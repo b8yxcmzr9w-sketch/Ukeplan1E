@@ -446,9 +446,11 @@ td.col-laer{width:90px;max-width:110px;}
               <input type="text" id="ny-laerer-navn" placeholder="Navn">
               <input type="password" id="ny-laerer-pw" placeholder="Passord">
               <input type="color" id="ny-laerer-farge" value="#6B8C2A" style="width:36px;height:32px;border:1px solid var(--kant);border-radius:6px;cursor:pointer;padding:2px;">
-              <button class="btn-legg" onclick="leggTilLaerer()">+ Laerer</button>
             </div>
-            <div class="innst-sek-lagre"><button id="btn-lagre-laerere" onclick="lagreLaerereInnst()">&#x1F4BE; Lagre</button></div>
+            <div class="innst-sek-lagre" style="gap:.5rem;">
+              <button id="btn-legg-laerer" onclick="leggTilLaerer()" style="background:var(--groen);color:#fff;border:none;border-radius:7px;padding:.3rem .9rem;font-size:.76rem;font-weight:600;cursor:pointer;">+ Lærer</button>
+              <button id="btn-lagre-laerere" onclick="lagreLaerereInnst()">&#x1F4BE; Lagre</button>
+            </div>
           </div>
         </div>
         <div class="innst-seksjon" id="innst-mine-fag-seksjon">
@@ -553,19 +555,19 @@ td.col-laer{width:90px;max-width:110px;}
 </div>
 <div class="modal-bg" id="slett-laerer-modal" style="display:none">
   <div class="modal">
-    <h3>&#x26A0;&#xFE0F; Slett laerer</h3>
+    <h3>&#x26A0;&#xFE0F; Slett lærer</h3>
     <p id="slett-laerer-tekst"></p>
-    <label>Overfar hendelser til:</label>
+    <label>Overfør hendelser til:</label>
     <select id="slett-laerer-arvtaker"></select>
     <div style="font-size:.73rem;color:var(--dempet);margin-top:.4rem;">
       <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;">
         <input type="checkbox" id="slett-hendelser-cb" style="width:auto;">
-        Slett hendelser i stedet for aa overfare
+        Slett hendelser i stedet for å overføre
       </label>
     </div>
     <div class="modal-knapper">
-      <button class="btn-avbryt" onclick="document.getElementById('slett-laerer-modal').style.display='none'">Avbryt</button>
-      <button class="btn-ok" style="background:#c0392b;" onclick="bekreftSlettLaerer()">Slett laerer</button>
+      <button class="btn-avbryt" id="slett-laerer-avbryt" onclick="document.getElementById('slett-laerer-modal').style.display='none'">Avbryt</button>
+      <button class="btn-ok" id="slett-laerer-ok" style="background:#c0392b;" onclick="bekreftSlettLaerer()">Slett lærer</button>
     </div>
   </div>
 </div>
@@ -1918,25 +1920,42 @@ function oppdaterAdminTeller(){visInnstAdvarsel('btn-lagre-laerere');
   alle.forEach(function(el){if(!el.checked)el.disabled=antall>=2;});
   allData.laerere.forEach(function(l){var cb=document.querySelector('.admin-cb[value="'+l.navn+'"]');if(cb)l.admin=cb.checked;});
 }
-function leggTilLaerer(){
+async function leggTilLaerer(){
   var navn=document.getElementById('ny-laerer-navn').value.trim(),pw=document.getElementById('ny-laerer-pw').value.trim(),farge=document.getElementById('ny-laerer-farge').value;
   if(!navn||!pw){visToast('Fyll inn navn og passord',true);return;}
   if(allData.laerere.find(function(l){return l.navn===navn;})){visToast('Lærer finnes allerede',true);return;}
   allData.laerere.push({navn:navn,passord:pw,farge:farge,admin:false,fag:[]});
   document.getElementById('ny-laerer-navn').value='';document.getElementById('ny-laerer-pw').value='';
-  renderLaererListe();visToast('Lærer lagt til. Husk å lagre innstillinger.');visInnstAdvarsel('btn-lagre-laerere');
+  renderLaererListe();
+  var btn=document.getElementById('btn-legg-laerer');
+  btn.disabled=true;btn.textContent='Lagrer...';
+  try{
+    await skrivTilSheets('Lærere',_byggLaerereRader());
+    await hentData(true);
+    visToast(navn+' er lagt til og lagret.');
+  }catch(e){visToast('Lagt til, men lagring feilet: '+e.message,true,true);}
+  finally{btn.disabled=false;btn.textContent='+ Lærer';}
 }
 function aapneSlettLaerer(navn){
   slettLaererNavn=navn;
-  document.getElementById('slett-laerer-tekst').textContent='Slett '+navn+'? Kommende hendelser overfoeres til valgt laerer.';
+  document.getElementById('slett-laerer-tekst').textContent='Slett '+navn+'? Kommende hendelser overføres til valgt lærer.';
   var sel=document.getElementById('slett-laerer-arvtaker');
   sel.innerHTML=allData.laerere.filter(function(l){return l.navn!==navn;}).map(function(l){return '<option value="'+l.navn+'">'+l.navn+'</option>';}).join('');
+  document.getElementById('slett-hendelser-cb').checked=false;
+  var ok=document.getElementById('slett-laerer-ok');
+  ok.disabled=false;ok.textContent='Slett lærer';
+  document.getElementById('slett-laerer-avbryt').disabled=false;
   document.getElementById('slett-laerer-modal').style.display='flex';
 }
 async function bekreftSlettLaerer(){
   var arvtaker=document.getElementById('slett-laerer-arvtaker').value;
   var slettHendelser=document.getElementById('slett-hendelser-cb').checked;
-  document.getElementById('slett-laerer-modal').style.display='none';
+  var okBtn=document.getElementById('slett-laerer-ok');
+  var avbrytBtn=document.getElementById('slett-laerer-avbryt');
+  var lagreBtn=document.getElementById('btn-lagre-laerere');
+  okBtn.disabled=true;okBtn.textContent='Sletter...';
+  avbrytBtn.disabled=true;
+  if(lagreBtn)lagreBtn.disabled=true;
   try{
     for(var fi=0;fi<2;fi++){
       var arknavn=['Plan_NPT','Plan_YFF'][fi];
@@ -1946,9 +1965,16 @@ async function bekreftSlettLaerer(){
     }
     allData.laerere=allData.laerere.filter(function(l){return l.navn!==slettLaererNavn;});
     await skrivTilSheets('Lærere',_byggLaerereRader());
+    document.getElementById('slett-laerer-modal').style.display='none';
     renderLaererListe();visToast(slettLaererNavn+' er slettet.');
     slettLaererNavn=null;
-  }catch(e){visToast('Feil: '+e.message,true,true);}
+  }catch(e){
+    okBtn.disabled=false;okBtn.textContent='Slett lærer';
+    avbrytBtn.disabled=false;
+    visToast('Feil: '+e.message,true,true);
+  }finally{
+    if(lagreBtn)lagreBtn.disabled=false;
+  }
 }
 function oppdaterYffGruppe(idx,val){var g=yffGrupper();g[idx]=val;allData.innstillinger.yffGrupper=g;visInnstAdvarsel('btn-lagre-yff');}
 function slettYffGruppe(idx){var g=yffGrupper();g.splice(idx,1);allData.innstillinger.yffGrupper=g;renderInnstillinger();visInnstAdvarsel('btn-lagre-yff');}
