@@ -141,6 +141,9 @@ td.col-laer{width:90px;max-width:110px;}
 .innst-sek-lagre button.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);cursor:pointer;}
 .innst-sek-lagre button.aktiv:hover{opacity:.87;}
 .innst-sek-lagre button:disabled{opacity:.5;cursor:not-allowed;}
+.ai-status{font-size:.69rem;color:var(--groen);display:flex;align-items:center;gap:.28rem;}
+.ai-spinner{display:inline-block;width:10px;height:10px;border:2px solid rgba(107,140,42,.25);border-top-color:var(--groen);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+.ai-preview-tittel{font-size:.72rem;font-weight:700;color:var(--groen);padding:.32rem .5rem;background:#f2f7ea;border:1px dashed #bdc9a0;border-radius:7px;display:flex;align-items:center;gap:.3rem;margin:.4rem 0 .2rem;}
 .btn-ok.passiv{background:#f0efe9 !important;color:#aaa !important;border:1px solid var(--kant) !important;cursor:default !important;}
 .btn-ok.passiv:hover{opacity:1 !important;}
 .innst-gruppe-label{font-size:.74rem;font-weight:700;color:var(--dempet);margin:.8rem 0 .4rem;padding-top:.6rem;border-top:1px solid var(--kant);}
@@ -332,25 +335,35 @@ td.col-laer{width:90px;max-width:110px;}
     <div id="seksjon-plan">
       <div id="lim-inn-panel" style="display:none;">
       <div class="paste-panel">
-        <h3>&#x1F4CB; Lim inn eller skriv inn økter</h3>
+        <h3>&#x1F4CB; Lim inn eller skriv inn &#xF8;kter</h3>
+        <p style="font-size:.7rem;color:var(--dempet);margin-bottom:.25rem;">Lim inn tekst fra Word, e-post eller timeplan – klikk &#xAB;Tolk med AI&#xBB; og rader fylles inn automatisk nedenfor. Rediger radene etter behov, og klikk &#xAB;Lagre &#xF8;kter&#xBB; n&#xE5;r du er klar.<br>
+        <span style="color:var(--oransje);font-size:.69rem;">NB: Fridager og h&#xF8;ytider administreres under Skolerute i Innstillinger.</span></p>
+        <p id="paste-format-tekst" style="font-size:.68rem;color:var(--dempet2);margin-bottom:.35rem;"></p>
 
-        <!-- Skjema-rader -->
-        <table id="paste-skjema" style="width:100%;border-collapse:collapse;font-size:.72rem;margin-bottom:.35rem;">
+        <!-- Fritekst-innliming -->
+        <textarea id="paste-input" placeholder="Lim inn tekst her &#x2013; AI tolker og fyller ut rader nedenfor automatisk&#x2026;" oninput="sjekkLagreOkterKnapp()"></textarea>
+        <div class="paste-rad" style="margin-top:.35rem;flex-wrap:wrap;gap:.35rem;">
+          <button id="btn-tolk-ai" class="pw-btn" onclick="tolkMedAI()" style="font-size:.72rem;">&#x1F916; Tolk med AI</button>
+          <button class="pw-btn" onclick="aapnePromptModal()" style="font-size:.72rem;">&#x1F511; Generer prompt</button>
+          <div id="ai-status-plan" class="ai-status" style="display:none;"></div>
+        </div>
+
+        <!-- AI-forhåndsvisning label -->
+        <div id="ai-preview-plan" class="ai-preview-tittel" style="display:none;">&#x2705; AI-tolket &#x2013; rediger radene under om &#xF8;nskelig, klikk &#xAB;Lagre &#xF8;kter&#xBB; n&#xE5;r klar</div>
+
+        <!-- Redigerbare rader -->
+        <table id="paste-skjema" style="width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.3rem;margin-bottom:.25rem;display:none;">
           <thead id="paste-skjema-head"></thead>
           <tbody id="paste-skjema-body"></tbody>
         </table>
         <button class="btn-legg-lite" onclick="leggTilPasteRad()" style="margin-bottom:.35rem;">+ Legg til rad</button>
-        <p style="font-size:.7rem;color:var(--dempet);margin-bottom:.25rem;">Fyll inn rader i skjemaet, eller lim inn fra Word/Excel. Bruk prompt-knappen for å konvertere data med Copilot/ChatGPT.<br>
-        <span style="color:var(--oransje);font-size:.69rem;">NB: Skolerute (fridager, høytider) administreres under Innstillinger.</span></p>
-        <p id="paste-format-tekst" style="font-size:.68rem;color:var(--dempet2);margin-bottom:.35rem;"></p>
-        <!-- Fritekst-innliming -->
-        <textarea id="paste-input" placeholder="Eller lim inn tekst her..."></textarea>
-        <div class="paste-rad">
-          <button class="btn-lim" onclick="limInnAlt()">Lim inn</button>
-          <button class="pw-btn" onclick="aapnePromptModal()" style="font-size:.72rem;">&#x1F916; Generer prompt</button>
-          <div class="paste-resultat" id="paste-resultat"></div>
-        </div>
+
+        <div class="paste-resultat" id="paste-resultat"></div>
         <div id="lagre-banner" style="display:none;background:#e8f5e9;border:1px solid #66bb6a;border-radius:7px;padding:.45rem .8rem;margin-top:.4rem;font-size:.76rem;color:#2e7d32;font-weight:600;"></div>
+
+        <div class="innst-sek-lagre" style="margin-top:.5rem;padding-top:.45rem;border-top:1px solid var(--kant);">
+          <button id="btn-lagre-okter" onclick="limInnAlt()">&#x1F4BE; Lagre &#xF8;kter</button>
+        </div>
       </div>
       </div><!-- lim-inn-panel -->
       <div class="tabell-wrapper">
@@ -483,12 +496,13 @@ td.col-laer{width:90px;max-width:110px;}
             </table>
             <button class="btn-legg-lite" onclick="leggTilSrRad()">+ Legg til rad</button>
             <div style="margin-top:.8rem;border-top:1px solid var(--kant);padding-top:.7rem;">
-              <div style="font-size:.75rem;font-weight:700;color:var(--dempet);margin-bottom:.35rem;">&#x1F4CB; Lim inn skolerute</div>
-              <p style="font-size:.71rem;color:var(--dempet);margin-bottom:.35rem;">Lim inn fra nettside og bruk prompt-knappen for aa konvertere til riktig format.</p>
+              <div style="font-size:.75rem;font-weight:700;color:var(--dempet);margin-bottom:.35rem;">&#x1F4CB; Lim inn skolerute med AI</div>
+              <p style="font-size:.71rem;color:var(--dempet);margin-bottom:.35rem;">Lim inn fra nettside og klikk &#xAB;Tolk med AI&#xBB;. Radene vises i tabellen ovenfor og er redigerbare f&#xF8;r du lagrer.</p>
               <textarea id="sr-innlim" style="width:100%;min-height:55px;font-size:.71rem;font-family:monospace;border:1px solid var(--kant);border-radius:7px;padding:.35rem .5rem;resize:vertical;background:var(--bg);margin-top:.4rem;" placeholder="Lim inn skolerute her..."></textarea>
-              <div style="display:flex;gap:.4rem;margin-top:.35rem;">
-                <button class="btn-legg-lite" onclick="limInnSkolerute()">Lim inn</button>
-                <button class="pw-btn" onclick="aapneSrPromptModal()" style="font-size:.72rem;">&#x1F916; Generer prompt</button>
+              <div style="display:flex;gap:.4rem;margin-top:.35rem;flex-wrap:wrap;align-items:center;">
+                <button id="btn-tolk-sr" class="pw-btn" onclick="tolkSkolerute()" style="font-size:.72rem;">&#x1F916; Tolk med AI</button>
+                <button class="pw-btn" onclick="aapneSrPromptModal()" style="font-size:.72rem;">&#x1F511; Generer prompt</button>
+                <div id="ai-status-sr" class="ai-status" style="display:none;margin-left:auto;"></div>
               </div>
               <div id="sr-resultat" style="font-size:.71rem;margin-top:.35rem;"></div>
             </div>
@@ -1649,7 +1663,7 @@ function oppdaterPasteSkjemaHeader(){
   }
 }
 
-function leggTilPasteRad(){
+function leggTilPasteRad(prefill){
   var tbody=document.getElementById('paste-skjema-body');
   var skjema=document.getElementById('paste-skjema');
   skjema.style.display='table';
@@ -1662,32 +1676,42 @@ function leggTilPasteRad(){
   function mkInput(type,ph,extra){var el=document.createElement('input');el.type=type||'text';el.placeholder=ph||'';el.style.cssText=is+(extra||'');return el;}
   function mkSelect(opts){var el=document.createElement('select');el.style.cssText=is+'cursor:pointer;';opts.forEach(function(o){var op=document.createElement('option');op.value=o.v;op.textContent=o.t;el.appendChild(op);});return el;}
   function mkTd(el){var td=document.createElement('td');td.style.cssText=cs;td.appendChild(el);return td;}
+  function setSelect(sel,val){if(!val)return;for(var i=0;i<sel.options.length;i++){if(sel.options[i].value.toLowerCase()===val.toLowerCase()){sel.selectedIndex=i;return;}}}
   var tr=document.createElement('tr');
+  var p=prefill||{};
   var dagOpts=ALLE_DAGER.map(function(d){return {v:d,t:DAG_FULLT[d]};});
   var laererOpts2=[{v:'',t:'-'},{v:'Alle',t:'Alle'}].concat(allData.laerere.map(function(l){return {v:l.navn,t:l.navn};}));
-  tr.appendChild(mkTd(mkInput('text','Uke','width:42px;')));
-  tr.appendChild(mkTd(mkSelect(dagOpts)));
+  var ukeEl=mkInput('text','Uke','width:42px;');if(p.uke)ukeEl.value=p.uke;
+  tr.appendChild(mkTd(ukeEl));
+  var dagEl=mkSelect(dagOpts);setSelect(dagEl,p.dag||'');
+  tr.appendChild(mkTd(dagEl));
   // Kolonne 3: Parti/Gruppe/Fag – kun hvis ikke NNA
   if(!erNNA){
     var col3Opts;
     if(erYFF) col3Opts=yffGrupper().map(function(g){return {v:g,t:g};});
     else if(erFF) col3Opts=(cfg().aktiveFag||[]).map(function(f){return {v:f,t:f};});
     else col3Opts=partier().map(function(p){return {v:p.slice(1),t:p.slice(1)};});
-    tr.appendChild(mkTd(mkSelect(col3Opts)));
+    var col3El=mkSelect(col3Opts);setSelect(col3El,p.parti||p.gruppe||p.fag||'');
+    tr.appendChild(mkTd(col3El));
   }
-  tr.appendChild(mkTd(mkInput('text','Aktivitet','min-width:80px;')));
-  tr.appendChild(mkTd(mkInput('text','Oppmøte','min-width:80px;')));
-  tr.appendChild(mkTd(mkInput('text','Info','min-width:60px;')));
-  tr.appendChild(mkTd(mkSelect(laererOpts2)));
+  var aktEl=mkInput('text','Aktivitet','min-width:80px;');if(p.aktivitet)aktEl.value=p.aktivitet;
+  tr.appendChild(mkTd(aktEl));
+  var oppEl=mkInput('text','Oppm\xF8te','min-width:80px;');if(p.oppmote)oppEl.value=p.oppmote;
+  tr.appendChild(mkTd(oppEl));
+  var infoEl=mkInput('text','Info','min-width:60px;');if(p.info)infoEl.value=p.info;
+  tr.appendChild(mkTd(infoEl));
+  var laerEl=mkSelect(laererOpts2);setSelect(laerEl,p.laerer||'');
+  tr.appendChild(mkTd(laerEl));
   var delTd=document.createElement('td');
   delTd.style.cssText=cs+'text-align:center;';
   var delBtn=document.createElement('button');
   delBtn.className='btn-slett-lite';
   delBtn.textContent='X';
-  delBtn.addEventListener('click',function(){tr.parentNode.removeChild(tr);oppdaterPasteSkjemaSynlighet();});
+  delBtn.addEventListener('click',function(){tr.parentNode.removeChild(tr);oppdaterPasteSkjemaSynlighet();sjekkLagreOkterKnapp();});
   delTd.appendChild(delBtn);
   tr.appendChild(delTd);
   tbody.appendChild(tr);
+  sjekkLagreOkterKnapp();
 }
 
 function slettPasteRad(btn){
@@ -1722,12 +1746,84 @@ function limInnAlt(){
   var alt=[fraSkjema,fraTekst].filter(Boolean).join('\n');
   if(!alt){document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Ingen data.</span>';return;}
   // Midlertidig sett paste-input til kombinert tekst og kall limInnOkter
-  var orig=document.getElementById('paste-input').value;
   document.getElementById('paste-input').value=alt;
   limInnOkter();
-  // Tøm skjema-rader etter vellykket innliming
+  // Tøm skjema-rader og reset UI etter vellykket innliming
   var tbody=document.getElementById('paste-skjema-body');
-  if(tbody&&kOk>0){tbody.innerHTML='';oppdaterPasteSkjemaSynlighet();}
+  if(tbody&&kOk>0){
+    tbody.innerHTML='';oppdaterPasteSkjemaSynlighet();
+    document.getElementById('paste-input').value='';
+    var prev=document.getElementById('ai-preview-plan');if(prev)prev.style.display='none';
+    var st=document.getElementById('ai-status-plan');if(st)st.style.display='none';
+    sjekkLagreOkterKnapp();
+  }
+}
+
+function sjekkLagreOkterKnapp(){
+  var btn=document.getElementById('btn-lagre-okter');if(!btn)return;
+  var harTekst=(document.getElementById('paste-input').value||'').trim().length>0;
+  var tbody=document.getElementById('paste-skjema-body');
+  var harRader=tbody&&tbody.children.length>0;
+  if(harTekst||harRader)btn.classList.add('aktiv');else btn.classList.remove('aktiv');
+}
+
+async function tolkMedAI(){
+  var tekst=(document.getElementById('paste-input').value||'').trim();
+  if(!tekst){visToast('Lim inn tekst f\xF8rst',true);return;}
+  var token=sessionStorage.getItem('token');
+  if(!token){visToast('Ikke innlogget',true);return;}
+  var btn=document.getElementById('btn-tolk-ai');
+  var statusEl=document.getElementById('ai-status-plan');
+  var previewEl=document.getElementById('ai-preview-plan');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Tolker...';}
+  if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='<span class="ai-spinner"></span>Henter svar fra Gemini AI…';}
+  try{
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer})});
+    var data=await res.json();
+    if(data.ok&&data.rader&&data.rader.length){
+      var tbody=document.getElementById('paste-skjema-body');
+      tbody.innerHTML='';
+      data.rader.forEach(function(r){leggTilPasteRad(r);});
+      var skjema=document.getElementById('paste-skjema');if(skjema)skjema.style.display='table';
+      oppdaterPasteSkjemaHeader();
+      document.getElementById('paste-input').value='';
+      if(previewEl)previewEl.style.display='flex';
+      if(statusEl)statusEl.innerHTML='✅ '+data.rader.length+' rad(er) tolket – rediger og lagre';
+      sjekkLagreOkterKnapp();
+    }else{
+      if(statusEl)statusEl.innerHTML='⚠️ '+(data.feil||'Ingen rader tolket – pr\xF8v \xABGenerer prompt\xBB for veiledning');
+    }
+  }catch(e){if(statusEl)statusEl.innerHTML='⚠️ Nettverksfeil: '+e.message;}
+  if(btn){btn.disabled=false;btn.textContent='🤖 Tolk med AI';}
+}
+
+async function tolkSkolerute(){
+  var tekst=(document.getElementById('sr-innlim').value||'').trim();
+  if(!tekst){visToast('Lim inn tekst f\xF8rst',true);return;}
+  var token=sessionStorage.getItem('token');
+  if(!token){visToast('Ikke innlogget',true);return;}
+  var btn=document.getElementById('btn-tolk-sr');
+  var statusEl=document.getElementById('ai-status-sr');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Tolker...';}
+  if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='<span class="ai-spinner"></span>Henter svar fra Gemini AI…';}
+  try{
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkSkolerute',token:token,tekst:tekst})});
+    var data=await res.json();
+    if(data.ok&&data.rader&&data.rader.length){
+      data.rader.forEach(function(r){
+        if(!allData.skolerute)allData.skolerute=[];
+        allData.skolerute.push({uke:r.uke||'',dag:(r.dag||'').toLowerCase(),type:r.type||srTyper[0]||'ferie',beskrivelse:r.beskrivelse||''});
+      });
+      renderSrTabell();
+      visInnstAdvarsel('btn-lagre-skolerute');
+      document.getElementById('sr-innlim').value='';
+      if(statusEl)statusEl.innerHTML='✅ '+data.rader.length+' rad(er) lagt til i tabellen – rediger om n\xF8dvendig, klikk Lagre';
+      document.getElementById('sr-resultat').textContent='';
+    }else{
+      if(statusEl)statusEl.innerHTML='⚠️ '+(data.feil||'Ingen rader tolket');
+    }
+  }catch(e){if(statusEl)statusEl.innerHTML='⚠️ Nettverksfeil: '+e.message;}
+  if(btn){btn.disabled=false;btn.textContent='🤖 Tolk med AI';}
 }
 
 function limInnOkter(){
@@ -1909,7 +2005,7 @@ function visInnstAdvarsel(el){
     var target=typeof el==='string'?document.getElementById(el):el;
     if(target){
       var sek=target.closest?target.closest('.innst-seksjon'):null;
-      if(sek){var lb=sek.querySelector('.innst-sek-lagre button');if(lb)lb.classList.add('aktiv');}
+      if(sek){var lb=(target&&target.tagName==='BUTTON')?target:sek.querySelector('.innst-sek-lagre button:last-child');if(lb)lb.classList.add('aktiv');}
     }
   }
 }
