@@ -1743,6 +1743,11 @@ function hentPasteSkjemaLinjer(){
 function limInnAlt(){
   var fraTekst=document.getElementById('paste-input').value.trim();
   var fraSkjema=hentPasteSkjemaLinjer();
+  // Sjekk om fritekst ser ut som naturlig språk (ingen semikolon) – da skal AI brukes
+  if(fraTekst&&!fraTekst.includes(';')){
+    document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Teksten ser ut som fritekst – klikk «🤖 Tolk med AI» for automatisk tolking.</span>';
+    return;
+  }
   var alt=[fraSkjema,fraTekst].filter(Boolean).join('\n');
   if(!alt){document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Ingen data.</span>';return;}
   // Midlertidig sett paste-input til kombinert tekst og kall limInnOkter
