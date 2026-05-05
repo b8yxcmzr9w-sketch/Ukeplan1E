@@ -75,11 +75,19 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 .seksjons-btn.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);}
 .pw-btn{background:#f0efe6;color:var(--nav);border:1px solid var(--kant);border-radius:7px;padding:.3rem .65rem;font-size:.73rem;cursor:pointer;font-weight:600;}
 .pw-btn:hover{background:#e4e3d8;}
-.paste-panel{background:#fff;border:1px solid var(--kant);border-radius:9px;margin:.45rem 1.2rem;padding:.65rem .9rem;}
-.paste-panel h3{font-size:.76rem;font-weight:700;margin-bottom:.28rem;color:var(--nav);}
+/* Flytende innlimingspanel */
+#lim-inn-panel{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:100vw;z-index:45;display:none;flex-direction:column;pointer-events:none;}
+#lim-inn-panel.vis{display:flex;}
+.paste-panel{background:#fff;display:flex;flex-direction:column;height:100%;border-radius:14px 0 0 14px;box-shadow:-6px 0 32px rgba(0,0,0,.18);border:1px solid var(--kant);border-right:none;pointer-events:all;overflow:hidden;}
+.paste-panel-hdr{display:flex;align-items:center;justify-content:space-between;background:var(--nav);color:#fff;padding:.55rem .85rem .5rem;flex-shrink:0;border-radius:14px 0 0 0;}
+.paste-panel-hdr span{font-size:.8rem;font-weight:700;letter-spacing:.01em;}
+.paste-panel-hdr button{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:6px;padding:.2rem .55rem;cursor:pointer;font-size:.9rem;line-height:1;transition:background .15s;}
+.paste-panel-hdr button:hover{background:rgba(255,255,255,.32);}
+.paste-panel-body{flex:1;overflow-y:auto;padding:.65rem .9rem;}
 .paste-panel p{font-size:.7rem;color:var(--dempet);margin-bottom:.4rem;line-height:1.5;}
-.paste-panel textarea{width:100%;min-height:60px;font-size:.71rem;font-family:monospace;border:1px solid var(--kant);border-radius:7px;padding:.36rem .52rem;resize:vertical;background:var(--bg);}
+.paste-panel textarea{width:100%;min-height:80px;font-size:.71rem;font-family:monospace;border:1px solid var(--kant);border-radius:7px;padding:.36rem .52rem;resize:vertical;background:var(--bg);}
 .paste-rad{display:flex;gap:.45rem;align-items:center;margin-top:.35rem;flex-wrap:wrap;}
+@media(max-width:420px){#lim-inn-panel{width:100vw;}}
 .btn-lim{background:var(--groen);color:#fff;border:none;border-radius:7px;padding:.3rem .78rem;font-size:.74rem;font-weight:600;cursor:pointer;}
 .paste-resultat{font-size:.71rem;line-height:1.6;flex:1;}
 .paste-ok{color:#2e7d32;font-weight:600;}
@@ -333,37 +341,44 @@ td.col-laer{width:90px;max-width:110px;}
           <select id="fellesfag-fag-select" onchange="byttFellesfag(this.value)" style="padding:.24rem .48rem;border:1px solid var(--kant);border-radius:7px;font-size:.73rem;background:var(--bg);cursor:pointer;"></select>
         </span>
     <div id="seksjon-plan">
-      <div id="lim-inn-panel" style="display:none;">
+      <div id="lim-inn-panel">
       <div class="paste-panel">
-        <h3>&#x1F4CB; Lim inn eller skriv inn &#xF8;kter</h3>
-        <p style="font-size:.7rem;color:var(--dempet);margin-bottom:.25rem;">Lim inn tekst fra Word, e-post eller timeplan – klikk &#xAB;Tolk med AI&#xBB; og rader fylles inn automatisk nedenfor. Rediger radene etter behov, og klikk &#xAB;Lagre &#xF8;kter&#xBB; n&#xE5;r du er klar.<br>
-        <span style="color:var(--oransje);font-size:.69rem;">NB: Fridager og h&#xF8;ytider administreres under Skolerute i Innstillinger.</span></p>
-        <p id="paste-format-tekst" style="font-size:.68rem;color:var(--dempet2);margin-bottom:.35rem;"></p>
-
-        <!-- Fritekst-innliming -->
-        <textarea id="paste-input" placeholder="Lim inn tekst her &#x2013; AI tolker og fyller ut rader nedenfor automatisk&#x2026;" oninput="sjekkLagreOkterKnapp()"></textarea>
-        <div class="paste-rad" style="margin-top:.35rem;flex-wrap:wrap;gap:.35rem;">
-          <button id="btn-tolk-ai" class="pw-btn" onclick="tolkMedAI()" style="font-size:.72rem;">&#x1F916; Tolk med AI</button>
-          <button class="pw-btn" onclick="aapnePromptModal()" style="font-size:.72rem;">&#x1F511; Generer prompt</button>
-          <div id="ai-status-plan" class="ai-status" style="display:none;"></div>
+        <!-- Header -->
+        <div class="paste-panel-hdr">
+          <span>&#x1F4CB; Lim inn / AI-tolking</span>
+          <button onclick="togglLimInnPanel()" title="Lukk">&#x2715;</button>
         </div>
+        <!-- Scrollbart innhold -->
+        <div class="paste-panel-body">
+          <p style="margin-bottom:.25rem;">Lim inn tekst fra Word, e-post eller timeplan &#x2013; klikk &#xAB;Tolk med AI&#xBB; og rader fylles inn automatisk. Rediger om n&#xF8;dvendig og klikk &#xAB;Lagre &#xF8;kter&#xBB; n&#xE5;r klar.<br>
+          <span style="color:var(--oransje);font-size:.69rem;">NB: Fridager og h&#xF8;ytider administreres under Skolerute i Innstillinger.</span></p>
+          <p id="paste-format-tekst" style="font-size:.68rem;color:var(--dempet2);margin-bottom:.35rem;"></p>
 
-        <!-- AI-forhåndsvisning label -->
-        <div id="ai-preview-plan" class="ai-preview-tittel" style="display:none;">&#x2705; AI-tolket &#x2013; rediger radene under om &#xF8;nskelig, klikk &#xAB;Lagre &#xF8;kter&#xBB; n&#xE5;r klar</div>
+          <!-- Fritekst-innliming -->
+          <textarea id="paste-input" placeholder="Lim inn tekst her &#x2013; AI tolker og fyller ut rader nedenfor automatisk&#x2026;" oninput="sjekkLagreOkterKnapp()"></textarea>
+          <div class="paste-rad" style="margin-top:.35rem;flex-wrap:wrap;gap:.35rem;">
+            <button id="btn-tolk-ai" class="pw-btn" onclick="tolkMedAI()" style="font-size:.72rem;">&#x1F916; Tolk med AI</button>
+            <button class="pw-btn" onclick="aapnePromptModal()" style="font-size:.72rem;">&#x1F511; Generer prompt</button>
+            <div id="ai-status-plan" class="ai-status" style="display:none;"></div>
+          </div>
 
-        <!-- Redigerbare rader -->
-        <table id="paste-skjema" style="width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.3rem;margin-bottom:.25rem;display:none;">
-          <thead id="paste-skjema-head"></thead>
-          <tbody id="paste-skjema-body"></tbody>
-        </table>
-        <button class="btn-legg-lite" onclick="leggTilPasteRad()" style="margin-bottom:.35rem;">+ Legg til rad</button>
+          <!-- AI-forhåndsvisning label -->
+          <div id="ai-preview-plan" class="ai-preview-tittel" style="display:none;">&#x2705; AI-tolket &#x2013; rediger radene under om &#xF8;nskelig, klikk &#xAB;Lagre &#xF8;kter&#xBB; n&#xE5;r klar</div>
 
-        <div class="paste-resultat" id="paste-resultat"></div>
-        <div id="lagre-banner" style="display:none;background:#e8f5e9;border:1px solid #66bb6a;border-radius:7px;padding:.45rem .8rem;margin-top:.4rem;font-size:.76rem;color:#2e7d32;font-weight:600;"></div>
+          <!-- Redigerbare rader -->
+          <table id="paste-skjema" style="width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.3rem;margin-bottom:.25rem;display:none;">
+            <thead id="paste-skjema-head"></thead>
+            <tbody id="paste-skjema-body"></tbody>
+          </table>
+          <button class="btn-legg-lite" onclick="leggTilPasteRad()" style="margin-bottom:.35rem;">+ Legg til rad</button>
 
-        <div class="innst-sek-lagre" style="margin-top:.5rem;padding-top:.45rem;border-top:1px solid var(--kant);">
-          <button id="btn-lagre-okter" onclick="limInnAlt()">&#x1F4BE; Lagre &#xF8;kter</button>
-        </div>
+          <div class="paste-resultat" id="paste-resultat"></div>
+          <div id="lagre-banner" style="display:none;background:#e8f5e9;border:1px solid #66bb6a;border-radius:7px;padding:.45rem .8rem;margin-top:.4rem;font-size:.76rem;color:#2e7d32;font-weight:600;"></div>
+
+          <div class="innst-sek-lagre" style="margin-top:.5rem;padding-top:.45rem;border-top:1px solid var(--kant);">
+            <button id="btn-lagre-okter" onclick="limInnAlt()">&#x1F4BE; Lagre &#xF8;kter</button>
+          </div>
+        </div><!-- paste-panel-body -->
       </div>
       </div><!-- lim-inn-panel -->
       <div class="tabell-wrapper">
@@ -2277,8 +2292,8 @@ async function byttPassordInnst(){
 function togglLimInnPanel(){
   var p=document.getElementById('lim-inn-panel');
   if(!p)return;
-  var vis=p.style.display!=='none';
-  p.style.display=vis?'none':'block';
+  var vis=p.classList.contains('vis');
+  p.classList.toggle('vis',!vis);
   var btn=document.getElementById('btn-lim-inn-plan');
   if(btn)btn.classList.toggle('aktiv',!vis);
 }
