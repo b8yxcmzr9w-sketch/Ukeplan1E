@@ -1770,7 +1770,7 @@ function sjekkLagreOkterKnapp(){
 async function tolkMedAI(){
   var tekst=(document.getElementById('paste-input').value||'').trim();
   if(!tekst){visToast('Lim inn tekst f\xF8rst',true);return;}
-  var token=sessionStorage.getItem('token');
+  var token=sesjonGet('praksisToken');
   if(!token){visToast('Ikke innlogget',true);return;}
   var btn=document.getElementById('btn-tolk-ai');
   var statusEl=document.getElementById('ai-status-plan');
@@ -1800,7 +1800,7 @@ async function tolkMedAI(){
 async function tolkSkolerute(){
   var tekst=(document.getElementById('sr-innlim').value||'').trim();
   if(!tekst){visToast('Lim inn tekst f\xF8rst',true);return;}
-  var token=sessionStorage.getItem('token');
+  var token=sesjonGet('praksisToken');
   if(!token){visToast('Ikke innlogget',true);return;}
   var btn=document.getElementById('btn-tolk-sr');
   var statusEl=document.getElementById('ai-status-sr');
