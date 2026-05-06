@@ -2454,11 +2454,12 @@ function byggPrompt(){
   p+='"neste uke" = uke '+(iUke+1)+', "denne uken" = uke '+iUke+lf+lf;
   p+='FAG: '+fagNavn+lf;
   if(fagDager.length&&fagDager.length<5){
-    p+='Faget er aktivt disse dagene: '+fagDager.join(', ')+lf;
+    p+='Typiske undervisningsdager for dette faget: '+fagDager.join(', ')+' (kun til orientering – ta med raden selv om en annen dag er oppgitt)'+lf;
   }
   p+=lf;
   p+='OPPGAVE: Teksten nedenfor kan v\xe6re fritekst p\xe5 norsk eller ferdig formatert med semikolon.'+lf;
-  p+='Tolk fritekst og konverter til semikolon-format. Eksempel p\xe5 fritekst: "tirsdag neste uke, synge i kor"'+lf+lf;
+  p+='Tolk fritekst og konverter til semikolon-format. Ta med alle rader – ikke forkast noe.'+lf;
+  p+='Eksempel p\xe5 fritekst: "tirsdag neste uke, synge i kor med Willy"'+lf+lf;
 
   // FORMAT
   p+='FORMAT (\xe9n rad per linje, semikolon som skilletegn):'+lf;
@@ -2479,7 +2480,7 @@ function byggPrompt(){
   // FELTKRAV
   p+='FELTKRAV:'+lf;
   p+='- Uke: tall, f.eks. 35'+lf;
-  p+='- Dag: '+gyldigeDagerStr+(fagDager.length&&fagDager.length<5?' (kun disse dagene er gyldige for '+fagNavn+')':'')+lf;
+  p+='- Dag: '+gyldigeDagerStr+lf;
   if(!erNNA)p+='- '+col3Navn+': '+col3Info+lf;
   p+='- Aktivitet: kort beskrivelse av hva som skal gj\xf8res (P\xc5KREVD)'+lf;
   p+='- Oppm\xf8te: sted og klokkeslett, f.eks. "Bedriften kl 08:00" (kan v\xe6re tom)'+lf;
