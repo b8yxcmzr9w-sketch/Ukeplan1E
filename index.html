@@ -328,21 +328,18 @@ td.col-laer{width:90px;max-width:110px;}
   </div>
   <div id="rediger-skjerm">
     <div class="verktolinje">
-      <button class="seksjons-btn" id="btn-plan" onclick="visLaererSeksjon('plan')" style="display:none;">&#x2190; Plan</button>
+      <button class="pw-btn" id="btn-plan" onclick="visLaererSeksjon('plan')" style="display:none;">&#x2190; Plan</button>
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
         <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">&#x1F4CD; Denne uken</button>
-        <select id="filter-uker" onchange="renderGrid()" style="padding:0 .48rem;border:1px solid var(--kant);border-radius:7px;font-size:.74rem;background:var(--bg);height:2rem;">
-          <option value="mine">Mine økter</option>
-          <option value="alle">Alle økter</option>
-        </select>
-        <button class="pw-btn" id="skjul-tomme" onclick="togglSkjulTomme()">👁️ Skjul tomme</button>
-        <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn plan</button>
+        <button class="pw-btn" id="filter-uker-btn" onclick="togglFilterUker()">Alle økter</button>
+        <button class="pw-btn" id="skjul-tomme" onclick="togglSkjulTomme()">Skjul tomme</button>
+        <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn</button>
         <button class="pw-btn" id="btn-skriv-ut" onclick="skrivUt()">&#x1F5A8;&#xFE0F; Skriv ut</button>
         <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
         <span id="lagre-status" style="font-size:.71rem;color:var(--groen);font-weight:600;"></span>
-        <button class="seksjons-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger')" style="display:none;font-size:.71rem;padding:.2rem .58rem;">&#x2699;&#xFE0F; Innstillinger</button>
-        <button class="seksjons-btn" id="btn-profil" onclick="aapneProfilModal()" style="display:none;font-size:.71rem;padding:.2rem .58rem;">&#x1F464; Profil</button>
+        <button class="pw-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger')" style="display:none;">&#x2699;&#xFE0F; Innstillinger</button>
+        <button class="pw-btn" id="btn-profil" onclick="aapneProfilModal()" style="display:none;">&#x1F464; Profil</button>
       </div>
     </div>
     <div class="fag-tabs" id="laerer-fag-tabs"></div><span id="fellesfag-velger" style="display:none;align-items:center;gap:.3rem;background:#f0efe6;padding:.2rem .8rem;border-bottom:1px solid var(--kant);position:sticky;top:70px;z-index:8;">
@@ -1468,9 +1465,14 @@ function visLaererSeksjon(sek){
   document.getElementById('seksjon-innstillinger').style.display=sek==='innstillinger'?'block':'none';
   // Plan-knapp: skjult på plan-siden, synlig (tilbake-knapp) ellers
   var btnPlan=document.getElementById('btn-plan');
-  btnPlan.style.display=sek==='plan'?'none':'inline-flex';
-  btnPlan.classList.toggle('aktiv',false);
-  document.getElementById('btn-innst').classList.toggle('aktiv',sek==='innstillinger');
+  btnPlan.style.display=sek==='plan'?'none':'inline-block';
+  btnPlan.classList.remove('aktiv');
+  var bi=document.getElementById('btn-innst');
+  if(bi){bi.classList.toggle('aktiv',sek==='innstillinger');}
+  // Vis/skjul Innstillinger og Profil-knapper
+  var binnst=document.getElementById('btn-innst'),bprofil=document.getElementById('btn-profil');
+  if(binnst&&sek==='plan')binnst.style.display=erAdmin()?'inline-block':'none';
+  if(bprofil&&sek==='plan')bprofil.style.display='inline-block';
   document.getElementById('plan-verktoy').style.display=sek==='plan'?'flex':'none';
   // Skjul fag-faner og hurtig-rad i innstillinger
   document.getElementById('laerer-fag-tabs').style.display=sek==='plan'?'flex':'none';
@@ -1542,7 +1544,7 @@ function slotRad(ui,dk,pk,dagCelleHtml){
 function renderGrid(){
   if(!aktivLaerer)return;
   buildGridHeader();
-  var visAlle=document.getElementById('filter-uker').value==='alle';
+  var visAlle=erVisAlle();
   var skjulTomme=erSkjulTomme();
   var planData=allData.plan[aktivtFagLaerer]||{uker:[]};
   var erYFF=aktivtFagLaerer==='YFF';
@@ -2706,15 +2708,22 @@ function gaTilDenneUkenGrid(){
   }
 }
 function skrivUt(){
-  var c=cfg(),visAlle=document.getElementById('filter-uker').value==='alle';
+  var c=cfg(),visAlle=erVisAlle();
   var tittel='Praksisplan'+(c.klassenavn?' - '+c.klassenavn:'')+(c.skoleaar?' | '+c.skoleaar:'')+' | '+aktivtFagLaerer+' | '+(visAlle?'Alle uker':'Mine uker - '+(aktivLaerer||''));
   var hdr=document.getElementById('print-header');
   hdr.textContent=tittel;hdr.style.display='block';
-  var btn=document.getElementById('skjul-tomme'),varSjult=btn.classList.contains('aktiv');
-  if(!varSjult)btn.classList.add('aktiv');
-  oppdaterSkjulTommeTekst();
+  var skjulBtn=document.getElementById('skjul-tomme'),varSjult=skjulBtn&&skjulBtn.classList.contains('aktiv');
+  var utBtn=document.getElementById('btn-skriv-ut');
+  if(utBtn)utBtn.classList.add('aktiv');
+  if(!varSjult&&skjulBtn){skjulBtn.classList.add('aktiv');oppdaterSkjulTommeTekst();}
   renderGrid();
-  setTimeout(function(){window.print();hdr.style.display='none';if(!varSjult){btn.classList.remove('aktiv');oppdaterSkjulTommeTekst();}renderGrid();},200);
+  setTimeout(function(){
+    window.print();
+    hdr.style.display='none';
+    if(utBtn)utBtn.classList.remove('aktiv');
+    if(!varSjult&&skjulBtn){skjulBtn.classList.remove('aktiv');oppdaterSkjulTommeTekst();}
+    renderGrid();
+  },200);
 }
 function togglSkjulTomme(){
   var btn=document.getElementById('skjul-tomme');
@@ -2731,36 +2740,43 @@ function erSkjulTomme(){
   var btn=document.getElementById('skjul-tomme');
   return btn&&btn.classList.contains('aktiv');
 }
+// ===== FILTER UKER (toggle-knapp) =====
+function erVisAlle(){
+  var btn=document.getElementById('filter-uker-btn');
+  return !btn||!btn.classList.contains('aktiv');
+}
+function togglFilterUker(){
+  var btn=document.getElementById('filter-uker-btn');
+  if(!btn)return;
+  btn.classList.toggle('aktiv');
+  btn.textContent=btn.classList.contains('aktiv')?'Mine økter':'Alle økter';
+  renderGrid();
+}
 // Print aktiv-state
 window.addEventListener('beforeprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.add('aktiv');});
 window.addEventListener('afterprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.remove('aktiv');});
+// Scroll til denne uken (2-3 rader over)
+function scrollTilDenneUkenVedOppstart(){
+  var forsok=0;
+  function prøv(){
+    var isoUke=getCurrentISOWeek();
+    var el=document.getElementById('uke-hdr-'+isoUke);
+    if(!el){if(forsok++<5)setTimeout(prøv,200);return;}
+    var stickyH=0;
+    var verk=document.querySelector('.verktolinje');
+    var tabs=document.getElementById('laerer-fag-tabs');
+    var hr=document.getElementById('hurtig-rad');
+    if(verk)stickyH+=verk.getBoundingClientRect().height;
+    if(tabs&&tabs.style.display!=='none')stickyH+=tabs.getBoundingClientRect().height;
+    if(hr&&hr.style.display==='flex')stickyH+=hr.getBoundingClientRect().height;
+    var offset=el.getBoundingClientRect().top+window.pageYOffset-stickyH-(38*2.5);
+    window.scrollTo({top:Math.max(0,offset),behavior:'auto'});
+  }
+  setTimeout(prøv,300);
+}
 byttHovedFane('elev');
 hentData();
 window.addEventListener('resize', oppdaterStickyTop);
-// Oppstart-defaults
-(function(){
-  var fu=document.getElementById('filter-uker');
-  if(fu)fu.value='alle';
-  var st=document.getElementById('skjul-tomme');
-  if(st){st.classList.add('aktiv');oppdaterSkjulTommeTekst();}
-})();
-// Scroll til denne uken ved oppstart (etter render)
-function scrollTilDenneUkenVedOppstart(){
-  var isoUke=getCurrentISOWeek();
-  var el=document.getElementById('uke-hdr-'+isoUke);
-  if(!el)return;
-  // Scroll slik at 2-3 rader vises over uke-headeren
-  var stickyH=0;
-  var verk=document.querySelector('.verktolinje');
-  var tabs=document.getElementById('laerer-fag-tabs');
-  var hr=document.getElementById('hurtig-rad');
-  if(verk)stickyH+=verk.getBoundingClientRect().height;
-  if(tabs&&tabs.style.display!=='none')stickyH+=tabs.getBoundingClientRect().height;
-  if(hr&&hr.style.display==='flex')stickyH+=hr.getBoundingClientRect().height;
-  var rowH=38; // ca. høyde på 2-3 rader
-  var offset=el.getBoundingClientRect().top+window.pageYOffset-stickyH-(rowH*2.5);
-  window.scrollTo({top:Math.max(0,offset),behavior:'auto'});
-}
 </script>
 </body>
 </html>
