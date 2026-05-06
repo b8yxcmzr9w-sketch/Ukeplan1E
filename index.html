@@ -328,7 +328,7 @@ td.col-laer{width:90px;max-width:110px;}
       <button class="seksjons-btn aktiv" id="btn-plan" onclick="visLaererSeksjon('plan')">&#x1F4C5; Plan</button>
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
-        <label style="font-size:.75rem;color:var(--dempet);">Vis:</label>
+        <button class="pw-btn" onclick="gaTilDenneUkenGrid()">&#x1F4CD; Denne uken</button>
         <select id="filter-uker" onchange="renderGrid()" style="padding:.26rem .48rem;border:1px solid var(--kant);border-radius:7px;font-size:.74rem;background:var(--bg);">
           <option value="mine">Mine økter</option>
           <option value="alle">Alle økter</option>
@@ -337,15 +337,12 @@ td.col-laer{width:90px;max-width:110px;}
           <input type="checkbox" id="skjul-tomme" onchange="renderGrid()" style="width:auto;">
           Skjul tomme
         </label>
-        <button class="pw-btn" onclick="gaTilDenneUkenGrid()">&#x1F4CD; Denne uken</button>
-        <button class="pw-btn" onclick="skrivUt()">&#x1F5A8;&#xFE0F; Skriv ut</button>
         <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()" style="font-size:.72rem;">&#x1F4CB; Lim inn plan</button>
+        <button class="pw-btn" onclick="skrivUt()">&#x1F5A8;&#xFE0F; Skriv ut</button>
         <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
         <span id="lagre-status" style="font-size:.71rem;color:var(--groen);font-weight:600;"></span>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.2rem;">
-        <button class="seksjons-btn" id="btn-profil" onclick="aapneProfilModal()" style="display:none;font-size:.71rem;padding:.2rem .58rem;">&#x1F464; Profil</button>
         <button class="seksjons-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger')" style="display:none;font-size:.71rem;padding:.2rem .58rem;">&#x2699;&#xFE0F; Innstillinger</button>
+        <button class="seksjons-btn" id="btn-profil" onclick="aapneProfilModal()" style="display:none;font-size:.71rem;padding:.2rem .58rem;">&#x1F464; Profil</button>
       </div>
     </div>
     <div class="fag-tabs" id="laerer-fag-tabs"></div><span id="fellesfag-velger" style="display:none;align-items:center;gap:.3rem;background:#f0efe6;padding:.2rem .8rem;border-bottom:1px solid var(--kant);position:sticky;top:70px;z-index:8;">
