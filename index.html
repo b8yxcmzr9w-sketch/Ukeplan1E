@@ -2488,16 +2488,18 @@ function byggPrompt(){
   p+='- Oppm\xf8te: sted og klokkeslett, f.eks. "Bedriften kl 08:00" (kan v\xe6re tom)'+lf;
   p+='- Info: valgfri tilleggsinformasjon (kan v\xe6re tom)'+lf;
   p+='- L\xe6rer: bruk ett av disse navnene: '+gyldigeLaerere.join(', ')+' (eller "Alle" for tverrfaglig)'+lf;
-  p+='  Hvis l\xe6rer ikke er nevnt i teksten, bruk "'+( aktivLaerer||gyldigeLaerere[0]||'')+'" som standard.'+lf;
-  p+='  Hvis navn i teksten ligner et navn i listen, bruk det nærmeste treffet.'+lf+lf;
+  p+='  Hvis l\xe6rernavn er eksplisitt nevnt i teksten, bruk det nøyaktig (match mot listen).'+lf;
+  p+='  Hvis ingen l\xe6rer er nevnt, bruk "'+(aktivLaerer||gyldigeLaerere[0]||'')+'" som standard.'+lf+lf;
 
-  p+='REGLER:'+lf;
-  p+='- Utelat rader som handler om ferie, fridag, høytid, planleggingsdag eller skoletur.'+lf;
-  p+='- Der informasjon mangler, la feltet stå tomt – ikke utelat raden.'+lf;
+  p+='VIKTIGE REGLER – følg disse nøye:'+lf;
+  p+='1. NØYAKTIGHET: Bruk eksakt informasjon fra teksten. Ikke endre dag, navn eller aktivitet.'+lf;
+  p+='2. DAG: Bruk eksakt den dagen som er nevnt i teksten. Ikke bytt til en annen dag.'+lf;
   if(!erNNA){
-    p+='- Lag én rad per '+col3Navn.toLowerCase()+' hvis aktiviteten gjelder alle.'+lf;
+    p+='3. FAG: Bruk kun fag som er eksplisitt nevnt i teksten. Hvis faget ikke er nevnt, la feltet stå tomt.'+lf;
+    p+='4. Lag én rad per '+col3Navn.toLowerCase()+' hvis aktiviteten gjelder alle.'+lf;
   }
-  p+=lf;
+  p+=(erNNA?'3.':'5.')+' Utelat rader som handler om ferie, fridag, høytid eller planleggingsdag.'+lf;
+  p+=(erNNA?'4.':'6.')+' Der informasjon mangler, la feltet stå tomt – ikke utelat raden.'+lf+lf;
 
   // SVARFORMAT
   p+='SVARFORMAT: Svar KUN med ferdige semikolon-rader. Ingen overskrifter, ingen forklaring.'+lf;
