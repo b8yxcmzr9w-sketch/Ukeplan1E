@@ -66,7 +66,7 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 .feil{color:#c0392b;font-size:.74rem;margin-top:.28rem;}
 .fag-tabs{display:flex;background:#f0efe6;border-bottom:1px solid var(--kant);overflow-x:auto;padding:0 1.2rem;position:sticky;top:37px;z-index:9;}
 .fag-tabs button{flex:none;padding:.42rem .8rem;font-size:.74rem;font-weight:600;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dempet);cursor:pointer;white-space:nowrap;}
-.fag-tabs button.aktiv{color:var(--nav);border-bottom-color:var(--groen);}
+.fag-tabs button.aktiv{color:#fff;background:var(--nav);border-bottom-color:var(--nav);border-radius:5px 5px 0 0;padding-bottom:.55rem;}
 .verktolinje{display:flex;align-items:center;gap:.4rem;padding:.55rem 1.2rem .3rem;flex-wrap:wrap;border-bottom:1px solid var(--kant);background:#fff;position:sticky;top:0;z-index:10;}
 .lagre-btn{background:#f0efe9;color:#aaa;border:1px solid var(--kant);border-radius:7px;padding:.36rem 1.3rem;font-size:.84rem;font-weight:700;cursor:default;transition:background .15s,color .15s,border-color .15s;}
 .lagre-btn.aktiv{background:var(--groen);color:#fff;border-color:var(--groen);cursor:pointer;}
@@ -346,7 +346,7 @@ td.col-laer{width:90px;max-width:110px;}
       <div class="paste-panel">
         <!-- Header -->
         <div class="paste-panel-hdr">
-          <span>&#x1F4CB; Lim inn / AI-tolking</span>
+          <span id="paste-panel-tittel">&#x1F4CB; Lim inn / AI-tolking</span>
           <button onclick="togglLimInnPanel()" title="Lukk">&#x2715;</button>
         </div>
         <!-- Scrollbart innhold -->
@@ -1100,6 +1100,7 @@ function byttFagLaerer(fag){
   var tbody=document.getElementById('paste-skjema-body');
   if(tbody)tbody.innerHTML='';
   oppdaterPasteSkjemaHeader();
+  oppdaterLimInnTittel();
   leggTilPasteRad();
   // Vis fellesfag-velger kun for Fellesfag-fanen
   var ffv=document.getElementById('fellesfag-velger');
@@ -2290,6 +2291,20 @@ async function byttPassordInnst(){
   }catch(e){document.getElementById('pw-feil-innst').textContent='Feil: '+e.message;}
   finally{if(btn){btn.disabled=false;btn.textContent='💾 Lagre passord';}}
 }
+function oppdaterLimInnTittel(){
+  var el=document.getElementById('paste-panel-tittel');
+  if(!el)return;
+  var fagVisn={'NPT':'NPT','NNA':'NNA','YFF':'YFF','Fellesfag':'Fellesfag'};
+  var navn=fagVisn[aktivtFagLaerer]||aktivtFagLaerer;
+  el.textContent='📋 Lim inn – '+navn;
+  var info=document.getElementById('paste-format-tekst');
+  if(info){
+    var dagInfo='';
+    var fd=aktiveDagerForFag(aktivtFagLaerer);
+    if(fd.length&&fd.length<5)dagInfo=' | Aktive dager: '+fd.join(', ');
+    info.textContent='Plan: '+navn+dagInfo;
+  }
+}
 function togglLimInnPanel(){
   var p=document.getElementById('lim-inn-panel');
   if(!p)return;
@@ -2297,6 +2312,7 @@ function togglLimInnPanel(){
   p.classList.toggle('vis',!vis);
   var btn=document.getElementById('btn-lim-inn-plan');
   if(btn)btn.classList.toggle('aktiv',!vis);
+  if(!vis)oppdaterLimInnTittel();
 }
 function aapneProfilModal(){
   renderMinProfil();
