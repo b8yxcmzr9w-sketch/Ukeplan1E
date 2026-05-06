@@ -64,9 +64,20 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 .login-kort select,.login-kort input{width:100%;padding:.5rem .75rem;border:1px solid var(--kant);border-radius:7px;font-size:.84rem;margin-bottom:.55rem;background:var(--bg);}
 .btn-login{width:100%;padding:.56rem;background:var(--nav);color:#fff;border:none;border-radius:7px;font-size:.84rem;cursor:pointer;font-weight:600;}
 .feil{color:#c0392b;font-size:.74rem;margin-top:.28rem;}
-.fag-tabs{display:flex;background:#f0efe6;border-bottom:1px solid var(--kant);overflow-x:auto;padding:0 1.2rem;position:sticky;top:37px;z-index:9;}
+.fag-tabs{display:flex;background:#f0efe6;border-bottom:1px solid var(--kant);overflow-x:auto;padding:0 1.2rem;position:sticky;top:37px;z-index:9;box-shadow:0 3px 8px rgba(0,0,0,.1);}
 .fag-tabs button{flex:none;padding:.42rem .8rem;font-size:.74rem;font-weight:600;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dempet);cursor:pointer;white-space:nowrap;}
 .fag-tabs button.aktiv{color:#fff;background:var(--nav);border-bottom-color:var(--nav);border-radius:5px 5px 0 0;padding-bottom:.55rem;}
+#hurtig-rad{position:sticky;z-index:7;background:#f5f5ec;border-bottom:2px solid var(--kant);padding:.28rem .7rem;display:none;align-items:center;gap:.3rem;flex-wrap:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.07);}
+#hurtig-rad input,#hurtig-rad select{font-size:.7rem;font-family:inherit;border:1px solid var(--kant);border-radius:5px;padding:.22rem .35rem;background:#fff;outline:none;}
+#hurtig-rad input:focus,#hurtig-rad select:focus{border-color:var(--groen);}
+#hurtig-rad input.h-uke{width:38px;}
+#hurtig-rad input.h-akt{flex:1;min-width:80px;}
+#hurtig-rad input.h-opp,#hurtig-rad input.h-inf{width:80px;}
+#hurtig-rad select.h-dag{width:80px;}
+#hurtig-rad select.h-pk{width:70px;}
+#hurtig-rad select.h-lae{width:72px;}
+#hurtig-rad button.h-legg{background:var(--groen);color:#fff;border:none;border-radius:6px;padding:.25rem .7rem;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+#hurtig-rad button.h-legg:hover{background:#4a7c2a;}
 .verktolinje{display:flex;align-items:center;gap:.4rem;padding:.55rem 1.2rem .3rem;flex-wrap:wrap;border-bottom:1px solid var(--kant);background:#fff;position:sticky;top:0;z-index:10;}
 .lagre-btn{background:#f0efe9;color:#aaa;border:1px solid var(--kant);border-radius:7px;padding:.36rem 1.3rem;font-size:.84rem;font-weight:700;cursor:default;transition:background .15s,color .15s,border-color .15s;}
 .lagre-btn.aktiv{background:var(--groen);color:#fff;border-color:var(--groen);cursor:pointer;}
@@ -341,6 +352,7 @@ td.col-laer{width:90px;max-width:110px;}
           <label style="font-size:.73rem;color:var(--dempet);">Fag:</label>
           <select id="fellesfag-fag-select" onchange="byttFellesfag(this.value)" style="padding:.24rem .48rem;border:1px solid var(--kant);border-radius:7px;font-size:.73rem;background:var(--bg);cursor:pointer;"></select>
         </span>
+    <div id="hurtig-rad"></div>
     <div id="seksjon-plan">
       <div id="lim-inn-panel">
       <div class="paste-panel">
@@ -942,7 +954,7 @@ async function hentData(manuell){
       document.getElementById('elev-side').style.display='block';
       if(!manuell)gaaTilDenneUken();else{renderElev();visToast('Data oppdatert!');}
     }
-    if(aktivLaerer){byggFagTabsLaerer();renderGrid();}
+    if(aktivLaerer){byggFagTabsLaerer();byggHurtigRad();renderGrid();}
   }catch(e){
     console.error(e);
     document.getElementById('laster-skjerm').style.display='none';
@@ -1101,6 +1113,7 @@ function byttFagLaerer(fag){
   if(tbody)tbody.innerHTML='';
   oppdaterPasteSkjemaHeader();
   oppdaterLimInnTittel();
+  byggHurtigRad();
   leggTilPasteRad();
   // Vis fellesfag-velger kun for Fellesfag-fanen
   var ffv=document.getElementById('fellesfag-velger');
@@ -2291,6 +2304,67 @@ async function byttPassordInnst(){
     visToast('Passord oppdatert for '+malLaerer);
   }catch(e){document.getElementById('pw-feil-innst').textContent='Feil: '+e.message;}
   finally{if(btn){btn.disabled=false;btn.textContent='💾 Lagre passord';}}
+}
+function byggHurtigRad(){
+  var el=document.getElementById('hurtig-rad');
+  if(!el)return;
+  var erYFF=aktivtFagLaerer==='YFF',erNNA=aktivtFagLaerer==='NNA',erFF=aktivtFagLaerer==='Fellesfag';
+  // Dager
+  var dager=[['mandag','Man'],['tirsdag','Tir'],['onsdag','Ons'],['torsdag','Tor'],['fredag','Fre']];
+  var dagOpts=dager.map(function(d){return '<option value="'+d[0]+'">'+d[1]+'</option>';}).join('');
+  // Parti/Gruppe/Fag (kolonne 3)
+  var pkHtml='';
+  if(!erNNA){
+    var pkOpts='';
+    if(erFF){var ff=cfg().aktiveFag||[];pkOpts=ff.map(function(f){return '<option value="'+f+'">'+f+'</option>';}).join('');}
+    else if(erYFF){var yg=yffGrupper();pkOpts=yg.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join('');}
+    else{var ap=antallPartier();for(var i=1;i<=ap;i++)pkOpts+='<option value="'+i+'">P'+i+'</option>';}
+    pkHtml='<select class="h-pk" id="h-pk">'+pkOpts+'</select>';
+  }
+  // Lærere
+  var laeOpts='<option value="">-</option><option value="Alle">Alle</option>'+
+    allData.laerere.map(function(l){return '<option value="'+l.navn+'"'+(l.navn===aktivLaerer?' selected':'')+'>'+l.navn+'</option>';}).join('');
+  el.innerHTML=
+    '<input class="h-uke" id="h-uke" type="text" placeholder="Uke">'+
+    '<select class="h-dag" id="h-dag">'+dagOpts+'</select>'+
+    pkHtml+
+    '<input class="h-akt" id="h-akt" type="text" placeholder="Aktivitet (påkrevd)">'+
+    '<input class="h-opp" id="h-opp" type="text" placeholder="Oppmøte">'+
+    '<input class="h-inf" id="h-inf" type="text" placeholder="Info">'+
+    '<select class="h-lae" id="h-lae">'+laeOpts+'</select>'+
+    '<button class="h-legg" onclick="hurtigLeggTil()">+ Legg til</button>';
+  // Top-posisjon dynamisk
+  var tabsEl=document.getElementById('laerer-fag-tabs');
+  var ffEl=document.getElementById('fellesfag-velger');
+  var base=37;
+  if(tabsEl)base+=tabsEl.offsetHeight||32;
+  if(ffEl&&ffEl.style.display!=='none')base+=ffEl.offsetHeight||28;
+  el.style.top=base+'px';
+  el.style.display='flex';
+}
+function hurtigLeggTil(){
+  var uke=(document.getElementById('h-uke').value||'').trim();
+  var dag=document.getElementById('h-dag').value;
+  var pk=document.getElementById('h-pk')?document.getElementById('h-pk').value:'';
+  var akt=(document.getElementById('h-akt').value||'').trim();
+  var opp=(document.getElementById('h-opp').value||'').trim();
+  var inf=(document.getElementById('h-inf').value||'').trim();
+  var lae=document.getElementById('h-lae').value;
+  if(!uke){visToast('Skriv inn ukenummer',true);document.getElementById('h-uke').focus();return;}
+  if(!akt){visToast('Aktivitet er påkrevd',true);document.getElementById('h-akt').focus();return;}
+  var linje;
+  if(aktivtFagLaerer==='NNA')linje=[uke,dag,akt,opp,inf,lae].join(';');
+  else linje=[uke,dag,pk,akt,opp,inf,lae].join(';');
+  var pasteEl=document.getElementById('paste-input');
+  var gammel=pasteEl.value;
+  pasteEl.value=linje;
+  limInnOkter();
+  pasteEl.value=gammel;
+  // Tøm felt
+  document.getElementById('h-uke').value='';
+  document.getElementById('h-akt').value='';
+  document.getElementById('h-opp').value='';
+  document.getElementById('h-inf').value='';
 }
 function oppdaterLimInnTittel(){
   var el=document.getElementById('paste-panel-tittel');
