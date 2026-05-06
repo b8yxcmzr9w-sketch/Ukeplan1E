@@ -1417,7 +1417,8 @@ async function loggInn(){
   document.getElementById('admin-badge').style.display=erAdmin()?'inline-block':'none';
   document.getElementById('btn-innst').style.display=erAdmin()?'inline-block':'none';
   document.getElementById('btn-profil').style.display='inline-block';
-  byggFagTabsLaerer();renderGrid();
+  byggFagTabsLaerer();byggHurtigRad();renderGrid();
+  oppdaterStickyTop();setTimeout(oppdaterStickyTop,200);
   setTimeout(function(){
     var tbody=document.getElementById('paste-skjema-body');
     if(tbody&&tbody.children.length===0)leggTilPasteRad();
