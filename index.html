@@ -1800,7 +1800,8 @@ async function tolkMedAI(){
   if(btn){btn.disabled=true;btn.textContent='⏳ Tolker...';}
   if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='<span class="ai-spinner"></span>Henter svar fra Gemini AI…';}
   try{
-    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||''})});
+    var laerereNavn=(allData.laerere||[]).map(function(l){return l.navn;}).filter(Boolean);
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||'',laerere:laerereNavn})});
     var data=await res.json();
     if(data.ok&&data.rader&&data.rader.length){
       var tbody=document.getElementById('paste-skjema-body');
