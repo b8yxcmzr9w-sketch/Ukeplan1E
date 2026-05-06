@@ -79,19 +79,22 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 #hurtig-rad button.h-legg{background:var(--groen);color:#fff;border:none;border-radius:6px;padding:.25rem .7rem;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
 #hurtig-rad button.h-legg:hover{background:#4a7c2a;}
 .verktolinje{display:flex;align-items:center;gap:.35rem;padding:.38rem 1rem;flex-wrap:nowrap;border-bottom:1px solid var(--kant);background:#fff;position:sticky;top:0;z-index:10;overflow-x:auto;}
-.lagre-btn{background:#f0efe9;color:#aaa;border:1px solid var(--kant);border-radius:7px;padding:.36rem 1.3rem;font-size:.84rem;font-weight:700;cursor:default;transition:background .15s,color .15s,border-color .15s;}
+.lagre-btn{background:#f0efe9;color:#aaa;border:1px solid var(--kant);border-radius:7px;padding:0 1.3rem;font-size:.84rem;font-weight:700;cursor:default;height:2rem;transition:background .15s,color .15s,border-color .15s;}
 .lagre-btn.aktiv{background:var(--groen);color:#fff;border-color:var(--groen);cursor:pointer;}
 .lagre-btn.aktiv:hover{opacity:.87;}
 .lagre-btn:disabled{opacity:.5;cursor:not-allowed;}
-.seksjons-btn{background:#f0efe6;color:var(--nav);border:1px solid var(--kant);border-radius:7px;padding:.3rem .7rem;font-size:.74rem;cursor:pointer;font-weight:600;}
+.seksjons-btn{background:#f0efe6;color:var(--nav);border:1px solid var(--kant);border-radius:7px;padding:0 .7rem;font-size:.74rem;cursor:pointer;font-weight:600;height:2rem;}
 .seksjons-btn.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);}
-.pw-btn{background:#f0efe6;color:var(--nav);border:1px solid var(--kant);border-radius:7px;padding:.3rem .65rem;font-size:.73rem;cursor:pointer;font-weight:600;}
+.pw-btn{background:#f0efe6;color:var(--nav);border:1px solid var(--kant);border-radius:7px;padding:0 .65rem;font-size:.73rem;cursor:pointer;font-weight:600;height:2rem;}
 .pw-btn:hover{background:#e4e3d8;}
-/* Flytende innlimingspanel */
-#lim-inn-panel{position:fixed;bottom:0;right:0;height:52vh;width:520px;max-width:100vw;z-index:45;display:none;flex-direction:column;pointer-events:none;}
+.pw-btn.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);}
+/* Sentrert innlimingspanel */
+#lim-inn-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:540px;max-width:96vw;max-height:80vh;z-index:45;display:none;flex-direction:column;pointer-events:none;}
 #lim-inn-panel.vis{display:flex;}
-.paste-panel{background:#fff;display:flex;flex-direction:column;height:100%;border-radius:14px 14px 0 0;box-shadow:-6px -4px 32px rgba(0,0,0,.18);border:1px solid var(--kant);border-right:none;border-bottom:none;pointer-events:all;overflow:hidden;}
-.paste-panel-hdr{display:flex;align-items:center;justify-content:space-between;background:var(--nav);color:#fff;padding:.55rem .85rem .5rem;flex-shrink:0;border-radius:14px 0 0 0;}
+#lim-inn-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:44;display:none;}
+#lim-inn-overlay.vis{display:block;}
+.paste-panel{background:#fff;display:flex;flex-direction:column;max-height:80vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.28);border:1px solid var(--kant);pointer-events:all;overflow:hidden;}
+.paste-panel-hdr{display:flex;align-items:center;justify-content:space-between;background:var(--nav);color:#fff;padding:.55rem .85rem .5rem;flex-shrink:0;border-radius:12px 12px 0 0;}
 .paste-panel-hdr span{font-size:.8rem;font-weight:700;letter-spacing:.01em;}
 .paste-panel-hdr button{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:6px;padding:.2rem .55rem;cursor:pointer;font-size:.9rem;line-height:1;transition:background .15s;}
 .paste-panel-hdr button:hover{background:rgba(255,255,255,.32);}
@@ -328,14 +331,14 @@ td.col-laer{width:90px;max-width:110px;}
       <button class="seksjons-btn" id="btn-plan" onclick="visLaererSeksjon('plan')" style="display:none;">&#x2190; Plan</button>
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
-        <button class="pw-btn" onclick="gaTilDenneUkenGrid()">&#x1F4CD; Denne uken</button>
-        <select id="filter-uker" onchange="renderGrid()" style="padding:.26rem .48rem;border:1px solid var(--kant);border-radius:7px;font-size:.74rem;background:var(--bg);">
+        <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">&#x1F4CD; Denne uken</button>
+        <select id="filter-uker" onchange="renderGrid()" style="padding:0 .48rem;border:1px solid var(--kant);border-radius:7px;font-size:.74rem;background:var(--bg);height:2rem;">
           <option value="mine">Mine økter</option>
           <option value="alle">Alle økter</option>
         </select>
-        <button class="pw-btn" id="skjul-tomme" onclick="togglSkjulTomme()" style="font-size:.72rem;">&#x1F441;&#xFE0F; Skjul tomme</button>
-        <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()" style="font-size:.72rem;">&#x1F4CB; Lim inn plan</button>
-        <button class="pw-btn" onclick="skrivUt()">&#x1F5A8;&#xFE0F; Skriv ut</button>
+        <button class="pw-btn" id="skjul-tomme" onclick="togglSkjulTomme()">👁️ Skjul tomme</button>
+        <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn plan</button>
+        <button class="pw-btn" id="btn-skriv-ut" onclick="skrivUt()">&#x1F5A8;&#xFE0F; Skriv ut</button>
         <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
         <span id="lagre-status" style="font-size:.71rem;color:var(--groen);font-weight:600;"></span>
         <button class="seksjons-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger')" style="display:none;font-size:.71rem;padding:.2rem .58rem;">&#x2699;&#xFE0F; Innstillinger</button>
@@ -348,6 +351,7 @@ td.col-laer{width:90px;max-width:110px;}
         </span>
     <div id="hurtig-rad"></div>
     <div id="seksjon-plan">
+      <div id="lim-inn-overlay" onclick="togglLimInnPanel()"></div>
       <div id="lim-inn-panel">
       <div class="paste-panel">
         <!-- Header -->
@@ -948,7 +952,7 @@ async function hentData(manuell){
       document.getElementById('elev-side').style.display='block';
       if(!manuell)gaaTilDenneUken();else{renderElev();visToast('Data oppdatert!');}
     }
-    if(aktivLaerer){byggFagTabsLaerer();byggHurtigRad();renderGrid();oppdaterStickyTop();setTimeout(oppdaterStickyTop,150);}
+    if(aktivLaerer){byggFagTabsLaerer();byggHurtigRad();renderGrid();oppdaterStickyTop();setTimeout(function(){oppdaterStickyTop();scrollTilDenneUkenVedOppstart();},200);}
   }catch(e){
     console.error(e);
     document.getElementById('laster-skjerm').style.display='none';
@@ -1418,7 +1422,7 @@ async function loggInn(){
   document.getElementById('btn-innst').style.display=erAdmin()?'inline-block':'none';
   document.getElementById('btn-profil').style.display='inline-block';
   byggFagTabsLaerer();byggHurtigRad();renderGrid();
-  oppdaterStickyTop();setTimeout(oppdaterStickyTop,200);
+  oppdaterStickyTop();setTimeout(function(){oppdaterStickyTop();scrollTilDenneUkenVedOppstart();},200);
   setTimeout(function(){
     var tbody=document.getElementById('paste-skjema-body');
     if(tbody&&tbody.children.length===0)leggTilPasteRad();
@@ -1475,15 +1479,6 @@ function visLaererSeksjon(sek){
   // Sticky top for fag-tabs dynamisk
   oppdaterStickyTop();
   if(sek==='innstillinger')renderInnstillinger();
-}
-function togglSkjulTomme(){
-  var btn=document.getElementById('skjul-tomme');
-  btn.classList.toggle('aktiv');
-  renderGrid();
-}
-function erSkjulTomme(){
-  var btn=document.getElementById('skjul-tomme');
-  return btn&&btn.classList.contains('aktiv');
 }
 function oppdaterStickyTop(){
   requestAnimationFrame(function(){
@@ -2415,9 +2410,11 @@ function oppdaterLimInnTittel(){
 }
 function togglLimInnPanel(){
   var p=document.getElementById('lim-inn-panel');
+  var ov=document.getElementById('lim-inn-overlay');
   if(!p)return;
   var vis=p.classList.contains('vis');
   p.classList.toggle('vis',!vis);
+  if(ov)ov.classList.toggle('vis',!vis);
   var btn=document.getElementById('btn-lim-inn-plan');
   if(btn)btn.classList.toggle('aktiv',!vis);
   if(!vis)oppdaterLimInnTittel();
@@ -2677,21 +2674,31 @@ function kopierSrPrompt(){
     if(si)si.value='';
   });
 }
+var _denneUkenObserver=null;
 function gaTilDenneUkenGrid(){
   var isoUke=getCurrentISOWeek();
   var el=document.getElementById('uke-hdr-'+isoUke);
+  var btn=document.getElementById('btn-denne-uken');
   if(el){
-    // Scroll slik at uken havner ca 25% fra toppen
     var rect=el.getBoundingClientRect();
     var offset=rect.top+window.pageYOffset-window.innerHeight*0.25;
     window.scrollTo({top:offset,behavior:'smooth'});
-    // Blink-effekt: 3 ganger
+    if(btn)btn.classList.add('aktiv');
+    // Observer: fjern aktiv når uke-headeren scrolles ut av syne
+    if(_denneUkenObserver)_denneUkenObserver.disconnect();
+    _denneUkenObserver=new IntersectionObserver(function(entries){
+      if(!entries[0].isIntersecting){
+        if(btn)btn.classList.remove('aktiv');
+        _denneUkenObserver.disconnect();
+      }
+    },{threshold:0});
+    _denneUkenObserver.observe(el);
+    // Blink-effekt
     var td=el.querySelector('td')||el;
     var origBg=td.style.background||'';
     var count=0;
     var blink=setInterval(function(){
-      count++;
-      td.style.background=(count%2===1)?'#c8e6c9':origBg;
+      count++;td.style.background=(count%2===1)?'#c8e6c9':origBg;
       if(count>=6){clearInterval(blink);td.style.background=origBg;}
     },300);
   } else {
@@ -2704,12 +2711,56 @@ function skrivUt(){
   var hdr=document.getElementById('print-header');
   hdr.textContent=tittel;hdr.style.display='block';
   var btn=document.getElementById('skjul-tomme'),varSjult=btn.classList.contains('aktiv');
-  if(!varSjult)btn.classList.add('aktiv');renderGrid();
-  setTimeout(function(){window.print();hdr.style.display='none';if(!varSjult)btn.classList.remove('aktiv');renderGrid();},200);
+  if(!varSjult)btn.classList.add('aktiv');
+  oppdaterSkjulTommeTekst();
+  renderGrid();
+  setTimeout(function(){window.print();hdr.style.display='none';if(!varSjult){btn.classList.remove('aktiv');oppdaterSkjulTommeTekst();}renderGrid();},200);
 }
+function togglSkjulTomme(){
+  var btn=document.getElementById('skjul-tomme');
+  btn.classList.toggle('aktiv');
+  oppdaterSkjulTommeTekst();
+  renderGrid();
+}
+function oppdaterSkjulTommeTekst(){
+  var btn=document.getElementById('skjul-tomme');
+  if(!btn)return;
+  btn.textContent=btn.classList.contains('aktiv')?'🚫 Vis tomme':'👁️ Skjul tomme';
+}
+function erSkjulTomme(){
+  var btn=document.getElementById('skjul-tomme');
+  return btn&&btn.classList.contains('aktiv');
+}
+// Print aktiv-state
+window.addEventListener('beforeprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.add('aktiv');});
+window.addEventListener('afterprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.remove('aktiv');});
 byttHovedFane('elev');
 hentData();
 window.addEventListener('resize', oppdaterStickyTop);
+// Oppstart-defaults
+(function(){
+  var fu=document.getElementById('filter-uker');
+  if(fu)fu.value='alle';
+  var st=document.getElementById('skjul-tomme');
+  if(st){st.classList.add('aktiv');oppdaterSkjulTommeTekst();}
+})();
+// Scroll til denne uken ved oppstart (etter render)
+function scrollTilDenneUkenVedOppstart(){
+  var isoUke=getCurrentISOWeek();
+  var el=document.getElementById('uke-hdr-'+isoUke);
+  if(!el)return;
+  // Scroll slik at 2-3 rader vises over uke-headeren
+  var stickyH=0;
+  var verk=document.querySelector('.verktolinje');
+  var tabs=document.getElementById('laerer-fag-tabs');
+  var hr=document.getElementById('hurtig-rad');
+  if(verk)stickyH+=verk.getBoundingClientRect().height;
+  if(tabs&&tabs.style.display!=='none')stickyH+=tabs.getBoundingClientRect().height;
+  if(hr&&hr.style.display==='flex')stickyH+=hr.getBoundingClientRect().height;
+  var rowH=38; // ca. høyde på 2-3 rader
+  var offset=el.getBoundingClientRect().top+window.pageYOffset-stickyH-(rowH*2.5);
+  window.scrollTo({top:Math.max(0,offset),behavior:'auto'});
+}
 </script>
 </body>
 </html>
