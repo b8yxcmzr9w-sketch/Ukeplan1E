@@ -2429,12 +2429,20 @@ function byggPrompt(){
   });
 
   var lf='\n';
-  var p='Du er en assistent som hjelper l\xe6rere med \xe5 formatere ukeplaner for yrkesfag.'+lf+lf;
+  var idag=new Date();
+  var dagNavn=['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+  var datoStr=idag.getDate()+'.'+(idag.getMonth()+1)+'.'+idag.getFullYear();
+  var iUke=getCurrentISOWeek();
+  var p='Du er en assistent som hjelper l\xe6rere med \xe5 lage ukeplaner for yrkesfag.'+lf+lf;
+  p+='I DAG: '+dagNavn[idag.getDay()]+' '+datoStr+' (uke '+iUke+')'+lf;
+  p+='"neste uke" = uke '+(iUke+1)+', "denne uken" = uke '+iUke+lf+lf;
   p+='FAG: '+fagNavn+lf;
   if(fagDager.length&&fagDager.length<5){
     p+='Faget er aktivt disse dagene: '+fagDager.join(', ')+lf;
   }
   p+=lf;
+  p+='OPPGAVE: Teksten nedenfor kan v\xe6re fritekst p\xe5 norsk eller ferdig formatert med semikolon.'+lf;
+  p+='Tolk fritekst og konverter til semikolon-format. Eksempel p\xe5 fritekst: "tirsdag neste uke, synge i kor"'+lf+lf;
 
   // FORMAT
   p+='FORMAT (\xe9n rad per linje, semikolon som skilletegn):'+lf;
@@ -2460,42 +2468,20 @@ function byggPrompt(){
   p+='- Aktivitet: kort beskrivelse av hva som skal gj\xf8res (P\xc5KREVD)'+lf;
   p+='- Oppm\xf8te: sted og klokkeslett, f.eks. "Bedriften kl 08:00" (kan v\xe6re tom)'+lf;
   p+='- Info: valgfri tilleggsinformasjon (kan v\xe6re tom)'+lf;
-  p+='- L\xe6rer: m\xe5 v\xe6re ett av disse navnene: '+gyldigeLaerere.join(', ')+lf;
-  p+='  "Alle" er ogs\xe5 gyldig – brukes kun for tverrfaglige \xf8kter som gjelder hele klassen'+lf+lf;
+  p+='- L\xe6rer: bruk ett av disse navnene: '+gyldigeLaerere.join(', ')+' (eller "Alle" for tverrfaglig)'+lf;
+  p+='  Hvis l\xe6rer ikke er nevnt i teksten, bruk "'+( aktivLaerer||gyldigeLaerere[0]||'')+'" som standard.'+lf;
+  p+='  Hvis navn i teksten ligner et navn i listen, bruk det nærmeste treffet.'+lf+lf;
 
-  // REGLER
-  p+='REGLER FOR BEHANDLING (f\xf8lg disse n\xf8ye):'+lf+lf;
-
-  p+='1. FERIE OG FRIDAGER: Dersom en rad inneholder et ferienavn som aktivitet'+lf;
-  p+='   (f.eks. SOMMERFERIE, H\xd8STFERIE, VINTERFERIE, P\xc5SKEFERIE, JULEFERIE, FERIE, FRI,'+lf;
-  p+='   PLANLEGGINGSDAG, SKOLETUR, H\xd8YTID eller lignende) – utelat raden HELT.'+lf;
-  p+='   Dette gjelder ogs\xe5 dersom dag-feltet inneholder "ferie" eller "fri".'+lf+lf;
-
-  p+='2. MANGLENDE P\xc5KREVD FELT: Dersom aktivitet mangler,'+lf;
-  p+='   utelat raden og legg til nummerert advarsel. Tomt oppm\xf8te er tillatt.'+lf+lf;
-
-  p+='3. UKJENT L\xc6RERNAVN: Hvis l\xe6rerfeltet inneholder et navn som ikke finnes i listen'+lf;
-  p+='   ('+gyldigeLaerere.join(', ')+', Alle), utelat raden og legg til nummerert advarsel.'+lf+lf;
-
+  p+='REGLER:'+lf;
+  p+='- Utelat rader som handler om ferie, fridag, høytid, planleggingsdag eller skoletur.'+lf;
+  p+='- Der informasjon mangler, la feltet stå tomt – ikke utelat raden.'+lf;
   if(!erNNA){
-    p+='4. DOBBELTBOOKING (samme uke + dag + '+col3Navn.toLowerCase()+'):'+lf;
-    p+='   Behold den f\xf8rste forekomsten. Utelat duplikatet og legg til nummerert advarsel.'+lf+lf;
-    p+='5. SORTERING: Sorter alle gyldige rader etter uke (stigende), deretter dag'+lf;
-    p+='   (mandag f\xf8rst, fredag sist), deretter '+col3Navn.toLowerCase()+'.'+lf+lf;
-    p+='6. SAMMENSATTE AKTIVITETER: Dersom en rad beskriver noe som gjelder alle grupper'+lf;
-    p+='   (f.eks. "Felles presentasjon for alle grupper"), lag \xe9n rad per '+col3Navn.toLowerCase()+lf;
-    p+='   med samme innhold, eller bruk L\xe6rer = "Alle" og ett gruppenavn.'+lf+lf;
-    p+='7. FULLF\xd8R ALLTID: Prosesser ALLE rader i inndata. Stopp ikke ved feil.'+lf+lf;
-  } else {
-    p+='4. SORTERING: Sorter alle gyldige rader etter uke (stigende), deretter dag (mandag f\xf8rst).'+lf+lf;
-    p+='5. FULLF\xd8R ALLTID: Prosesser ALLE rader i inndata. Stopp ikke ved feil.'+lf+lf;
+    p+='- Lag én rad per '+col3Navn.toLowerCase()+' hvis aktiviteten gjelder alle.'+lf;
   }
+  p+=lf;
 
   // SVARFORMAT
-  p+='SVARFORMAT:'+lf;
-  p+='Del 1 – Gyldige rader: alle rader som passerer validering, i riktig format'+lf;
-  p+='Del 2 – Advarsler: nummererte advarsler for utelattes rader (f.eks. "1. Uke 36, mandag: Mangler oppm\xf8te")'+lf;
-  p+='Del 3 – Oppsummering: en setning (antall rader ok / advarsler)'+lf;
+  p+='SVARFORMAT: Svar KUN med ferdige semikolon-rader. Ingen overskrifter, ingen forklaring.'+lf;
 
   if(srLinjer.length){
     p+=lf+'SKOLERUTE FOR BER\xd8RTE UKER (disse dagene er blokkerte – utelat rader som treffer dem):'+lf;
@@ -2505,7 +2491,7 @@ function byggPrompt(){
     p+=lf+'EKSISTERENDE DATA I PLANEN (unng\xe5 \xe5 overskrive disse med duplikater):'+lf;
     p+=eksLinjer.join(lf)+lf;
   }
-  p+=innlimt?lf+'NY DATA SOM SKAL KONVERTERES:'+lf+innlimt:lf+'[LIM INN TABELLEN DIN HER]';
+  p+=innlimt?lf+'TEKST SOM SKAL KONVERTERES:'+lf+innlimt:lf+'[LIM INN TEKST HER – fritekst eller semikolon-rader]';
   return p;
 }
 
