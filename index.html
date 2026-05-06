@@ -2309,9 +2309,20 @@ function byggHurtigRad(){
   var el=document.getElementById('hurtig-rad');
   if(!el)return;
   var erYFF=aktivtFagLaerer==='YFF',erNNA=aktivtFagLaerer==='NNA',erFF=aktivtFagLaerer==='Fellesfag';
-  // Dager
-  var dager=[['mandag','Man'],['tirsdag','Tir'],['onsdag','Ons'],['torsdag','Tor'],['fredag','Fre']];
-  var dagOpts=dager.map(function(d){return '<option value="'+d[0]+'">'+d[1]+'</option>';}).join('');
+  // Dager – aktive dager fra innstillinger øverst, resten etter separator
+  var alleDager=[['mandag','Man'],['tirsdag','Tir'],['onsdag','Ons'],['torsdag','Tor'],['fredag','Fre']];
+  var fd=aktiveDagerForFag(aktivtFagLaerer);
+  var aktiveDag=(fd&&fd.length&&fd.length<5)?fd:[];
+  var dagOpts;
+  if(aktiveDag.length){
+    var aktOpts=alleDager.filter(function(d){return aktiveDag.indexOf(d[0])>=0;})
+      .map(function(d){return '<option value="'+d[0]+'">'+d[1]+'</option>';}).join('');
+    var restOpts=alleDager.filter(function(d){return aktiveDag.indexOf(d[0])<0;})
+      .map(function(d){return '<option value="'+d[0]+'">'+d[1]+'</option>';}).join('');
+    dagOpts=aktOpts+(restOpts?'<option disabled>──</option>'+restOpts:'');
+  } else {
+    dagOpts=alleDager.map(function(d){return '<option value="'+d[0]+'">'+d[1]+'</option>';}).join('');
+  }
   // Parti/Gruppe/Fag (kolonne 3)
   var pkHtml='';
   if(!erNNA){
