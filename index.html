@@ -1125,6 +1125,7 @@ function byttFagLaerer(fag){
       ffv.style.display='none';
     }
   }
+  byggHurtigRad(); // oppdater top-posisjon etter fellesfag-velger vises/skjules
   renderGrid();
 }
 function byttFellesfag(fag){
@@ -1469,8 +1470,10 @@ function visLaererSeksjon(sek){
   document.getElementById('btn-plan').classList.toggle('aktiv',sek==='plan');
   document.getElementById('btn-innst').classList.toggle('aktiv',sek==='innstillinger');
   document.getElementById('plan-verktoy').style.display=sek==='plan'?'flex':'none';
-  // Skjul fag-faner i innstillinger
+  // Skjul fag-faner og hurtig-rad i innstillinger
   document.getElementById('laerer-fag-tabs').style.display=sek==='plan'?'flex':'none';
+  var hr=document.getElementById('hurtig-rad');
+  if(hr)hr.style.display=sek==='plan'?'flex':'none';
   if(sek==='innstillinger')renderInnstillinger();
 }
 function laererOpts(valgt){
