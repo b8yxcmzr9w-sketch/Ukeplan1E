@@ -2300,8 +2300,10 @@ function oppdaterLimInnTittel(){
   var info=document.getElementById('paste-format-tekst');
   if(info){
     var dagInfo='';
-    var fd=aktiveDagerForFag(aktivtFagLaerer);
-    if(fd.length&&fd.length<5)dagInfo=' | Aktive dager: '+fd.join(', ');
+    if(aktivtFagLaerer!=='Fellesfag'){
+      var fd=aktiveDagerForFag(aktivtFagLaerer);
+      if(fd.length&&fd.length<5)dagInfo=' | Aktive dager: '+fd.join(', ');
+    }
     info.textContent='Plan: '+navn+dagInfo;
   }
 }
