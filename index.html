@@ -385,7 +385,7 @@ td.col-laer{width:90px;max-width:110px;}
           <div class="paste-resultat" id="paste-resultat"></div>
 
           <div class="innst-sek-lagre" style="margin-top:.5rem;padding-top:.45rem;border-top:1px solid var(--kant);">
-            <button id="btn-lagre-okter" class="lagre-btn" onclick="limInnAlt()">&#x1F4BE; Legg til i plan</button>
+            <button id="btn-lagre-okter" class="lagre-btn" onclick="limInnAlt()" style="display:none;">&#x1F4BE; Legg til i plan</button>
           </div>
         </div><!-- paste-panel-body -->
       </div>
@@ -571,13 +571,19 @@ td.col-laer{width:90px;max-width:110px;}
 <div class="modal-bg" id="prompt-modal" style="display:none">
   <div class="prompt-modal">
     <h3>&#x1F916; Prompt for annen AI</h3>
-    <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.5rem;">Kopier og lim inn i ChatGPT, Copilot eller annen AI. Lim inn svaret tilbake i tekstfeltet og klikk «Legg til i plan» direkte – du trenger ikke «Tolk med AI» for ferdig formatert svar.</p>
+    <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.5rem;">Kopier og lim inn i ChatGPT, Copilot eller annen AI. Lim deretter inn svaret i feltet nedenfor.</p>
     <textarea id="prompt-tekst" readonly></textarea>
     <div class="modal-knapper" style="margin-top:.7rem;">
       <button class="btn-avbryt" onclick="document.getElementById('prompt-modal').style.display='none'">Lukk</button>
-      <button class="btn-ok" onclick="kopierPrompt()">&#x1F4CB; Kopier</button>
+      <button class="btn-ok" onclick="kopierPrompt()">&#x1F4CB; Kopier prompt</button>
     </div>
-    <div id="prompt-kopiert" style="text-align:center;font-size:.73rem;color:var(--groen);font-weight:600;margin-top:.35rem;min-height:1.2em;"></div>
+    <div id="annen-ai-paste-sek" style="display:none;margin-top:.9rem;border-top:1px solid var(--kant);padding-top:.7rem;">
+      <p style="font-size:.73rem;color:var(--dempet);margin-bottom:.35rem;">&#x2B07;&#xFE0F; Lim inn svaret fra AI her:</p>
+      <textarea id="annen-ai-tekst" placeholder="Lim inn semikolon-formatert svar fra AI…" style="width:100%;height:120px;font-size:.68rem;font-family:monospace;border:1px solid var(--kant);border-radius:7px;padding:.5rem;background:var(--bg);resize:vertical;box-sizing:border-box;"></textarea>
+      <div style="text-align:right;margin-top:.4rem;">
+        <button class="btn-ok" onclick="parseAnnenAI()">&#x2705; Vis i tabell</button>
+      </div>
+    </div>
   </div>
 </div>
 <div class="modal-bg" id="sr-prompt-modal" style="display:none">
@@ -747,6 +753,7 @@ function kanRedigere(slot){if(erAdmin())return true;return(!slot.aktivitet&&!slo
 function sikrSlot(s){if(!s)return{aktivitet:'',oppmote:'',info:'',laerer:''};return{aktivitet:s.aktivitet||'',oppmote:s.oppmote||'',info:s.info||'',laerer:s.laerer||''};}
 function erTom(slot){return!slot.aktivitet&&!slot.oppmote&&!slot.info&&!slot.laerer;}
 function getCurrentISOWeek(){var now=new Date(),d=new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()));d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));var ys=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil((((d-ys)/86400000)+1)/7);}
+function getVisningsUke(){var now=new Date(),dag=now.getDay(),time=now.getHours();var nesteUke=(dag===5&&time>=16)||dag===6||dag===0;return getCurrentISOWeek()+(nesteUke?1:0);}
 function sorterUker(uker){return uker.sort(function(a,b){var p=function(u){var s=String(u.uke);return parseInt(s)||0;};var ua=p(a),ub=p(b);return(ua>=30?ua:ua+100)-(ub>=30?ub:ub+100);});}
 function datoTilUkeDag(datoStr,skoleaar){
   // Bestem skoleår-startår: bruk cfg() eller utled fra dagens dato
@@ -1122,17 +1129,10 @@ function byttFagLaerer(fag){
   oppdaterPasteSkjemaSynlighet();
   oppdaterLimInnTittel();
   byggHurtigRad();
-  // Vis fellesfag-velger kun for Fellesfag-fanen
+  // Fellesfag-velger er fjernet – skjul alltid
   var ffv=document.getElementById('fellesfag-velger');
-  if(ffv){
-    if(fag==='Fellesfag'){
-      ffv.style.display='flex';
-      byggFellesfagVelger();
-    } else {
-      ffv.style.display='none';
-    }
-  }
-  oppdaterStickyTop(); // oppdater top-posisjon etter fellesfag-velger vises/skjules
+  if(ffv)ffv.style.display='none';
+  oppdaterStickyTop();
   renderGrid();
 }
 function byttFellesfag(fag){
@@ -1803,37 +1803,29 @@ function hentPasteSkjemaLinjer(){
 }
 
 function limInnAlt(){
-  var fraTekst=document.getElementById('paste-input').value.trim();
   var fraSkjema=hentPasteSkjemaLinjer();
-  if(fraTekst&&!fraTekst.includes(';')){
-    document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Teksten ser ut som fritekst – klikk «🤖 Tolk med AI» først.</span>';
-    return;
-  }
-  var alt=[fraSkjema,fraTekst].filter(Boolean).join('\n');
-  if(!alt){document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Ingen data.</span>';return;}
+  if(!fraSkjema){document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Ingen rader i tabellen å legge til.</span>';return;}
   var gammelVerdi=document.getElementById('paste-input').value;
-  document.getElementById('paste-input').value=alt;
+  document.getElementById('paste-input').value=fraSkjema;
   limInnOkter();
   document.getElementById('paste-input').value=gammelVerdi;
   var tbody=document.getElementById('paste-skjema-body');
   if(kOk>0){
-    // Tøm skjema og lukk panel
     tbody.innerHTML='';oppdaterPasteSkjemaSynlighet();
-    document.getElementById('paste-input').value='';
     var prev=document.getElementById('ai-preview-plan');if(prev)prev.style.display='none';
     var st=document.getElementById('ai-status-plan');if(st)st.style.display='none';
     sjekkLagreOkterKnapp();
-    togglLimInnPanel(); // lukk panelet
-    visToast('✅ '+kOk+' rad(er) lagt til i planen – husk å lagre!');
+    togglLimInnPanel();
+    visToast('✅ '+kOk+' økt(er) lagt til – trykk 💾 Lagre for å lagre til Sheets!');
   }
 }
 
 function sjekkLagreOkterKnapp(){
   var btn=document.getElementById('btn-lagre-okter');if(!btn)return;
-  var harTekst=(document.getElementById('paste-input').value||'').trim().length>0;
   var tbody=document.getElementById('paste-skjema-body');
   var harRader=tbody&&tbody.children.length>0;
-  if(harTekst||harRader)btn.classList.add('aktiv');else btn.classList.remove('aktiv');
+  btn.style.display=harRader?'inline-flex':'none';
+  if(harRader)btn.classList.add('aktiv');else btn.classList.remove('aktiv');
 }
 
 async function tolkMedAI(){
@@ -1870,9 +1862,6 @@ async function tolkMedAI(){
         leggTilPasteRad({uke:r.uke,dag:r.dag,parti:r.parti,gruppe:r.gruppe,fag:r.fag,
           aktivitet:kap(r.aktivitet),oppmote:kap(r.oppmote),info:kap(r.info),laerer:r.laerer});
       });
-      // Legg til én tom rad, men bare hvis siste rad ikke allerede er tom
-      var rader=tbody.querySelectorAll('tr');
-      if(!rader.length||!erTomRad(rader[rader.length-1]))leggTilPasteRad();
       var skjema=document.getElementById('paste-skjema');if(skjema)skjema.style.display='table';
       oppdaterPasteSkjemaHeader();
       if(previewEl)previewEl.style.display='flex';
@@ -2416,6 +2405,9 @@ function byggHurtigRad(){
     '<input class="h-inf" id="h-inf" type="text" placeholder="Info">'+
     '<select class="h-lae" id="h-lae">'+laeOpts+'</select>'+
     '<button class="h-legg" onclick="hurtigLeggTil()">+ Legg til</button>';
+  // Vis kun på plan-siden, ikke i Innstillinger
+  var planSek=document.getElementById('seksjon-plan');
+  if(planSek&&planSek.style.display==='none')return;
   el.style.display='flex';
   oppdaterStickyTop();
 }
@@ -2680,20 +2672,34 @@ function kopierPrompt(){
   var ta=document.getElementById('prompt-tekst');
   ta.select();
   function etterKopiering(){
-    document.getElementById('prompt-modal').style.display='none';
-    var pi=document.getElementById('paste-input');
-    if(pi){
-      pi.value='';
-      pi.placeholder='Lim inn svaret fra AI her, klikk «Legg til i plan» direkte…';
-    }
-    document.getElementById('paste-resultat').innerHTML='';
-    var st=document.getElementById('ai-status-plan');
-    if(st){st.style.display='flex';st.innerHTML='📋 Prompt kopiert – lim inn svar fra annen AI og klikk «Legg til i plan»';}
+    // Vis paste-seksjonen i modalen (ikke lukk)
+    var sek=document.getElementById('annen-ai-paste-sek');
+    if(sek){sek.style.display='block';document.getElementById('annen-ai-tekst').value='';document.getElementById('annen-ai-tekst').focus();}
   }
   navigator.clipboard.writeText(ta.value).then(etterKopiering).catch(function(){
-    document.execCommand('copy');
-    etterKopiering();
+    document.execCommand('copy');etterKopiering();
   });
+}
+function parseAnnenAI(){
+  var tekst=(document.getElementById('annen-ai-tekst').value||'').trim();
+  if(!tekst){visToast('Lim inn svaret fra AI først',true);return;}
+  function kap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+  var linjer=tekst.split('\n').map(function(l){return l.trim();}).filter(function(l){return l&&l.includes(';');});
+  if(!linjer.length){visToast('Fant ingen semikolon-rader i teksten',true);return;}
+  var erNNA=aktivtFagLaerer==='NNA';
+  var antall=0;
+  linjer.forEach(function(linje){
+    var d=linje.split(';').map(function(x){return x.trim();});
+    var r={};
+    if(erNNA){r={uke:d[0],dag:d[1],aktivitet:kap(d[2]),oppmote:kap(d[3]),info:kap(d[4]),laerer:d[5]};}
+    else{r={uke:d[0],dag:d[1],parti:d[2],gruppe:d[2],fag:d[2],aktivitet:kap(d[3]),oppmote:kap(d[4]),info:kap(d[5]),laerer:d[6]};}
+    if(r.uke||r.aktivitet){leggTilPasteRad(r);antall++;}
+  });
+  if(antall){
+    document.getElementById('prompt-modal').style.display='none';
+    var prev=document.getElementById('ai-preview-plan');if(prev)prev.style.display='flex';
+    var st=document.getElementById('ai-status-plan');if(st){st.style.display='flex';st.innerHTML='✅ '+antall+' rad(er) fra annen AI – rediger og klikk «Legg til i plan»';}
+  } else {visToast('Ingen gyldige rader funnet',true);}
 }
 function aapneSrPromptModal(){
   var typerStr=srTyper.filter(function(t){return!erSrIgnorert(t);}).join(', ');
@@ -2817,7 +2823,7 @@ window.addEventListener('afterprint',function(){var b=document.getElementById('b
 function scrollTilDenneUkenVedOppstart(){
   var forsok=0;
   function prøv(){
-    var isoUke=getCurrentISOWeek();
+    var isoUke=getVisningsUke();
     var el=document.getElementById('uke-hdr-'+isoUke);
     if(!el){if(forsok++<5)setTimeout(prøv,200);return;}
     var stickyH=0;
