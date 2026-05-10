@@ -695,18 +695,26 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 <div class="modal-bg" id="ical-modal" style="display:none">
   <div class="modal" style="max-width:480px;width:94%;">
     <h3>&#x1F4C5; Kalenderabonnement</h3>
-    <p style="margin-bottom:.6rem;">Kopier lenken og legg den inn i kalenderappen din som et abonnement. Planen oppdateres automatisk.</p>
+    <p style="margin-bottom:.6rem;">Planen oppdateres automatisk i kalenderen din. Inneholder alle fag. <strong>Gjør utvalg av parti eller gruppe på elevvisningen først dersom du ikke vil ha alle økter med.</strong></p>
     <label>Kalenderlenke</label>
     <div style="display:flex;gap:.4rem;margin-bottom:.7rem;">
       <input id="ical-url-felt" type="text" readonly style="font-size:.68rem;font-family:monospace;flex:1;padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;background:var(--bg);">
       <button class="btn-ok" style="flex:none;padding:.4rem .85rem;font-size:.76rem;" onclick="kopierIcalUrl()">&#x1F4CB; Kopier</button>
     </div>
-    <a id="ical-gcal-link" href="#" target="_blank" rel="noopener"
-       style="display:inline-block;background:#4285f4;color:#fff;text-decoration:none;border-radius:7px;padding:.42rem .9rem;font-size:.76rem;font-weight:600;margin-bottom:.85rem;">
-      &#x1F4C5; Legg til i Google Kalender
-    </a>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.85rem;">
+      <a id="ical-gcal-link" href="#" target="_blank" rel="noopener"
+         style="display:inline-block;background:#4285f4;color:#fff;text-decoration:none;border-radius:7px;padding:.42rem .9rem;font-size:.76rem;font-weight:600;">
+        &#x1F4C5; Google Kalender
+      </a>
+      <a id="ical-webcal-link" href="#"
+         style="display:inline-block;background:#555;color:#fff;text-decoration:none;border-radius:7px;padding:.42rem .9rem;font-size:.76rem;font-weight:600;">
+        &#xF8FF; Apple Kalender
+      </a>
+    </div>
+    <p style="font-size:.7rem;color:var(--dempet);margin-bottom:.4rem;"><strong>iPhone:</strong> Skann QR-koden med kameraet – åpner direkte i Kalender-appen:</p>
+    <img id="ical-qr" src="" alt="QR-kode" style="width:140px;height:140px;border:1px solid var(--kant);border-radius:8px;display:block;margin:0 auto .8rem;">
     <p style="font-size:.7rem;color:var(--dempet);margin-bottom:0;">
-      <strong>Apple Kalender:</strong> Fil → Nytt kalenderabonnement → lim inn lenken.<br>
+      <strong>Apple Kalender (Mac):</strong> Arkiv → Nytt kalenderabonnement → lim inn lenken.<br>
       <strong>Outlook:</strong> Legg til kalender → Fra Internett → lim inn lenken.
     </p>
     <div class="modal-knapper" style="margin-top:.9rem;">
@@ -3143,17 +3151,21 @@ function lagIcalUrl(type) {
   if (type === 'laerer') {
     return base + '?ical=1&laerer=' + encodeURIComponent(aktivLaerer || '');
   }
-  var fag = aktivtFagElev || 'NPT';
-  var params = 'ical=1&fag=' + encodeURIComponent(fag);
-  if (fag === 'NPT') params += '&parti=' + encodeURIComponent(elevParti || 'p1');
-  else if (fag === 'YFF') params += '&gruppe=' + encodeURIComponent(aktivGruppeElev || '');
+  // Alle fag kombinert; valgfri filtrering på parti (NPT) og gruppe (YFF)
+  var params = 'ical=1';
+  if (elevParti && elevParti !== 'p1') params += '&parti=' + encodeURIComponent(elevParti);
+  if (aktivGruppeElev) params += '&gruppe=' + encodeURIComponent(aktivGruppeElev);
   return base + '?' + params;
 }
 function aapneIcalModal(type) {
   var url = lagIcalUrl(type);
+  var webcalUrl = url.replace(/^https:\/\//, 'webcal://');
   document.getElementById('ical-url-felt').value = url;
   document.getElementById('ical-gcal-link').href =
     'https://calendar.google.com/calendar/r/settings/addbyurl?url=' + encodeURIComponent(url);
+  document.getElementById('ical-webcal-link').href = webcalUrl;
+  document.getElementById('ical-qr').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(webcalUrl);
   document.getElementById('ical-modal').style.display = 'flex';
 }
 function kopierIcalUrl() {
