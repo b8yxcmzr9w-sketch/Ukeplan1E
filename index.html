@@ -578,7 +578,7 @@ td.col-laer{width:90px;max-width:110px;}
 <div id="slot-ctx-menu" style="position:fixed;z-index:200;background:#fff;border:1px solid var(--kant);border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.2);display:none;min-width:170px;overflow:hidden;">
   <div onclick="slotKopier()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;">📋 Kopier til hurtigrad</div>
   <div onclick="slotFlytt()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;">➡️ Flytt til annen dato</div>
-  <div id="slot-ctx-tilbake" onclick="slotLeggTilbake()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;display:none;">↩ Angre sletting</div>
+  <div id="slot-ctx-tilbake" onclick="slotAngreSlettet()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;display:none;">↩ Angre sletting</div>
   <div onclick="slotSlett()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;color:#c0392b;">🗑️ Slett økt</div>
 </div>
 <!-- Flytt-modal -->
@@ -2318,7 +2318,7 @@ function renderSoppel(){
     tbody.innerHTML=datarader.map(function(r,i){
       var dato=r[0]?String(r[0]).replace('T',' ').slice(0,16):'';
       var gjenData=JSON.stringify({fag:r[2],uke:r[3],dag:r[4],parti:r[5],aktivitet:r[6],oppmote:r[7],info:r[8],laerer:r[9]}).replace(/'/g,'&#39;');
-      return '<tr><td style="white-space:nowrap;font-size:.68rem;">'+dato+'</td><td>'+escHtml(r[1])+'</td><td>'+escHtml(r[2])+'</td><td>'+escHtml(r[3])+'</td><td>'+escHtml(r[4])+'</td><td>'+escHtml(r[5])+'</td><td>'+escHtml(r[6])+'</td><td>'+escHtml(r[7])+'</td><td>'+escHtml(r[8])+'</td><td>'+escHtml(r[9])+'</td><td><button class="btn-ok" style="font-size:.68rem;padding:.18rem .45rem;" onclick="gjenopprettFraSøppeldunk(\''+gjenData.replace(/"/g,"'")+'\')" title="Gjenopprett">↩</button></td></tr>';
+      return '<tr><td style="white-space:nowrap;font-size:.68rem;">'+dato+'</td><td>'+escHtml(r[1])+'</td><td>'+escHtml(r[2])+'</td><td>'+escHtml(r[3])+'</td><td>'+escHtml(r[4])+'</td><td>'+escHtml(r[5])+'</td><td>'+escHtml(r[6])+'</td><td>'+escHtml(r[7])+'</td><td>'+escHtml(r[8])+'</td><td>'+escHtml(r[9])+'</td><td><button class="btn-avbryt" style="font-size:.7rem;padding:.22rem .55rem;white-space:nowrap;" onclick="gjenopprettFraSøppeldunk(\''+gjenData.replace(/"/g,"'")+'\')" title="Gjenopprett denne økt">↩ Angre sletting</button></td></tr>';
     }).join('');
   }).catch(function(){
     tbody.innerHTML='<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Ark ikke opprettet ennå.</td></tr>';
@@ -2915,26 +2915,19 @@ var _ctxSlot={ui:0,dk:'',pk:''};
 function visSlotMenu(e,ui,dk,pk){
   e.preventDefault();
   _ctxSlot={ui:ui,dk:dk,pk:pk};
-  // Sjekk om det finnes en slettet versjon i søppeldunk-buffer for denne sloten
+  // Vis «Angre sletting» kun på tomme slot (der noe kan gjenopprettes)
   var uke=alleGridUkerCache[ui];
   var tilbakeEl=document.getElementById('slot-ctx-tilbake');
   if(tilbakeEl&&uke){
-    var funn=_finnISøppeldunk(aktivtFagLaerer,String(uke.uke),dk,pk);
-    tilbakeEl.style.display=funn?'block':'none';
+    var nk=uke.uke+'|'+dk+'|'+pk;
+    var slot=endringer[nk]||sikrSlot(uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);
+    tilbakeEl.style.display=erTom(slot)?'block':'none';
   }
   var m=document.getElementById('slot-ctx-menu');
   m.style.display='block';
   var x=Math.min(e.clientX,window.innerWidth-190);
   var y=Math.min(e.clientY,window.innerHeight-140);
   m.style.left=x+'px';m.style.top=y+'px';
-}
-function _finnISøppeldunk(fag,uke,dag,pk){
-  // søppeldunk: [tid, slettetAv, fag, uke, dag, parti, aktivitet, oppmote, info, laerer]
-  for(var i=søppeldunk.length-1;i>=0;i--){
-    var r=søppeldunk[i];
-    if(r[2]===fag&&String(r[3])===String(uke)&&r[4]===dag&&r[5]===pk)return i;
-  }
-  return -1;
 }
 function skjulSlotMenu(){document.getElementById('slot-ctx-menu').style.display='none';}
 document.addEventListener('click',function(){skjulSlotMenu();});
@@ -3018,18 +3011,26 @@ function slotSlett(){
   lagreTilSheets(true);
   visToast('🗑️ Økt slettet og lagret');
 }
-function slotLeggTilbake(){
+async function slotAngreSlettet(){
   skjulSlotMenu();
   var ctx=_hentCtxSlot();if(!ctx)return;
   var uke=alleGridUkerCache[_ctxSlot.ui];if(!uke)return;
-  var idx=_finnISøppeldunk(aktivtFagLaerer,String(uke.uke),_ctxSlot.dk,_ctxSlot.pk);
-  if(idx<0){visToast('Ingen slettet økt å legge tilbake',true);return;}
-  var r=søppeldunk[idx];
-  endringer[ctx.nk]={aktivitet:r[6]||'',oppmote:r[7]||'',info:r[8]||'',laerer:r[9]||''};
-  søppeldunk.splice(idx,1); // Fjern fra buffer
-  aktiverLagreBtn();renderGrid();
-  lagreTilSheets(true);
-  visToast('↩ Økt lagt tilbake og lagret');
+  var fag=aktivtFagLaerer,ukeNr=String(uke.uke),dag=_ctxSlot.dk,pk=_ctxSlot.pk;
+  visToast('Søker i søppeldunk…');
+  try{
+    var rader=await hentArk('Søppeldunk');
+    // Kolonner: [0]Tidspunkt [1]Slettet av [2]Fag [3]Uke [4]Dag [5]Parti [6]Aktivitet [7]Oppmøte [8]Info [9]Lærer
+    var treff=rader.slice(1).filter(function(r){
+      return r[0]&&String(r[2])===fag&&String(r[3])===ukeNr&&String(r[4])===dag&&String(r[5])===pk;
+    });
+    if(!treff.length){visToast('Ingen slettet økt funnet for denne plassen',true);return;}
+    // Bruk siste treff (nyeste sletting)
+    var r=treff[treff.length-1];
+    endringer[ctx.nk]={aktivitet:r[6]||'',oppmote:r[7]||'',info:r[8]||'',laerer:r[9]||''};
+    aktiverLagreBtn();renderGrid();
+    lagreTilSheets(true);
+    visToast('↩ Økt angret og lagret – «'+( r[6]||'tom')+'»');
+  }catch(e){visToast('Kunne ikke hente søppeldunk: '+e.message,true);}
 }
 
 function skrivUt(){
