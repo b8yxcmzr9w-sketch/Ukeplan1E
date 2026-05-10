@@ -72,11 +72,12 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 #hurtig-rad input::placeholder{color:#888;}
 #hurtig-rad input:focus,#hurtig-rad select:focus{border-color:var(--groen);}
 #hurtig-rad input.h-uke{width:38px;}
-#hurtig-rad input.h-akt{flex:1;min-width:80px;}
-#hurtig-rad input.h-opp,#hurtig-rad input.h-inf{width:80px;}
-#hurtig-rad select.h-dag{width:80px;}
-#hurtig-rad select.h-pk{width:70px;}
-#hurtig-rad select.h-lae{width:72px;}
+#hurtig-rad input.h-akt{width:110px;}
+#hurtig-rad input.h-opp{width:105px;}
+#hurtig-rad input.h-inf{flex:1;min-width:160px;}
+#hurtig-rad select.h-dag{width:65px;}
+#hurtig-rad select.h-pk{width:60px;}
+#hurtig-rad select.h-lae{width:90px;}
 #hurtig-rad button.h-legg{background:var(--groen);color:#fff;border:none;border-radius:6px;padding:.25rem .7rem;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
 #hurtig-rad button.h-legg:hover{background:#4a7c2a;}
 .verktolinje{display:flex;align-items:center;gap:.35rem;padding:.38rem 1rem;flex-wrap:nowrap;border-bottom:1px solid var(--kant);background:#fff;position:sticky;top:0;z-index:10;overflow-x:auto;}
@@ -553,15 +554,19 @@ td.col-laer{width:90px;max-width:110px;}
             <div class="innst-sek-lagre"><button id="btn-lagre-passord" onclick="byttPassordInnst()">&#x1F4BE; Lagre passord</button></div>
           </div>
         </div>
-        <div class="innst-seksjon">
-          <div class="innst-hdr">&#x1F5D1;&#xFE0F; Søppeldunk</div>
+        <div class="innst-seksjon" id="soppel-seksjon" style="display:none;">
+          <div class="innst-hdr">🗑️ Søppeldunk <span id="soppel-teller" style="font-size:.72rem;font-weight:400;color:var(--dempet);margin-left:.4rem;"></span></div>
           <div class="innst-body">
-            <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.6rem">Slettede og avviste data. Maks 100 linjer.</p>
-            <div style="max-height:220px;overflow-y:auto;">
+            <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.6rem;">Slettede og overskrevne økter. Kun synlig for Admin. Data lagres til Sheets ved neste lagring.</p>
+            <div style="max-height:280px;overflow-y:auto;margin-bottom:.5rem;">
               <table class="soppel-tabell">
-                <thead><tr><th>Dato</th><th>Fag</th><th>Uke</th><th>Dag</th><th>Aktivitet</th><th>Arsak</th></tr></thead>
+                <thead><tr><th>Tidspunkt</th><th>Av</th><th>Fag</th><th>Uke</th><th>Dag</th><th>P</th><th>Aktivitet</th><th>Oppmøte</th><th>Info</th><th>Lærer</th><th></th></tr></thead>
                 <tbody id="soppel-tbody"></tbody>
               </table>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <button class="btn-avbryt" onclick="tømSøppeldunkAction()" style="font-size:.73rem;">🗑️ Tøm søppeldunk</button>
+              <button class="btn-ok" onclick="renderSoppel()" style="font-size:.73rem;">↻ Oppdater</button>
             </div>
           </div>
         </div>
@@ -612,13 +617,20 @@ td.col-laer{width:90px;max-width:110px;}
 </div>
 <div class="modal-bg" id="sr-prompt-modal" style="display:none">
   <div class="prompt-modal">
-    <h3>&#x1F916; Prompt for skolerute</h3>
+    <h3>&#x1F916; Prompt for annen AI (skolerute)</h3>
+    <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.5rem;">Kopier og lim inn i ChatGPT, Copilot eller annen AI. Lim deretter inn svaret i feltet nedenfor.</p>
     <textarea id="sr-prompt-tekst" readonly></textarea>
     <div class="modal-knapper" style="margin-top:.7rem;">
       <button class="btn-avbryt" onclick="document.getElementById('sr-prompt-modal').style.display='none'">Lukk</button>
-      <button class="btn-ok" onclick="kopierSrPrompt()">&#x1F4CB; Kopier</button>
+      <button class="btn-ok" onclick="kopierSrPrompt()">&#x1F4CB; Kopier prompt</button>
     </div>
-    <div id="sr-prompt-kopiert" style="text-align:center;font-size:.73rem;color:var(--groen);font-weight:600;margin-top:.35rem;min-height:1.2em;"></div>
+    <div id="sr-annen-ai-sek" style="display:none;margin-top:.9rem;border-top:1px solid var(--kant);padding-top:.7rem;">
+      <p style="font-size:.73rem;color:var(--dempet);margin-bottom:.35rem;">&#x2B07;&#xFE0F; Lim inn svaret fra AI her:</p>
+      <textarea id="sr-annen-ai-tekst" placeholder="Lim inn semikolon-formatert svar fra AI…" style="width:100%;height:120px;font-size:.68rem;font-family:monospace;border:1px solid var(--kant);border-radius:7px;padding:.5rem;background:var(--bg);resize:vertical;box-sizing:border-box;"></textarea>
+      <div style="text-align:right;margin-top:.4rem;">
+        <button class="btn-ok" onclick="parseAnnenAISr()">&#x2705; Vis i tabell</button>
+      </div>
+    </div>
   </div>
 </div>
 <div class="modal-bg" id="slett-laerer-modal" style="display:none">
@@ -703,7 +715,9 @@ function stopHeartbeat(){if(heartbeatInterval){clearInterval(heartbeatInterval);
 var allData={innstillinger:{},laerere:[],skolerute:[],fag:[],plan:{}};
 var aktivUkeIdx=0,aktivLaerer=null,aktivtFagLaerer='NPT',aktivtFagElev='NPT',aktivGruppeElev='';
 var endringer={},slettLaererNavn=null;
+var søppeldunk=[];
 var sisteVersjon=0,heartbeatInterval=null;
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 var srTyper=['ferie','fri','høytid','planlegging','skoletur','avspasering','undervisningsfri'];
 var ALLE_DAGER=['mandag','tirsdag','onsdag','torsdag','fredag'];
 var DAG_FULLT={mandag:'Mandag',tirsdag:'Tirsdag',onsdag:'Onsdag',torsdag:'Torsdag',fredag:'Fredag'};
@@ -1009,8 +1023,13 @@ async function skrivTilSheets(arknavn,verdier){
   if(!json.ok)throw new Error(json.feil||'Ukjent feil');
   return json;
 }
-async function lagreTilSheets(){
-  if(!Object.keys(endringer).length){visToast('Ingen endringer å lagre.');return;}
+async function lagreTilSheets(auto){
+  var harEndringer=Object.keys(endringer).length>0;
+  var harSøppel=søppeldunk.length>0;
+  if(!harEndringer&&!harSøppel){if(!auto)visToast('Ingen endringer å lagre.');return;}
+  var token=sesjonGet('praksisToken')||'';
+  // Hvis bare søppeldunk (ingen plan-endringer), bare send søppeldunk
+  if(!harEndringer&&harSøppel){await sendSøppeldunkTilSheets(token);return;}
   var btn=document.getElementById('lagre-btn');
   btn.disabled=true;btn.textContent='Lagrer...';
   try{
@@ -1081,10 +1100,12 @@ async function lagreTilSheets(){
     Object.values(eksMap).forEach(function(r){rader.push(r);});
     rader.sort(function(a,b){if(a[0]==='Uke')return -1;if(b[0]==='Uke')return 1;var p=function(s){var n=parseInt(String(s));return n>=30?n:n+100;};return p(a[0])-p(b[0]);});
     await skrivTilSheets(arknavn,rader);
-    endringer={};passivLagreBtn();visToast('Lagret!');
+    endringer={};passivLagreBtn();
+    if(!auto)visToast('Lagret!');
     skjulLagreBanner();
     document.getElementById('lagre-status').textContent='✅ Lagret';
     setTimeout(function(){document.getElementById('lagre-status').textContent='';},3000);
+    await sendSøppeldunkTilSheets(token);
     await hentData(true);
   }catch(e){visToast('Lagring feilet: '+e.message,true,true);}
   finally{btn.disabled=false;btn.textContent='Lagre';}
@@ -1842,7 +1863,8 @@ function limInnAlt(){
     var st=document.getElementById('ai-status-plan');if(st)st.style.display='none';
     sjekkLagreOkterKnapp();
     togglLimInnPanel();
-    visToast('✅ '+kOk+' økt(er) lagt til – trykk 💾 Lagre for å lagre til Sheets!');
+    lagreTilSheets(true);
+    visToast('✅ '+kOk+' økt(er) lagt til og lagret');
   }
 }
 
@@ -2279,18 +2301,68 @@ function limInnSkolerute(){
   document.getElementById('sr-resultat').textContent=(ok?'OK '+ok+' rader. ':'')+feil.join(', ');
 }
 function renderSoppel(){
+  // Kun synlig for Admin
+  var sek=document.getElementById('soppel-seksjon');
+  if(sek)sek.style.display=erAdmin()?'block':'none';
+  if(!erAdmin())return;
   var tbody=document.getElementById('soppel-tbody');
-  tbody.innerHTML='<tr><td colspan="6" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Laster...</td></tr>';
-  var tom='<tr><td colspan="6" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Ingen slettede oppføringer.</td></tr>';
+  var cols=11;
+  tbody.innerHTML='<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Laster...</td></tr>';
+  var tom='<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Ingen slettede oppføringer.</td></tr>';
   hentArk('Søppeldunk').then(function(rader){
     var datarader=rader.slice(1).filter(function(r){return r[0];});
+    var teller=document.getElementById('soppel-teller');if(teller)teller.textContent='('+datarader.length+')';
     if(!datarader.length){tbody.innerHTML=tom;return;}
-    tbody.innerHTML=datarader.map(function(r){
-      return '<tr><td>'+(r[0]||'')+'</td><td>'+(r[1]||'')+'</td><td>'+(r[2]||'')+'</td><td>'+(r[3]||'')+'</td><td>'+(r[5]||r[4]||'')+'</td><td>'+(r[9]||r[8]||'')+'</td></tr>';
+    // Kolonner: [0]Tidspunkt [1]Slettet av [2]Fag [3]Uke [4]Dag [5]Parti [6]Aktivitet [7]Oppmøte [8]Info [9]Lærer
+    tbody.innerHTML=datarader.map(function(r,i){
+      var dato=r[0]?String(r[0]).replace('T',' ').slice(0,16):'';
+      var gjenData=JSON.stringify({fag:r[2],uke:r[3],dag:r[4],parti:r[5],aktivitet:r[6],oppmote:r[7],info:r[8],laerer:r[9]}).replace(/'/g,'&#39;');
+      return '<tr><td style="white-space:nowrap;font-size:.68rem;">'+dato+'</td><td>'+escHtml(r[1])+'</td><td>'+escHtml(r[2])+'</td><td>'+escHtml(r[3])+'</td><td>'+escHtml(r[4])+'</td><td>'+escHtml(r[5])+'</td><td>'+escHtml(r[6])+'</td><td>'+escHtml(r[7])+'</td><td>'+escHtml(r[8])+'</td><td>'+escHtml(r[9])+'</td><td><button class="btn-ok" style="font-size:.68rem;padding:.18rem .45rem;" onclick="gjenopprettFraSøppeldunk(\''+gjenData.replace(/"/g,"'")+'\')" title="Gjenopprett">↩</button></td></tr>';
     }).join('');
-  }).catch(function(e){
-    tbody.innerHTML='<tr><td colspan="6" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Ark ikke opprettet ennå.</td></tr>';
+  }).catch(function(){
+    tbody.innerHTML='<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Ark ikke opprettet ennå.</td></tr>';
   });
+}
+function gjenopprettFraSøppeldunk(jsonStr){
+  try{
+    var d=JSON.parse(jsonStr.replace(/'/g,'"'));
+    if(aktivtFagLaerer!==d.fag&&FASTE_FANER.indexOf(d.fag)>=0){
+      byttFagLaerer(d.fag);
+      var tabBtn=document.querySelector('.fag-tab-btn[data-fag="'+d.fag+'"]');
+      if(tabBtn)tabBtn.click();
+    }
+    var nk=d.uke+'|'+d.dag+'|'+d.parti;
+    endringer[nk]={aktivitet:d.aktivitet||'',oppmote:d.oppmote||'',info:d.info||'',laerer:d.laerer||''};
+    aktiverLagreBtn();renderGrid();
+    visToast('↩ Gjenopprettet uke '+d.uke+' '+d.dag+' – trykk 💾 Lagre');
+  }catch(e){visToast('Feil ved gjenoppretting',true);}
+}
+async function tømSøppeldunkAction(){
+  if(!confirm('Tøm hele søppeldunken permanent?'))return;
+  var token=sesjonGet('praksisToken')||'';
+  try{
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tømSøppeldunk',token:token})});
+    var json=await res.json();
+    if(json.ok){visToast('Søppeldunk tømt');renderSoppel();}
+    else visToast('Feil: '+(json.feil||'ukjent'),true);
+  }catch(e){visToast('Nettverksfeil',true);}
+}
+function leggITrash(slot,nk){
+  if(!slot||(!slot.aktivitet&&!slot.oppmote&&!slot.info&&!slot.laerer))return;
+  var d=nk.split('|');
+  var tid=new Date().toISOString();
+  var slettetAv=aktivLaerer||'';
+  søppeldunk.push([tid,slettetAv,aktivtFagLaerer,d[0],d[1],d[2],slot.aktivitet||'',slot.oppmote||'',slot.info||'',slot.laerer||'']);
+}
+async function sendSøppeldunkTilSheets(token){
+  if(!søppeldunk.length)return;
+  var kopi=søppeldunk.slice();
+  søppeldunk=[];
+  try{
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'appendSøppeldunk',token:token,rader:kopi})});
+    var json=await res.json();
+    if(!json.ok){søppeldunk=kopi.concat(søppeldunk);} // Legg tilbake ved feil
+  }catch(e){søppeldunk=kopi.concat(søppeldunk);}
 }
 function _byggInnstRader(){
   var dager=Array.from(document.querySelectorAll('#dag-checkboxes input:checked')).map(function(el){return el.value;});
@@ -2460,6 +2532,7 @@ function hurtigLeggTil(){
   document.getElementById('h-akt').value='';
   document.getElementById('h-opp').value='';
   document.getElementById('h-inf').value='';
+  lagreTilSheets(true);
 }
 function oppdaterLimInnTittel(){
   var el=document.getElementById('paste-panel-tittel');
@@ -2747,24 +2820,48 @@ function aapneSrPromptModal(){
   p+='Svar kun med formaterte rader.';
   p+=innlimt?lf+lf+'SKOLERUTE:'+lf+innlimt:lf+lf+'[LIM INN SKOLERUTEN HER]';
   document.getElementById('sr-prompt-tekst').value=p;
-  document.getElementById('sr-prompt-kopiert').textContent='';
+  var srSek=document.getElementById('sr-annen-ai-sek');if(srSek)srSek.style.display='none';
   document.getElementById('sr-prompt-modal').style.display='flex';
 }
 
 function kopierSrPrompt(){
   var ta=document.getElementById('sr-prompt-tekst');
   ta.select();
-  navigator.clipboard.writeText(ta.value).then(function(){
-    document.getElementById('sr-prompt-modal').style.display='none';
-    var si=document.getElementById('sr-innlim');
-    if(si)si.value='';
-    document.getElementById('sr-resultat').textContent='';
-  }).catch(function(){
-    document.execCommand('copy');
-    document.getElementById('sr-prompt-modal').style.display='none';
-    var si=document.getElementById('sr-innlim');
-    if(si)si.value='';
+  function etterKopiering(){
+    var sek=document.getElementById('sr-annen-ai-sek');
+    if(sek){sek.style.display='block';document.getElementById('sr-annen-ai-tekst').value='';document.getElementById('sr-annen-ai-tekst').focus();}
+  }
+  navigator.clipboard.writeText(ta.value).then(etterKopiering).catch(function(){
+    document.execCommand('copy');etterKopiering();
   });
+}
+function parseAnnenAISr(){
+  var tekst=(document.getElementById('sr-annen-ai-tekst').value||'').trim();
+  if(!tekst){visToast('Lim inn svaret fra AI først',true);return;}
+  var gyldige=['ferie','fri','høytid','planlegging','skoletur','avspasering','undervisningsfri'];
+  var linjer=tekst.split('\n').map(function(l){return l.trim();}).filter(function(l){return l&&l.includes(';');});
+  if(!linjer.length){visToast('Fant ingen semikolon-rader i teksten',true);return;}
+  var antall=0;
+  linjer.forEach(function(linje){
+    var d=linje.split(';').map(function(x){return x.trim();});
+    var uke=d[0],dag=(d[1]||'').toLowerCase(),type=d[2]||'ferie',besk=d[3]||'';
+    if(gyldige.indexOf(type)<0)type='annet';
+    if(uke){
+      if(!allData.skolerute)allData.skolerute=[];
+      allData.skolerute.push({uke:uke,dag:dag,type:type,beskrivelse:besk});
+      antall++;
+    }
+  });
+  if(antall){
+    renderSrTabell();
+    visInnstAdvarsel('btn-lagre-skolerute');
+    document.getElementById('sr-prompt-modal').style.display='none';
+    var si=document.getElementById('sr-innlim');if(si)si.value='';
+    document.getElementById('sr-resultat').textContent='';
+    visToast('✅ '+antall+' rad(er) lagt til – rediger og klikk Lagre');
+  } else {
+    visToast('Ingen gyldige rader funnet',true);
+  }
 }
 var _denneUkenObserver=null;
 function gaTilDenneUkenGrid(){
@@ -2887,19 +2984,23 @@ function slotFlyttBekreft(){
   if(!tilUkeObj){tilUkeObj={uke:tilUke,ferie:false,ferieNavn:'',ferieEmoji:'',dager:{}};planData.uker.push(tilUkeObj);sorterUker(planData.uker);}
   var tilNk=tilUke+'|'+tilDag+'|'+tilPk;
   endringer[tilNk]=JSON.parse(JSON.stringify(ctx.slot));
-  // Tøm kilden
+  // Tøm kilden (legg i søppeldunk for sporbarhet)
+  leggITrash(ctx.slot,ctx.nk);
   endringer[ctx.nk]={aktivitet:'',oppmote:'',info:'',laerer:''};
   document.getElementById('flytt-modal').style.display='none';
   aktiverLagreBtn();renderGrid();
+  lagreTilSheets(true);
   visToast('✅ Økt flyttet til uke '+tilUke+', '+tilDag);
 }
 function slotSlett(){
   skjulSlotMenu();
   var ctx=_hentCtxSlot();if(!ctx)return;
   if(erTom(ctx.slot)){visToast('Allerede tom');return;}
+  leggITrash(ctx.slot,ctx.nk);
   endringer[ctx.nk]={aktivitet:'',oppmote:'',info:'',laerer:''};
   aktiverLagreBtn();renderGrid();
-  visToast('🗑️ Økt slettet – husk å lagre');
+  lagreTilSheets(true);
+  visToast('🗑️ Økt slettet og lagret');
 }
 
 function skrivUt(){
