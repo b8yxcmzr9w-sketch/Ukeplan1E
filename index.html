@@ -67,8 +67,9 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 .fag-tabs{display:flex;background:#f0efe6;border-bottom:1px solid var(--kant);overflow-x:auto;padding:0 1.2rem;position:sticky;top:0;z-index:9;box-shadow:0 3px 8px rgba(0,0,0,.1);}
 .fag-tabs button{flex:none;padding:.42rem .8rem;font-size:.74rem;font-weight:600;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dempet);cursor:pointer;white-space:nowrap;}
 .fag-tabs button.aktiv{color:#fff;background:var(--nav);border-bottom-color:var(--nav);border-radius:5px 5px 0 0;padding-bottom:.55rem;}
-#hurtig-rad{position:sticky;z-index:7;background:#f5f5ec;border-bottom:2px solid var(--kant);padding:.28rem .7rem;display:none;align-items:center;gap:.3rem;flex-wrap:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.07);}
-#hurtig-rad input,#hurtig-rad select{font-size:.7rem;font-family:inherit;border:1px solid var(--kant);border-radius:5px;padding:.22rem .35rem;background:#fff;outline:none;}
+#hurtig-rad{position:sticky;z-index:7;background:var(--nav);border-bottom:3px solid var(--groen);padding:.28rem .7rem;display:none;align-items:center;gap:.3rem;flex-wrap:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.18);}
+#hurtig-rad input,#hurtig-rad select{font-size:.7rem;font-family:inherit;border:1px solid rgba(255,255,255,.35);border-radius:5px;padding:.22rem .35rem;background:rgba(255,255,255,.92);outline:none;color:var(--tekst);}
+#hurtig-rad input::placeholder{color:#888;}
 #hurtig-rad input:focus,#hurtig-rad select:focus{border-color:var(--groen);}
 #hurtig-rad input.h-uke{width:38px;}
 #hurtig-rad input.h-akt{flex:1;min-width:80px;}
@@ -565,6 +566,29 @@ td.col-laer{width:90px;max-width:110px;}
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+<!-- Slot-kontekstmeny -->
+<div id="slot-ctx-menu" style="position:fixed;z-index:200;background:#fff;border:1px solid var(--kant);border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.2);display:none;min-width:170px;overflow:hidden;">
+  <div onclick="slotKopier()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;">📋 Kopier til hurtigrad</div>
+  <div onclick="slotFlytt()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;">➡️ Flytt til annen dato</div>
+  <div onclick="slotSlett()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;color:#c0392b;">🗑️ Slett økt</div>
+</div>
+<!-- Flytt-modal -->
+<div class="modal-bg" id="flytt-modal" style="display:none;">
+  <div style="background:#fff;border-radius:13px;padding:1.3rem 1.5rem;max-width:310px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 style="font-size:.9rem;margin:0 0 .7rem;">➡️ Flytt økt til</h3>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.85rem;">
+      <label style="font-size:.74rem;display:flex;align-items:center;gap:.25rem;">Uke <input id="flytt-uke" type="text" style="width:42px;padding:.25rem .35rem;border:1px solid var(--kant);border-radius:5px;font-size:.74rem;"></label>
+      <label style="font-size:.74rem;display:flex;align-items:center;gap:.25rem;">Dag <select id="flytt-dag" style="padding:.25rem .35rem;border:1px solid var(--kant);border-radius:5px;font-size:.74rem;">
+        <option value="mandag">Mandag</option><option value="tirsdag">Tirsdag</option><option value="onsdag">Onsdag</option><option value="torsdag">Torsdag</option><option value="fredag">Fredag</option>
+      </select></label>
+      <label id="flytt-pk-label" style="font-size:.74rem;display:flex;align-items:center;gap:.25rem;">Parti <select id="flytt-pk" style="padding:.25rem .35rem;border:1px solid var(--kant);border-radius:5px;font-size:.74rem;"></select></label>
+    </div>
+    <div class="modal-knapper">
+      <button class="btn-avbryt" onclick="document.getElementById('flytt-modal').style.display='none'">Avbryt</button>
+      <button class="btn-ok" onclick="slotFlyttBekreft()">Flytt</button>
     </div>
   </div>
 </div>
@@ -1235,9 +1259,10 @@ function alleUker(){
 }
 
 function gaaTilDenneUken(){
-  var iso=getCurrentISOWeek();
+  var iso=getVisningsUke();
   var alle=alleUker();
   var idx=alle.indexOf(String(iso));
+  if(idx<0)idx=alle.indexOf(String(iso-1)); // fallback til forrige uke
   aktivUkeIdx=idx>=0?idx:0;
   renderElev();
 }
@@ -1257,7 +1282,7 @@ function renderElev(){
   var ukenummer=alle[aktivUkeIdx];
   document.getElementById('uke-label').textContent='Uke '+ukenummer;
   var denneBtnEl=document.getElementById('denne-uke-btn');
-  if(denneBtnEl)denneBtnEl.classList.toggle('aktiv',String(ukenummer)===String(getCurrentISOWeek()));
+  if(denneBtnEl)denneBtnEl.classList.toggle('aktiv',String(ukenummer)===String(getVisningsUke()));
   var dager=ALLE_DAGER;
   var html='';
 
@@ -1540,7 +1565,7 @@ function slotRad(ui,dk,pk,dagCelleHtml){
   var bar='<div class="slot-bar" style="background:'+(harData?f:'#eee')+'"></div>';
   var partiCell='';
   if(!erNNA){partiCell='<td class="parti-celle" style="color:'+pFarge+';background:'+(idx%2===0?'#eef2e8':'#fdf3e8')+'">'+(erYFF||erFellesfag?pk:(idx+1))+'</td>';}
-  return '<tr style="background:'+rowBg+'">'+
+  return '<tr style="background:'+rowBg+'" oncontextmenu="visSlotMenu(event,'+ui+',\''+dk+'\',\''+pk+'\')" title="Høyreklikk for alternativer">'+
     dagCelleHtml+
     partiCell+
     '<td class="col-akt"><div>'+bar+'<textarea class="slot-edit-area" '+dis+' placeholder="Aktivitet..." oninput="autoResize(this);setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'aktivitet\',this.value)" style="background:'+slotBg+'">'+esc(slot.aktivitet)+'</textarea></div></td>'+
@@ -1675,6 +1700,7 @@ function renderGrid(){
   // Årsplan-banner fjernet - skolerute flettes inn i grid på riktig plass
   document.getElementById('grid-body').innerHTML=rows||'<tr><td colspan="6" style="padding:1rem;color:#999;text-align:center">Ingen uker å vise</td></tr>';
   setTimeout(autoResizeAll,0);
+  setTimeout(setupDenneUkenObserver,50);
 }
 function setFelt(ui,dk,pk,felt,v){
   console.log('setFelt: ui='+ui+' dk='+dk+' pk='+pk+' felt='+felt+' v='+v+' cache.length='+alleGridUkerCache.length);
@@ -2771,6 +2797,111 @@ function gaTilDenneUkenGrid(){
     visToast('Uke '+isoUke+' er ikke synlig i planen');
   }
 }
+
+// ── Denne-uken observer (midterste 50% av viewport, alle faner) ──────────
+var _denneUkenObserver=null;
+function setupDenneUkenObserver(){
+  var btn=document.getElementById('btn-denne-uken');
+  var isoUke=getVisningsUke();
+  var el=document.getElementById('uke-hdr-'+isoUke);
+  if(_denneUkenObserver)_denneUkenObserver.disconnect();
+  if(!el||!btn)return;
+  _denneUkenObserver=new IntersectionObserver(function(entries){
+    btn.classList.toggle('aktiv',entries[0].isIntersecting);
+  },{rootMargin:'-25% 0px -25% 0px',threshold:0});
+  _denneUkenObserver.observe(el);
+}
+
+// ── Slot-kontekstmeny ────────────────────────────────────────────────────
+var _ctxSlot={ui:0,dk:'',pk:''};
+function visSlotMenu(e,ui,dk,pk){
+  e.preventDefault();
+  _ctxSlot={ui:ui,dk:dk,pk:pk};
+  var m=document.getElementById('slot-ctx-menu');
+  m.style.display='block';
+  var x=Math.min(e.clientX,window.innerWidth-180);
+  var y=Math.min(e.clientY,window.innerHeight-120);
+  m.style.left=x+'px';m.style.top=y+'px';
+}
+function skjulSlotMenu(){document.getElementById('slot-ctx-menu').style.display='none';}
+document.addEventListener('click',function(){skjulSlotMenu();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')skjulSlotMenu();});
+
+function _hentCtxSlot(){
+  var planData=allData.plan[aktivtFagLaerer]||{uker:[]};
+  var uke=alleGridUkerCache[_ctxSlot.ui];
+  if(!uke)return null;
+  var nk=uke.uke+'|'+_ctxSlot.dk+'|'+_ctxSlot.pk;
+  return {uke:uke,nk:nk,slot:endringer[nk]||sikrSlot(uke.dager&&uke.dager[_ctxSlot.dk]?uke.dager[_ctxSlot.dk][_ctxSlot.pk]:null)};
+}
+function slotKopier(){
+  skjulSlotMenu();
+  var ctx=_hentCtxSlot();if(!ctx)return;
+  var s=ctx.slot,uke=ctx.uke;
+  // Fyll hurtig-rad
+  var hu=document.getElementById('h-uke');if(hu)hu.value=uke.uke;
+  var hd=document.getElementById('h-dag');
+  if(hd){for(var i=0;i<hd.options.length;i++){if(hd.options[i].value===_ctxSlot.dk){hd.selectedIndex=i;break;}}}
+  var hp=document.getElementById('h-pk');
+  if(hp){var pkV=_ctxSlot.pk.startsWith('p')?_ctxSlot.pk.slice(1):_ctxSlot.pk;for(var j=0;j<hp.options.length;j++){if(hp.options[j].value===pkV||hp.options[j].value===_ctxSlot.pk){hp.selectedIndex=j;break;}}}
+  var ha=document.getElementById('h-akt');if(ha)ha.value=s.aktivitet||'';
+  var ho=document.getElementById('h-opp');if(ho)ho.value=s.oppmote||'';
+  var hi=document.getElementById('h-inf');if(hi)hi.value=s.info||'';
+  var hl=document.getElementById('h-lae');if(hl){for(var k=0;k<hl.options.length;k++){if(hl.options[k].value===s.laerer){hl.selectedIndex=k;break;}}}
+  visToast('📋 Kopiert til hurtigrad – rediger og klikk + Legg til');
+}
+function slotFlytt(){
+  skjulSlotMenu();
+  var ctx=_hentCtxSlot();if(!ctx)return;
+  // Fyll flytt-modal med nåverdier
+  var fu=document.getElementById('flytt-uke');if(fu)fu.value=ctx.uke.uke;
+  var fd=document.getElementById('flytt-dag');
+  if(fd){for(var i=0;i<fd.options.length;i++){if(fd.options[i].value===_ctxSlot.dk){fd.selectedIndex=i;break;}}}
+  // Bygg parti-select
+  var fp=document.getElementById('flytt-pk'),fpl=document.getElementById('flytt-pk-label');
+  var erNNA2=aktivtFagLaerer==='NNA',erYFF2=aktivtFagLaerer==='YFF',erFF2=aktivtFagLaerer==='Fellesfag';
+  if(erNNA2){if(fpl)fpl.style.display='none';}
+  else{
+    if(fpl)fpl.style.display='flex';
+    var pkOpts2='';
+    if(erYFF2)yffGrupper().forEach(function(g){pkOpts2+='<option value="'+g+'">'+g+'</option>';});
+    else if(erFF2)(cfg().aktiveFag||[]).forEach(function(f){pkOpts2+='<option value="'+f+'">'+f+'</option>';});
+    else{var ap2=antallPartier();for(var p=1;p<=ap2;p++)pkOpts2+='<option value="p'+p+'">P'+p+'</option>';}
+    if(fp)fp.innerHTML=pkOpts2;
+    // Velg nåværende parti
+    if(fp){for(var j=0;j<fp.options.length;j++){if(fp.options[j].value===_ctxSlot.pk){fp.selectedIndex=j;break;}}}
+  }
+  document.getElementById('flytt-modal').style.display='flex';
+}
+function slotFlyttBekreft(){
+  var tilUke=(document.getElementById('flytt-uke').value||'').trim();
+  var tilDag=document.getElementById('flytt-dag').value;
+  var erNNA2=aktivtFagLaerer==='NNA';
+  var fp=document.getElementById('flytt-pk');
+  var tilPk=erNNA2?'nna':(fp?fp.value:_ctxSlot.pk);
+  if(!tilUke){visToast('Uke mangler',true);return;}
+  var ctx=_hentCtxSlot();if(!ctx||erTom(ctx.slot)){visToast('Tom økt – ingenting å flytte',true);return;}
+  // Finn eller opprett uke-objekt
+  var planData=allData.plan[aktivtFagLaerer]||{uker:[]};
+  var tilUkeObj=planData.uker.find(function(u){return String(u.uke)===String(tilUke);});
+  if(!tilUkeObj){tilUkeObj={uke:tilUke,ferie:false,ferieNavn:'',ferieEmoji:'',dager:{}};planData.uker.push(tilUkeObj);sorterUker(planData.uker);}
+  var tilNk=tilUke+'|'+tilDag+'|'+tilPk;
+  endringer[tilNk]=JSON.parse(JSON.stringify(ctx.slot));
+  // Tøm kilden
+  endringer[ctx.nk]={aktivitet:'',oppmote:'',info:'',laerer:''};
+  document.getElementById('flytt-modal').style.display='none';
+  aktiverLagreBtn();renderGrid();
+  visToast('✅ Økt flyttet til uke '+tilUke+', '+tilDag);
+}
+function slotSlett(){
+  skjulSlotMenu();
+  var ctx=_hentCtxSlot();if(!ctx)return;
+  if(erTom(ctx.slot)){visToast('Allerede tom');return;}
+  endringer[ctx.nk]={aktivitet:'',oppmote:'',info:'',laerer:''};
+  aktiverLagreBtn();renderGrid();
+  visToast('🗑️ Økt slettet – husk å lagre');
+}
+
 function skrivUt(){
   var c=cfg(),visAlle=erVisAlle();
   var tittel='Praksisplan'+(c.klassenavn?' - '+c.klassenavn:'')+(c.skoleaar?' | '+c.skoleaar:'')+' | '+aktivtFagLaerer+' | '+(visAlle?'Alle uker':'Mine uker - '+(aktivLaerer||''));
@@ -2835,6 +2966,7 @@ function scrollTilDenneUkenVedOppstart(){
     if(hr&&hr.style.display==='flex')stickyH+=hr.getBoundingClientRect().height;
     var offset=el.getBoundingClientRect().top+window.pageYOffset-stickyH-(38*2.5);
     window.scrollTo({top:Math.max(0,offset),behavior:'auto'});
+    setTimeout(setupDenneUkenObserver,100);
   }
   setTimeout(prøv,300);
 }
