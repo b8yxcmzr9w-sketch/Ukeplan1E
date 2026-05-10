@@ -363,28 +363,30 @@ td.col-laer{width:90px;max-width:110px;}
           <p id="paste-format-tekst" style="font-size:.68rem;color:var(--dempet2);margin-bottom:.35rem;"></p>
 
           <!-- Fritekst-innliming -->
-          <textarea id="paste-input" placeholder="Lim inn tekst her &#x2013; AI tolker og fyller ut rader nedenfor automatisk&#x2026;" oninput="sjekkLagreOkterKnapp()"></textarea>
-          <div class="paste-rad" style="margin-top:.35rem;flex-wrap:wrap;gap:.35rem;">
-            <button id="btn-tolk-ai" class="pw-btn" onclick="tolkMedAI()" style="font-size:.72rem;">&#x1F916; Tolk med AI</button>
-            <button class="pw-btn" onclick="aapnePromptModal()" style="font-size:.72rem;">&#x1F511; Generer prompt</button>
+          <div style="position:relative;">
+            <textarea id="paste-input" placeholder="Lim inn tekst her – AI tolker og fyller ut rader nedenfor automatisk…" oninput="sjekkLagreOkterKnapp()" style="padding-right:3.5rem;"></textarea>
+            <button onclick="document.getElementById('paste-input').value='';sjekkLagreOkterKnapp();" title="Tøm" style="position:absolute;top:.35rem;right:.35rem;background:none;border:1px solid var(--kant);border-radius:5px;font-size:.68rem;color:var(--dempet);cursor:pointer;padding:.15rem .4rem;">✕ Tøm</button>
+          </div>
+          <div class="paste-rad" style="margin-top:.35rem;flex-wrap:wrap;gap:.35rem;align-items:center;">
+            <button id="btn-tolk-ai" class="pw-btn" onclick="tolkMedAI()">&#x1F916; Tolk med AI</button>
+            <button onclick="aapnePromptModal()" style="background:none;border:none;color:var(--dempet);font-size:.68rem;cursor:pointer;text-decoration:underline;padding:0;">&#x1F511; Bruk ChatGPT i stedet</button>
             <div id="ai-status-plan" class="ai-status" style="display:none;"></div>
           </div>
 
           <!-- AI-forhåndsvisning label -->
-          <div id="ai-preview-plan" class="ai-preview-tittel" style="display:none;">&#x2705; AI-tolket &#x2013; rediger radene under om &#xF8;nskelig, klikk &#xAB;Lagre &#xF8;kter&#xBB; n&#xE5;r klar</div>
+          <div id="ai-preview-plan" class="ai-preview-tittel" style="display:none;">&#x2705; AI-tolket – rediger radene under om ønskelig, klikk «Legg til i plan» når klar</div>
 
           <!-- Redigerbare rader -->
           <table id="paste-skjema" style="width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.3rem;margin-bottom:.25rem;display:none;">
             <thead id="paste-skjema-head"></thead>
             <tbody id="paste-skjema-body"></tbody>
           </table>
-          <button class="btn-legg-lite" onclick="leggTilPasteRad()" style="margin-bottom:.35rem;">+ Legg til rad</button>
+          <button class="btn-legg-lite" onclick="leggTilPasteRad()" style="margin-bottom:.35rem;">+ Legg til økt</button>
 
           <div class="paste-resultat" id="paste-resultat"></div>
-          <div id="lagre-banner" style="display:none;background:#e8f5e9;border:1px solid #66bb6a;border-radius:7px;padding:.45rem .8rem;margin-top:.4rem;font-size:.76rem;color:#2e7d32;font-weight:600;"></div>
 
           <div class="innst-sek-lagre" style="margin-top:.5rem;padding-top:.45rem;border-top:1px solid var(--kant);">
-            <button id="btn-lagre-okter" onclick="limInnAlt()">&#x1F4BE; Lagre &#xF8;kter</button>
+            <button id="btn-lagre-okter" class="lagre-btn" onclick="limInnAlt()">&#x1F4BE; Legg til i plan</button>
           </div>
         </div><!-- paste-panel-body -->
       </div>
@@ -1732,7 +1734,7 @@ function leggTilPasteRad(prefill){
   function setSelect(sel,val){if(!val)return;for(var i=0;i<sel.options.length;i++){if(sel.options[i].value.toLowerCase()===val.toLowerCase()){sel.selectedIndex=i;return;}}}
   var tr=document.createElement('tr');
   var p=prefill||{};
-  var dagOpts=ALLE_DAGER.map(function(d){return {v:d,t:DAG_FULLT[d]};});
+  var dagOpts=[{v:'',t:'─ Dag ─'}].concat(ALLE_DAGER.map(function(d){return {v:d,t:DAG_FULLT[d]};}));
   var laererOpts2=[{v:'',t:'-'},{v:'Alle',t:'Alle'}].concat(allData.laerere.map(function(l){return {v:l.navn,t:l.navn};}));
   var ukeEl=mkInput('text','Uke','width:42px;');if(p.uke)ukeEl.value=p.uke;
   tr.appendChild(mkTd(ukeEl));
@@ -1741,9 +1743,10 @@ function leggTilPasteRad(prefill){
   // Kolonne 3: Parti/Gruppe/Fag – kun hvis ikke NNA
   if(!erNNA){
     var col3Opts;
-    if(erYFF) col3Opts=yffGrupper().map(function(g){return {v:g,t:g};});
-    else if(erFF) col3Opts=(cfg().aktiveFag||[]).map(function(f){return {v:f,t:f};});
-    else col3Opts=partier().map(function(p){return {v:p.slice(1),t:p.slice(1)};});
+    var col3Tom=erYFF?'─ Gr ─':erFF?'─ Fag ─':'─ P ─';
+    if(erYFF) col3Opts=[{v:'',t:col3Tom}].concat(yffGrupper().map(function(g){return {v:g,t:g};}));
+    else if(erFF) col3Opts=[{v:'',t:col3Tom}].concat((cfg().aktiveFag||[]).map(function(f){return {v:f,t:f};}));
+    else col3Opts=[{v:'',t:col3Tom}].concat(partier().map(function(p){return {v:p.slice(1),t:p.slice(1)};}));
     var col3El=mkSelect(col3Opts);setSelect(col3El,p.parti||p.gruppe||p.fag||'');
     tr.appendChild(mkTd(col3El));
   }
@@ -1796,24 +1799,26 @@ function hentPasteSkjemaLinjer(){
 function limInnAlt(){
   var fraTekst=document.getElementById('paste-input').value.trim();
   var fraSkjema=hentPasteSkjemaLinjer();
-  // Sjekk om fritekst ser ut som naturlig språk (ingen semikolon) – da skal AI brukes
   if(fraTekst&&!fraTekst.includes(';')){
-    document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Teksten ser ut som fritekst – klikk «🤖 Tolk med AI» for automatisk tolking.</span>';
+    document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Teksten ser ut som fritekst – klikk «🤖 Tolk med AI» først.</span>';
     return;
   }
   var alt=[fraSkjema,fraTekst].filter(Boolean).join('\n');
   if(!alt){document.getElementById('paste-resultat').innerHTML='<span class="paste-feil-item">Ingen data.</span>';return;}
-  // Midlertidig sett paste-input til kombinert tekst og kall limInnOkter
+  var gammelVerdi=document.getElementById('paste-input').value;
   document.getElementById('paste-input').value=alt;
   limInnOkter();
-  // Tøm skjema-rader og reset UI etter vellykket innliming
+  document.getElementById('paste-input').value=gammelVerdi;
   var tbody=document.getElementById('paste-skjema-body');
-  if(tbody&&kOk>0){
+  if(kOk>0){
+    // Tøm skjema og lukk panel
     tbody.innerHTML='';oppdaterPasteSkjemaSynlighet();
     document.getElementById('paste-input').value='';
     var prev=document.getElementById('ai-preview-plan');if(prev)prev.style.display='none';
     var st=document.getElementById('ai-status-plan');if(st)st.style.display='none';
     sjekkLagreOkterKnapp();
+    togglLimInnPanel(); // lukk panelet
+    visToast('✅ '+kOk+' rad(er) lagt til i planen – husk å lagre!');
   }
 }
 
@@ -1845,9 +1850,8 @@ async function tolkMedAI(){
       data.rader.forEach(function(r){leggTilPasteRad(r);});
       var skjema=document.getElementById('paste-skjema');if(skjema)skjema.style.display='table';
       oppdaterPasteSkjemaHeader();
-      document.getElementById('paste-input').value='';
       if(previewEl)previewEl.style.display='flex';
-      if(statusEl)statusEl.innerHTML='✅ '+data.rader.length+' rad(er) tolket – rediger og lagre';
+      if(statusEl)statusEl.innerHTML='✅ '+data.rader.length+' rad(er) tolket – rediger og klikk «Legg til i plan»';
       sjekkLagreOkterKnapp();
     }else{
       if(statusEl)statusEl.innerHTML='⚠️ '+(data.feil||'Ingen rader tolket – pr\xF8v \xABGenerer prompt\xBB for veiledning');
@@ -1937,8 +1941,28 @@ function limInnOkter(){
     var nk=ukeObj.uke+'|'+dk+'|'+pk;
     var nySlot={aktivitet:akt||'',oppmote:opp||'',info:info||'',laerer:laerer||''};
     var eks=endringer[nk]||sikrSlot(ukeObj.dager&&ukeObj.dager[dk]?ukeObj.dager[dk][pk]:null);
-    if(eks.aktivitet||eks.oppmote||eks.laerer)kKo.push({nk:nk,nySlot:nySlot,eks:eks,ukeObj:ukeObj,dk:dk,pk:pk,li:li});
-    else{kKlare[nk]=nySlot;kOk++;}
+    if(eks.aktivitet||eks.oppmote||eks.laerer){
+      if(erYFF||aktivtFagLaerer==='Fellesfag'){
+        // YFF/Fellesfag: bruk gruppe/fag som nøkkel – overskriv direkte
+        kKlare[nk]=nySlot;kOk++;
+      } else if(aktivtFagLaerer==='NNA'){
+        // NNA har kun ett slot per dag – overskriv
+        kKlare[nk]=nySlot;kOk++;
+      } else {
+        // NPT: prøv neste ledige parti-slot
+        var funnet=false;
+        var maxP=(antallPartier()||2)+2;
+        for(var tryN=1;tryN<=maxP;tryN++){
+          var tryPk='p'+tryN;
+          var tryNk=ukeObj.uke+'|'+dk+'|'+tryPk;
+          var tryEks=endringer[tryNk]||sikrSlot(ukeObj.dager&&ukeObj.dager[dk]?ukeObj.dager[dk][tryPk]:null);
+          if(!tryEks.aktivitet&&!tryEks.oppmote&&!tryEks.laerer){
+            kKlare[tryNk]=nySlot;kOk++;funnet=true;break;
+          }
+        }
+        if(!funnet)kKo.push({nk:nk,nySlot:nySlot,eks:eks,ukeObj:ukeObj,dk:dk,pk:pk,li:li});
+      }
+    } else{kKlare[nk]=nySlot;kOk++;}
   });
   Object.assign(endringer,kKlare);aktiverLagreBtn();renderGrid();
   if(kKo.length>0){kIdx=0;visKonflikt();}
@@ -2589,8 +2613,13 @@ function byggPrompt(){
   p+='- Uke: tall, f.eks. 35'+lf;
   p+='- Dag: '+gyldigeDagerStr+lf;
   if(!erNNA)p+='- '+col3Navn+': '+col3Info+lf;
-  p+='- Aktivitet: kort beskrivelse av hva som skal gj\xf8res (P\xc5KREVD)'+lf;
-  p+='- Oppm\xf8te: sted og klokkeslett, f.eks. "Bedriften kl 08:00" (kan v\xe6re tom)'+lf;
+  p+='- Aktivitet: HVA som skal gj\xf8res (f.eks. "eksperiment", "stell av dyr", "teoritime") (P\xc5KREVD)'+lf;
+  p+='- Oppm\xf8te: HVOR elevene skal m\xf8te/v\xe6re – rom, bygg, sted eller omr\xe5de (kan skrives med liten bokstav).'+lf;
+  p+='  Eksempler: "labben", "grishuset", "auditoriet", "fj\xf8set kl 08:00", "Bedriften kl 08:30"'+lf;
+  p+='  VIKTIG: Hvis et stedsnavn eller lokale er nevnt etter aktivitetsbeskrivelsen, plasser det i Oppm\xf8te – ikke i Aktivitet.'+lf;
+  p+='  Eks: "eksperiment labben" → aktivitet: eksperiment, oppm\xf8te: labben'+lf;
+  p+='  Eks: "synge i kor auditoriet" → aktivitet: synge i kor, oppm\xf8te: auditoriet'+lf;
+  p+='  Eks: "stell grishuset" → aktivitet: stell, oppm\xf8te: grishuset'+lf;
   p+='- Info: valgfri tilleggsinformasjon (kan v\xe6re tom)'+lf;
   p+='- L\xe6rer: Gyldige navn er: '+gyldigeLaerere.join(', ')+' (eller "Alle" for tverrfaglig)'+lf;
   p+='  VIKTIG: Hvis et personnavn er eksplisitt nevnt i teksten, bruk det uansett – selv om det ikke er p\xe5 listen.'+lf;
