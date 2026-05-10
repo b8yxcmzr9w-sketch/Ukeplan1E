@@ -1164,6 +1164,8 @@ function byggFagTabsLaerer(){
   });
 }
 function byttFagLaerer(fag){
+  // Husk hvilken uke som er synlig nå, slik at vi kan scrolle dit etter render
+  var synligUke=hentSynligUke();
   aktivtFagLaerer=fag;
   endringer={};passivLagreBtn();
   oppdaterTilstede();
@@ -1180,6 +1182,12 @@ function byttFagLaerer(fag){
   if(ffv)ffv.style.display='none';
   oppdaterStickyTop();
   renderGrid();
+  // Scroll til samme uke som var synlig – med litt forsinkelse for at DOM er klar
+  setTimeout(function(){
+    if(synligUke)scrollTilUke(synligUke,'auto');
+    else scrollTilDenneUkenVedOppstart();
+    setTimeout(setupDenneUkenObserver,100);
+  },60);
 }
 function byttFellesfag(fag){
   if(!allData.innstillinger)allData.innstillinger={};
@@ -2866,31 +2874,15 @@ function parseAnnenAISr(){
 }
 var _denneUkenObserver=null;
 function gaTilDenneUkenGrid(){
-  var isoUke=getCurrentISOWeek();
-  var el=document.getElementById('uke-hdr-'+isoUke);
+  var isoUke=getVisningsUke();
   var btn=document.getElementById('btn-denne-uken');
-  if(el){
-    var rect=el.getBoundingClientRect();
-    var offset=rect.top+window.pageYOffset-window.innerHeight*0.25;
-    window.scrollTo({top:offset,behavior:'smooth'});
+  var ok=scrollTilUke(isoUke,'smooth');
+  var el=document.getElementById('uke-hdr-'+isoUke);
+  if(ok){
     if(btn)btn.classList.add('aktiv');
-    // Observer: fjern aktiv når uke-headeren scrolles ut av syne
-    if(_denneUkenObserver)_denneUkenObserver.disconnect();
-    _denneUkenObserver=new IntersectionObserver(function(entries){
-      if(!entries[0].isIntersecting){
-        if(btn)btn.classList.remove('aktiv');
-        _denneUkenObserver.disconnect();
-      }
-    },{threshold:0});
-    _denneUkenObserver.observe(el);
+    setTimeout(setupDenneUkenObserver,400);
     // Blink-effekt
-    var td=el.querySelector('td')||el;
-    var origBg=td.style.background||'';
-    var count=0;
-    var blink=setInterval(function(){
-      count++;td.style.background=(count%2===1)?'#c8e6c9':origBg;
-      if(count>=6){clearInterval(blink);td.style.background=origBg;}
-    },300);
+    if(el){var td=el.querySelector('td')||el;var origBg=td.style.background||'';var count=0;var blink=setInterval(function(){count++;td.style.background=(count%2===1)?'#c8e6c9':origBg;if(count>=6){clearInterval(blink);td.style.background=origBg;}},300);}
   } else {
     visToast('Uke '+isoUke+' er ikke synlig i planen');
   }
@@ -3081,22 +3073,66 @@ function togglFilterUker(){
 // Print aktiv-state
 window.addEventListener('beforeprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.add('aktiv');});
 window.addEventListener('afterprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.remove('aktiv');});
-// Scroll til denne uken (2-3 rader over)
+// ── Scroll-hjelpere ──────────────────────────────────────────────────────────
+function _stickyHoyde(){
+  var h=0;
+  var verk=document.querySelector('.verktolinje');
+  var tabs=document.getElementById('laerer-fag-tabs');
+  var hr=document.getElementById('hurtig-rad');
+  if(verk)h+=verk.getBoundingClientRect().height;
+  if(tabs&&tabs.style.display!=='none')h+=tabs.getBoundingClientRect().height;
+  if(hr&&hr.style.display==='flex')h+=hr.getBoundingClientRect().height;
+  return h;
+}
+// Scroll til en gitt uke. Finner nærmeste synlige uke hvis nøyaktig uke mangler.
+function scrollTilUke(ukeNr,behavior){
+  var el=document.getElementById('uke-hdr-'+ukeNr);
+  if(!el){
+    // Finn nærmeste uke >= ukeNr i DOM
+    var alle=Array.from(document.querySelectorAll('tr.uke-hdr[id^="uke-hdr-"]'));
+    if(!alle.length)return false;
+    var target=null,bestDiff=Infinity;
+    var p=function(u){var n=parseInt(String(u));return n>=30?n:n+100;};
+    var maal=p(ukeNr);
+    alle.forEach(function(row){
+      var u=row.id.replace('uke-hdr-','');
+      var diff=p(u)-maal;
+      if(diff>=0&&diff<bestDiff){bestDiff=diff;target=row;}
+    });
+    if(!target)return false;
+    el=target;
+  }
+  var stickyH=_stickyHoyde();
+  var offset=el.getBoundingClientRect().top+window.pageYOffset-stickyH-20;
+  window.scrollTo({top:Math.max(0,offset),behavior:behavior||'auto'});
+  return true;
+}
+// Returnerer ukenummer for uke-headeren som er nærmest toppen av viewport (under sticky-bar)
+function hentSynligUke(){
+  var stickyH=_stickyHoyde()+8;
+  var alle=Array.from(document.querySelectorAll('tr.uke-hdr[id^="uke-hdr-"]'));
+  var best=null,bestTop=Infinity;
+  alle.forEach(function(row){
+    var top=row.getBoundingClientRect().top;
+    if(top>=stickyH&&top<bestTop){bestTop=top;best=row;}
+  });
+  if(!best){
+    // Fallback: siste rad som er over stickyH
+    var siste=null;
+    alle.forEach(function(row){
+      var top=row.getBoundingClientRect().top;
+      if(top<stickyH)siste=row;
+    });
+    best=siste;
+  }
+  return best?best.id.replace('uke-hdr-',''):null;
+}
 function scrollTilDenneUkenVedOppstart(){
   var forsok=0;
   function prøv(){
     var isoUke=getVisningsUke();
-    var el=document.getElementById('uke-hdr-'+isoUke);
-    if(!el){if(forsok++<5)setTimeout(prøv,200);return;}
-    var stickyH=0;
-    var verk=document.querySelector('.verktolinje');
-    var tabs=document.getElementById('laerer-fag-tabs');
-    var hr=document.getElementById('hurtig-rad');
-    if(verk)stickyH+=verk.getBoundingClientRect().height;
-    if(tabs&&tabs.style.display!=='none')stickyH+=tabs.getBoundingClientRect().height;
-    if(hr&&hr.style.display==='flex')stickyH+=hr.getBoundingClientRect().height;
-    var offset=el.getBoundingClientRect().top+window.pageYOffset-stickyH-(38*2.5);
-    window.scrollTo({top:Math.max(0,offset),behavior:'auto'});
+    var ok=scrollTilUke(isoUke,'auto');
+    if(!ok){if(forsok++<5)setTimeout(prøv,200);return;}
     setTimeout(setupDenneUkenObserver,100);
   }
   setTimeout(prøv,300);
