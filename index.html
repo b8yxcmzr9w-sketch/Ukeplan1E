@@ -213,6 +213,32 @@ td.col-laer{width:90px;max-width:110px;}
   #grid-thead th{background:#3d4a1e !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:.1rem .28rem !important;font-size:6.5pt !important;}
 }
 .print-header{display:none;}
+/* ── Elevside print ────────────────────────────────────────────────────── */
+#elev-print{display:none;}
+body.elev-utskrift #elev-print{display:block !important;}
+body.elev-utskrift>*:not(#elev-print){display:none !important;}
+.ep-side{font-family:"Segoe UI",system-ui,sans-serif;color:#1a1a14;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.ep-hdr{border-bottom:2.5pt solid #3d4a1e;padding-bottom:.18cm;margin-bottom:.28cm;display:flex;align-items:baseline;justify-content:space-between;}
+.ep-hdr-tittel{font-size:13pt;font-weight:700;color:#3d4a1e;}
+.ep-hdr-sub{font-size:8pt;color:#666;letter-spacing:.02em;}
+.ep-grid{display:grid;gap:.18cm;border:1pt solid #ccc;border-radius:4pt;overflow:hidden;}
+.ep-dag-hdr{background:#3d4a1e;color:#fff;font-size:7.5pt;font-weight:700;text-align:center;padding:.22cm .1cm .15cm;text-transform:uppercase;letter-spacing:.05em;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.ep-dag-dato{font-size:6pt;font-weight:400;opacity:.75;margin-top:.05cm;}
+.ep-dag-innhold{padding:.12cm .14cm;display:flex;flex-direction:column;gap:.12cm;min-height:2.2cm;}
+.ep-kort{border-left:2.5pt solid #3d4a1e;padding:.1cm .13cm;border-radius:0 2pt 2pt 0;background:#f8f7f3;page-break-inside:avoid;}
+.ep-kort-fag{font-size:6pt;font-weight:700;color:#3d4a1e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.06cm;}
+.ep-kort-akt{font-size:8pt;font-weight:700;line-height:1.25;}
+.ep-kort-opp{font-size:7pt;color:#555;margin-top:.05cm;}
+.ep-kort-info{font-size:6.5pt;color:#7a6030;background:#fffce8;border-left:2pt solid #e0c84a;padding:.05cm .1cm;margin-top:.06cm;border-radius:0 2pt 2pt 0;}
+.ep-notater{border-top:1.5pt solid #3d4a1e;margin-top:.3cm;padding-top:.22cm;}
+.ep-notater-tittel{font-size:7.5pt;font-weight:700;color:#3d4a1e;margin-bottom:.25cm;letter-spacing:.03em;}
+.ep-linje{border-bottom:.75pt solid #ccc;height:.68cm;margin-bottom:0;}
+@media print{
+  body.elev-utskrift{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body.elev-utskrift #elev-print{display:block !important;}
+  body.elev-utskrift>*:not(#elev-print){display:none !important;}
+  @page{size:A4 landscape;margin:.9cm;}
+}
 .innst-advarsel{display:none;background:#c0392b;color:#fff;font-size:.78rem;font-weight:600;padding:.6rem 1rem;text-align:center;border-radius:8px;margin-bottom:.8rem;}
 .innst-advarsel.vis{display:block;}
 @media screen and (max-width:768px){
@@ -312,10 +338,13 @@ td.col-laer{width:90px;max-width:110px;}
     <span class="uke-label" id="uke-label">Uke</span>
     <button onclick="navigerUke(1)">Neste &#x2192;</button>
     <button class="oppdater-btn" id="denne-uke-btn" onclick="gaaTilDenneUken()">Denne uken</button>
-    <button onclick="hentData(true)">&#x21BB; Oppdater</button>
+    <button class="oppdater-btn" id="elev-oppdater-btn" onclick="elevOppdater()" style="cursor:default;opacity:.45;" disabled>&#x21BB; Oppdater</button>
+    <button class="oppdater-btn" onclick="skrivUtElev()" style="margin-left:auto;">&#x1F5A8;&#xFE0F; Skriv ut</button>
   </div>
   <div id="elev-main"></div>
   <div class="sist-oppdatert" id="sist-oppdatert"></div>
+  <!-- Skjult print-container for elevside -->
+  <div id="elev-print" style="display:none;"></div>
 </div>
 <div id="laerer-side">
   <div id="login-wrap">
@@ -1000,6 +1029,7 @@ async function hentData(manuell){
     allData.plan['YFF']=parseplanRader(d['Plan_YFF']||[['Uke','Dag','Gruppe','Aktivitet','Oppmoete','Info','Laerer']],'yff');
     allData.plan['Fellesfag']=parseplanRader(d['Plan_Fag']||[['Uke','Dag','Fag','Aktivitet','Oppmoete','Info','Laerer']],'fellesfag');
     oppdaterHeader();byggLaererVelger();byggElevFagVelger();endringer={};passivLagreBtn();
+    passivElevOppdater();
     var na=new Date().toLocaleTimeString('no',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('sist-oppdatert').textContent='Sist oppdatert: '+na;
     document.getElementById('laster-skjerm').style.display='none';
@@ -1128,7 +1158,8 @@ function byttHovedFane(f){
   document.getElementById('laerer-side').style.display=f==='laerer'?'block':'none';
   document.getElementById('tab-elev').classList.toggle('aktiv',f==='elev');
   document.getElementById('tab-laerer').classList.toggle('aktiv',f==='laerer');
-  if(f==='elev')renderElev();
+  if(f==='elev'){renderElev();startElevVersjonSjekk();}
+  else stopElevVersjonSjekk();
 }
 function byggElevFagVelger(){
   var div=document.getElementById('elev-fag-velger');
@@ -3070,9 +3101,150 @@ function togglFilterUker(){
   btn.textContent=btn.classList.contains('aktiv')?'Mine økter':'Alle økter';
   renderGrid();
 }
-// Print aktiv-state
+// Print aktiv-state (lærerside)
 window.addEventListener('beforeprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.add('aktiv');});
-window.addEventListener('afterprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.remove('aktiv');});
+window.addEventListener('afterprint',function(){
+  var b=document.getElementById('btn-skriv-ut');if(b)b.classList.remove('aktiv');
+  // Rydd opp elevside-print
+  document.body.classList.remove('elev-utskrift');
+  document.title=_origTitle||document.title;
+});
+
+// ── Elevside: Skriv ut ───────────────────────────────────────────────────────
+var _origTitle='';
+function skrivUtElev(){
+  var alle=alleUker();
+  if(!alle.length){visToast('Ingen data å skrive ut',true);return;}
+  var ukenummer=alle[aktivUkeIdx];
+  var c=cfg();
+  var klasse=c.klassenavn||c.skolenavn||'';
+  var manDate=ukeStartDato(ukenummer);
+  var freDate=manDate?new Date(manDate.getTime()+4*86400000):null;
+  function fmt(d){if(!d)return'';var dd=d.getDate(),mm=d.getMonth()+1;return(dd<10?'0'+dd:dd)+'.'+(mm<10?'0'+mm:mm)+'.'+(d.getFullYear()%100<10?'0'+(d.getFullYear()%100):d.getFullYear()%100);}
+  var datoSpenn=manDate?fmt(manDate)+' – '+fmt(freDate):'';
+  var tittelTekst=(klasse?klasse+' – ':'')+' Uke '+ukenummer+(datoSpenn?' | '+datoSpenn:'');
+
+  // Bygg dag-kolonner
+  var dager=ALLE_DAGER.filter(function(dk){
+    // Vis dager med data eller aktive dager
+    return aktiveDager().indexOf(dk)>=0||ALLE_DAGER.some(function(){return true;});
+  });
+  // Bruk aktiveDager + dager med faktisk data denne uken
+  var dagerMedData={};
+  FASTE_FANER.forEach(function(fagNavn){
+    var uke=allData.plan[fagNavn]&&allData.plan[fagNavn].uker.find(function(u){return String(u.uke)===ukenummer;})||null;
+    if(!uke)return;
+    Object.keys(uke.dager||{}).forEach(function(dk){dagerMedData[dk]=true;});
+  });
+  var printDager=ALLE_DAGER.filter(function(dk){
+    return aktiveDager().indexOf(dk)>=0||dagerMedData[dk];
+  });
+
+  var fagFarger={'NPT':'#6B8C2A','NNA':'#A0722A','YFF':'#185FA5','Fellesfag':'#534AB7'};
+  var gridCols=printDager.map(function(){return '1fr';}).join(' ');
+
+  var dagKols=printDager.map(function(dk){
+    var dato=dagDato(ukenummer,dk);
+    var bl=erBlokert(ukenummer,dk);
+    var dagHtml='<div style="border-right:1pt solid #e0ddd0;last-child:border:none;">';
+    dagHtml+='<div class="ep-dag-hdr">'+DAG_FULLT[dk]+(dato?'<div class="ep-dag-dato">'+dato+'</div>':'')+'</div>';
+    dagHtml+='<div class="ep-dag-innhold">';
+    if(bl.blokkert&&!erSrIgnorert(bl.type)){
+      dagHtml+='<div style="text-align:center;padding:.3cm .1cm;font-size:7.5pt;font-weight:600;color:#856404;">'+srEmoji(bl.type,bl.beskrivelse)+' '+bl.beskrivelse+'</div>';
+    } else {
+      // Alle-aktiviteter
+      hentAlleAktiviteter(ukenummer,dk).forEach(function(slot){
+        dagHtml+='<div class="ep-kort" style="border-left-color:#3d4a1e;">';
+        dagHtml+='<div class="ep-kort-fag">Alle</div>';
+        if(slot.aktivitet)dagHtml+='<div class="ep-kort-akt">'+escHtml(slot.aktivitet)+'</div>';
+        if(slot.oppmote)dagHtml+='<div class="ep-kort-opp">📍 '+escHtml(slot.oppmote)+'</div>';
+        if(slot.info)dagHtml+='<div class="ep-kort-info">'+escHtml(slot.info)+'</div>';
+        dagHtml+='</div>';
+      });
+      // Per fag
+      FASTE_FANER.forEach(function(fagNavn){
+        var uke=allData.plan[fagNavn]&&allData.plan[fagNavn].uker.find(function(u){return String(u.uke)===ukenummer;})||null;
+        var grupper=fagNavn==='YFF'?yffGrupper():fagNavn==='NNA'?['nna']:fagNavn==='Fellesfag'?(cfg().aktiveFag||[]):partier();
+        var farge=fagFarger[fagNavn]||'#888';
+        grupper.forEach(function(pk){
+          var slot=sikrSlot(uke&&uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);
+          if(!slot.aktivitet&&!slot.oppmote&&!slot.info&&!slot.laerer)return;
+          var fagVis=fagNavn==='Fellesfag'?pk:fagNavn;
+          var pk2=fagNavn==='NNA'?'':(fagNavn==='YFF'||fagNavn==='Fellesfag')?pk:('P'+pk.slice(1));
+          dagHtml+='<div class="ep-kort" style="border-left-color:'+farge+';">';
+          dagHtml+='<div class="ep-kort-fag" style="color:'+farge+';">'+fagEmoji(fagVis)+' '+fagVis+(pk2?' · '+pk2:'')+'</div>';
+          if(slot.aktivitet)dagHtml+='<div class="ep-kort-akt">'+escHtml(slot.aktivitet)+'</div>';
+          if(slot.oppmote)dagHtml+='<div class="ep-kort-opp">📍 '+escHtml(slot.oppmote)+'</div>';
+          if(slot.info)dagHtml+='<div class="ep-kort-info">'+escHtml(slot.info)+'</div>';
+          dagHtml+='</div>';
+        });
+      });
+    }
+    dagHtml+='</div></div>';
+    return dagHtml;
+  }).join('');
+
+  // Notatlinjer (~9 linjer)
+  var notatLinjer='';
+  for(var i=0;i<9;i++)notatLinjer+='<div class="ep-linje"></div>';
+
+  var html='<div class="ep-side">';
+  html+='<div class="ep-hdr"><span class="ep-hdr-tittel">'+escHtml(tittelTekst)+'</span><span class="ep-hdr-sub">'+escHtml(c.skolenavn||'')+'</span></div>';
+  html+='<div class="ep-grid" style="display:grid;grid-template-columns:'+gridCols+';height:13cm;align-items:stretch;">'+dagKols+'</div>';
+  html+='<div class="ep-notater"><div class="ep-notater-tittel">📝 Notater</div>'+notatLinjer+'</div>';
+  html+='</div>';
+
+  document.getElementById('elev-print').innerHTML=html;
+  _origTitle=document.title;
+  document.title='Ukeplan – '+(klasse||'Elev')+' – Uke '+ukenummer;
+  document.body.classList.add('elev-utskrift');
+  window.print();
+}
+
+// ── Elevside: versjonsjekk (Oppdater-knapp) ──────────────────────────────────
+var _elevVersjonInterval=null;
+var _elevNyVersjon=false;
+function aktiverElevOppdater(nyVersjon){
+  _elevNyVersjon=true;
+  var btn=document.getElementById('elev-oppdater-btn');
+  if(!btn)return;
+  btn.disabled=false;btn.style.cursor='pointer';btn.style.opacity='1';
+  btn.classList.add('aktiv');
+  btn.textContent='↻ Ny data ('+nyVersjon+')';
+}
+function passivElevOppdater(){
+  _elevNyVersjon=false;
+  var btn=document.getElementById('elev-oppdater-btn');
+  if(!btn)return;
+  btn.disabled=true;btn.style.cursor='default';btn.style.opacity='.45';
+  btn.classList.remove('aktiv');
+  btn.textContent='↻ Oppdater';
+}
+async function sjekkeElevVersjon(){
+  try{
+    var ny=await hentVersjonFraSheets();
+    if(ny>sisteVersjon)aktiverElevOppdater(ny);
+  }catch(e){}
+}
+function startElevVersjonSjekk(){
+  stopElevVersjonSjekk();
+  _elevVersjonInterval=setInterval(sjekkeElevVersjon,90*1000); // sjekk hvert 90 sek
+}
+function stopElevVersjonSjekk(){if(_elevVersjonInterval){clearInterval(_elevVersjonInterval);_elevVersjonInterval=null;}}
+async function elevOppdater(){
+  if(!_elevNyVersjon)return;
+  // Finn uker med ny data – sammenlign versjoner
+  var forrigeVersjon=sisteVersjon;
+  await hentData(true);
+  passivElevOppdater();
+  // Tilby å gå til en uke med ny data (heuristikk: gå til nåværende uke)
+  var nyUke=getVisningsUke();
+  var alle=alleUker();
+  var idx=alle.indexOf(String(nyUke));
+  if(idx<0){visToast('Data oppdatert!');return;}
+  var svar=confirm('Data er oppdatert!\n\nGå til uke '+nyUke+' (denne uken) nå?\n\nTrykk OK for å navigere dit, Avbryt for å bli på uke '+alle[aktivUkeIdx]+'.');
+  if(svar){aktivUkeIdx=idx;renderElev();}
+}
 // ── Scroll-hjelpere ──────────────────────────────────────────────────────────
 function _stickyHoyde(){
   var h=0;
