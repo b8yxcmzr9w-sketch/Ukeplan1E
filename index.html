@@ -381,7 +381,6 @@ td.col-laer{width:90px;max-width:110px;}
             <thead id="paste-skjema-head"></thead>
             <tbody id="paste-skjema-body"></tbody>
           </table>
-          <button class="btn-legg-lite" onclick="leggTilPasteRad()" style="margin-bottom:.35rem;">+ Legg til økt</button>
 
           <div class="paste-resultat" id="paste-resultat"></div>
 
@@ -1956,7 +1955,7 @@ function limInnOkter(){
     if(ALLE_DAGER.indexOf(dk)<0){kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+': Ugyldig dag "'+dagR+'"');return;}
     var bl=erBlokert(ukeR,dk);
     if(bl.blokkert&&!erSrIgnorert(bl.type)){kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+', '+((DAG_FULLT[dk])||dk)+': Blokkert av skolerute ('+bl.type+': '+bl.beskrivelse+')');return;}
-    var pk=erYFF?pkR:(pkR&&pkR.startsWith('p')?pkR:'p'+pkR);
+    var pk=erYFF||aktivtFagLaerer==='Fellesfag'?pkR:(pkR&&pkR.startsWith('p')?pkR:'p'+pkR);
     var ALLE_LAERERE=['Alle'];
     var gyldigLaerer=!laerer||ALLE_LAERERE.indexOf(laerer)>=0||allData.laerere.find(function(l){return l.navn===laerer;});
     if(!gyldigLaerer){kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+', '+((DAG_FULLT[dk])||dk)+', Parti '+pk+': Ukjent lærer "'+laerer+'" - gyldige navn: Alle, '+allData.laerere.map(function(l){return l.navn;}).join(', '));return;}
