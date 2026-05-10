@@ -339,7 +339,8 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
     <button onclick="navigerUke(1)">Neste &#x2192;</button>
     <button class="oppdater-btn" id="denne-uke-btn" onclick="gaaTilDenneUken()">Denne uken</button>
     <button class="oppdater-btn" id="elev-oppdater-btn" onclick="elevOppdater()" style="cursor:default;opacity:.45;" disabled>&#x21BB; Oppdater</button>
-    <button class="oppdater-btn" onclick="skrivUtElev()" style="margin-left:auto;">&#x1F5A8;&#xFE0F; Skriv ut</button>
+    <button class="oppdater-btn" onclick="aapneIcalModal('elev')" style="margin-left:auto;">&#x1F4C5; Kalender</button>
+    <button class="oppdater-btn" onclick="skrivUtElev()">&#x1F5A8;&#xFE0F; Skriv ut</button>
   </div>
   <div id="elev-main"></div>
   <div class="sist-oppdatert" id="sist-oppdatert"></div>
@@ -367,6 +368,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
         <button class="pw-btn" id="skjul-tomme" onclick="togglSkjulTomme()">Skjul tomme</button>
         <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn</button>
         <button class="pw-btn" id="btn-skriv-ut" onclick="skrivUt()">&#x1F5A8;&#xFE0F; Skriv ut</button>
+        <button class="pw-btn" id="btn-ical-laerer" onclick="aapneIcalModal('laerer')" style="display:none;">&#x1F4C5; Kalender</button>
         <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
         <span id="lagre-status" style="font-size:.71rem;color:var(--groen);font-weight:600;"></span>
         <button class="pw-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger')" style="display:none;">&#x2699;&#xFE0F; Innstillinger</button>
@@ -687,6 +689,28 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
     <div id="profil-innhold"></div>
     <div class="modal-knapper" style="margin-top:.9rem;">
       <button class="btn-avbryt" onclick="document.getElementById('profil-modal').style.display='none'">Lukk</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="ical-modal" style="display:none">
+  <div class="modal" style="max-width:480px;width:94%;">
+    <h3>&#x1F4C5; Kalenderabonnement</h3>
+    <p style="margin-bottom:.6rem;">Kopier lenken og legg den inn i kalenderappen din som et abonnement. Planen oppdateres automatisk.</p>
+    <label>Kalenderlenke</label>
+    <div style="display:flex;gap:.4rem;margin-bottom:.7rem;">
+      <input id="ical-url-felt" type="text" readonly style="font-size:.68rem;font-family:monospace;flex:1;padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;background:var(--bg);">
+      <button class="btn-ok" style="flex:none;padding:.4rem .85rem;font-size:.76rem;" onclick="kopierIcalUrl()">&#x1F4CB; Kopier</button>
+    </div>
+    <a id="ical-gcal-link" href="#" target="_blank" rel="noopener"
+       style="display:inline-block;background:#4285f4;color:#fff;text-decoration:none;border-radius:7px;padding:.42rem .9rem;font-size:.76rem;font-weight:600;margin-bottom:.85rem;">
+      &#x1F4C5; Legg til i Google Kalender
+    </a>
+    <p style="font-size:.7rem;color:var(--dempet);margin-bottom:0;">
+      <strong>Apple Kalender:</strong> Fil → Nytt kalenderabonnement → lim inn lenken.<br>
+      <strong>Outlook:</strong> Legg til kalender → Fra Internett → lim inn lenken.
+    </p>
+    <div class="modal-knapper" style="margin-top:.9rem;">
+      <button class="btn-avbryt" onclick="document.getElementById('ical-modal').style.display='none'">Lukk</button>
     </div>
   </div>
 </div>
@@ -1516,6 +1540,7 @@ async function loggInn(){
   document.getElementById('admin-badge').style.display=erAdmin()?'inline-block':'none';
   document.getElementById('btn-innst').style.display=erAdmin()?'inline-block':'none';
   document.getElementById('btn-profil').style.display='inline-block';
+  document.getElementById('btn-ical-laerer').style.display='inline-block';
   byggFagTabsLaerer();byggHurtigRad();renderGrid();
   oppdaterStickyTop();setTimeout(function(){oppdaterStickyTop();scrollTilDenneUkenVedOppstart();},200);
   // Tilstedeværelse: registrer og vis hvem som er inne
@@ -1549,6 +1574,7 @@ function loggUt(){
   document.getElementById('admin-badge').style.display='none';
   document.getElementById('btn-innst').style.display='none';
   document.getElementById('btn-profil').style.display='none';
+  document.getElementById('btn-ical-laerer').style.display='none';
   document.getElementById('passord-felt').value='';
   document.getElementById('feil-melding').textContent='';
   visLaererSeksjon('plan');
@@ -3112,6 +3138,34 @@ window.addEventListener('afterprint',function(){
 
 // ── Elevside: Skriv ut ───────────────────────────────────────────────────────
 var _origTitle='';
+function lagIcalUrl(type) {
+  var base = SCRIPT_URL;
+  if (type === 'laerer') {
+    return base + '?ical=1&laerer=' + encodeURIComponent(aktivLaerer || '');
+  }
+  var fag = aktivtFagElev || 'NPT';
+  var params = 'ical=1&fag=' + encodeURIComponent(fag);
+  if (fag === 'NPT') params += '&parti=' + encodeURIComponent(elevParti || 'p1');
+  else if (fag === 'YFF') params += '&gruppe=' + encodeURIComponent(aktivGruppeElev || '');
+  return base + '?' + params;
+}
+function aapneIcalModal(type) {
+  var url = lagIcalUrl(type);
+  document.getElementById('ical-url-felt').value = url;
+  document.getElementById('ical-gcal-link').href =
+    'https://calendar.google.com/calendar/r/settings/addbyurl?url=' + encodeURIComponent(url);
+  document.getElementById('ical-modal').style.display = 'flex';
+}
+function kopierIcalUrl() {
+  var felt = document.getElementById('ical-url-felt');
+  felt.select(); felt.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(felt.value).then(function() {
+    visToast('Kalenderlenke kopiert!');
+  }).catch(function() {
+    document.execCommand('copy');
+    visToast('Kalenderlenke kopiert!');
+  });
+}
 function skrivUtElev(){
   var alle=alleUker();
   if(!alle.length){visToast('Ingen data å skrive ut',true);return;}
