@@ -1846,11 +1846,25 @@ async function tolkMedAI(){
     var data=await res.json();
     if(data.ok&&data.rader&&data.rader.length){
       function kap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+      function erTomRad(tr){
+        var inputs=tr.querySelectorAll('input');
+        var selects=tr.querySelectorAll('select');
+        var harInput=Array.prototype.some.call(inputs,function(el){return el.value.trim()!=='';});
+        var harSelect=Array.prototype.some.call(selects,function(el){return el.value!=='';});
+        return !harInput&&!harSelect;
+      }
+      // Fjern eksisterende tomme rader før AI-rader legges til
+      var tbody=document.getElementById('paste-skjema-body');
+      Array.prototype.slice.call(tbody.querySelectorAll('tr')).forEach(function(tr){
+        if(erTomRad(tr))tbody.removeChild(tr);
+      });
       data.rader.forEach(function(r){
         leggTilPasteRad({uke:r.uke,dag:r.dag,parti:r.parti,gruppe:r.gruppe,fag:r.fag,
           aktivitet:kap(r.aktivitet),oppmote:kap(r.oppmote),info:kap(r.info),laerer:r.laerer});
       });
-      leggTilPasteRad(); // tom rad klar for neste økt
+      // Legg til én tom rad, men bare hvis siste rad ikke allerede er tom
+      var rader=tbody.querySelectorAll('tr');
+      if(!rader.length||!erTomRad(rader[rader.length-1]))leggTilPasteRad();
       var skjema=document.getElementById('paste-skjema');if(skjema)skjema.style.display='table';
       oppdaterPasteSkjemaHeader();
       if(previewEl)previewEl.style.display='flex';
