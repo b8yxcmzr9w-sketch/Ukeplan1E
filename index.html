@@ -1845,9 +1845,12 @@ async function tolkMedAI(){
     var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||'',laerere:laerereNavn})});
     var data=await res.json();
     if(data.ok&&data.rader&&data.rader.length){
-      var tbody=document.getElementById('paste-skjema-body');
-      tbody.innerHTML='';
-      data.rader.forEach(function(r){leggTilPasteRad(r);});
+      function kap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+      data.rader.forEach(function(r){
+        leggTilPasteRad({uke:r.uke,dag:r.dag,parti:r.parti,gruppe:r.gruppe,fag:r.fag,
+          aktivitet:kap(r.aktivitet),oppmote:kap(r.oppmote),info:kap(r.info),laerer:r.laerer});
+      });
+      leggTilPasteRad(); // tom rad klar for neste økt
       var skjema=document.getElementById('paste-skjema');if(skjema)skjema.style.display='table';
       oppdaterPasteSkjemaHeader();
       if(previewEl)previewEl.style.display='flex';
