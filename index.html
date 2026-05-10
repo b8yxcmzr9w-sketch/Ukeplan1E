@@ -578,6 +578,7 @@ td.col-laer{width:90px;max-width:110px;}
 <div id="slot-ctx-menu" style="position:fixed;z-index:200;background:#fff;border:1px solid var(--kant);border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.2);display:none;min-width:170px;overflow:hidden;">
   <div onclick="slotKopier()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;">📋 Kopier til hurtigrad</div>
   <div onclick="slotFlytt()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;">➡️ Flytt til annen dato</div>
+  <div id="slot-ctx-tilbake" onclick="slotLeggTilbake()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;border-bottom:1px solid #eee;display:none;">↩ Legg tilbake</div>
   <div onclick="slotSlett()" style="padding:.55rem .95rem;cursor:pointer;font-size:.78rem;color:#c0392b;">🗑️ Slett økt</div>
 </div>
 <!-- Flytt-modal -->
@@ -2914,11 +2915,26 @@ var _ctxSlot={ui:0,dk:'',pk:''};
 function visSlotMenu(e,ui,dk,pk){
   e.preventDefault();
   _ctxSlot={ui:ui,dk:dk,pk:pk};
+  // Sjekk om det finnes en slettet versjon i søppeldunk-buffer for denne sloten
+  var uke=alleGridUkerCache[ui];
+  var tilbakeEl=document.getElementById('slot-ctx-tilbake');
+  if(tilbakeEl&&uke){
+    var funn=_finnISøppeldunk(aktivtFagLaerer,String(uke.uke),dk,pk);
+    tilbakeEl.style.display=funn?'block':'none';
+  }
   var m=document.getElementById('slot-ctx-menu');
   m.style.display='block';
-  var x=Math.min(e.clientX,window.innerWidth-180);
-  var y=Math.min(e.clientY,window.innerHeight-120);
+  var x=Math.min(e.clientX,window.innerWidth-190);
+  var y=Math.min(e.clientY,window.innerHeight-140);
   m.style.left=x+'px';m.style.top=y+'px';
+}
+function _finnISøppeldunk(fag,uke,dag,pk){
+  // søppeldunk: [tid, slettetAv, fag, uke, dag, parti, aktivitet, oppmote, info, laerer]
+  for(var i=søppeldunk.length-1;i>=0;i--){
+    var r=søppeldunk[i];
+    if(r[2]===fag&&String(r[3])===String(uke)&&r[4]===dag&&r[5]===pk)return i;
+  }
+  return -1;
 }
 function skjulSlotMenu(){document.getElementById('slot-ctx-menu').style.display='none';}
 document.addEventListener('click',function(){skjulSlotMenu();});
@@ -3001,6 +3017,19 @@ function slotSlett(){
   aktiverLagreBtn();renderGrid();
   lagreTilSheets(true);
   visToast('🗑️ Økt slettet og lagret');
+}
+function slotLeggTilbake(){
+  skjulSlotMenu();
+  var ctx=_hentCtxSlot();if(!ctx)return;
+  var uke=alleGridUkerCache[_ctxSlot.ui];if(!uke)return;
+  var idx=_finnISøppeldunk(aktivtFagLaerer,String(uke.uke),_ctxSlot.dk,_ctxSlot.pk);
+  if(idx<0){visToast('Ingen slettet økt å legge tilbake',true);return;}
+  var r=søppeldunk[idx];
+  endringer[ctx.nk]={aktivitet:r[6]||'',oppmote:r[7]||'',info:r[8]||'',laerer:r[9]||''};
+  søppeldunk.splice(idx,1); // Fjern fra buffer
+  aktiverLagreBtn();renderGrid();
+  lagreTilSheets(true);
+  visToast('↩ Økt lagt tilbake og lagret');
 }
 
 function skrivUt(){
