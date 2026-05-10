@@ -369,7 +369,7 @@ td.col-laer{width:90px;max-width:110px;}
           </div>
           <div class="paste-rad" style="margin-top:.35rem;flex-wrap:wrap;gap:.35rem;align-items:center;">
             <button id="btn-tolk-ai" class="pw-btn" onclick="tolkMedAI()">&#x1F916; Tolk med AI</button>
-            <button onclick="aapnePromptModal()" style="background:none;border:none;color:var(--dempet);font-size:.68rem;cursor:pointer;text-decoration:underline;padding:0;">&#x1F511; Bruk ChatGPT i stedet</button>
+            <button onclick="aapnePromptModal()" style="background:none;border:none;color:var(--dempet);font-size:.68rem;cursor:pointer;text-decoration:underline;padding:0;">&#x1F511; Bruk annen AI i stedet</button>
             <div id="ai-status-plan" class="ai-status" style="display:none;"></div>
           </div>
 
@@ -571,8 +571,8 @@ td.col-laer{width:90px;max-width:110px;}
 </div>
 <div class="modal-bg" id="prompt-modal" style="display:none">
   <div class="prompt-modal">
-    <h3>&#x1F916; Prompt for Copilot / ChatGPT</h3>
-    <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.5rem;">Kopier og lim inn i Copilot eller ChatGPT.</p>
+    <h3>&#x1F916; Prompt for annen AI</h3>
+    <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.5rem;">Kopier og lim inn i ChatGPT, Copilot eller annen AI. Lim inn svaret tilbake i tekstfeltet og klikk «Legg til i plan» direkte – du trenger ikke «Tolk med AI» for ferdig formatert svar.</p>
     <textarea id="prompt-tekst" readonly></textarea>
     <div class="modal-knapper" style="margin-top:.7rem;">
       <button class="btn-avbryt" onclick="document.getElementById('prompt-modal').style.display='none'">Lukk</button>
@@ -717,6 +717,17 @@ function fagEmoji(navn){
   return'📚';
 }
 function aktiveDagerForFag(fagNavn){
+  if(fagNavn==='Fellesfag'){
+    // Union av alle enkeltfags konfigurerte dager
+    var dagSet={};
+    (cfg().aktiveFag||[]).forEach(function(fn){
+      var f=allData.fag.find(function(x){return x.navn===fn;});
+      var d=f&&f.dager&&f.dager.length?f.dager:aktiveDager();
+      d.forEach(function(dk){dagSet[dk]=true;});
+    });
+    var union=ALLE_DAGER.filter(function(d){return dagSet[d];});
+    return union.length?union:aktiveDager();
+  }
   var fag=allData.fag.find(function(f){return f.navn===fagNavn;});
   if(fag&&fag.dager&&fag.dager.length)return fag.dager;
   return aktiveDager(); // Fallback til globale dager
@@ -1105,13 +1116,13 @@ function byttFagLaerer(fag){
   endringer={};passivLagreBtn();
   oppdaterTilstede();
   byggFagTabsLaerer();
-  // Oppdater innlimingsskjema for nytt fag
+  // Oppdater innlimingsskjema for nytt fag – tøm og skjul tabell
   var tbody=document.getElementById('paste-skjema-body');
   if(tbody)tbody.innerHTML='';
   oppdaterPasteSkjemaHeader();
+  oppdaterPasteSkjemaSynlighet();
   oppdaterLimInnTittel();
   byggHurtigRad();
-  leggTilPasteRad();
   // Vis fellesfag-velger kun for Fellesfag-fanen
   var ffv=document.getElementById('fellesfag-velger');
   if(ffv){
@@ -1422,10 +1433,6 @@ async function loggInn(){
   document.getElementById('btn-profil').style.display='inline-block';
   byggFagTabsLaerer();byggHurtigRad();renderGrid();
   oppdaterStickyTop();setTimeout(function(){oppdaterStickyTop();scrollTilDenneUkenVedOppstart();},200);
-  setTimeout(function(){
-    var tbody=document.getElementById('paste-skjema-body');
-    if(tbody&&tbody.children.length===0)leggTilPasteRad();
-  },100);
   // Tilstedeværelse: registrer og vis hvem som er inne
   var tilstede=await oppdaterTilstede();
   if(tilstede&&tilstede.aktive){
@@ -1561,8 +1568,8 @@ function renderGrid(){
   // Bygg dager-liste: aktive dager for faget + alle dager med data
   var dagerSet={};
   if(erFellesfag){
-    // Fellesfag-fanen: vis alltid alle aktive dager
-    aktiveDager().forEach(function(d){dagerSet[d]=true;});
+    // Fellesfag-fanen: union av alle enkeltfags dager
+    aktiveDagerForFag('Fellesfag').forEach(function(d){dagerSet[d]=true;});
   } else {
     aktiveDagerForFag(aktivtFagLaerer).forEach(function(d){dagerSet[d]=true;});
   }
@@ -1839,6 +1846,8 @@ async function tolkMedAI(){
   var statusEl=document.getElementById('ai-status-plan');
   var previewEl=document.getElementById('ai-preview-plan');
   if(btn){btn.disabled=true;btn.textContent='⏳ Tolker...';}
+  var piEl=document.getElementById('paste-input');
+  if(piEl)piEl.placeholder='Lim inn tekst her – AI tolker og fyller ut rader nedenfor automatisk…';
   if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='<span class="ai-spinner"></span>Henter svar fra Gemini AI…';}
   try{
     var laerereNavn=(allData.laerere||[]).map(function(l){return l.navn;}).filter(Boolean);
@@ -1868,7 +1877,7 @@ async function tolkMedAI(){
       var skjema=document.getElementById('paste-skjema');if(skjema)skjema.style.display='table';
       oppdaterPasteSkjemaHeader();
       if(previewEl)previewEl.style.display='flex';
-      if(statusEl)statusEl.innerHTML='✅ '+data.rader.length+' rad(er) tolket – rediger og klikk «Legg til i plan»';
+      if(statusEl)statusEl.innerHTML='✅ '+data.rader.length+' rad(er) tolket med Gemini AI – rediger og klikk «Legg til i plan»';
       sjekkLagreOkterKnapp();
     }else{
       if(statusEl)statusEl.innerHTML='⚠️ '+(data.feil||'Ingen rader tolket – pr\xF8v \xABGenerer prompt\xBB for veiledning');
@@ -2671,16 +2680,20 @@ function aapnePromptModal(){document.getElementById('prompt-tekst').value=byggPr
 function kopierPrompt(){
   var ta=document.getElementById('prompt-tekst');
   ta.select();
-  navigator.clipboard.writeText(ta.value).then(function(){
+  function etterKopiering(){
     document.getElementById('prompt-modal').style.display='none';
     var pi=document.getElementById('paste-input');
-    if(pi)pi.value='';
+    if(pi){
+      pi.value='';
+      pi.placeholder='Lim inn svaret fra AI her, klikk «Legg til i plan» direkte…';
+    }
     document.getElementById('paste-resultat').innerHTML='';
-  }).catch(function(){
+    var st=document.getElementById('ai-status-plan');
+    if(st){st.style.display='flex';st.innerHTML='📋 Prompt kopiert – lim inn svar fra annen AI og klikk «Legg til i plan»';}
+  }
+  navigator.clipboard.writeText(ta.value).then(etterKopiering).catch(function(){
     document.execCommand('copy');
-    document.getElementById('prompt-modal').style.display='none';
-    var pi=document.getElementById('paste-input');
-    if(pi)pi.value='';
+    etterKopiering();
   });
 }
 function aapneSrPromptModal(){
