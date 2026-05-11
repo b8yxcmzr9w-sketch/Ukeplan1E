@@ -266,7 +266,8 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   body.elev-utskrift{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   body.elev-utskrift #elev-print{display:block !important;}
   body.elev-utskrift>*:not(#elev-print){display:none !important;}
-  @page{size:A4 landscape;margin:.9cm;}
+  @page{size:A4 landscape;margin:.85cm;}
+  .ep-side{page-break-after:avoid;}
 }
 .elev-filter-bar{display:flex;align-items:center;gap:.45rem;padding:.5rem 1.2rem;flex-wrap:wrap;}
 .elev-chip-wrap{display:inline-flex;align-items:center;gap:.22rem;background:var(--kort);border:1.5px solid var(--kant);border-radius:20px;padding:.3rem .52rem .3rem .72rem;transition:border-color .15s,background .15s;cursor:pointer;min-height:40px;}
@@ -3496,7 +3497,7 @@ function skrivUtElev(){
 
   // Notatlinjer (~9 linjer)
   var notatLinjer='';
-  for(var i=0;i<9;i++)notatLinjer+='<div class="ep-linje"></div>';
+  for(var i=0;i<5;i++)notatLinjer+='<div class="ep-linje"></div>';
 
   // Hel-uke skolerute-bannere
   var bannerHtml='';
