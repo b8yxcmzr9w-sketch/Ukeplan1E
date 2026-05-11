@@ -34,7 +34,7 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 @keyframes spin{to{transform:rotate(360deg);}}
 #laster-skjerm p{font-size:.82rem;color:var(--dempet);}
 #elev-side{display:none;}
-.elev-kontroller{display:flex;align-items:center;gap:.45rem;padding:.75rem 1.2rem 0;flex-wrap:wrap;}
+.elev-kontroller{display:flex;align-items:center;gap:.45rem;padding:.75rem 1.2rem 0;flex-wrap:wrap;position:sticky;top:0;z-index:10;}
 /* Nav-gruppe: ← [Uke 20] → */
 .elev-nav-gruppe{display:inline-flex;align-items:center;background:var(--kort);border:1.5px solid var(--kant);border-radius:24px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
 .elev-nav-pil{background:transparent;border:none;padding:.44rem .95rem;font-size:1.05rem;cursor:pointer;color:var(--nav);transition:background .15s;min-height:40px;line-height:1;}
@@ -137,7 +137,7 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .laerer-uke-label{padding:.28rem .65rem;font-size:.86rem;font-weight:700;color:#fff;border-left:1px solid rgba(255,255,255,.22);border-right:1px solid rgba(255,255,255,.22);min-width:72px;text-align:center;}
 .laerer-uke-input{width:46px;border:none;background:transparent;font-size:.86rem;font-weight:700;text-align:center;outline:none;padding:0;color:#fff;}
 /* Elevkontroller mørk */
-.elev-kontroller{background:var(--nav);padding:.45rem 1rem .45rem;}
+.elev-kontroller{background:var(--nav);padding:.45rem 1rem .45rem;box-shadow:0 2px 8px rgba(0,0,0,.18);}
 .elev-kontroller .elev-nav-gruppe{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22);}
 .elev-kontroller .elev-nav-pil{color:#fff;}
 .elev-kontroller .elev-nav-pil:hover{background:rgba(255,255,255,.15);}
