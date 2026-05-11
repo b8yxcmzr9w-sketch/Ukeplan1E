@@ -1880,8 +1880,14 @@ function renderGrid(){
   // Bygg dager-liste: aktive dager for faget + alle dager med data
   var dagerSet={};
   if(erFellesfag){
-    // Fellesfag-fanen: union av alle enkeltfags dager
+    // Konfigurerte dager
     aktiveDagerForFag('Fellesfag').forEach(function(d){dagerSet[d]=true;});
+    // Dager med faktiske data for et Fellesfag-fag (selv om dagen ikke er konfigurert)
+    planData.uker.forEach(function(u){grupper.forEach(function(pk){Object.keys(u.dager||{}).forEach(function(dk){
+      if(ALLE_DAGER.indexOf(dk)<0)return;
+      var s=u.dager[dk]&&u.dager[dk][pk];
+      if(s&&(s.aktivitet||s.oppmote||s.laerer))dagerSet[dk]=true;
+    });});});
   } else {
     aktiveDagerForFag(aktivtFagLaerer).forEach(function(d){dagerSet[d]=true;});
   }
@@ -1970,8 +1976,13 @@ function renderGrid(){
     });
     dager.forEach(function(dk){
       var visibleGr=grupper.filter(function(pk){
-        if(erFellesfag){var fo=allData.fag.find(function(x){return x.navn===pk;});if(fo&&fo.dager&&fo.dager.length&&fo.dager.indexOf(dk)<0)return false;}
-        var slot=endringer[uke.uke+'|'+dk+'|'+pk]||sikrSlot(uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);return skalVises(slot);});
+        var slot=endringer[uke.uke+'|'+dk+'|'+pk]||sikrSlot(uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);
+        if(erFellesfag){
+          var fo=allData.fag.find(function(x){return x.navn===pk;});
+          // Skjul kun tomme rader på dager som ikke er konfigurert for faget
+          if(fo&&fo.dager&&fo.dager.length&&fo.dager.indexOf(dk)<0&&erTom(slot))return false;
+        }
+        return skalVises(slot);});
       if(!visibleGr.length)return;
       var bl=erBlokert(uke.uke,dk);
       if(bl.blokkert&&!erSrIgnorert(bl.type)){
