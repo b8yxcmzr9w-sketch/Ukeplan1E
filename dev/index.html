@@ -490,7 +490,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   </div>
   <div id="rediger-skjerm">
     <div class="verktolinje">
-      <button class="pw-btn" id="btn-til-elevside" onclick="byttHovedFane('elev')" title="Gå til elevside">&#x2190; Tilbake</button>
+      <button class="pw-btn" id="btn-til-elevside" onclick="byttHovedFane('elev')" title="Gå til elevside">&#x2190; Visning</button>
       <button class="pw-btn" id="btn-plan" onclick="visLaererSeksjon('plan')" style="display:none;">&#x2190; Plan</button>
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
@@ -578,25 +578,6 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
         <div class="innst-advarsel" id="innst-advarsel">&#x26A0;&#xFE0F; Du har ulagrede endringer. Bruk «Lagre»-knappen i hvert felt!</div>
         <div class="innst-info-topp">Alle innstillinger lagres til Google Sheets. Trykk «Lagre» i hvert felt, eller «Lagre alle innstillinger» nederst.</div>
         <div class="innst-seksjon">
-          <div class="innst-hdr">&#x1F3EB; Skole og klasse</div>
-          <div class="innst-body">
-            <div class="innst-rad"><label>Skolenavn</label><input id="cfg-skole" type="text" oninput="visInnstAdvarsel(this)"></div>
-            <div class="innst-rad"><label>Klassenavn</label><input id="cfg-klasse" type="text" oninput="visInnstAdvarsel(this)"></div>
-            <div class="innst-rad"><label>Skoleår</label><input id="cfg-skoleaar" type="text" oninput="visInnstAdvarsel(this)" placeholder="2025/2026"></div>
-            <div class="innst-rad"><label>Logo</label>
-              <div style="display:flex;gap:.4rem;align-items:center;flex:1;">
-                <input id="cfg-logo" type="text" oninput="visInnstAdvarsel(this)" placeholder="logo.png eller https://..." style="flex:1;">
-                <label style="display:inline-flex;align-items:center;gap:.3rem;cursor:pointer;background:var(--nav);color:#fff;border-radius:6px;padding:.28rem .6rem;font-size:.72rem;font-weight:600;white-space:nowrap;">
-                  &#x1F4C2; Last opp
-                  <input type="file" id="logo-fil-input" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none;">
-                </label>
-                <img id="logo-forhandsvis" src="" style="max-height:32px;max-width:64px;border-radius:4px;object-fit:contain;display:none;border:1px solid var(--kant);">
-              </div>
-            </div>
-            <div class="innst-sek-lagre"><button id="btn-lagre-skole" onclick="lagreSkoleKlasse()">&#x1F4BE; Lagre</button></div>
-          </div>
-        </div>
-        <div class="innst-seksjon">
           <div class="innst-hdr">&#x1F4CB; NPT – Dager og partier</div>
           <div class="innst-body">
             <p class="innst-gruppe-label">Praksisdager</p>
@@ -648,6 +629,18 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
             <div class="innst-sek-lagre"><button id="btn-lagre-yff" onclick="lagreYffInnst()">&#x1F4BE; Lagre</button></div>
           </div>
         </div>
+        <div class="innst-seksjon" id="innst-mine-fag-seksjon">
+          <div class="innst-hdr">&#x1F4DA; Fellesfag</div>
+          <div class="innst-body">
+            <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.7rem">Fag som vises i Fellesfag-fanen (f.eks. Norsk, Matematikk, Engelsk). NPT, NNA og YFF er egne faner og legges ikke til her.</p>
+            <div id="mine-fag-liste"></div>
+            <div style="display:flex;gap:.35rem;margin-top:.6rem;">
+              <input type="text" id="ny-fellesfag-input" placeholder="Nytt fagnavn..." style="flex:1;padding:.35rem .5rem;border:1px solid var(--kant);border-radius:6px;font-size:.76rem;background:var(--bg);">
+              <button class="btn-legg" onclick="leggTilFellesfag()">+ Legg til</button>
+            </div>
+            <div class="innst-sek-lagre"><button id="btn-lagre-fellesfag" onclick="lagreFellesfag()">&#x1F4BE; Lagre</button></div>
+          </div>
+        </div>
         <div class="innst-seksjon">
           <div class="innst-hdr">&#x1F469;&#x200D;&#x1F3EB; Lærere</div>
           <div class="innst-body">
@@ -664,16 +657,42 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
             </div>
           </div>
         </div>
-        <div class="innst-seksjon" id="innst-mine-fag-seksjon">
-          <div class="innst-hdr">&#x1F4DA; Fellesfag</div>
+        <div class="innst-seksjon">
+          <div class="innst-hdr">&#x1F511; Passord</div>
           <div class="innst-body">
-            <p style="font-size:.74rem;color:var(--dempet);margin-bottom:.7rem">Fag som vises i Fellesfag-fanen (f.eks. Norsk, Matematikk, Engelsk). NPT, NNA og YFF er egne faner og legges ikke til her.</p>
-            <div id="mine-fag-liste"></div>
-            <div style="display:flex;gap:.35rem;margin-top:.6rem;">
-              <input type="text" id="ny-fellesfag-input" placeholder="Nytt fagnavn..." style="flex:1;padding:.35rem .5rem;border:1px solid var(--kant);border-radius:6px;font-size:.76rem;background:var(--bg);">
-              <button class="btn-legg" onclick="leggTilFellesfag()">+ Legg til</button>
+            <div id="pw-admin-velger-innst" style="display:none;margin-bottom:.5rem;">
+              <label style="font-size:.76rem;color:var(--dempet);">Velg laerer</label>
+              <select id="pw-laerer-velg-innst" style="padding:.35rem .55rem;border:1px solid var(--kant);border-radius:7px;font-size:.78rem;background:var(--bg);margin-top:.2rem;display:block;width:100%;"></select>
             </div>
-            <div class="innst-sek-lagre"><button id="btn-lagre-fellesfag" onclick="lagreFellesfag()">&#x1F4BE; Lagre</button></div>
+            <div id="pw-gammelt-wrap">
+              <label style="font-size:.74rem;color:var(--dempet);">Naavaerende passord</label>
+              <input type="password" id="pw-gammelt-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
+            </div>
+            <label style="font-size:.74rem;color:var(--dempet);margin-top:.5rem;display:block;">Nytt passord</label>
+            <input type="password" id="pw-nytt-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
+            <label style="font-size:.74rem;color:var(--dempet);margin-top:.4rem;display:block;">Bekreft nytt passord</label>
+            <input type="password" id="pw-bekreft-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
+            <div style="color:#c0392b;font-size:.73rem;margin-top:.3rem;" id="pw-feil-innst"></div>
+            <div class="innst-sek-lagre"><button id="btn-lagre-passord" onclick="byttPassordInnst()">&#x1F4BE; Lagre passord</button></div>
+          </div>
+        </div>
+        <div class="innst-seksjon">
+          <div class="innst-hdr">&#x1F3EB; Skole og klasse</div>
+          <div class="innst-body">
+            <div class="innst-rad"><label>Skolenavn</label><input id="cfg-skole" type="text" oninput="visInnstAdvarsel(this)"></div>
+            <div class="innst-rad"><label>Klassenavn</label><input id="cfg-klasse" type="text" oninput="visInnstAdvarsel(this)"></div>
+            <div class="innst-rad"><label>Skoleår</label><input id="cfg-skoleaar" type="text" oninput="visInnstAdvarsel(this)" placeholder="2025/2026"></div>
+            <div class="innst-rad"><label>Logo</label>
+              <div style="display:flex;gap:.4rem;align-items:center;flex:1;">
+                <input id="cfg-logo" type="text" oninput="visInnstAdvarsel(this)" placeholder="logo.png eller https://..." style="flex:1;">
+                <label style="display:inline-flex;align-items:center;gap:.3rem;cursor:pointer;background:var(--nav);color:#fff;border-radius:6px;padding:.28rem .6rem;font-size:.72rem;font-weight:600;white-space:nowrap;">
+                  &#x1F4C2; Last opp
+                  <input type="file" id="logo-fil-input" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none;">
+                </label>
+                <img id="logo-forhandsvis" src="" style="max-height:32px;max-width:64px;border-radius:4px;object-fit:contain;display:none;border:1px solid var(--kant);">
+              </div>
+            </div>
+            <div class="innst-sek-lagre"><button id="btn-lagre-skole" onclick="lagreSkoleKlasse()">&#x1F4BE; Lagre</button></div>
           </div>
         </div>
         <div class="innst-seksjon">
@@ -705,25 +724,6 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
               <div id="sr-resultat" style="font-size:.71rem;margin-top:.35rem;"></div>
             </div>
             <div class="innst-sek-lagre"><button id="btn-lagre-skolerute" onclick="lagreSkolerute()">&#x1F4BE; Lagre</button></div>
-          </div>
-        </div>
-        <div class="innst-seksjon">
-          <div class="innst-hdr">&#x1F511; Passord</div>
-          <div class="innst-body">
-            <div id="pw-admin-velger-innst" style="display:none;margin-bottom:.5rem;">
-              <label style="font-size:.76rem;color:var(--dempet);">Velg laerer</label>
-              <select id="pw-laerer-velg-innst" style="padding:.35rem .55rem;border:1px solid var(--kant);border-radius:7px;font-size:.78rem;background:var(--bg);margin-top:.2rem;display:block;width:100%;"></select>
-            </div>
-            <div id="pw-gammelt-wrap">
-              <label style="font-size:.74rem;color:var(--dempet);">Naavaerende passord</label>
-              <input type="password" id="pw-gammelt-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
-            </div>
-            <label style="font-size:.74rem;color:var(--dempet);margin-top:.5rem;display:block;">Nytt passord</label>
-            <input type="password" id="pw-nytt-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
-            <label style="font-size:.74rem;color:var(--dempet);margin-top:.4rem;display:block;">Bekreft nytt passord</label>
-            <input type="password" id="pw-bekreft-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
-            <div style="color:#c0392b;font-size:.73rem;margin-top:.3rem;" id="pw-feil-innst"></div>
-            <div class="innst-sek-lagre"><button id="btn-lagre-passord" onclick="byttPassordInnst()">&#x1F4BE; Lagre passord</button></div>
           </div>
         </div>
         <div class="innst-seksjon" id="soppel-seksjon" style="display:none;">
@@ -1793,6 +1793,7 @@ function visLaererSeksjon(sek){
   if(binnst&&sek==='plan')binnst.style.display=erAdmin()?'inline-block':'none';
   if(bprofil&&sek==='plan')bprofil.style.display='inline-block';
   document.getElementById('plan-verktoy').style.display=sek==='plan'?'flex':'none';
+  var btv=document.getElementById('btn-til-elevside');if(btv)btv.style.display=sek==='plan'?'':'none';
   // Skjul fag-faner og hurtig-rad i innstillinger
   document.getElementById('laerer-fag-tabs').style.display=sek==='plan'?'flex':'none';
   var hr=document.getElementById('hurtig-rad');
@@ -1884,16 +1885,7 @@ function renderGrid(){
   } else {
     aktiveDagerForFag(aktivtFagLaerer).forEach(function(d){dagerSet[d]=true;});
   }
-  planData.uker.forEach(function(uke){
-    Object.keys(uke.dager||{}).forEach(function(dk){
-      if(ALLE_DAGER.indexOf(dk)<0)return;
-      var harData=grupper.some(function(pk){
-        var s=uke.dager[dk]&&uke.dager[dk][pk];
-        return s&&(s.aktivitet||s.laerer);
-      });
-      if(harData)dagerSet[dk]=true;
-    });
-  });
+  // Kun konfigurerte dager vises – ikke dager med data utenfor konfigurasjonen
   var dager=ALLE_DAGER.filter(function(d){return dagerSet[d];});
   if(!dager.length)dager=aktiveDager();
   function skalVises(slot){if(!visAlle&&slot.laerer&&!erMinStrikt(slot.laerer))return false;if(skjulTomme&&erTom(slot))return false;return true;}
@@ -1903,13 +1895,16 @@ function renderGrid(){
     var ukeStr=String(uke.uke);
     var harSr=allData.skolerute.some(function(sr){
       if(erSrIgnorert(sr.type))return false;
-      return srUkeTilNummer(sr.uke)===ukeStr;
+      if(srUkeTilNummer(sr.uke)!==ukeStr)return false;
+      if(sr.dag&&dager.indexOf(sr.dag)<0)return false; // dag-spesifikk hendelse på ikke-konfigurert dag
+      return true;
     });
     if(harSr)return true;
-    // Sjekk plandata
+    // Sjekk plandata – kun konfigurerte dager
     var ukeDager=Object.keys(uke.dager||{});
     for(var di=0;di<ukeDager.length;di++){
       var dk=ukeDager[di];
+      if(dager.indexOf(dk)<0)continue; // hopp over ikke-konfigurerte dager
       var dagData=uke.dager[dk];
       if(!dagData)continue;
       var pkeys=Object.keys(dagData);
@@ -1932,6 +1927,7 @@ function renderGrid(){
     if(erSrIgnorert(sr.type))return;
     var srUke=srUkeTilNummer(sr.uke);
     if(!srUke)return;
+    if(sr.dag&&dager.indexOf(sr.dag)<0)return; // dag-spesifikk hendelse på ikke-konfigurert dag
     if(!srUkeMap[srUke])srUkeMap[srUke]=true;
   });
   // Ekstrauke: skolerute-uker som IKKE finnes i planData
@@ -1973,7 +1969,9 @@ function renderGrid(){
       }
     });
     dager.forEach(function(dk){
-      var visibleGr=grupper.filter(function(pk){var slot=endringer[uke.uke+'|'+dk+'|'+pk]||sikrSlot(uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);return skalVises(slot);});
+      var visibleGr=grupper.filter(function(pk){
+        if(erFellesfag){var fo=allData.fag.find(function(x){return x.navn===pk;});if(fo&&fo.dager&&fo.dager.length&&fo.dager.indexOf(dk)<0)return false;}
+        var slot=endringer[uke.uke+'|'+dk+'|'+pk]||sikrSlot(uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);return skalVises(slot);});
       if(!visibleGr.length)return;
       var bl=erBlokert(uke.uke,dk);
       if(bl.blokkert&&!erSrIgnorert(bl.type)){
