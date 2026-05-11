@@ -201,7 +201,7 @@ td.col-laer{width:90px;max-width:110px;}
 .dag-check{display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer;}
 .dag-check input{width:auto;}
 .laerer-kort{border:1px solid var(--kant);border-radius:8px;margin-bottom:.5rem;overflow:hidden;}
-.laerer-rad-innst{display:grid;grid-template-columns:1fr auto auto auto;gap:.4rem;align-items:center;padding:.4rem .6rem;background:#fff;}
+.laerer-rad-innst{display:grid;grid-template-columns:1fr auto auto auto auto;gap:.4rem;align-items:center;padding:.4rem .6rem;background:#fff;}
 .laerer-rad-innst:hover{background:#f9f8f2;}
 .laerer-fag-rad{display:flex;flex-wrap:wrap;gap:.35rem .7rem;padding:.35rem .7rem .45rem;background:#f5f4ef;border-top:1px solid var(--kant);font-size:.7rem;}
 .laerer-fag-rad span{color:var(--dempet);align-self:center;margin-right:.1rem;}
@@ -209,10 +209,12 @@ td.col-laer{width:90px;max-width:110px;}
 .farge-dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex-shrink:0;}
 .admin-cb-label{font-size:.72rem;color:var(--dempet);display:flex;align-items:center;gap:.25rem;cursor:pointer;white-space:nowrap;}
 .admin-cb-label input{width:auto;}
-.btn-slett-laerer{background:none;border:none;color:#c0392b;cursor:pointer;font-size:.82rem;padding:.15rem .3rem;border-radius:6px;transition:background .15s;}
-.btn-slett-laerer:hover{background:#fdf0ee;}
 .ny-laerer-rad{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--kant);}
 .ny-laerer-rad input{flex:1;min-width:90px;padding:.38rem .55rem;border:1.5px solid var(--kant);border-radius:8px;font-size:.78rem;background:var(--bg);}
+.laerer-pw-rad{padding:.5rem .7rem .6rem;background:#f5f4ef;border-top:1px solid var(--kant);}
+.pw-inline-input{width:100%;padding:.38rem .55rem;border:1.5px solid var(--kant);border-radius:7px;font-size:.78rem;background:var(--bg);margin-bottom:.32rem;display:block;box-sizing:border-box;}
+.pw-inline-feil{color:#c0392b;font-size:.72rem;margin-bottom:.22rem;min-height:.85rem;}
+.pw-inline-knapper{display:flex;gap:.4rem;margin-top:.25rem;}
 .btn-legg{background:var(--groen);color:#fff;border:none;border-radius:8px;padding:.4rem .85rem;font-size:.78rem;cursor:pointer;font-weight:600;white-space:nowrap;transition:opacity .15s;}
 .btn-legg:hover{opacity:.87;}
 .gruppe-rad{display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem;}
@@ -397,7 +399,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   .innst-rad{flex-direction:column;align-items:flex-start;gap:.3rem;}
   .innst-rad label{min-width:unset;font-size:.82rem;}
   .innst-rad input,.innst-rad select{min-width:unset;width:100%;}
-  .laerer-rad-innst{grid-template-columns:1fr auto auto;}
+  .laerer-rad-innst{grid-template-columns:1fr auto auto auto auto;}
 
   /* ── Modal – bunnark ── */
   .modal-bg{align-items:flex-end;}
@@ -655,25 +657,6 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
               <button id="btn-legg-laerer" onclick="leggTilLaerer()" style="background:var(--groen);color:#fff;border:none;border-radius:7px;padding:.3rem .9rem;font-size:.76rem;font-weight:600;cursor:pointer;">+ Lærer</button>
               <button id="btn-lagre-laerere" onclick="lagreLaerereInnst()">&#x1F4BE; Lagre</button>
             </div>
-          </div>
-        </div>
-        <div class="innst-seksjon">
-          <div class="innst-hdr">&#x1F511; Passord</div>
-          <div class="innst-body">
-            <div id="pw-admin-velger-innst" style="display:none;margin-bottom:.5rem;">
-              <label style="font-size:.76rem;color:var(--dempet);">Velg laerer</label>
-              <select id="pw-laerer-velg-innst" style="padding:.35rem .55rem;border:1px solid var(--kant);border-radius:7px;font-size:.78rem;background:var(--bg);margin-top:.2rem;display:block;width:100%;"></select>
-            </div>
-            <div id="pw-gammelt-wrap">
-              <label style="font-size:.74rem;color:var(--dempet);">Naavaerende passord</label>
-              <input type="password" id="pw-gammelt-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
-            </div>
-            <label style="font-size:.74rem;color:var(--dempet);margin-top:.5rem;display:block;">Nytt passord</label>
-            <input type="password" id="pw-nytt-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
-            <label style="font-size:.74rem;color:var(--dempet);margin-top:.4rem;display:block;">Bekreft nytt passord</label>
-            <input type="password" id="pw-bekreft-innst" oninput="visInnstAdvarsel('btn-lagre-passord')" style="padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;font-size:.82rem;background:var(--bg);width:100%;margin-top:.2rem;">
-            <div style="color:#c0392b;font-size:.73rem;margin-top:.3rem;" id="pw-feil-innst"></div>
-            <div class="innst-sek-lagre"><button id="btn-lagre-passord" onclick="byttPassordInnst()">&#x1F4BE; Lagre passord</button></div>
           </div>
         </div>
         <div class="innst-seksjon">
@@ -2374,20 +2357,25 @@ function renderInnstillinger(){
   var nnaDager=nnaFag&&nnaFag.dager?nnaFag.dager:[];
   document.querySelectorAll('.nna-dag-cb').forEach(function(el){el.checked=nnaDager.indexOf(el.value)>=0;});
   renderLaererListe();renderMineFag();renderSrTyper();renderSrTabell();renderSoppel();
-  document.getElementById('pw-admin-velger-innst').style.display=erAdmin()?'block':'none';
-  document.getElementById('pw-gammelt-wrap').style.display=erAdmin()?'none':'block';
-  if(erAdmin()){var sel=document.getElementById('pw-laerer-velg-innst');sel.innerHTML=allData.laerere.map(function(l){return '<option value="'+l.navn+'">'+l.navn+'</option>';}).join('');}
 }
 function renderLaererListe(){
   var antallAdmins=allData.laerere.filter(function(l){return l.admin;}).length;
   var liste=document.getElementById('laerer-admin-liste');
   liste.innerHTML='';
-  // NPT, NNA, YFF + egendefinerte fellesfag (ikke 'Fellesfag'-gruppen)
   var fagListe=['NPT','NNA','YFF'].concat(allData.fag.filter(function(f){return FASTE_FAG.indexOf(f.navn)<0;}).map(function(f){return f.navn;}));
-
-  allData.laerere.forEach(function(l,i){
+  // Admins øverst (A→Å), deretter ikke-admin (A→Å)
+  var sortert=allData.laerere.slice().sort(function(a,b){
+    if(a.admin&&!b.admin)return -1;if(!a.admin&&b.admin)return 1;
+    return a.navn.localeCompare(b.navn,'nb');
+  });
+  var erAdm=erAdmin();
+  sortert.forEach(function(l){
     var disabled=!l.admin&&antallAdmins>=2;
     if(!l.fag)l.fag=[];
+    var erEgen=l.navn===aktivLaerer;
+    var visPw=erAdm||erEgen;
+    var sn=l.navn.replace(/[^a-zA-Z0-9æøåÆØÅ]/g,'_');
+    var lnEsc=l.navn.replace(/'/g,"\\'");
 
     var kort=document.createElement('div');
     kort.className='laerer-kort';
@@ -2395,14 +2383,19 @@ function renderLaererListe(){
     var rad=document.createElement('div');
     rad.className='laerer-rad-innst';
     rad.innerHTML=
-      '<div class="laerer-navn-innst"><span class="farge-dot" style="background:'+l.farge+'"></span>'+l.navn+'</div>'+
+      '<div class="laerer-navn-innst">'+
+        (l.admin?'<span style="font-size:.6rem;background:var(--nav);color:#fff;border-radius:4px;padding:.08rem .28rem;margin-right:.15rem;font-weight:700;">A</span>':'')+
+        '<span class="farge-dot" style="background:'+l.farge+'"></span>'+l.navn+
+      '</div>'+
       '<label class="admin-cb-label"><input type="checkbox" class="admin-cb" value="'+l.navn+'" '+(l.admin?'checked':'')+' '+(disabled?'disabled':'')+' onchange="oppdaterAdminTeller()"> Admin</label>'+
-      '<input type="color" value="'+l.farge+'" onchange="allData.laerere['+i+'].farge=this.value;visInnstAdvarsel(\'btn-lagre-laerere\');" style="width:26px;height:24px;border:1px solid var(--kant);border-radius:5px;cursor:pointer;padding:1px;">'+
-      '<button class="btn-slett-laerer">Slett</button>';
-    rad.querySelector('.btn-slett-laerer').addEventListener('click', function(){aapneSlettLaerer(l.navn);});
+      '<input type="color" value="'+l.farge+'" title="Farge" onchange="var lx=allData.laerere.find(function(x){return x.navn===\''+lnEsc+'\';});if(lx){lx.farge=this.value;}visInnstAdvarsel(\'btn-lagre-laerere\');" style="width:26px;height:24px;border:1px solid var(--kant);border-radius:5px;cursor:pointer;padding:1px;">'+
+      (visPw?'<button class="btn-slett-lite" title="Bytt passord" style="border-color:var(--kant);color:#555;" onclick="togglPwSkjema(\''+sn+'\')">🔑</button>':'')+
+      (visPw?'':'<span></span>')+
+      '<button class="btn-slett-lite" title="Slett lærer">🗑️</button>';
+    rad.querySelector('.btn-slett-lite:last-child').addEventListener('click',function(){aapneSlettLaerer(l.navn);});
     kort.appendChild(rad);
 
-    // Fag-rad med checkboxes
+    // Fag-rad
     var fagRad=document.createElement('div');
     fagRad.className='laerer-fag-rad';
     fagRad.innerHTML='<span>Fag:</span>'+fagListe.map(function(fn){
@@ -2411,8 +2404,53 @@ function renderLaererListe(){
     }).join('');
     kort.appendChild(fagRad);
 
+    // Inline passord-panel (kun for admin og eget kort)
+    if(visPw){
+      var pwRad=document.createElement('div');
+      pwRad.id='pw-rad-'+sn;
+      pwRad.className='laerer-pw-rad';
+      pwRad.style.display='none';
+      var visGammelt=!erAdm||erEgen;
+      pwRad.innerHTML=
+        '<div class="pw-inline-feil" id="pw-feil-'+sn+'"></div>'+
+        (visGammelt?'<input type="password" id="pw-gammelt-'+sn+'" class="pw-inline-input" placeholder="Nåværende passord">':'')+
+        '<input type="password" id="pw-nytt-'+sn+'" class="pw-inline-input" placeholder="Nytt passord">'+
+        '<input type="password" id="pw-bekreft-'+sn+'" class="pw-inline-input" placeholder="Bekreft nytt passord">'+
+        '<div class="pw-inline-knapper">'+
+          '<button class="pw-btn" style="font-size:.73rem;" onclick="lagreInlinePw(\''+sn+'\',\''+lnEsc+'\')">💾 Lagre</button>'+
+          '<button class="pw-btn" style="font-size:.73rem;" onclick="togglPwSkjema(\''+sn+'\')">✕ Avbryt</button>'+
+        '</div>';
+      kort.appendChild(pwRad);
+    }
+
     liste.appendChild(kort);
   });
+}
+function togglPwSkjema(sn){
+  var el=document.getElementById('pw-rad-'+sn);if(!el)return;
+  var synlig=el.style.display!=='none';
+  document.querySelectorAll('.laerer-pw-rad').forEach(function(r){r.style.display='none';});
+  if(!synlig){el.style.display='block';var f=el.querySelector('.pw-inline-input');if(f)f.focus();}
+}
+async function lagreInlinePw(sn,laererNavn){
+  var erAdm=erAdmin(),erEgen=laererNavn===aktivLaerer;
+  var gammeltEl=document.getElementById('pw-gammelt-'+sn);
+  var nyttEl=document.getElementById('pw-nytt-'+sn);
+  var bekreftEl=document.getElementById('pw-bekreft-'+sn);
+  var feilEl=document.getElementById('pw-feil-'+sn);
+  var gammelt=gammeltEl?gammeltEl.value:'',nytt=nyttEl?nyttEl.value:'',bekreft=bekreftEl?bekreftEl.value:'';
+  if(!erAdm&&!gammelt){feilEl.textContent='Skriv inn nåværende passord';return;}
+  if(nytt.length<4){feilEl.textContent='For kort passord (minst 4 tegn)';return;}
+  if(nytt!==bekreft){feilEl.textContent='Passordene stemmer ikke overens';return;}
+  feilEl.textContent='';
+  try{
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'byttPassord',malLaerer:laererNavn,gammelt:gammelt,nytt:nytt,token:sesjonGet('praksisToken')})});
+    var json=await res.json();
+    if(!json.ok){feilEl.textContent=json.feil||'Feil ved passordbytte';return;}
+    [gammeltEl,nyttEl,bekreftEl].forEach(function(e){if(e)e.value='';});
+    document.getElementById('pw-rad-'+sn).style.display='none';
+    visToast('Passord oppdatert for '+laererNavn);
+  }catch(e){feilEl.textContent='Feil: '+e.message;}
 }
 function oppdaterLaererFag(navn,fag,checked){
   var l=allData.laerere.find(function(x){return x.navn===navn;});
@@ -2829,25 +2867,6 @@ function lagreYffInnst(){_lagreSek('btn-lagre-yff','💾 Lagre',async function()
 function lagreLaerereInnst(){_lagreSek('btn-lagre-laerere','💾 Lagre',async function(){await skrivTilSheets('Lærere',_byggLaerereRader());await hentData(true);});}
 function lagreFellesfag(){_lagreSek('btn-lagre-fellesfag','💾 Lagre',async function(){await skrivTilSheets('Fag',_byggFagRader());await hentData(true);});}
 function lagreSkolerute(){_lagreSek('btn-lagre-skolerute','💾 Lagre',async function(){await skrivTilSheets('Skolerute',_byggSkolerute());await hentData(true);});}
-async function byttPassordInnst(){
-  var erAdm=erAdmin(),malLaerer=erAdm?document.getElementById('pw-laerer-velg-innst').value:aktivLaerer;
-  var gammelt=document.getElementById('pw-gammelt-innst').value,nytt=document.getElementById('pw-nytt-innst').value,bekreft=document.getElementById('pw-bekreft-innst').value;
-  if(!erAdm&&!gammelt){document.getElementById('pw-feil-innst').textContent='Skriv inn nåværende passord';return;}
-  if(nytt.length<4){document.getElementById('pw-feil-innst').textContent='For kort passord (minst 4 tegn)';return;}
-  if(nytt!==bekreft){document.getElementById('pw-feil-innst').textContent='Passordene stemmer ikke overens';return;}
-  var btn=document.querySelector('button[onclick="byttPassordInnst()"]');
-  if(btn){btn.disabled=true;btn.textContent='Lagrer...';}
-  document.getElementById('pw-feil-innst').textContent='';
-  try{
-    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'byttPassord',malLaerer:malLaerer,gammelt:gammelt,nytt:nytt,token:sesjonGet('praksisToken')})});
-    var json=await res.json();
-    if(!json.ok){document.getElementById('pw-feil-innst').textContent=json.feil||'Feil ved passordbytte';return;}
-    ['pw-gammelt-innst','pw-nytt-innst','pw-bekreft-innst'].forEach(function(id){document.getElementById(id).value='';});
-    if(btn)btn.classList.remove('aktiv');
-    visToast('Passord oppdatert for '+malLaerer);
-  }catch(e){document.getElementById('pw-feil-innst').textContent='Feil: '+e.message;}
-  finally{if(btn){btn.disabled=false;btn.textContent='💾 Lagre passord';}}
-}
 function byggHurtigRad(){
   var el=document.getElementById('hurtig-rad');
   if(!el)return;
