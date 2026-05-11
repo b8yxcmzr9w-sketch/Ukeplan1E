@@ -492,7 +492,6 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   </div>
   <div id="rediger-skjerm">
     <div class="verktolinje">
-      <button class="pw-btn" id="btn-til-elevside" onclick="byttHovedFane('elev')" title="Gå til elevside">&#x2190; Visning</button>
       <button class="pw-btn" id="btn-plan" onclick="visLaererSeksjon('plan')" style="display:none;">&#x2190; Plan</button>
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
@@ -516,6 +515,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
           </div>
         </div>
         <span id="lagre-status" style="font-size:.71rem;color:var(--groen);font-weight:600;"></span>
+        <button class="pw-btn" id="btn-til-elevside" onclick="byttHovedFane('elev')" title="Gå til elevside" style="margin-left:auto;">&#x2715;</button>
       </div>
     </div>
     <div class="fag-tabs" id="laerer-fag-tabs"></div><span id="fellesfag-velger" style="display:none;align-items:center;gap:.3rem;background:#f0efe6;padding:.2rem .8rem;border-bottom:1px solid var(--kant);position:sticky;top:70px;z-index:8;">
@@ -1776,7 +1776,6 @@ function visLaererSeksjon(sek){
   if(binnst&&sek==='plan')binnst.style.display=erAdmin()?'inline-block':'none';
   if(bprofil&&sek==='plan')bprofil.style.display='inline-block';
   document.getElementById('plan-verktoy').style.display=sek==='plan'?'flex':'none';
-  var btv=document.getElementById('btn-til-elevside');if(btv)btv.style.display=sek==='plan'?'':'none';
   // Skjul fag-faner og hurtig-rad i innstillinger
   document.getElementById('laerer-fag-tabs').style.display=sek==='plan'?'flex':'none';
   var hr=document.getElementById('hurtig-rad');
@@ -1880,7 +1879,8 @@ function renderGrid(){
       if(s&&(s.aktivitet||s.oppmote||s.laerer))dagerSet[dk]=true;
     });});});
   }
-  // Kun konfigurerte dager vises – ikke dager med data utenfor konfigurasjonen
+  // Konfigurerte dager (for å sjekke tomme rader)
+  var dagerKfg=erFellesfag?aktiveDagerForFag('Fellesfag'):aktiveDagerForFag(aktivtFagLaerer);
   var dager=ALLE_DAGER.filter(function(d){return dagerSet[d];});
   if(!dager.length)dager=aktiveDager();
   function skalVises(slot){if(!visAlle&&slot.laerer&&!erMinStrikt(slot.laerer))return false;if(skjulTomme&&erTom(slot))return false;return true;}
@@ -1964,12 +1964,14 @@ function renderGrid(){
       }
     });
     dager.forEach(function(dk){
+      var ikkKfgDag=dagerKfg.indexOf(dk)<0;
       var visibleGr=grupper.filter(function(pk){
         var slot=endringer[uke.uke+'|'+dk+'|'+pk]||sikrSlot(uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);
         if(erFellesfag){
           var fo=allData.fag.find(function(x){return x.navn===pk;});
-          // Skjul kun tomme rader på dager som ikke er konfigurert for faget
           if(fo&&fo.dager&&fo.dager.length&&fo.dager.indexOf(dk)<0&&erTom(slot))return false;
+        } else if(ikkKfgDag&&erTom(slot)){
+          return false; // Skjul tom rad på ikke-konfigurert dag (NPT/NNA/YFF)
         }
         return skalVises(slot);});
       if(!visibleGr.length)return;
