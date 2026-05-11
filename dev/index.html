@@ -266,8 +266,10 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   body.elev-utskrift{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   body.elev-utskrift #elev-print{display:block !important;}
   body.elev-utskrift>*:not(#elev-print){display:none !important;}
-  @page{size:A4 landscape;margin:.85cm;}
-  .ep-side{page-break-after:avoid;}
+  @page{size:A4 landscape !important;margin:.85cm !important;}
+  .ep-side{display:flex;flex-direction:column;height:100vh;overflow:hidden;page-break-inside:avoid;page-break-after:avoid;}
+  .ep-grid{flex:1;min-height:0 !important;overflow:hidden;}
+  .ep-notater{flex-shrink:0;}
 }
 .elev-filter-bar{display:flex;align-items:center;gap:.45rem;padding:.5rem 1.2rem;flex-wrap:wrap;}
 .elev-chip-wrap{display:inline-flex;align-items:center;gap:.22rem;background:var(--kort);border:1.5px solid var(--kant);border-radius:20px;padding:.3rem .52rem .3rem .72rem;transition:border-color .15s,background .15s;cursor:pointer;min-height:40px;}
@@ -3509,13 +3511,20 @@ function skrivUtElev(){
   var html='<div class="ep-side">';
   html+='<div class="ep-hdr"><span class="ep-hdr-tittel">'+escHtml(tittelTekst)+'</span><span class="ep-hdr-sub">'+escHtml(c.skolenavn||'')+'</span></div>';
   html+=bannerHtml;
-  html+='<div class="ep-grid" style="display:grid;grid-template-columns:'+gridCols+';min-height:11cm;align-items:stretch;">'+dagKols+'</div>';
+  html+='<div class="ep-grid" style="display:grid;grid-template-columns:'+gridCols+';align-items:stretch;">'+dagKols+'</div>';
   html+='<div class="ep-notater"><div class="ep-notater-tittel">📝 Notater</div>'+notatLinjer+'</div>';
   html+='</div>';
 
   document.getElementById('elev-print').innerHTML=html;
   _origTitle=document.title;
   document.title='Ukeplan – '+(klasse||'Elev')+' – Uke '+ukenummer;
+
+  // Tving landscape via dynamisk style-tag
+  var epStyle=document.getElementById('ep-print-style')||document.createElement('style');
+  epStyle.id='ep-print-style';
+  epStyle.textContent='@page{size:A4 landscape !important;margin:.85cm !important;}';
+  document.head.appendChild(epStyle);
+
   document.body.classList.add('elev-utskrift');
   window.print();
 }
