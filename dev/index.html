@@ -503,7 +503,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
           <button class="laerer-nav-pil" onclick="navigerUkeLaerer(1)" title="Neste uke">&#x2192;</button>
         </div>
         <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">I dag</button>
-        <button class="pw-btn aktiv" id="filter-uker-btn" onclick="togglFilterUker()">Mine økter</button>
+        <button class="pw-btn" id="filter-uker-btn" onclick="togglFilterUker()">Mine økter</button>
         <button class="pw-btn aktiv" id="skjul-tomme" onclick="togglSkjulTomme()">Skjul tomme</button>
         <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn</button>
         <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
@@ -3293,8 +3293,7 @@ function gaTilDenneUkenGrid(){
   }
 }
 
-// ── Denne-uken observer (midterste 50% av viewport, alle faner) ──────────
-var _denneUkenObserver=null;
+// ── Denne-uken observer (midterste 2/4 av viewport → I dag-knapp aktiv) ──
 function setupDenneUkenObserver(){
   var btn=document.getElementById('btn-denne-uken');
   var isoUke=getVisningsUke();
@@ -3730,7 +3729,7 @@ function _stickyHoyde(){
 function scrollTilUke(ukeNr,behavior){
   var el=document.getElementById('uke-hdr-'+ukeNr);
   if(!el){
-    // Finn nærmeste uke >= ukeNr i DOM
+    // Finn nærmeste uke (begge retninger) i DOM
     var alle=Array.from(document.querySelectorAll('tr.uke-hdr[id^="uke-hdr-"]'));
     if(!alle.length)return false;
     var target=null,bestDiff=Infinity;
@@ -3738,14 +3737,15 @@ function scrollTilUke(ukeNr,behavior){
     var maal=p(ukeNr);
     alle.forEach(function(row){
       var u=row.id.replace('uke-hdr-','');
-      var diff=p(u)-maal;
-      if(diff>=0&&diff<bestDiff){bestDiff=diff;target=row;}
+      var diff=Math.abs(p(u)-maal);
+      if(diff<bestDiff){bestDiff=diff;target=row;}
     });
     if(!target)return false;
     el=target;
   }
   var stickyH=_stickyHoyde();
-  var offset=el.getBoundingClientRect().top+window.pageYOffset-stickyH-20;
+  var visH=window.innerHeight-stickyH;
+  var offset=el.getBoundingClientRect().top+window.pageYOffset-stickyH-Math.round(visH*0.20);
   window.scrollTo({top:Math.max(0,offset),behavior:behavior||'auto'});
   return true;
 }
