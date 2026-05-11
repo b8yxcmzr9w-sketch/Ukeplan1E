@@ -96,6 +96,7 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 #hurtig-rad button.h-legg:hover{opacity:.87;}
 .verktolinje{display:flex;align-items:center;gap:.35rem;padding:.38rem 1rem;flex-wrap:nowrap;border-bottom:1px solid var(--kant);background:#fff;position:sticky;top:0;z-index:10;overflow-x:auto;}
 .lagre-btn{background:#f0efe9;color:#bbb;border:1.5px solid var(--kant);border-radius:8px;padding:0 1.3rem;font-size:.78rem;font-weight:700;cursor:default;height:34px;transition:background .15s,color .15s,border-color .15s;}
+.lagre-btn.ikon{padding:0 .55rem;font-size:.9rem;}
 .lagre-btn.aktiv{background:var(--groen);color:#fff;border-color:var(--groen);cursor:pointer;}
 .lagre-btn.aktiv:hover{opacity:.87;}
 .lagre-btn:disabled{opacity:.5;cursor:not-allowed;}
@@ -103,6 +104,7 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .seksjons-btn:hover{background:#e4e3d8;border-color:#c4c0aa;}
 .seksjons-btn.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);}
 .pw-btn{background:#f0efe6;color:var(--nav);border:1.5px solid var(--kant);border-radius:8px;padding:0 .75rem;font-size:.76rem;cursor:pointer;font-weight:600;height:34px;transition:background .15s,border-color .15s;}
+.pw-btn.ikon{padding:0 .55rem;font-size:.9rem;}
 .pw-btn:hover{background:#e4e3d8;border-color:#c4c0aa;}
 .pw-btn.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);}
 /* Sentrert innlimingspanel */
@@ -443,15 +445,15 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
         <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">&#x1F4CD; Denne uken</button>
-        <button class="pw-btn" id="filter-uker-btn" onclick="togglFilterUker()">Alle økter</button>
+        <button class="pw-btn" id="filter-uker-btn" onclick="togglFilterUker()">Mine økter</button>
         <button class="pw-btn" id="skjul-tomme" onclick="togglSkjulTomme()">Skjul tomme</button>
         <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn</button>
-        <button class="pw-btn" id="btn-skriv-ut" onclick="skrivUt()">&#x1F5A8;&#xFE0F; Skriv ut</button>
-        <button class="pw-btn" id="btn-ical-laerer" onclick="aapneIcalModal('laerer')" style="display:none;">&#x1F4C5; Kalender</button>
-        <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
+        <button class="pw-btn ikon" id="btn-skriv-ut" onclick="skrivUt()" title="Skriv ut">&#x1F5A8;&#xFE0F;</button>
+        <button class="pw-btn ikon" id="btn-ical-laerer" onclick="aapneIcalModal('laerer')" title="Legg til i kalender" style="display:none;">&#x1F4C5;</button>
+        <button class="lagre-btn ikon" id="lagre-btn" onclick="lagreTilSheets()" title="Lagre">&#x1F4BE;</button>
         <span id="lagre-status" style="font-size:.71rem;color:var(--groen);font-weight:600;"></span>
-        <button class="pw-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger')" style="display:none;">&#x2699;&#xFE0F; Innstillinger</button>
-        <button class="pw-btn" id="btn-profil" onclick="aapneProfilModal()" style="display:none;">&#x1F464; Profil</button>
+        <button class="pw-btn ikon" id="btn-innst" onclick="visLaererSeksjon('innstillinger')" title="Innstillinger" style="display:none;">&#x2699;&#xFE0F;</button>
+        <button class="pw-btn ikon" id="btn-profil" onclick="aapneProfilModal()" title="Profil" style="display:none;">&#x1F464;</button>
       </div>
     </div>
     <div class="fag-tabs" id="laerer-fag-tabs"></div><span id="fellesfag-velger" style="display:none;align-items:center;gap:.3rem;background:#f0efe6;padding:.2rem .8rem;border-bottom:1px solid var(--kant);position:sticky;top:70px;z-index:8;">
@@ -3367,7 +3369,7 @@ function togglFilterUker(){
   var btn=document.getElementById('filter-uker-btn');
   if(!btn)return;
   btn.classList.toggle('aktiv');
-  btn.textContent=btn.classList.contains('aktiv')?'Mine økter':'Alle økter';
+  btn.textContent=btn.classList.contains('aktiv')?'Alle økter':'Mine økter';
   renderGrid();
 }
 // Print aktiv-state (lærerside)
