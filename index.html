@@ -1641,7 +1641,7 @@ function buildGridHeader(){
   var erFellesfag=aktivtFagLaerer==='Fellesfag';
   var col2=erYFF?'Gr':erNNA?'':erFellesfag?'Fag':'P';
   var thead=document.getElementById('grid-thead');
-  if(thead)thead.innerHTML='<tr><th style="'+thS+'">Dag</th>'+(col2?'<th style="'+thS+';width:22px;">'+col2+'</th>':'')+'<th style="'+thS+'">Aktivitet</th><th style="'+thS+'">Oppmøte</th><th style="'+thS+'">Info</th><th style="'+thS+'">Lærer</th></tr>';
+  if(thead)thead.innerHTML='<tr><th style="'+thS+'">Dag</th>'+(col2?'<th style="'+thS+';width:22px;">'+col2+'</th>':'')+'<th style="'+thS+';width:90px;">Lærer</th><th style="'+thS+'">Aktivitet</th><th style="'+thS+'">Oppmøte</th><th style="'+thS+'">Info</th></tr>';
 }
 function slotRad(ui,dk,pk,dagCelleHtml){
   var planData=allData.plan[aktivtFagLaerer]||{uker:[]};
@@ -1667,10 +1667,10 @@ function slotRad(ui,dk,pk,dagCelleHtml){
   return '<tr class="'+(harData?'slot-rad-data':'')+'" style="background:'+rowBg+'" oncontextmenu="visSlotMenu(event,'+ui+',\''+dk+'\',\''+pk+'\')" title="Høyreklikk for alternativer">'+
     dagCelleHtml+
     partiCell+
-    '<td class="col-akt"><div>'+bar+'<textarea class="slot-edit-area" '+dis+' placeholder="Aktivitet..." oninput="autoResize(this);setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'aktivitet\',this.value)" style="background:'+slotBg+'">'+esc(slot.aktivitet)+'</textarea></div></td>'+
-    '<td class="col-opp"><div>'+bar+'<textarea class="slot-edit-area" '+dis+' placeholder="Oppmoete..." oninput="autoResize(this);setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'oppmote\',this.value)" style="background:'+slotBg+'">'+esc(slot.oppmote)+'</textarea></div></td>'+
-    '<td class="col-info"><div>'+bar+'<textarea class="slot-edit-area slot-info-bg" '+dis+' placeholder="Info..." oninput="autoResize(this);setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'info\',this.value)" style="background:'+(redig?'#fffef0':'#f0eedc')+'">'+esc(slot.info)+'</textarea></div></td>'+
     '<td class="col-laer"><div>'+bar+'<span class="print-laerer">'+esc(slot.laerer)+'</span><select class="slot-select" '+dis+' onchange="setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'laerer\',this.value)" style="background:'+slotBg+'">'+laererOpts(slot.laerer)+'</select></div></td>'+
+    '<td class="col-akt"><div>'+bar+'<textarea class="slot-edit-area" '+dis+' placeholder="Aktivitet..." oninput="autoResize(this);setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'aktivitet\',this.value)" style="background:'+slotBg+'">'+esc(slot.aktivitet)+'</textarea></div></td>'+
+    '<td class="col-opp"><div>'+bar+'<textarea class="slot-edit-area" '+dis+' placeholder="Oppmøte..." oninput="autoResize(this);setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'oppmote\',this.value)" style="background:'+slotBg+'">'+esc(slot.oppmote)+'</textarea></div></td>'+
+    '<td class="col-info"><div>'+bar+'<textarea class="slot-edit-area slot-info-bg" '+dis+' placeholder="Info..." oninput="autoResize(this);setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'info\',this.value)" style="background:'+(redig?'#fffef0':'#f0eedc')+'">'+esc(slot.info)+'</textarea></div></td>'+
   '</tr>';
 }
 function renderGrid(){
@@ -1682,6 +1682,7 @@ function renderGrid(){
   var erYFF=aktivtFagLaerer==='YFF';
   var erNNA=aktivtFagLaerer==='NNA';
   var erFellesfag=aktivtFagLaerer==='Fellesfag';
+  var nKolonner=erNNA?5:6;
   var aktivtFellesfag=cfg().aktivtFellesfag||((cfg().aktiveFag&&cfg().aktiveFag[0])||'');
   var grupper;
   if(erYFF) grupper=yffGrupper();
@@ -1767,18 +1768,21 @@ function renderGrid(){
     if(!harMineData(uke)&&!uke.ferie)return;
     if(uke.ferie){
       var em=uke.ferieEmoji||'';
-      if(erAdmin()){rows+='<tr class="uke-hdr" id="uke-hdr-'+uke.uke+'"><td style="padding:.28rem .5rem;font-weight:700;color:#856404;background:#fff3cd;">'+em+' '+uke.uke+'</td><td colspan="5" style="background:#fff3cd;padding:0 .3rem;"><input type="text" value="'+uke.ferieNavn+'" oninput="allData.plan[aktivtFagLaerer].uker['+ui+'].ferieNavn=this.value;endringer[\''+uke.uke+'|__ferie__\']={ferieNavn:this.value,ferieEmoji:\''+em+'\'};aktiverLagreBtn();" style="background:transparent;border:none;outline:none;font-size:.72rem;font-weight:700;color:#856404;width:100%;padding:.3rem 0;"></td></tr>';}
-      else{rows+='<tr class="uke-hdr" id="uke-hdr-'+uke.uke+'"><td style="padding:.28rem .5rem;font-weight:700;color:#856404;background:#fff3cd;">'+em+' '+uke.uke+'</td><td colspan="5" style="background:#fff3cd;color:#856404;font-weight:700;padding:.28rem .4rem;">'+uke.ferieNavn+'</td></tr>';}
+      if(erAdmin()){rows+='<tr class="uke-hdr" id="uke-hdr-'+uke.uke+'"><td style="padding:.28rem .5rem;font-weight:700;color:#856404;background:#fff3cd;">'+em+' '+uke.uke+'</td><td colspan="'+(nKolonner-1)+'" style="background:#fff3cd;padding:0 .3rem;"><input type="text" value="'+uke.ferieNavn+'" oninput="allData.plan[aktivtFagLaerer].uker['+ui+'].ferieNavn=this.value;endringer[\''+uke.uke+'|__ferie__\']={ferieNavn:this.value,ferieEmoji:\''+em+'\'};aktiverLagreBtn();" style="background:transparent;border:none;outline:none;font-size:.72rem;font-weight:700;color:#856404;width:100%;padding:.3rem 0;"></td></tr>';}
+      else{rows+='<tr class="uke-hdr" id="uke-hdr-'+uke.uke+'"><td style="padding:.28rem .5rem;font-weight:700;color:#856404;background:#fff3cd;">'+em+' '+uke.uke+'</td><td colspan="'+(nKolonner-1)+'" style="background:#fff3cd;color:#856404;font-weight:700;padding:.28rem .4rem;">'+uke.ferieNavn+'</td></tr>';}
       ukerVist++;return;
     }
-    if(ukerVist%4===0)rows+='<tr class="uke-hdr" id="uke-hdr-'+uke.uke+'"><td style="padding:.28rem .5rem;font-weight:700;">'+uke.uke+'</td><td style="'+sh+'">'+(erYFF?'Gr':'P')+'</td><td style="'+sh+'">Aktivitet</td><td style="'+sh+'">Oppmoete</td><td style="'+sh+'">Info</td><td style="'+sh+'">Laerer</td></tr>';
-    else rows+='<tr class="uke-hdr" id="uke-hdr-'+uke.uke+'"><td colspan="6" style="padding:.28rem .5rem;"><span style="font-weight:700;margin-right:.4rem;">'+uke.uke+'</span></td></tr>';
+    var col2Hdr=erYFF?'Gr':erFellesfag?'Fag':'P';
+    if(ukerVist%4===0)rows+='<tr class="uke-hdr" id="uke-hdr-'+uke.uke+'"><td style="padding:.28rem .5rem;font-weight:700;">'+uke.uke+'</td>'
+      +(erNNA?'':'<td style="'+sh+'">'+col2Hdr+'</td>')
+      +'<td style="'+sh+'">Lærer</td><td style="'+sh+'">Aktivitet</td><td style="'+sh+'">Oppmøte</td><td style="'+sh+'">Info</td></tr>';
+    else rows+='<tr class="uke-hdr" id="uke-hdr-'+uke.uke+'"><td colspan="'+nKolonner+'" style="padding:.28rem .5rem;"><span style="font-weight:700;margin-right:.4rem;">'+uke.uke+'</span></td></tr>';
     ukerVist++;
     allData.skolerute.forEach(function(sr){
       if(erSrIgnorert(sr.type)||sr.dag)return;
       var srUke=srUkeTilNummer(sr.uke);
       if(srUke&&srUke===String(uke.uke)){
-        rows+='<tr><td colspan="6" style="background:#fff3cd;color:#856404;font-weight:600;font-size:.73rem;padding:.32rem .55rem;">'+srEmoji(sr.type,sr.beskrivelse)+' '+sr.beskrivelse+'</td></tr>';
+        rows+='<tr><td colspan="'+nKolonner+'" style="background:#fff3cd;color:#856404;font-weight:600;font-size:.73rem;padding:.32rem .55rem;">'+srEmoji(sr.type,sr.beskrivelse)+' '+sr.beskrivelse+'</td></tr>';
       }
     });
     dager.forEach(function(dk){
@@ -1787,7 +1791,7 @@ function renderGrid(){
       var bl=erBlokert(uke.uke,dk);
       if(bl.blokkert&&!erSrIgnorert(bl.type)){
         var blEm=srEmoji(bl.type,bl.beskrivelse);
-        rows+='<tr><td class="dag-celle" style="background:#fff8e8;">'+DAG_FULLT[dk]+'</td><td colspan="5" style="background:#fff3cd;color:#856404;font-size:.73rem;font-weight:600;padding:.32rem .6rem;">'+blEm+' '+bl.beskrivelse+'</td></tr>';
+        rows+='<tr><td class="dag-celle" style="background:#fff8e8;">'+DAG_FULLT[dk]+'</td><td colspan="'+(nKolonner-1)+'" style="background:#fff3cd;color:#856404;font-size:.73rem;font-weight:600;padding:.32rem .6rem;">'+blEm+' '+bl.beskrivelse+'</td></tr>';
         return;
       }
       visibleGr.forEach(function(pk,pi){
@@ -1797,7 +1801,7 @@ function renderGrid(){
     });
   });
   // Årsplan-banner fjernet - skolerute flettes inn i grid på riktig plass
-  document.getElementById('grid-body').innerHTML=rows||'<tr><td colspan="6" style="padding:1rem;color:#999;text-align:center">Ingen uker å vise</td></tr>';
+  document.getElementById('grid-body').innerHTML=rows||'<tr><td colspan="'+nKolonner+'" style="padding:1rem;color:#999;text-align:center">Ingen uker å vise</td></tr>';
   setTimeout(autoResizeAll,0);
   setTimeout(setupDenneUkenObserver,50);
 }
@@ -2659,10 +2663,10 @@ function byggHurtigRad(){
     '<input class="h-uke" id="h-uke" type="text" placeholder="Uke">'+
     '<select class="h-dag" id="h-dag">'+dagOpts+'</select>'+
     pkHtml+
+    '<select class="h-lae" id="h-lae">'+laeOpts+'</select>'+
     '<input class="h-akt" id="h-akt" type="text" placeholder="Aktivitet (påkrevd)">'+
     '<input class="h-opp" id="h-opp" type="text" placeholder="Oppmøte">'+
     '<input class="h-inf" id="h-inf" type="text" placeholder="Info">'+
-    '<select class="h-lae" id="h-lae">'+laeOpts+'</select>'+
     '<button class="h-legg" onclick="hurtigLeggTil()">+ Legg til</button>';
   // Vis kun på plan-siden, ikke i Innstillinger
   var planSek=document.getElementById('seksjon-plan');
