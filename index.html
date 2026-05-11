@@ -2415,7 +2415,6 @@ function renderSoppel(){
     var col2='<td class="soppel-rad-innhold">'+oktId+innholdHtml+'</td>';
     var col3='<td class="soppel-rad-handl"><div style="display:flex;flex-direction:column;gap:.18rem;align-items:flex-end;">'
       +'<button class="btn-ok" style="font-size:.64rem;padding:.14rem .36rem;white-space:nowrap;" onclick="_gjenopprettSøppel(\''+id+'\')" title="Legg tilbake i planen">↩ Tilbake</button>'
-      +'<button style="font-size:.64rem;padding:.14rem .36rem;white-space:nowrap;background:#eef4ee;border:1px solid var(--kant);border-radius:5px;cursor:pointer;" onclick="_kopierSøppel(\''+id+'\')" title="Kopier til utklippstavlen">📋 Kopier</button>'
       +'<button class="btn-avbryt" style="font-size:.64rem;padding:.14rem .36rem;" onclick="_slettSøppel(\''+id+'\',this)" title="Slett permanent">🗑 Slett</button>'
       +'</div></td>';
     return '<tr data-soppel="1" style="border-bottom:1px solid var(--kant);">'+col1+col2+col3+'</tr>';
@@ -2440,7 +2439,7 @@ function renderSoppel(){
     _oppdaterSoppelTeller();
   });
 }
-function _gjenopprettSøppel(id){
+async function _gjenopprettSøppel(id){
   var d=_soppelData[id];
   if(!d)return;
   var r=d.r;
@@ -2469,7 +2468,8 @@ function _gjenopprettSøppel(id){
   }
   endringer[nk]={aktivitet:r[6]||'',oppmote:r[7]||'',info:r[8]||'',laerer:r[9]||''};
   aktiverLagreBtn();renderGrid();
-  visToast('↩ Lagt tilbake uke '+uke+' '+dag+' – trykk 💾 Lagre');
+  visToast('↩ Gjenopprettet – lagrer…');
+  await lagreTilSheets(true);
 }
 function _kopierSøppel(id){
   var d=_soppelData[id];
