@@ -33,10 +33,21 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 @keyframes spin{to{transform:rotate(360deg);}}
 #laster-skjerm p{font-size:.82rem;color:var(--dempet);}
 #elev-side{display:none;}
-.elev-kontroller{display:flex;align-items:center;gap:.4rem;padding:.75rem 1.2rem 0;flex-wrap:wrap;}
-.elev-kontroller button{background:var(--kort);border:1px solid var(--kant);border-radius:7px;padding:.32rem .68rem;font-size:.75rem;cursor:pointer;}
-.uke-label{font-size:.92rem;font-weight:700;min-width:68px;text-align:center;}
-.oppdater-btn,.elev-kontroller .oppdater-btn{background:var(--kort);color:var(--tekst);border:1px solid var(--kant);border-radius:7px;padding:.32rem .68rem;font-size:.73rem;cursor:pointer;}
+.elev-kontroller{display:flex;align-items:center;gap:.45rem;padding:.75rem 1.2rem 0;flex-wrap:wrap;}
+/* Nav-gruppe: ← [Uke 20] → */
+.elev-nav-gruppe{display:inline-flex;align-items:center;background:var(--kort);border:1.5px solid var(--kant);border-radius:24px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.elev-nav-pil{background:transparent;border:none;padding:.44rem .95rem;font-size:1.05rem;cursor:pointer;color:var(--nav);transition:background .15s;min-height:40px;line-height:1;}
+.elev-nav-pil:hover{background:#edecd8;}
+.uke-label{padding:.36rem .7rem;font-size:.9rem;font-weight:700;color:var(--tekst);border-left:1px solid var(--kant);border-right:1px solid var(--kant);min-width:72px;text-align:center;cursor:pointer;user-select:none;transition:background .15s;}
+.uke-label:hover{background:#f5f4ef;}
+.uke-input{width:46px;border:none;background:transparent;font-size:.9rem;font-weight:700;text-align:center;outline:none;padding:0;color:var(--nav);}
+/* Sekundærknapper */
+.elev-sek-btn{background:var(--kort);color:var(--nav);border:1.5px solid var(--kant);border-radius:20px;padding:.38rem .82rem;font-size:.78rem;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s;min-height:40px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.elev-sek-btn:hover{background:#edecd8;border-color:#c4c0aa;}
+.elev-sek-btn.aktiv{background:var(--groen);color:#fff;border-color:var(--groen);}
+.elev-sek-btn:disabled{opacity:.38;cursor:default;}
+/* Beholder for bakoverkompatibilitet */
+.oppdater-btn{background:var(--kort);color:var(--tekst);border:1px solid var(--kant);border-radius:7px;padding:.32rem .68rem;font-size:.73rem;cursor:pointer;}
 .oppdater-btn.aktiv{background:var(--groen);color:#fff;border-color:var(--groen);}
 .fag-velger{padding:.45rem 1.2rem 0;display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;}
 .fag-velger label{font-size:.74rem;color:var(--dempet);}
@@ -262,9 +273,10 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   .tabs button{padding:.62rem .5rem;font-size:.8rem;min-height:44px;}
 
   /* ── Elev: kontroller ── */
-  .elev-kontroller{padding:.6rem .85rem 0;gap:.38rem;flex-wrap:wrap;}
-  .elev-kontroller button,.elev-kontroller .oppdater-btn{font-size:.8rem;padding:.42rem .72rem;min-height:40px;}
-  .uke-label{font-size:1rem;}
+  .elev-kontroller{padding:.6rem .85rem 0;gap:.42rem;flex-wrap:wrap;}
+  .elev-nav-pil{padding:.44rem 1rem;}
+  .uke-label{font-size:1rem;min-width:68px;}
+  .elev-sek-btn{font-size:.8rem;padding:.4rem .8rem;min-height:40px;}
   .elev-kontroller-ekstra{margin-left:0 !important;display:flex;gap:.38rem;flex-wrap:wrap;}
 
   /* ── Fag-velger ── */
@@ -384,14 +396,16 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   </div>
   <div id="elev-fag-velger" style="display:none"></div>
   <div class="elev-kontroller">
-    <button onclick="navigerUke(-1)">&#x2190; Forrige</button>
-    <span class="uke-label" id="uke-label">Uke</span>
-    <button onclick="navigerUke(1)">Neste &#x2192;</button>
-    <button class="oppdater-btn" id="denne-uke-btn" onclick="gaaTilDenneUken()">Denne uken</button>
-    <button class="oppdater-btn" id="elev-oppdater-btn" onclick="elevOppdater()" style="cursor:default;opacity:.45;" disabled>&#x21BB; Oppdater</button>
+    <div class="elev-nav-gruppe">
+      <button class="elev-nav-pil" onclick="navigerUke(-1)" title="Forrige uke">&#x2190;</button>
+      <span class="uke-label" id="uke-label" onclick="aktiverUkeInput()" title="Klikk for å skrive inn ukenummer">Uke</span>
+      <button class="elev-nav-pil" onclick="navigerUke(1)" title="Neste uke">&#x2192;</button>
+    </div>
+    <button class="elev-sek-btn" id="denne-uke-btn" onclick="gaaTilDenneUken()">I dag</button>
+    <button class="elev-sek-btn" id="elev-oppdater-btn" onclick="elevOppdater()" disabled title="Oppdater">&#x21BB;</button>
     <div class="elev-kontroller-ekstra" style="margin-left:auto;display:flex;gap:.38rem;">
-      <button class="oppdater-btn" onclick="aapneIcalModal('elev')">&#x1F4C5; Kalender</button>
-      <button class="oppdater-btn" onclick="skrivUtElev()">&#x1F5A8;&#xFE0F; Skriv ut</button>
+      <button class="elev-sek-btn" onclick="aapneIcalModal('elev')" title="Legg til i kalender">&#x1F4C5;</button>
+      <button class="elev-sek-btn" onclick="skrivUtElev()" title="Skriv ut">&#x1F5A8;&#xFE0F;</button>
     </div>
   </div>
   <div id="elev-main"></div>
@@ -1440,6 +1454,23 @@ function navigerUke(r){
   var alle=alleUker();
   aktivUkeIdx=Math.max(0,Math.min(alle.length-1,aktivUkeIdx+r));
   renderElev();
+}
+function aktiverUkeInput(){
+  var lbl=document.getElementById('uke-label');
+  var alle=alleUker();
+  var gjeldende=alle[aktivUkeIdx]||'';
+  lbl.innerHTML='<input class="uke-input" id="uke-input-felt" type="number" min="1" max="53" value="'+gjeldende+'">';
+  var inp=document.getElementById('uke-input-felt');
+  inp.focus();inp.select();
+  inp.onblur=function(){gaTilUkeNummer(this.value);};
+  inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();this.blur();}if(e.key==='Escape')renderElev();};
+}
+function gaTilUkeNummer(nr){
+  var alle=alleUker();
+  var uke=String(parseInt(nr,10));
+  var idx=alle.indexOf(uke);
+  if(idx>=0){aktivUkeIdx=idx;renderElev();}
+  else{visToast('Uke '+nr+' finnes ikke i planen',true);renderElev();}
 }
 
 function renderElev(){
@@ -3473,7 +3504,7 @@ function aktiverElevOppdater(nyVersjon){
   if(!btn)return;
   btn.disabled=false;btn.style.cursor='pointer';btn.style.opacity='1';
   btn.classList.add('aktiv');
-  btn.textContent='↻ Ny data ('+nyVersjon+')';
+  btn.textContent='↻ Ny';
 }
 function passivElevOppdater(){
   _elevNyVersjon=false;
