@@ -118,6 +118,39 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .pw-meny-rad.lagre-btn:hover{background:var(--kort);}
 .pw-btn:hover{background:#e4e3d8;border-color:#c4c0aa;}
 .pw-btn.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);}
+/* ── Mørk nav-bar: Verktolinje (lærer) + Elev-kontroller ── */
+.verktolinje{background:var(--nav) !important;border-bottom:2px solid rgba(0,0,0,.18);}
+.verktolinje .pw-btn{background:rgba(255,255,255,.13);color:rgba(255,255,255,.9);border-color:rgba(255,255,255,.22);}
+.verktolinje .pw-btn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.35);}
+.verktolinje .pw-btn.aktiv{background:#fff;color:var(--nav);border-color:transparent;}
+.verktolinje .pw-meny-trigger.lagre-aktiv{border-color:var(--groen);color:var(--groen);}
+#innst-advarsel-toolbar{background:#e53935 !important;}
+#lagre-status{color:#a8e06a !important;}
+/* Lærers ukenavigering */
+.laerer-nav-gruppe{display:inline-flex;align-items:center;background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.22);border-radius:24px;overflow:hidden;}
+.laerer-nav-pil{background:transparent;border:none;padding:.32rem .88rem;font-size:1.05rem;cursor:pointer;color:#fff;transition:background .15s;min-height:34px;line-height:1;}
+.laerer-nav-pil:hover{background:rgba(255,255,255,.18);}
+.laerer-uke-label{padding:.28rem .65rem;font-size:.86rem;font-weight:700;color:#fff;border-left:1px solid rgba(255,255,255,.22);border-right:1px solid rgba(255,255,255,.22);min-width:72px;text-align:center;}
+/* Elevkontroller mørk */
+.elev-kontroller{background:var(--nav);padding:.45rem 1rem .45rem;}
+.elev-kontroller .elev-nav-gruppe{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22);}
+.elev-kontroller .elev-nav-pil{color:#fff;}
+.elev-kontroller .elev-nav-pil:hover{background:rgba(255,255,255,.15);}
+.elev-kontroller .uke-label{color:#fff;border-color:rgba(255,255,255,.22);}
+.elev-kontroller .uke-label:hover{background:rgba(255,255,255,.1);}
+.elev-kontroller .elev-sek-btn{background:rgba(255,255,255,.13);color:rgba(255,255,255,.9);border-color:rgba(255,255,255,.22);box-shadow:none;}
+.elev-kontroller .elev-sek-btn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4);}
+.elev-kontroller .elev-sek-btn.aktiv{background:#fff;color:var(--nav);border-color:transparent;}
+.elev-kontroller .elev-sek-btn:disabled{opacity:.35;}
+.elev-kontroller .elev-chip-wrap{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22);}
+.elev-kontroller .elev-chip-wrap:hover,.elev-kontroller .elev-chip-wrap:focus-within{border-color:rgba(255,255,255,.5);}
+.elev-kontroller .elev-chip-wrap.aktiv{background:rgba(255,255,255,.22);border-color:#fff;}
+.elev-kontroller .elev-chip-select{color:#fff;}
+.elev-kontroller .elev-chip-icon,.elev-kontroller .elev-chip-arrow{color:rgba(255,255,255,.75);}
+.elev-kontroller .elev-chip-reset{background:transparent;border-color:rgba(255,255,255,.22);color:rgba(255,255,255,.75);}
+.elev-kontroller .elev-chip-reset:hover{border-color:#ff8a80;color:#ff8a80;}
+.elev-kontroller .pw-meny-trigger{background:rgba(255,255,255,.13);color:rgba(255,255,255,.9);border:1.5px solid rgba(255,255,255,.22);border-radius:20px;padding:.38rem .82rem;font-size:.78rem;font-weight:600;cursor:pointer;min-height:40px;letter-spacing:.12em;transition:background .15s;}
+.elev-kontroller .pw-meny-trigger:hover{background:rgba(255,255,255,.22);}
 /* Sentrert innlimingspanel */
 #lim-inn-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:540px;max-width:96vw;max-height:80vh;z-index:45;display:none;flex-direction:column;pointer-events:none;}
 #lim-inn-panel.vis{display:flex;}
@@ -344,6 +377,9 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   /* ── Fag-tabs – sticky også på mobil ── */
   .fag-tabs{padding:0 .5rem;box-shadow:0 2px 6px rgba(0,0,0,.1);}
   .fag-tabs button{min-height:36px;padding:.32rem .55rem;font-size:.72rem;}
+  /* ── Mørk nav på mobil ── */
+  .elev-kontroller{padding:.4rem .65rem .4rem;gap:.3rem;}
+  .verktolinje{padding:.32rem .65rem;gap:.3rem;}
 
   /* ── Hurtig-rad – horisontal scroll ── */
   #hurtig-rad{overflow-x:auto;padding:.3rem .5rem;flex-wrap:nowrap;gap:.22rem;}
@@ -426,9 +462,12 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
       <span class="elev-chip-arrow">&#x276F;</span>
     </div>
     <button class="elev-chip-reset" id="chip-nullstill" onclick="nullstillElevFilter()" style="display:none;">&#x21BA; Nullstill</button>
-    <div class="elev-kontroller-ekstra" style="margin-left:auto;display:flex;gap:.38rem;">
-      <button class="elev-sek-btn" onclick="aapneIcalModal('elev')" title="Legg til i kalender">&#x1F4C5;</button>
-      <button class="elev-sek-btn" onclick="skrivUtElev()" title="Skriv ut">&#x1F5A8;&#xFE0F;</button>
+    <div class="pw-meny-wrap" id="elev-meny-wrap" style="margin-left:auto;">
+      <button class="pw-meny-trigger" id="elev-meny-trigger" onclick="togglElevMeny(event)" title="Mer">&#x2022;&#x2022;&#x2022;</button>
+      <div class="pw-meny-panel" id="elev-meny-panel">
+        <button class="pw-meny-rad pw-btn" onclick="aapneIcalModal('elev');lukkElevMeny()">&#x1F4C5; Kalender</button>
+        <button class="pw-meny-rad pw-btn" onclick="skrivUtElev();lukkElevMeny()">&#x1F5A8;&#xFE0F; Skriv ut</button>
+      </div>
     </div>
   </div>
   <div id="elev-main"></div>
@@ -453,7 +492,12 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
       <button class="pw-btn" id="btn-plan" onclick="visLaererSeksjon('plan')" style="display:none;">&#x2190; Plan</button>
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
-        <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">&#x1F4CD; Denne uken</button>
+        <div class="laerer-nav-gruppe" id="laerer-nav-gruppe">
+          <button class="laerer-nav-pil" onclick="navigerUkeLaerer(-1)" title="Forrige uke">&#x2190;</button>
+          <span class="laerer-uke-label" id="laerer-uke-label">Uke &#x2013;</span>
+          <button class="laerer-nav-pil" onclick="navigerUkeLaerer(1)" title="Neste uke">&#x2192;</button>
+        </div>
+        <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">I dag</button>
         <button class="pw-btn aktiv" id="filter-uker-btn" onclick="togglFilterUker()">Mine økter</button>
         <button class="pw-btn aktiv" id="skjul-tomme" onclick="togglSkjulTomme()">Skjul tomme</button>
         <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn</button>
@@ -1163,7 +1207,7 @@ async function hentData(manuell){
       document.getElementById('elev-side').style.display='block';
       if(!manuell)gaaTilDenneUken();else{renderElev();visToast('Data oppdatert!');}
     }
-    if(aktivLaerer){byggFagTabsLaerer();byggHurtigRad();renderGrid();oppdaterStickyTop();setTimeout(function(){oppdaterStickyTop();scrollTilDenneUkenVedOppstart();},200);}
+    if(aktivLaerer){byggFagTabsLaerer();byggHurtigRad();renderGrid();oppdaterStickyTop();oppdaterLaererNavLabel();setTimeout(function(){oppdaterStickyTop();scrollTilDenneUkenVedOppstart();},200);}
   }catch(e){
     console.error(e);
     document.getElementById('laster-skjerm').style.display='none';
@@ -1696,7 +1740,7 @@ async function loggInn(){
   document.getElementById('btn-profil').style.display='inline-block';
   document.getElementById('btn-ical-laerer').style.display='inline-block';
   byggFagTabsLaerer();byggHurtigRad();renderGrid();
-  oppdaterStickyTop();setTimeout(function(){oppdaterStickyTop();scrollTilDenneUkenVedOppstart();},200);
+  oppdaterStickyTop();oppdaterLaererNavLabel();setTimeout(function(){oppdaterStickyTop();scrollTilDenneUkenVedOppstart();},200);
   // Tilstedeværelse: registrer og vis hvem som er inne
   var tilstede=await oppdaterTilstede();
   if(tilstede&&tilstede.aktive){
@@ -1720,7 +1764,7 @@ function loggUt(){
   var oi=document.getElementById('online-indikator');if(oi)oi.innerHTML='';
   var vb=document.getElementById('vente-banner');if(vb)vb.style.display='none';
   sesjonFjern('praksisToken');
-  aktivLaerer=null;endringer={};passivLagreBtn();
+  aktivLaerer=null;endringer={};passivLagreBtn();_laererNavIdx=-1;
   document.getElementById('login-wrap').style.display='flex';
   document.getElementById('rediger-skjerm').style.display='none';
   document.getElementById('innlogget-chip').style.display='none';
@@ -3383,7 +3427,31 @@ function togglFilterUker(){
 // ── ••• dropdown-meny ────────────────────────────────────────────────────────
 function togglPwMeny(e){e&&e.stopPropagation();var p=document.getElementById('pw-meny-panel');p.classList.toggle('open');}
 function lukkPwMeny(){var p=document.getElementById('pw-meny-panel');if(p)p.classList.remove('open');}
-document.addEventListener('click',function(e){var w=document.getElementById('pw-meny-wrap');if(w&&!w.contains(e.target))lukkPwMeny();});
+function togglElevMeny(e){e&&e.stopPropagation();var p=document.getElementById('elev-meny-panel');p.classList.toggle('open');}
+function lukkElevMeny(){var p=document.getElementById('elev-meny-panel');if(p)p.classList.remove('open');}
+document.addEventListener('click',function(e){
+  var w=document.getElementById('pw-meny-wrap');if(w&&!w.contains(e.target))lukkPwMeny();
+  var ew=document.getElementById('elev-meny-wrap');if(ew&&!ew.contains(e.target))lukkElevMeny();
+});
+// ── Lærer ukenavigering ──────────────────────────────────────────────────────
+var _laererNavIdx=-1;
+function _laererNavInitIdx(){
+  if(_laererNavIdx>=0)return _laererNavIdx;
+  var alle=alleUker();var uke=getVisningsUke();var i=alle.indexOf(String(uke));
+  return i>=0?i:0;
+}
+function navigerUkeLaerer(delta){
+  var alle=alleUker();if(!alle.length)return;
+  _laererNavIdx=Math.max(0,Math.min(alle.length-1,_laererNavInitIdx()+delta));
+  scrollTilUke(alle[_laererNavIdx],'smooth');
+  oppdaterLaererNavLabel();
+}
+function oppdaterLaererNavLabel(){
+  var el=document.getElementById('laerer-uke-label');if(!el)return;
+  var alle=alleUker();if(!alle.length)return;
+  var idx=_laererNavIdx>=0?_laererNavIdx:_laererNavInitIdx();
+  el.textContent='Uke '+alle[idx];
+}
 function oppdaterPwMenyTrigger(){
   var t=document.getElementById('pw-meny-trigger');
   if(!t)return;
