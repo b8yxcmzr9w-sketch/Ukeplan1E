@@ -190,8 +190,10 @@ td.col-laer{width:90px;max-width:110px;}
 .prompt-modal textarea{width:100%;height:200px;font-size:.68rem;font-family:monospace;border:1px solid var(--kant);border-radius:7px;padding:.5rem;background:var(--bg);resize:vertical;}
 @keyframes pulse-btn{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
 .toast{position:fixed;bottom:1.5rem;right:1.1rem;background:#3d4a1e;color:#fff;padding:.65rem 1.1rem;border-radius:9px;font-size:.8rem;z-index:999;max-width:420px;line-height:1.4;cursor:pointer;display:none;}
+.laerer-tilgang-btn{position:fixed;bottom:1.1rem;right:1.1rem;background:transparent;border:none;font-size:1.1rem;opacity:.22;cursor:pointer;z-index:90;padding:.3rem;line-height:1;transition:opacity .2s;user-select:none;}
+.laerer-tilgang-btn:hover{opacity:.55;}
 @media print{
-  header,.tabs,.verktolinje,.paste-panel,.fag-velger,.elev-kontroller,.fag-tabs,.toast,.modal-bg,#laster-skjerm,#login-wrap,#elev-side{display:none !important;}
+  header,.tabs,.verktolinje,.paste-panel,.fag-velger,.elev-kontroller,.fag-tabs,.toast,.modal-bg,#laster-skjerm,#login-wrap,#elev-side,.laerer-tilgang-btn{display:none !important;}
   #laerer-side,#rediger-skjerm{display:block !important;}
   body{font-size:7.5pt;background:#fff;}
   .tabell-wrapper{overflow:visible;padding:0;}
@@ -314,10 +316,11 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   </div>
 </header>
 <div class="vente-banner" id="vente-banner"></div>
-<div class="tabs">
+<div class="tabs" style="display:none;">
   <button id="tab-elev" class="aktiv" onclick="byttHovedFane('elev')">&#x1F4CB; Elevside</button>
   <button id="tab-laerer" onclick="byttHovedFane('laerer')">&#x270F;&#xFE0F; Lærerside</button>
 </div>
+<button class="laerer-tilgang-btn" id="laerer-tilgang-btn" onclick="byttHovedFane('laerer')" title="Lærerside">&#x1F511;</button>
 <div id="laster-skjerm">
   <div class="spinner"></div>
   <p id="laster-tekst">Henter data...</p>
@@ -1195,6 +1198,7 @@ function byttHovedFane(f){
   document.getElementById('laerer-side').style.display=f==='laerer'?'block':'none';
   document.getElementById('tab-elev').classList.toggle('aktiv',f==='elev');
   document.getElementById('tab-laerer').classList.toggle('aktiv',f==='laerer');
+  var kb=document.getElementById('laerer-tilgang-btn');if(kb)kb.style.display=f==='laerer'?'none':'';
   if(f==='elev'){renderElev();startElevVersjonSjekk();}
   else stopElevVersjonSjekk();
 }
@@ -1590,6 +1594,7 @@ function loggUt(){
   document.getElementById('btn-ical-laerer').style.display='none';
   document.getElementById('passord-felt').value='';
   document.getElementById('feil-melding').textContent='';
+  var kb=document.getElementById('laerer-tilgang-btn');if(kb)kb.style.display='';
   visLaererSeksjon('plan');
 }
 function visLaererSeksjon(sek){
