@@ -381,8 +381,16 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   <p id="laster-tekst">Henter data...</p>
 </div>
 <div id="elev-side">
-  <div class="elev-filter-bar" id="elev-filter-bar" style="display:none;">
-    <div class="elev-chip-wrap" id="chip-wrap-parti">
+  <div id="elev-fag-velger" style="display:none"></div>
+  <div class="elev-kontroller">
+    <div class="elev-nav-gruppe">
+      <button class="elev-nav-pil" onclick="navigerUke(-1)" title="Forrige uke">&#x2190;</button>
+      <span class="uke-label" id="uke-label" onclick="aktiverUkeInput()" title="Klikk for å skrive inn ukenummer">Uke</span>
+      <button class="elev-nav-pil" onclick="navigerUke(1)" title="Neste uke">&#x2192;</button>
+    </div>
+    <button class="elev-sek-btn" id="denne-uke-btn" onclick="gaaTilDenneUken()">I dag</button>
+    <button class="elev-sek-btn" id="elev-oppdater-btn" onclick="elevOppdater()" disabled title="Oppdater">&#x21BB;</button>
+    <div class="elev-chip-wrap" id="chip-wrap-parti" style="display:none;">
       <span class="elev-chip-icon">&#x1F465;</span>
       <select id="elev-parti-velg" class="elev-chip-select" onchange="byttElevParti(this.value)"></select>
       <span class="elev-chip-arrow">&#x276F;</span>
@@ -393,16 +401,6 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
       <span class="elev-chip-arrow">&#x276F;</span>
     </div>
     <button class="elev-chip-reset" id="chip-nullstill" onclick="nullstillElevFilter()" style="display:none;">&#x21BA; Nullstill</button>
-  </div>
-  <div id="elev-fag-velger" style="display:none"></div>
-  <div class="elev-kontroller">
-    <div class="elev-nav-gruppe">
-      <button class="elev-nav-pil" onclick="navigerUke(-1)" title="Forrige uke">&#x2190;</button>
-      <span class="uke-label" id="uke-label" onclick="aktiverUkeInput()" title="Klikk for å skrive inn ukenummer">Uke</span>
-      <button class="elev-nav-pil" onclick="navigerUke(1)" title="Neste uke">&#x2192;</button>
-    </div>
-    <button class="elev-sek-btn" id="denne-uke-btn" onclick="gaaTilDenneUken()">I dag</button>
-    <button class="elev-sek-btn" id="elev-oppdater-btn" onclick="elevOppdater()" disabled title="Oppdater">&#x21BB;</button>
     <div class="elev-kontroller-ekstra" style="margin-left:auto;display:flex;gap:.38rem;">
       <button class="elev-sek-btn" onclick="aapneIcalModal('elev')" title="Legg til i kalender">&#x1F4C5;</button>
       <button class="elev-sek-btn" onclick="skrivUtElev()" title="Skriv ut">&#x1F5A8;&#xFE0F;</button>
@@ -1377,44 +1375,54 @@ function byggElevUtvalg(){
   var ps=partier();
   var yff=allData.fag.find(function(f){return f.navn==='YFF';});
   var yffGr=yff&&yff.grupper&&yff.grupper.length?yff.grupper:[];
-  var bar=document.getElementById('elev-filter-bar');
   var wrapParti=document.getElementById('chip-wrap-parti');
   var wrapGruppe=document.getElementById('chip-wrap-gruppe');
   var nullstill=document.getElementById('chip-nullstill');
+  var altModus=(elevVisMode==='alt');
   // Parti-chip
   var pSel=document.getElementById('elev-parti-velg');
   if(pSel&&ps.length>1){
-    pSel.innerHTML=ps.map(function(p){
-      return '<option value="'+p+'"'+(p===elevParti?' selected':'')+'>Parti '+p.slice(1)+'</option>';
+    pSel.innerHTML='<option value="">NPT parti</option>'+ps.map(function(p){
+      return '<option value="'+p+'"'+((!altModus&&p===elevParti)?' selected':'')+'>Parti '+p.slice(1)+'</option>';
     }).join('');
+    if(altModus)pSel.value='';
     if(wrapParti)wrapParti.style.display='';
   } else {if(wrapParti)wrapParti.style.display='none';}
   // YFF-gruppe-chip
   var gSel=document.getElementById('elev-gruppe-velg');
   if(gSel&&yffGr.length>1){
-    gSel.innerHTML=yffGr.map(function(g){
-      return '<option value="'+g+'"'+(g===aktivGruppeElev?' selected':'')+'>'+g+'</option>';
+    gSel.innerHTML='<option value="">YFF gruppe</option>'+yffGr.map(function(g){
+      return '<option value="'+g+'"'+((!altModus&&g===aktivGruppeElev)?' selected':'')+'>'+g+'</option>';
     }).join('');
+    if(altModus)gSel.value='';
     if(wrapGruppe)wrapGruppe.style.display='';
   } else {if(wrapGruppe)wrapGruppe.style.display='none';}
-  // Vis filter-bar kun om noe er synlig
-  var visBalk=(ps.length>1||yffGr.length>1);
-  if(bar)bar.style.display=visBalk?'flex':'none';
-  // Nullstill-knapp
-  if(nullstill)nullstill.style.display=elevVisMode==='utvalg'?'':'none';
-  // Aktiv-klasse
-  if(wrapParti)wrapParti.classList.toggle('aktiv',elevVisMode==='utvalg');
-  if(wrapGruppe)wrapGruppe.classList.toggle('aktiv',elevVisMode==='utvalg');
+  // (chips vises/skjules individuelt)
+  // Nullstill-knapp – vis kun når noe er aktivt filtrert
+  if(nullstill)nullstill.style.display=(!altModus&&(elevParti||aktivGruppeElev))?'':'none';
+  // Aktiv-klasse per chip
+  if(wrapParti)wrapParti.classList.toggle('aktiv',!altModus&&!!elevParti);
+  if(wrapGruppe)wrapGruppe.classList.toggle('aktiv',!altModus&&!!aktivGruppeElev);
 }
 
 function nullstillElevFilter(){
   elevVisMode='alt';
+  elevParti='';
+  aktivGruppeElev='';
   byggElevUtvalg();
   renderElev();
 }
 
-function byttElevParti(p){elevParti=p;elevVisMode='utvalg';byggElevUtvalg();renderElev();}
-function byttElevGruppe(gruppe){aktivGruppeElev=gruppe;elevVisMode='utvalg';byggElevUtvalg();renderElev();}
+function byttElevParti(p){
+  if(!p){elevVisMode='alt';elevParti='';}
+  else{elevParti=p;elevVisMode='utvalg';}
+  byggElevUtvalg();renderElev();
+}
+function byttElevGruppe(gruppe){
+  if(!gruppe){elevVisMode='alt';aktivGruppeElev='';}
+  else{aktivGruppeElev=gruppe;elevVisMode='utvalg';}
+  byggElevUtvalg();renderElev();
+}
 
 function srUkeTilNummer(srUke){
   var u=String(srUke);
