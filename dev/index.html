@@ -1332,7 +1332,6 @@ function byttHovedFane(f){
   document.getElementById('laerer-side').style.display=f==='laerer'?'block':'none';
   document.getElementById('tab-elev').classList.toggle('aktiv',f==='elev');
   document.getElementById('tab-laerer').classList.toggle('aktiv',f==='laerer');
-  var kb=document.getElementById('laerer-tilgang-btn');if(kb)kb.style.display=f==='laerer'?'none':'';
   if(f==='elev'){renderElev();startElevVersjonSjekk();}
   else stopElevVersjonSjekk();
 }
@@ -1777,7 +1776,6 @@ function loggUt(){
   document.getElementById('btn-ical-laerer').style.display='none';
   document.getElementById('passord-felt').value='';
   document.getElementById('feil-melding').textContent='';
-  var kb=document.getElementById('laerer-tilgang-btn');if(kb)kb.style.display='';
   visLaererSeksjon('plan');
 }
 function visLaererSeksjon(sek){
