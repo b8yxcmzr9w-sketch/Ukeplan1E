@@ -1351,8 +1351,10 @@ function byggFagTabsLaerer(){
   });
 }
 function byttFagLaerer(fag){
-  // Husk hvilken uke som er synlig nå, slik at vi kan scrolle dit etter render
-  var synligUke=hentSynligUke();
+  // Bruk pill-posisjon (_laererNavIdx) som kilde til sannhet – fallback til DOM
+  var alle=alleUker();
+  var pilIdx=_laererNavIdx>=0?_laererNavIdx:_laererNavInitIdx();
+  var malUke=(alle.length&&pilIdx>=0)?alle[pilIdx]:hentSynligUke();
   aktivtFagLaerer=fag;
   endringer={};passivLagreBtn();
   oppdaterTilstede();
@@ -1369,10 +1371,11 @@ function byttFagLaerer(fag){
   if(ffv)ffv.style.display='none';
   oppdaterStickyTop();
   renderGrid();
-  // Scroll til samme uke som var synlig – med litt forsinkelse for at DOM er klar
+  // Scroll til pill-uke i nytt fag, med litt forsinkelse for at DOM er klar
   setTimeout(function(){
-    if(synligUke)scrollTilUke(synligUke,'auto');
+    if(malUke)scrollTilUke(malUke,'auto');
     else scrollTilDenneUkenVedOppstart();
+    oppdaterLaererNavLabel();
     setTimeout(setupDenneUkenObserver,100);
   },60);
 }
@@ -3272,12 +3275,14 @@ var _denneUkenObserver=null;
 function gaTilDenneUkenGrid(){
   var isoUke=getVisningsUke();
   var btn=document.getElementById('btn-denne-uken');
+  // Synk pill til i dag
+  var alle=alleUker();var idx=alle.indexOf(String(isoUke));
+  if(idx>=0){_laererNavIdx=idx;oppdaterLaererNavLabel();}
   var ok=scrollTilUke(isoUke,'smooth');
   var el=document.getElementById('uke-hdr-'+isoUke);
   if(ok){
     if(btn)btn.classList.add('aktiv');
     setTimeout(setupDenneUkenObserver,400);
-    // Blink-effekt
     if(el){var td=el.querySelector('td')||el;var origBg=td.style.background||'';var count=0;var blink=setInterval(function(){count++;td.style.background=(count%2===1)?'#c8e6c9':origBg;if(count>=6){clearInterval(blink);td.style.background=origBg;}},300);}
   } else {
     visToast('Uke '+isoUke+' er ikke synlig i planen');
@@ -3771,6 +3776,9 @@ function scrollTilDenneUkenVedOppstart(){
     var isoUke=getVisningsUke();
     var ok=scrollTilUke(isoUke,'auto');
     if(!ok){if(forsok++<5)setTimeout(prøv,200);return;}
+    // Synk pill til i dag etter vellykket scroll
+    var alle=alleUker();var idx=alle.indexOf(String(isoUke));
+    if(idx>=0){_laererNavIdx=idx;oppdaterLaererNavLabel();}
     setTimeout(setupDenneUkenObserver,100);
   }
   setTimeout(prøv,300);
