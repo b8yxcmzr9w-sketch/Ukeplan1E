@@ -258,6 +258,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 .ep-kort-akt{font-size:9pt;font-weight:700;line-height:1.3;}
 .ep-kort-opp{font-size:7.5pt;color:#444;margin-top:.06cm;}
 .ep-kort-info{font-size:7pt;color:#7a6030;background:#fffce8;border-left:2pt solid #e0c84a;padding:.06cm .12cm;margin-top:.08cm;border-radius:0 2pt 2pt 0;}
+.ep-banner{background:#f0f5e6;border:1pt solid #b5cc7a;border-radius:4pt;padding:.22cm .35cm;margin-bottom:.3cm;font-size:9pt;font-weight:700;color:#3d4a1e;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .ep-notater{border-top:1.5pt solid #3d4a1e;margin-top:.35cm;padding-top:.25cm;}
 .ep-notater-tittel{font-size:8pt;font-weight:700;color:#3d4a1e;margin-bottom:.28cm;letter-spacing:.03em;}
 .ep-linje{border-bottom:.75pt solid #d0ccc0;height:.72cm;margin-bottom:0;}
@@ -268,13 +269,13 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   @page{size:A4 landscape;margin:.9cm;}
 }
 .elev-filter-bar{display:flex;align-items:center;gap:.45rem;padding:.5rem 1.2rem;flex-wrap:wrap;}
-.elev-chip-wrap{display:inline-flex;align-items:center;gap:.22rem;background:var(--kort);border:1.5px solid var(--kant);border-radius:20px;padding:.3rem .52rem .3rem .72rem;transition:border-color .15s,background .15s;cursor:pointer;}
+.elev-chip-wrap{display:inline-flex;align-items:center;gap:.22rem;background:var(--kort);border:1.5px solid var(--kant);border-radius:20px;padding:.3rem .52rem .3rem .72rem;transition:border-color .15s,background .15s;cursor:pointer;min-height:40px;}
 .elev-chip-wrap:hover,.elev-chip-wrap:focus-within{border-color:var(--groen);}
 .elev-chip-wrap.aktiv{border-color:var(--groen);background:#f2f7ea;}
 .elev-chip-icon{font-size:.85rem;line-height:1;pointer-events:none;}
 .elev-chip-select{appearance:none;-webkit-appearance:none;background:transparent;border:none;font-size:.8rem;font-weight:600;color:var(--tekst);cursor:pointer;outline:none;padding:0;max-width:140px;}
 .elev-chip-arrow{font-size:.58rem;color:var(--dempet2);line-height:1;pointer-events:none;margin-left:.1rem;}
-.elev-chip-reset{background:none;border:1.5px solid var(--kant);border-radius:20px;padding:.3rem .78rem;font-size:.76rem;color:var(--dempet);cursor:pointer;font-weight:600;transition:all .15s;}
+.elev-chip-reset{background:none;border:1.5px solid var(--kant);border-radius:20px;padding:.3rem .78rem;font-size:.76rem;color:var(--dempet);cursor:pointer;font-weight:600;transition:all .15s;min-height:40px;}
 .elev-chip-reset:hover{border-color:#c0392b;color:#c0392b;}
 .innst-advarsel{display:none;background:#c0392b;color:#fff;font-size:.78rem;font-weight:600;padding:.6rem 1rem;text-align:center;border-radius:8px;margin-bottom:.8rem;}
 .innst-advarsel.vis{display:block;}
@@ -3438,20 +3439,15 @@ function skrivUtElev(){
   var datoSpenn=manDate?fmt(manDate)+' – '+fmt(freDate):'';
   var tittelTekst=(klasse?klasse+' – ':'')+' Uke '+ukenummer+(datoSpenn?' | '+datoSpenn:'');
 
-  // Bygg dag-kolonner
-  var dager=ALLE_DAGER.filter(function(dk){
-    // Vis dager med data eller aktive dager
-    return aktiveDager().indexOf(dk)>=0||ALLE_DAGER.some(function(){return true;});
-  });
-  // Bruk aktiveDager + dager med faktisk data denne uken
-  var dagerMedData={};
-  FASTE_FANER.forEach(function(fagNavn){
-    var uke=allData.plan[fagNavn]&&allData.plan[fagNavn].uker.find(function(u){return String(u.uke)===ukenummer;})||null;
-    if(!uke)return;
-    Object.keys(uke.dager||{}).forEach(function(dk){dagerMedData[dk]=true;});
-  });
-  var printDager=ALLE_DAGER.filter(function(dk){
-    return aktiveDager().indexOf(dk)>=0||dagerMedData[dk];
+  // Alltid alle 5 dager
+  var printDager=ALLE_DAGER;
+
+  // Skolerute-hendelser for denne uken
+  var srHendelser=[];
+  allData.skolerute.forEach(function(sr){
+    if(erSrIgnorert(sr.type))return;
+    var srUke=srUkeTilNummer(sr.uke);
+    if(srUke===ukenummer)srHendelser.push(sr);
   });
 
   var fagFarger={'NPT':'#6B8C2A','NNA':'#A0722A','YFF':'#185FA5','Fellesfag':'#534AB7'};
@@ -3502,9 +3498,17 @@ function skrivUtElev(){
   var notatLinjer='';
   for(var i=0;i<9;i++)notatLinjer+='<div class="ep-linje"></div>';
 
+  // Hel-uke skolerute-bannere
+  var bannerHtml='';
+  srHendelser.forEach(function(sr){
+    if(sr.dag)return; // Enkeltdag – vises i kolonne via erBlokert
+    bannerHtml+='<div class="ep-banner">'+srEmoji(sr.type,sr.beskrivelse)+' '+escHtml(sr.beskrivelse)+'</div>';
+  });
+
   var html='<div class="ep-side">';
   html+='<div class="ep-hdr"><span class="ep-hdr-tittel">'+escHtml(tittelTekst)+'</span><span class="ep-hdr-sub">'+escHtml(c.skolenavn||'')+'</span></div>';
-  html+='<div class="ep-grid" style="display:grid;grid-template-columns:'+gridCols+';height:14.5cm;align-items:stretch;">'+dagKols+'</div>';
+  html+=bannerHtml;
+  html+='<div class="ep-grid" style="display:grid;grid-template-columns:'+gridCols+';min-height:11cm;align-items:stretch;">'+dagKols+'</div>';
   html+='<div class="ep-notater"><div class="ep-notater-tittel">📝 Notater</div>'+notatLinjer+'</div>';
   html+='</div>';
 
