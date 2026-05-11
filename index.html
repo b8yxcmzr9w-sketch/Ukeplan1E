@@ -53,6 +53,7 @@ header h1{font-size:.95rem;font-weight:700;line-height:1.2;}
 .plan-celle .inf{font-size:.67rem;color:#5a4a2a;background:#fffbe8;border-left:2px solid #e0c84a;padding:.12rem .28rem;margin:.12rem 0;border-radius:0 3px 3px 0;}
 .plan-celle .laerer-chip{display:inline-block;font-size:.61rem;font-weight:600;padding:.1rem .38rem;border-radius:20px;color:#fff;margin-top:.1rem;}
 .plan-celle.tom{opacity:.3;}
+tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .ferie-banner{background:#fff3cd;border:1px solid #ffc107;border-radius:9px;padding:.7rem 1rem;margin-bottom:.75rem;font-weight:600;color:#856404;font-size:.88rem;text-align:center;}
 .sist-oppdatert{font-size:.68rem;color:var(--dempet2);padding:.3rem 1.2rem 0;text-align:right;}
 #laerer-side{display:none;}
@@ -780,7 +781,7 @@ var aktivUkeIdx=0,aktivLaerer=null,aktivtFagLaerer='NPT',aktivtFagElev='NPT',akt
 var endringer={},slettLaererNavn=null;
 var søppeldunk=[];
 var sisteVersjon=0,heartbeatInterval=null;
-function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escHtml(s){return String(s===null||s===undefined?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 var srTyper=['ferie','fri','høytid','planlegging','skoletur','avspasering','undervisningsfri'];
 var ALLE_DAGER=['mandag','tirsdag','onsdag','torsdag','fredag'];
 var DAG_FULLT={mandag:'Mandag',tirsdag:'Tirsdag',onsdag:'Onsdag',torsdag:'Torsdag',fredag:'Fredag'};
@@ -1661,7 +1662,7 @@ function slotRad(ui,dk,pk,dagCelleHtml){
   var bar='<div class="slot-bar" style="background:'+(harData?f:'#eee')+'"></div>';
   var partiCell='';
   if(!erNNA){partiCell='<td class="parti-celle" style="color:'+pFarge+';background:'+(idx%2===0?'#eef2e8':'#fdf3e8')+'">'+(erYFF||erFellesfag?pk:(idx+1))+'</td>';}
-  return '<tr style="background:'+rowBg+'" oncontextmenu="visSlotMenu(event,'+ui+',\''+dk+'\',\''+pk+'\')" title="Høyreklikk for alternativer">'+
+  return '<tr class="'+(harData?'slot-rad-data':'')+'" style="background:'+rowBg+'" oncontextmenu="visSlotMenu(event,'+ui+',\''+dk+'\',\''+pk+'\')" title="Høyreklikk for alternativer">'+
     dagCelleHtml+
     partiCell+
     '<td class="col-akt"><div>'+bar+'<textarea class="slot-edit-area" '+dis+' placeholder="Aktivitet..." oninput="autoResize(this);setFelt('+ui+',\''+dk+'\',\''+pk+'\',\'aktivitet\',this.value)" style="background:'+slotBg+'">'+esc(slot.aktivitet)+'</textarea></div></td>'+
@@ -1965,7 +1966,8 @@ async function tolkMedAI(){
   if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='<span class="ai-spinner"></span>Henter svar fra Gemini AI…';}
   try{
     var laerereNavn=(allData.laerere||[]).map(function(l){return l.navn;}).filter(Boolean);
-    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||'',laerere:laerereNavn})});
+    var dagsDato=new Date().toLocaleDateString('nb-NO',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' (uke '+getCurrentISOWeek()+')';
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||'',laerere:laerereNavn,dagsDato:dagsDato})});
     var data=await res.json();
     if(data.ok&&data.rader&&data.rader.length){
       function kap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
@@ -2079,12 +2081,9 @@ function limInnOkter(){
     var nySlot={aktivitet:akt||'',oppmote:opp||'',info:info||'',laerer:laerer||''};
     var eks=endringer[nk]||sikrSlot(ukeObj.dager&&ukeObj.dager[dk]?ukeObj.dager[dk][pk]:null);
     if(eks.aktivitet||eks.oppmote||eks.laerer){
-      if(erYFF||aktivtFagLaerer==='Fellesfag'){
-        // YFF/Fellesfag: bruk gruppe/fag som nøkkel – overskriv direkte
-        kKlare[nk]=nySlot;kOk++;
-      } else if(aktivtFagLaerer==='NNA'){
-        // NNA har kun ett slot per dag – overskriv
-        kKlare[nk]=nySlot;kOk++;
+      if(erYFF||aktivtFagLaerer==='Fellesfag'||aktivtFagLaerer==='NNA'){
+        // Direkte konflikt – legg i kø for bekreftelse (og søppeldunk ved overskriving)
+        kKo.push({nk:nk,nySlot:nySlot,eks:eks,ukeObj:ukeObj,dk:dk,pk:pk,li:li});
       } else {
         // NPT: prøv neste ledige parti-slot
         var funnet=false;
@@ -2111,7 +2110,7 @@ function visKonflikt(){
   var fn={aktivitet:'Aktivitet',oppmote:'Oppmoete',info:'Info',laerer:'Laerer'};
   ['aktivitet','oppmote','info','laerer'].forEach(function(f){var g=k.eks[f]||'-',n=k.nySlot[f]||'-';if(g!==n)msg+=fn[f]+': "'+g+'" -> "'+n+'"\n';});
   msg+='\nOverskriv med ny data?';
-  if(confirm(msg)){endringer[k.nk]=k.nySlot;kOk++;}
+  if(confirm(msg)){leggITrash(k.eks,k.nk);endringer[k.nk]=k.nySlot;kOk++;}
   else if(!erTom(k.eks)){endringer[k.nk]=k.eks;}
   kIdx++;
   if(kIdx<kKo.length)visKonflikt();
