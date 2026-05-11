@@ -247,6 +247,36 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 .innst-advarsel{display:none;background:#c0392b;color:#fff;font-size:.78rem;font-weight:600;padding:.6rem 1rem;text-align:center;border-radius:8px;margin-bottom:.8rem;}
 .innst-advarsel.vis{display:block;}
 @media screen and (max-width:768px){
+  /* ── Tabs ── */
+  .tabs button{padding:.62rem .5rem;font-size:.8rem;min-height:44px;}
+
+  /* ── Elev: kontroller ── */
+  .elev-kontroller{padding:.6rem .85rem 0;gap:.38rem;flex-wrap:wrap;}
+  .elev-kontroller button,.elev-kontroller .oppdater-btn{font-size:.8rem;padding:.42rem .72rem;min-height:40px;}
+  .uke-label{font-size:1rem;}
+  .elev-kontroller-ekstra{margin-left:0 !important;display:flex;gap:.38rem;flex-wrap:wrap;}
+
+  /* ── Fag-velger ── */
+  .fag-velger{padding:.42rem .85rem;gap:.3rem .5rem;flex-wrap:wrap;}
+
+  /* ── Elevside: plan-celle tekst ── */
+  .elev-vkeplan .plan-celle .akt{font-size:.84rem;}
+  .elev-vkeplan .plan-celle .opp{font-size:.75rem;}
+  .elev-vkeplan .plan-celle .inf{font-size:.73rem;}
+
+  /* ── Elevside: vertikal dag-visning ── */
+  .elev-vkeplan .uke-plan-grid{display:block !important;min-width:unset !important;border-radius:10px;overflow:hidden;}
+  .elev-vkeplan .dag-col{border-bottom:2px solid var(--kant);}
+  .elev-vkeplan .dag-col:last-child{border-bottom:none;}
+  .elev-vkeplan .dag-col-header{display:block;text-align:left;padding:.5rem .85rem;font-size:.74rem;}
+  .elev-vkeplan .parti-label{background:#edecd8;font-size:.67rem;font-weight:700;padding:.28rem .65rem;border-right:none;border-bottom:none;}
+  .elev-vkeplan .plan-celle{display:block;border-right:none;min-height:unset;padding:.45rem .85rem;}
+  .elev-vkeplan .plan-celle.tom{display:none;}
+
+  /* ── Elev-main ── */
+  #elev-main{padding:.6rem .5rem 4rem;}
+
+  /* ── Tabell (lærerside) ── */
   .tabell-wrapper{padding:.3rem .4rem 3rem;}
   table.grid{font-size:.65rem;}
   td.dag-celle{width:26px;font-size:.57rem;}
@@ -254,47 +284,49 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   .slot-edit-area{font-size:.64rem;height:auto;min-height:20px;}
   td{height:auto !important;}
 
-  /* Elevside: vertikal dag-visning på mobil */
-  .elev-vkeplan .uke-plan-grid{
-    display:block !important;
-    min-width:unset !important;
-    border-radius:10px;
-    overflow:hidden;
-  }
-  .elev-vkeplan .dag-col{
-    border-bottom:2px solid var(--kant);
-  }
-  .elev-vkeplan .dag-col:last-child{
-    border-bottom:none;
-  }
-  .elev-vkeplan .dag-col:first-child .dag-col-header{
-    margin-top:0;
-  }
-  .elev-vkeplan .dag-col-header{
-    display:block;
-    text-align:left;
-    padding:.5rem .85rem;
-    margin-top:0;
-    font-size:.72rem;
-  }
-  .elev-vkeplan .parti-label{
-    background:#edecd8;
-    font-size:.65rem;
-    font-weight:700;
-    padding:.25rem .6rem;
-    border-right:none;
-    border-bottom:none;
-  }
-  .elev-vkeplan .plan-celle{
-    display:block;
-    border-right:none;
-    min-height:unset;
-    padding:.45rem .85rem;
-  }
-  .elev-vkeplan .plan-celle.tom{display:none;}
-  .elev-kontroller{padding:.6rem .85rem 0;gap:.35rem;}
-  .elev-kontroller button{font-size:.72rem;padding:.3rem .55rem;}
-  #elev-main{padding:.6rem .85rem 4rem;}
+  /* ── Verktolinje – tillat bryting ── */
+  .verktolinje{flex-wrap:wrap;overflow-x:visible;padding:.38rem .65rem;gap:.3rem;}
+  #plan-verktoy{flex-wrap:wrap;}
+  .pw-btn{min-height:36px;height:auto;padding:0 .6rem;font-size:.76rem;}
+  .lagre-btn{min-height:36px;height:auto;}
+  .seksjons-btn{min-height:36px;height:auto;}
+
+  /* ── Fag-tabs – ikke sticky på mobil (for høy) ── */
+  .fag-tabs{position:static;padding:0 .5rem;box-shadow:none;}
+  .fag-tabs button{min-height:40px;padding:.42rem .65rem;font-size:.76rem;}
+  #fellesfag-velger{position:static !important;top:unset !important;}
+  #hurtig-rad{position:static !important;top:unset !important;}
+
+  /* ── Hurtig-rad – horisontal scroll ── */
+  #hurtig-rad{overflow-x:auto;padding:.3rem .5rem;flex-wrap:nowrap;gap:.22rem;}
+  #hurtig-rad input.h-uke{width:32px;}
+  #hurtig-rad input.h-akt{width:88px;}
+  #hurtig-rad input.h-opp{width:84px;}
+  #hurtig-rad input.h-inf{min-width:100px;}
+  #hurtig-rad select.h-dag{width:56px;}
+  #hurtig-rad select.h-pk{width:50px;}
+  #hurtig-rad select.h-lae{width:76px;}
+
+  /* ── Innstillinger – stable vertikalt ── */
+  .innst-side{padding:.75rem .85rem 3rem;}
+  .innst-rad{flex-direction:column;align-items:flex-start;gap:.3rem;}
+  .innst-rad label{min-width:unset;font-size:.82rem;}
+  .innst-rad input,.innst-rad select{min-width:unset;width:100%;}
+  .laerer-rad-innst{grid-template-columns:1fr auto auto;}
+
+  /* ── Modal – bunnark ── */
+  .modal-bg{align-items:flex-end;}
+  .modal,.prompt-modal{max-width:100%;border-radius:16px 16px 0 0;padding:1.4rem 1.2rem 1.8rem;margin:0;}
+
+  /* ── Paste-panel – bunnark ── */
+  #lim-inn-panel{top:auto !important;left:0 !important;right:0 !important;bottom:0 !important;width:100% !important;max-width:100% !important;transform:none !important;max-height:85vh !important;}
+  .paste-panel{border-radius:16px 16px 0 0;}
+
+  /* ── Toast – full bredde ── */
+  .toast{bottom:4.5rem;right:.6rem;left:.6rem;max-width:calc(100vw - 1.2rem);}
+
+  /* ── Sist oppdatert ── */
+  .sist-oppdatert{padding:.3rem .85rem 0;}
 }
 </style>
 </head>
@@ -346,8 +378,10 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
     <button onclick="navigerUke(1)">Neste &#x2192;</button>
     <button class="oppdater-btn" id="denne-uke-btn" onclick="gaaTilDenneUken()">Denne uken</button>
     <button class="oppdater-btn" id="elev-oppdater-btn" onclick="elevOppdater()" style="cursor:default;opacity:.45;" disabled>&#x21BB; Oppdater</button>
-    <button class="oppdater-btn" onclick="aapneIcalModal('elev')" style="margin-left:auto;">&#x1F4C5; Kalender</button>
-    <button class="oppdater-btn" onclick="skrivUtElev()">&#x1F5A8;&#xFE0F; Skriv ut</button>
+    <div class="elev-kontroller-ekstra" style="margin-left:auto;display:flex;gap:.38rem;">
+      <button class="oppdater-btn" onclick="aapneIcalModal('elev')">&#x1F4C5; Kalender</button>
+      <button class="oppdater-btn" onclick="skrivUtElev()">&#x1F5A8;&#xFE0F; Skriv ut</button>
+    </div>
   </div>
   <div id="elev-main"></div>
   <div class="sist-oppdatert" id="sist-oppdatert"></div>
