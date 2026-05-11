@@ -1890,6 +1890,12 @@ function renderGrid(){
     });});});
   } else {
     aktiveDagerForFag(aktivtFagLaerer).forEach(function(d){dagerSet[d]=true;});
+    // Dager med faktiske data vises selv om de ikke er konfigurert
+    planData.uker.forEach(function(u){grupper.forEach(function(pk){Object.keys(u.dager||{}).forEach(function(dk){
+      if(ALLE_DAGER.indexOf(dk)<0)return;
+      var s=u.dager[dk]&&u.dager[dk][pk];
+      if(s&&(s.aktivitet||s.oppmote||s.laerer))dagerSet[dk]=true;
+    });});});
   }
   // Kun konfigurerte dager vises – ikke dager med data utenfor konfigurasjonen
   var dager=ALLE_DAGER.filter(function(d){return dagerSet[d];});
