@@ -223,21 +223,23 @@ td.col-laer{width:90px;max-width:110px;}
 body.elev-utskrift #elev-print{display:block !important;}
 body.elev-utskrift>*:not(#elev-print){display:none !important;}
 .ep-side{font-family:"Segoe UI",system-ui,sans-serif;color:#1a1a14;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.ep-hdr{border-bottom:2.5pt solid #3d4a1e;padding-bottom:.18cm;margin-bottom:.28cm;display:flex;align-items:baseline;justify-content:space-between;}
-.ep-hdr-tittel{font-size:13pt;font-weight:700;color:#3d4a1e;}
-.ep-hdr-sub{font-size:8pt;color:#666;letter-spacing:.02em;}
-.ep-grid{display:grid;gap:.18cm;border:1pt solid #ccc;border-radius:4pt;overflow:hidden;}
-.ep-dag-hdr{background:#3d4a1e;color:#fff;font-size:7.5pt;font-weight:700;text-align:center;padding:.22cm .1cm .15cm;text-transform:uppercase;letter-spacing:.05em;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.ep-dag-dato{font-size:6pt;font-weight:400;opacity:.75;margin-top:.05cm;}
-.ep-dag-innhold{padding:.12cm .14cm;display:flex;flex-direction:column;gap:.12cm;min-height:2.2cm;}
-.ep-kort{border-left:2.5pt solid #3d4a1e;padding:.1cm .13cm;border-radius:0 2pt 2pt 0;background:#f8f7f3;page-break-inside:avoid;}
-.ep-kort-fag{font-size:6pt;font-weight:700;color:#3d4a1e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.06cm;}
-.ep-kort-akt{font-size:8pt;font-weight:700;line-height:1.25;}
-.ep-kort-opp{font-size:7pt;color:#555;margin-top:.05cm;}
-.ep-kort-info{font-size:6.5pt;color:#7a6030;background:#fffce8;border-left:2pt solid #e0c84a;padding:.05cm .1cm;margin-top:.06cm;border-radius:0 2pt 2pt 0;}
-.ep-notater{border-top:1.5pt solid #3d4a1e;margin-top:.3cm;padding-top:.22cm;}
-.ep-notater-tittel{font-size:7.5pt;font-weight:700;color:#3d4a1e;margin-bottom:.25cm;letter-spacing:.03em;}
-.ep-linje{border-bottom:.75pt solid #ccc;height:.68cm;margin-bottom:0;}
+.ep-hdr{border-bottom:2pt solid #3d4a1e;padding-bottom:.22cm;margin-bottom:.35cm;display:flex;align-items:baseline;justify-content:space-between;}
+.ep-hdr-tittel{font-size:14pt;font-weight:700;color:#3d4a1e;}
+.ep-hdr-sub{font-size:9pt;color:#666;letter-spacing:.02em;}
+.ep-grid{display:grid;gap:0;border:1pt solid #c8c4b0;border-radius:5pt;overflow:hidden;}
+.ep-dag-col{border-right:1pt solid #c8c4b0;}
+.ep-dag-col:last-child{border-right:none;}
+.ep-dag-hdr{background:#3d4a1e;color:#fff;font-size:8.5pt;font-weight:700;text-align:center;padding:.28cm .15cm .2cm;text-transform:uppercase;letter-spacing:.05em;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.ep-dag-dato{font-size:7pt;font-weight:400;opacity:.75;margin-top:.06cm;}
+.ep-dag-innhold{padding:.2cm .18cm;display:flex;flex-direction:column;gap:.15cm;}
+.ep-kort{border-left:3pt solid #3d4a1e;padding:.12cm .15cm;border-radius:0 3pt 3pt 0;background:#f8f7f3;page-break-inside:avoid;}
+.ep-kort-fag{font-size:6.5pt;font-weight:700;color:#3d4a1e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.07cm;}
+.ep-kort-akt{font-size:9pt;font-weight:700;line-height:1.3;}
+.ep-kort-opp{font-size:7.5pt;color:#444;margin-top:.06cm;}
+.ep-kort-info{font-size:7pt;color:#7a6030;background:#fffce8;border-left:2pt solid #e0c84a;padding:.06cm .12cm;margin-top:.08cm;border-radius:0 2pt 2pt 0;}
+.ep-notater{border-top:1.5pt solid #3d4a1e;margin-top:.35cm;padding-top:.25cm;}
+.ep-notater-tittel{font-size:8pt;font-weight:700;color:#3d4a1e;margin-bottom:.28cm;letter-spacing:.03em;}
+.ep-linje{border-bottom:.75pt solid #d0ccc0;height:.72cm;margin-bottom:0;}
 @media print{
   body.elev-utskrift{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   body.elev-utskrift #elev-print{display:block !important;}
@@ -385,9 +387,9 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   </div>
   <div id="elev-main"></div>
   <div class="sist-oppdatert" id="sist-oppdatert"></div>
-  <!-- Skjult print-container for elevside -->
-  <div id="elev-print" style="display:none;"></div>
 </div>
+<!-- Skjult print-container for elevside – må være direkte barn av body -->
+<div id="elev-print" style="display:none;"></div>
 <div id="laerer-side">
   <div id="login-wrap">
     <div class="login-kort">
@@ -401,6 +403,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   </div>
   <div id="rediger-skjerm">
     <div class="verktolinje">
+      <button class="pw-btn" id="btn-til-elevside" onclick="byttHovedFane('elev')" title="Gå til elevside">&#x1F441;&#xFE0F; Elevside</button>
       <button class="pw-btn" id="btn-plan" onclick="visLaererSeksjon('plan')" style="display:none;">&#x2190; Plan</button>
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
@@ -3375,7 +3378,7 @@ function skrivUtElev(){
   var dagKols=printDager.map(function(dk){
     var dato=dagDato(ukenummer,dk);
     var bl=erBlokert(ukenummer,dk);
-    var dagHtml='<div style="border-right:1pt solid #e0ddd0;last-child:border:none;">';
+    var dagHtml='<div class="ep-dag-col">';
     dagHtml+='<div class="ep-dag-hdr">'+DAG_FULLT[dk]+(dato?'<div class="ep-dag-dato">'+dato+'</div>':'')+'</div>';
     dagHtml+='<div class="ep-dag-innhold">';
     if(bl.blokkert&&!erSrIgnorert(bl.type)){
@@ -3419,7 +3422,7 @@ function skrivUtElev(){
 
   var html='<div class="ep-side">';
   html+='<div class="ep-hdr"><span class="ep-hdr-tittel">'+escHtml(tittelTekst)+'</span><span class="ep-hdr-sub">'+escHtml(c.skolenavn||'')+'</span></div>';
-  html+='<div class="ep-grid" style="display:grid;grid-template-columns:'+gridCols+';height:13cm;align-items:stretch;">'+dagKols+'</div>';
+  html+='<div class="ep-grid" style="display:grid;grid-template-columns:'+gridCols+';height:14.5cm;align-items:stretch;">'+dagKols+'</div>';
   html+='<div class="ep-notater"><div class="ep-notater-tittel">📝 Notater</div>'+notatLinjer+'</div>';
   html+='</div>';
 
