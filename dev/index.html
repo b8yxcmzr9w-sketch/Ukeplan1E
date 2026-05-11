@@ -266,7 +266,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   body.elev-utskrift{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   body.elev-utskrift #elev-print{display:block !important;}
   body.elev-utskrift>*:not(#elev-print){display:none !important;}
-  @page{size:A4 landscape !important;margin:.85cm !important;}
+  @page{size:A4 landscape !important;margin:1.8cm .85cm .85cm !important;}
   .ep-side{display:flex;flex-direction:column;height:100vh;overflow:hidden;page-break-inside:avoid;page-break-after:avoid;}
   .ep-grid{flex:1;min-height:0 !important;overflow:hidden;}
   .ep-notater{flex-shrink:0;}
@@ -773,8 +773,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 <div class="modal-bg" id="ical-modal" style="display:none">
   <div class="modal" style="max-width:480px;width:94%;">
     <h3>&#x1F4C5; Kalenderabonnement</h3>
-    <p style="margin-bottom:.5rem;">Planen oppdateres automatisk i kalenderen din. Inneholder alle fag. Gjør utvalg av parti eller gruppe på elevvisningen først dersom du ikke vil ha alle økter med.</p>
-    <p style="font-size:.72rem;background:#f0f5e6;border:1px solid #b5cc7a;border-radius:7px;padding:.45rem .7rem;margin-bottom:.65rem;color:#3d4a1e;"><strong>Forbedring:</strong> Velg NPT-parti og YFF-gruppe på elevvisningen først dersom du vil ha din personlige kalender.</p>
+    <p style="margin-bottom:.65rem;">Planen oppdateres automatisk i kalenderen din. Velg NPT-parti og YFF-gruppe på elevvisningen først dersom du vil ha din personlige plan.</p>
     <p style="font-size:.74rem;margin-bottom:.5rem;">Kalender: <strong id="ical-kalnavn" style="font-family:monospace;"></strong></p>
     <label>Kalenderlenke</label>
     <div style="display:flex;gap:.4rem;margin-bottom:.7rem;">
@@ -3521,7 +3520,7 @@ function skrivUtElev(){
   // Tving landscape via dynamisk style-tag
   var epStyle=document.getElementById('ep-print-style')||document.createElement('style');
   epStyle.id='ep-print-style';
-  epStyle.textContent='@page{size:A4 landscape !important;margin:.85cm !important;}';
+  epStyle.textContent='@page{size:A4 landscape !important;margin:1.8cm .85cm .85cm !important;}';
   document.head.appendChild(epStyle);
 
   document.body.classList.add('elev-utskrift');
