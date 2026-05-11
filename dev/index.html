@@ -246,6 +246,15 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   body.elev-utskrift>*:not(#elev-print){display:none !important;}
   @page{size:A4 landscape;margin:.9cm;}
 }
+.elev-filter-bar{display:flex;align-items:center;gap:.45rem;padding:.5rem 1.2rem;flex-wrap:wrap;}
+.elev-chip-wrap{display:inline-flex;align-items:center;gap:.22rem;background:var(--kort);border:1.5px solid var(--kant);border-radius:20px;padding:.3rem .52rem .3rem .72rem;transition:border-color .15s,background .15s;cursor:pointer;}
+.elev-chip-wrap:hover,.elev-chip-wrap:focus-within{border-color:var(--groen);}
+.elev-chip-wrap.aktiv{border-color:var(--groen);background:#f2f7ea;}
+.elev-chip-icon{font-size:.85rem;line-height:1;pointer-events:none;}
+.elev-chip-select{appearance:none;-webkit-appearance:none;background:transparent;border:none;font-size:.8rem;font-weight:600;color:var(--tekst);cursor:pointer;outline:none;padding:0;max-width:140px;}
+.elev-chip-arrow{font-size:.58rem;color:var(--dempet2);line-height:1;pointer-events:none;margin-left:.1rem;}
+.elev-chip-reset{background:none;border:1.5px solid var(--kant);border-radius:20px;padding:.3rem .78rem;font-size:.76rem;color:var(--dempet);cursor:pointer;font-weight:600;transition:all .15s;}
+.elev-chip-reset:hover{border-color:#c0392b;color:#c0392b;}
 .innst-advarsel{display:none;background:#c0392b;color:#fff;font-size:.78rem;font-weight:600;padding:.6rem 1rem;text-align:center;border-radius:8px;margin-bottom:.8rem;}
 .innst-advarsel.vis{display:block;}
 @media screen and (max-width:768px){
@@ -360,18 +369,18 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   <p id="laster-tekst">Henter data...</p>
 </div>
 <div id="elev-side">
-  <div class="fag-velger" id="elev-utvalg-bar" style="display:none;">
-    <label style="font-size:.74rem;color:var(--dempet);">Parti:</label>
-    <select id="elev-parti-velg" onchange="byttElevParti(this.value)" style="padding:.24rem .5rem;border:1px solid var(--kant);border-radius:7px;font-size:.75rem;background:var(--bg);cursor:pointer;"></select>
-    <label style="font-size:.74rem;color:var(--dempet);margin-left:.4rem;">YFF-gruppe:</label>
-    <select id="elev-gruppe-velg" onchange="byttElevGruppe(this.value)" style="padding:.24rem .5rem;border:1px solid var(--kant);border-radius:7px;font-size:.75rem;background:var(--bg);cursor:pointer;"></select>
-  </div>
-  <div class="fag-velger" id="elev-vis-velger">
-    <label style="font-size:.74rem;color:var(--dempet);">Vis:</label>
-    <select onchange="byttElevVis(this.value)" style="padding:.24rem .5rem;border:1px solid var(--kant);border-radius:7px;font-size:.75rem;background:var(--bg);cursor:pointer;">
-      <option value="alt">Alt</option>
-      <option value="utvalg">Mitt utvalg</option>
-    </select>
+  <div class="elev-filter-bar" id="elev-filter-bar" style="display:none;">
+    <div class="elev-chip-wrap" id="chip-wrap-parti">
+      <span class="elev-chip-icon">&#x1F465;</span>
+      <select id="elev-parti-velg" class="elev-chip-select" onchange="byttElevParti(this.value)"></select>
+      <span class="elev-chip-arrow">&#x276F;</span>
+    </div>
+    <div class="elev-chip-wrap" id="chip-wrap-gruppe" style="display:none;">
+      <span class="elev-chip-icon">&#x1F3F7;&#xFE0F;</span>
+      <select id="elev-gruppe-velg" class="elev-chip-select" onchange="byttElevGruppe(this.value)"></select>
+      <span class="elev-chip-arrow">&#x276F;</span>
+    </div>
+    <button class="elev-chip-reset" id="chip-nullstill" onclick="nullstillElevFilter()" style="display:none;">&#x21BA; Nullstill</button>
   </div>
   <div id="elev-fag-velger" style="display:none"></div>
   <div class="elev-kontroller">
@@ -1248,7 +1257,6 @@ function byggElevFagVelger(){
   div.innerHTML=html;
 }
 function byttElevFag(fag){aktivtFagElev=fag;var yff=allData.fag.find(function(f){return f.navn==='YFF';});if(fag==='YFF'&&yff&&yff.grupper.length)aktivGruppeElev=yff.grupper[0];byggElevFagVelger();gaaTilDenneUken();}
-function byttElevGruppe(gruppe){aktivGruppeElev=gruppe;renderElev();}
 var FASTE_FANER=['NPT','NNA','YFF','Fellesfag'];
 
 function laererFagListe(){
@@ -1352,24 +1360,47 @@ function byttElevVis(mode){
 }
 
 function byggElevUtvalg(){
-  // Parti-velger
+  var ps=partier();
+  var yff=allData.fag.find(function(f){return f.navn==='YFF';});
+  var yffGr=yff&&yff.grupper&&yff.grupper.length?yff.grupper:[];
+  var bar=document.getElementById('elev-filter-bar');
+  var wrapParti=document.getElementById('chip-wrap-parti');
+  var wrapGruppe=document.getElementById('chip-wrap-gruppe');
+  var nullstill=document.getElementById('chip-nullstill');
+  // Parti-chip
   var pSel=document.getElementById('elev-parti-velg');
-  if(pSel){
-    pSel.innerHTML=partier().map(function(p){
+  if(pSel&&ps.length>1){
+    pSel.innerHTML=ps.map(function(p){
       return '<option value="'+p+'"'+(p===elevParti?' selected':'')+'>Parti '+p.slice(1)+'</option>';
     }).join('');
-  }
-  // YFF-gruppe-velger
+    if(wrapParti)wrapParti.style.display='';
+  } else {if(wrapParti)wrapParti.style.display='none';}
+  // YFF-gruppe-chip
   var gSel=document.getElementById('elev-gruppe-velg');
-  var yff=allData.fag.find(function(f){return f.navn==='YFF';});
-  if(gSel&&yff){
-    gSel.innerHTML=yff.grupper.map(function(g){
+  if(gSel&&yffGr.length>1){
+    gSel.innerHTML=yffGr.map(function(g){
       return '<option value="'+g+'"'+(g===aktivGruppeElev?' selected':'')+'>'+g+'</option>';
     }).join('');
-  }
+    if(wrapGruppe)wrapGruppe.style.display='';
+  } else {if(wrapGruppe)wrapGruppe.style.display='none';}
+  // Vis filter-bar kun om noe er synlig
+  var visBalk=(ps.length>1||yffGr.length>1);
+  if(bar)bar.style.display=visBalk?'flex':'none';
+  // Nullstill-knapp
+  if(nullstill)nullstill.style.display=elevVisMode==='utvalg'?'':'none';
+  // Aktiv-klasse
+  if(wrapParti)wrapParti.classList.toggle('aktiv',elevVisMode==='utvalg');
+  if(wrapGruppe)wrapGruppe.classList.toggle('aktiv',elevVisMode==='utvalg');
 }
 
-function byttElevParti(p){elevParti=p;renderElev();}
+function nullstillElevFilter(){
+  elevVisMode='alt';
+  byggElevUtvalg();
+  renderElev();
+}
+
+function byttElevParti(p){elevParti=p;elevVisMode='utvalg';byggElevUtvalg();renderElev();}
+function byttElevGruppe(gruppe){aktivGruppeElev=gruppe;elevVisMode='utvalg';byggElevUtvalg();renderElev();}
 
 function srUkeTilNummer(srUke){
   var u=String(srUke);
@@ -1417,7 +1448,7 @@ function renderElev(){
     document.getElementById('elev-main').innerHTML='<p style="color:#999;padding:1rem 0">Ingen data lastet.</p>';
     document.getElementById('uke-label').textContent='Uke -';return;
   }
-  if(elevVisMode==='utvalg')byggElevUtvalg();
+  byggElevUtvalg();
   var ukenummer=alle[aktivUkeIdx];
   document.getElementById('uke-label').textContent='Uke '+ukenummer;
   var denneBtnEl=document.getElementById('denne-uke-btn');
