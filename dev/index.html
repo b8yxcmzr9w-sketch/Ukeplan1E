@@ -131,6 +131,7 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .laerer-nav-pil{background:transparent;border:none;padding:.32rem .88rem;font-size:1.05rem;cursor:pointer;color:#fff;transition:background .15s;min-height:34px;line-height:1;}
 .laerer-nav-pil:hover{background:rgba(255,255,255,.18);}
 .laerer-uke-label{padding:.28rem .65rem;font-size:.86rem;font-weight:700;color:#fff;border-left:1px solid rgba(255,255,255,.22);border-right:1px solid rgba(255,255,255,.22);min-width:72px;text-align:center;}
+.laerer-uke-input{width:46px;border:none;background:transparent;font-size:.86rem;font-weight:700;text-align:center;outline:none;padding:0;color:#fff;}
 /* Elevkontroller mørk */
 .elev-kontroller{background:var(--nav);padding:.45rem 1rem .45rem;}
 .elev-kontroller .elev-nav-gruppe{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22);}
@@ -436,7 +437,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   <button id="tab-elev" class="aktiv" onclick="byttHovedFane('elev')">&#x1F4CB; Elevside</button>
   <button id="tab-laerer" onclick="byttHovedFane('laerer')">&#x270F;&#xFE0F; Lærerside</button>
 </div>
-<button class="laerer-tilgang-btn" id="laerer-tilgang-btn" onclick="byttHovedFane('laerer')" title="Lærerside">&#x1F511;</button>
+<button class="laerer-tilgang-btn" id="laerer-tilgang-btn" onclick="byttHovedFane('laerer')" title="Lærerside" style="display:none;">&#x1F511;</button>
 <div id="laster-skjerm">
   <div class="spinner"></div>
   <p id="laster-tekst">Henter data...</p>
@@ -467,6 +468,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
       <div class="pw-meny-panel" id="elev-meny-panel">
         <button class="pw-meny-rad pw-btn" onclick="aapneIcalModal('elev');lukkElevMeny()">&#x1F4C5; Kalender</button>
         <button class="pw-meny-rad pw-btn" onclick="skrivUtElev();lukkElevMeny()">&#x1F5A8;&#xFE0F; Skriv ut</button>
+        <button class="pw-meny-rad pw-btn" onclick="byttHovedFane('laerer');lukkElevMeny()" style="border-top:1.5px solid var(--kant);opacity:.6;font-size:.72rem;">&#x1F511; Lærerside</button>
       </div>
     </div>
   </div>
@@ -488,13 +490,13 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   </div>
   <div id="rediger-skjerm">
     <div class="verktolinje">
-      <button class="pw-btn" id="btn-til-elevside" onclick="byttHovedFane('elev')" title="Gå til elevside">&#x1F441;&#xFE0F; Elevside</button>
+      <button class="pw-btn" id="btn-til-elevside" onclick="byttHovedFane('elev')" title="Gå til elevside">&#x2190; Tilbake</button>
       <button class="pw-btn" id="btn-plan" onclick="visLaererSeksjon('plan')" style="display:none;">&#x2190; Plan</button>
       <span id="innst-advarsel-toolbar" style="display:none;background:#c0392b;color:#fff;font-size:.71rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;white-space:nowrap;">&#x26A0;&#xFE0F; Ulagrede endringer</span>
       <div id="plan-verktoy" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1;">
         <div class="laerer-nav-gruppe" id="laerer-nav-gruppe">
           <button class="laerer-nav-pil" onclick="navigerUkeLaerer(-1)" title="Forrige uke">&#x2190;</button>
-          <span class="laerer-uke-label" id="laerer-uke-label">Uke &#x2013;</span>
+          <span class="laerer-uke-label" id="laerer-uke-label" onclick="aktiverLaererUkeInput()" title="Klikk for å skrive inn ukenummer" style="cursor:pointer;">Uke &#x2013;</span>
           <button class="laerer-nav-pil" onclick="navigerUkeLaerer(1)" title="Neste uke">&#x2192;</button>
         </div>
         <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">I dag</button>
@@ -3451,6 +3453,22 @@ function oppdaterLaererNavLabel(){
   var alle=alleUker();if(!alle.length)return;
   var idx=_laererNavIdx>=0?_laererNavIdx:_laererNavInitIdx();
   el.textContent='Uke '+alle[idx];
+}
+function aktiverLaererUkeInput(){
+  var lbl=document.getElementById('laerer-uke-label');if(!lbl)return;
+  var alle=alleUker();var gjeldende=alle[_laererNavIdx>=0?_laererNavIdx:_laererNavInitIdx()]||'';
+  lbl.innerHTML='<input class="laerer-uke-input" id="laerer-uke-input-felt" type="number" min="1" max="53" value="'+gjeldende+'">';
+  var inp=document.getElementById('laerer-uke-input-felt');
+  inp.focus();inp.select();
+  function commit(){
+    var nr=parseInt(inp.value,10);var uke=String(nr);
+    var idx=alle.indexOf(uke);
+    if(idx>=0){_laererNavIdx=idx;scrollTilUke(alle[idx],'smooth');}
+    else visToast('Uke '+nr+' finnes ikke i planen',true);
+    oppdaterLaererNavLabel();
+  }
+  inp.onblur=commit;
+  inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();this.blur();}if(e.key==='Escape')oppdaterLaererNavLabel();};
 }
 function oppdaterPwMenyTrigger(){
   var t=document.getElementById('pw-meny-trigger');
