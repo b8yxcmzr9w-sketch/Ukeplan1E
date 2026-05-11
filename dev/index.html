@@ -100,6 +100,11 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .lagre-btn.aktiv{background:var(--groen);color:#fff;border-color:var(--groen);cursor:pointer;}
 .lagre-btn.aktiv:hover{opacity:.87;}
 .lagre-btn:disabled{opacity:.5;cursor:not-allowed;}
+/* Lagre-knapp i mørk verktølinje */
+.verktolinje .lagre-btn{background:rgba(255,255,255,.10);color:rgba(255,255,255,.4);border-color:rgba(255,255,255,.18);}
+.verktolinje .lagre-btn.aktiv{background:#c0392b;color:#fff;border-color:#c0392b;cursor:pointer;animation:lagre-puls 1.8s ease-in-out infinite;}
+.verktolinje .lagre-btn.aktiv:hover{background:#a93226;border-color:#a93226;animation:none;}
+@keyframes lagre-puls{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.5);}50%{box-shadow:0 0 0 5px rgba(192,57,43,0);}}
 .seksjons-btn{background:#f0efe6;color:var(--nav);border:1.5px solid var(--kant);border-radius:8px;padding:0 .75rem;font-size:.76rem;cursor:pointer;font-weight:600;height:34px;transition:background .15s,border-color .15s;}
 .seksjons-btn:hover{background:#e4e3d8;border-color:#c4c0aa;}
 .seksjons-btn.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);}
@@ -113,9 +118,6 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .pw-meny-rad{width:100%;text-align:left;border:none;border-radius:0;border-bottom:1px solid var(--kant);padding:.55rem .85rem;font-size:.78rem;font-weight:600;cursor:pointer;background:var(--kort);color:var(--nav);transition:background .12s;height:auto;}
 .pw-meny-rad:last-child{border-bottom:none;}
 .pw-meny-rad:hover{background:#e8e7d8;}
-.pw-meny-rad.lagre-btn{color:#bbb;cursor:default;}
-.pw-meny-rad.lagre-btn.aktiv{color:var(--groen);cursor:pointer;}
-.pw-meny-rad.lagre-btn:hover{background:var(--kort);}
 .pw-btn:hover{background:#e4e3d8;border-color:#c4c0aa;}
 .pw-btn.aktiv{background:var(--nav);color:#fff;border-color:var(--nav);}
 /* ── Mørk nav-bar: Verktolinje (lærer) + Elev-kontroller ── */
@@ -153,7 +155,7 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .elev-kontroller .pw-meny-trigger{background:rgba(255,255,255,.13);color:rgba(255,255,255,.9);border:1.5px solid rgba(255,255,255,.22);border-radius:20px;padding:.38rem .82rem;font-size:.78rem;font-weight:600;cursor:pointer;min-height:40px;letter-spacing:.12em;transition:background .15s;}
 .elev-kontroller .pw-meny-trigger:hover{background:rgba(255,255,255,.22);}
 /* Sentrert innlimingspanel */
-#lim-inn-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:540px;max-width:96vw;max-height:80vh;z-index:45;display:none;flex-direction:column;pointer-events:none;}
+#lim-inn-panel{position:fixed;top:5.5rem;left:50%;transform:translateX(-50%);width:540px;max-width:96vw;max-height:80vh;z-index:45;display:none;flex-direction:column;pointer-events:none;}
 #lim-inn-panel.vis{display:flex;}
 #lim-inn-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:44;display:none;}
 #lim-inn-overlay.vis{display:block;}
@@ -244,7 +246,7 @@ td.col-laer{width:90px;max-width:110px;}
 .btn-ok.passiv:hover{opacity:1 !important;}
 .innst-gruppe-label{font-size:.74rem;font-weight:700;color:var(--dempet);margin:.8rem 0 .4rem;padding-top:.6rem;border-top:1px solid var(--kant);}
 .innst-gruppe-label:first-of-type{border-top:none;margin-top:0;padding-top:0;}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding-top:5.5rem;z-index:100;}
 .modal{background:#fff;border-radius:14px;padding:1.7rem 1.5rem;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.18);}
 .modal h3{font-size:.96rem;margin-bottom:.3rem;}
 .modal p{font-size:.76rem;color:var(--dempet);margin-bottom:.9rem;}
@@ -406,7 +408,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   .modal,.prompt-modal{max-width:100%;border-radius:16px 16px 0 0;padding:1.4rem 1.2rem 1.8rem;margin:0;}
 
   /* ── Paste-panel – bunnark ── */
-  #lim-inn-panel{top:auto !important;left:0 !important;right:0 !important;bottom:0 !important;width:100% !important;max-width:100% !important;transform:none !important;max-height:85vh !important;}
+  #lim-inn-panel{top:4.5rem !important;left:2vw !important;right:2vw !important;width:auto !important;max-width:96vw !important;transform:none !important;max-height:85vh !important;}
   .paste-panel{border-radius:16px 16px 0 0;}
 
   /* ── Toast – full bredde ── */
@@ -504,10 +506,10 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
         <button class="pw-btn aktiv" id="filter-uker-btn" onclick="togglFilterUker()">Mine økter</button>
         <button class="pw-btn aktiv" id="skjul-tomme" onclick="togglSkjulTomme()">Skjul tomme</button>
         <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn</button>
+        <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
         <div class="pw-meny-wrap" id="pw-meny-wrap">
           <button class="pw-btn pw-meny-trigger" id="pw-meny-trigger" onclick="togglPwMeny(event)" title="Flere valg">&#x2022;&#x2022;&#x2022;</button>
           <div class="pw-meny-panel" id="pw-meny-panel">
-            <button class="pw-meny-rad lagre-btn" id="lagre-btn" onclick="lagreTilSheets();lukkPwMeny()">&#x1F4BE; Lagre</button>
             <button class="pw-meny-rad pw-btn" id="btn-skriv-ut" onclick="skrivUt();lukkPwMeny()">&#x1F5A8;&#xFE0F; Skriv ut</button>
             <button class="pw-meny-rad pw-btn" id="btn-ical-laerer" onclick="aapneIcalModal('laerer');lukkPwMeny()" style="display:none;">&#x1F4C5; Kalender</button>
             <button class="pw-meny-rad pw-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger');lukkPwMeny()" style="display:none;">&#x2699;&#xFE0F; Innstillinger</button>
@@ -1351,10 +1353,9 @@ function byggFagTabsLaerer(){
   });
 }
 function byttFagLaerer(fag){
-  // Bruk pill-posisjon (_laererNavIdx) som kilde til sannhet – fallback til DOM
-  var alle=alleUker();
-  var pilIdx=_laererNavIdx>=0?_laererNavIdx:_laererNavInitIdx();
-  var malUke=(alle.length&&pilIdx>=0)?alle[pilIdx]:hentSynligUke();
+  // DOM-posisjon er primær; pill-posisjon som fallback hvis DOM er tom
+  var synligUke=hentSynligUke();
+  if(!synligUke&&_laererNavIdx>=0){var _au=alleUker();if(_au.length>_laererNavIdx)synligUke=_au[_laererNavIdx];}
   aktivtFagLaerer=fag;
   endringer={};passivLagreBtn();
   oppdaterTilstede();
@@ -1371,13 +1372,16 @@ function byttFagLaerer(fag){
   if(ffv)ffv.style.display='none';
   oppdaterStickyTop();
   renderGrid();
-  // Scroll til pill-uke i nytt fag, med litt forsinkelse for at DOM er klar
+  // Scroll til samme uke, synk pill etterpå
   setTimeout(function(){
-    if(malUke)scrollTilUke(malUke,'auto');
-    else scrollTilDenneUkenVedOppstart();
-    oppdaterLaererNavLabel();
+    var ok=synligUke?scrollTilUke(synligUke,'auto'):false;
+    if(!ok)scrollTilDenneUkenVedOppstart();
+    // Synk pill til faktisk synlig uke
+    var visNaa=hentSynligUke();var alleU=alleUker();
+    var idx=visNaa?alleU.indexOf(visNaa):-1;
+    if(idx>=0){_laererNavIdx=idx;oppdaterLaererNavLabel();}
     setTimeout(setupDenneUkenObserver,100);
-  },60);
+  },80);
 }
 function byttFellesfag(fag){
   if(!allData.innstillinger)allData.innstillinger={};
@@ -3509,12 +3513,7 @@ function aktiverLaererUkeInput(){
   inp.onblur=commit;
   inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();this.blur();}if(e.key==='Escape')oppdaterLaererNavLabel();};
 }
-function oppdaterPwMenyTrigger(){
-  var t=document.getElementById('pw-meny-trigger');
-  if(!t)return;
-  var lagre=document.getElementById('lagre-btn');
-  t.classList.toggle('lagre-aktiv',!!(lagre&&lagre.classList.contains('aktiv')));
-}
+function oppdaterPwMenyTrigger(){}
 // Print aktiv-state (lærerside)
 window.addEventListener('beforeprint',function(){var b=document.getElementById('btn-skriv-ut');if(b)b.classList.add('aktiv');});
 window.addEventListener('afterprint',function(){
