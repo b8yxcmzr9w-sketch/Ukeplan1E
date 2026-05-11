@@ -2382,21 +2382,33 @@ function renderSoppel(){
   if(!erAdmin())return;
   var tbody=document.getElementById('soppel-tbody');
   var cols=11;
-  tbody.innerHTML='<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Laster...</td></tr>';
+  function radHtml(r,lokal){
+    var dato=r[0]?String(r[0]).replace('T',' ').slice(0,16):'';
+    var gjenData=JSON.stringify({fag:r[2],uke:r[3],dag:r[4],parti:r[5],aktivitet:r[6],oppmote:r[7],info:r[8],laerer:r[9]}).replace(/'/g,'&#39;');
+    var prikk=lokal?'<span title="Ikke lagret ennå" style="color:orange;margin-right:.25rem;">●</span>':'';
+    return '<tr><td style="white-space:nowrap;font-size:.68rem;">'+prikk+dato+'</td><td>'+escHtml(r[1])+'</td><td>'+escHtml(r[2])+'</td><td>'+escHtml(r[3])+'</td><td>'+escHtml(r[4])+'</td><td>'+escHtml(r[5])+'</td><td>'+escHtml(r[6])+'</td><td>'+escHtml(r[7])+'</td><td>'+escHtml(r[8])+'</td><td>'+escHtml(r[9])+'</td><td><button class="btn-avbryt" style="font-size:.7rem;padding:.22rem .55rem;white-space:nowrap;" onclick="gjenopprettFraSøppeldunk(\''+gjenData.replace(/"/g,"'")+'\')" title="Gjenopprett denne økt">↩ Angre sletting</button></td></tr>';
+  }
+  function oppdaterTeller(n){var t=document.getElementById('soppel-teller');if(t)t.textContent=n?'('+n+')':'';}
   var tom='<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Ingen slettede oppføringer.</td></tr>';
+  // Vis lokale (uslagrede) elementer umiddelbart
+  if(søppeldunk.length){
+    oppdaterTeller(søppeldunk.length);
+    tbody.innerHTML=søppeldunk.map(function(r){return radHtml(r,true);}).join('')
+      +'<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.3rem;text-align:center;font-size:.68rem;">Laster lagrede oppføringer fra Sheets…</td></tr>';
+  } else {
+    tbody.innerHTML='<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Laster…</td></tr>';
+  }
   hentArk('Søppeldunk').then(function(rader){
-    var datarader=rader.slice(1).filter(function(r){return r[0];});
-    var teller=document.getElementById('soppel-teller');if(teller)teller.textContent='('+datarader.length+')';
-    if(!datarader.length){tbody.innerHTML=tom;return;}
-    // Kolonner: [0]Tidspunkt [1]Slettet av [2]Fag [3]Uke [4]Dag [5]Parti [6]Aktivitet [7]Oppmøte [8]Info [9]Lærer
-    tbody.innerHTML=datarader.map(function(r,i){
-      var dato=r[0]?String(r[0]).replace('T',' ').slice(0,16):'';
-      var gjenData=JSON.stringify({fag:r[2],uke:r[3],dag:r[4],parti:r[5],aktivitet:r[6],oppmote:r[7],info:r[8],laerer:r[9]}).replace(/'/g,'&#39;');
-      return '<tr><td style="white-space:nowrap;font-size:.68rem;">'+dato+'</td><td>'+escHtml(r[1])+'</td><td>'+escHtml(r[2])+'</td><td>'+escHtml(r[3])+'</td><td>'+escHtml(r[4])+'</td><td>'+escHtml(r[5])+'</td><td>'+escHtml(r[6])+'</td><td>'+escHtml(r[7])+'</td><td>'+escHtml(r[8])+'</td><td>'+escHtml(r[9])+'</td><td><button class="btn-avbryt" style="font-size:.7rem;padding:.22rem .55rem;white-space:nowrap;" onclick="gjenopprettFraSøppeldunk(\''+gjenData.replace(/"/g,"'")+'\')" title="Gjenopprett denne økt">↩ Angre sletting</button></td></tr>';
-    }).join('');
+    var sheetsRader=rader.slice(1).filter(function(r){return r[0];});
+    var alle=søppeldunk.map(function(r){return {r:r,lokal:true};})
+      .concat(sheetsRader.map(function(r){return {r:r,lokal:false};}));
+    oppdaterTeller(alle.length);
+    tbody.innerHTML=alle.length?alle.map(function(x){return radHtml(x.r,x.lokal);}).join(''):tom;
   }).catch(function(err){
-    var teller=document.getElementById('soppel-teller');if(teller)teller.textContent='';
-    tbody.innerHTML='<tr><td colspan="'+cols+'" style="color:var(--dempet2);font-style:italic;padding:.4rem;text-align:center;">Kunne ikke laste søppeldunk: '+(err&&err.message?escHtml(err.message):'ukjent feil')+'</td></tr>';
+    // Sheets feilet – vis lokale elementer + feilnotat
+    var lokale=søppeldunk.map(function(r){return radHtml(r,true);}).join('');
+    oppdaterTeller(søppeldunk.length);
+    tbody.innerHTML=(lokale||'')+'<tr><td colspan="'+cols+'" style="color:#c0392b;font-style:italic;padding:.3rem;text-align:center;font-size:.68rem;">Sheets-feil: '+(err&&err.message?escHtml(err.message):'ukjent')+'</td></tr>';
   });
 }
 function gjenopprettFraSøppeldunk(jsonStr){
