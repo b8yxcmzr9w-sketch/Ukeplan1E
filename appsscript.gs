@@ -1,9 +1,12 @@
-var SHEETS_ID = '10j90z_Xnh6mpUuAOiZ5hM4fKYgw61vVfkS4nOL0q4RA';
+var PROD_SHEETS_ID = '10j90z_Xnh6mpUuAOiZ5hM4fKYgw61vVfkS4nOL0q4RA';
+var DEV_SHEETS_ID  = '1rrwEFtqrOh11HruFdZ2m-v-zBGCgScYyWVIW4Y-vZ1s';
+var SHEETS_ID = PROD_SHEETS_ID;
 var TOKEN_LEVETID_MS = 8 * 60 * 60 * 1000;
 var MAKS_FORSOK = 5;
 var RATE_VINDU_MS = 10 * 60 * 1000;
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.dev) SHEETS_ID = DEV_SHEETS_ID;
   if (e && e.parameter && e.parameter.ical) {
     return lagIcalSvar_(e.parameter);
   }
@@ -207,6 +210,7 @@ function genererICS_(okter, kalNavn, skoleaar) {
 
 function doPost(e) {
   try {
+    if (e && e.parameter && e.parameter.dev) SHEETS_ID = DEV_SHEETS_ID;
     var body = JSON.parse(e.postData.contents);
     if (body.action === 'hentArk')          return lagSvar(hentArkAction(body.arknavn));
     if (body.action === 'hentAlle')         return lagSvar(hentAlleAction());
