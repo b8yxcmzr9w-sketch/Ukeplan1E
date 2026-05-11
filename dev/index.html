@@ -1250,6 +1250,8 @@ function oppdaterHeader(){
   img.onerror=function(){img.style.display='none';img.onerror=null;};
   img.onload=function(){img.style.display='block';img.onerror=null;};
   img.src=logoSrc;
+  // Oppdater favicon dynamisk
+  if(c.logoUrl){var fav=document.querySelector('link[rel="icon"]');if(fav)fav.href=c.logoUrl;}
 }
 function byttHovedFane(f){
   document.getElementById('elev-side').style.display=f==='elev'?'block':'none';
