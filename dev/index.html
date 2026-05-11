@@ -773,14 +773,15 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 <div class="modal-bg" id="ical-modal" style="display:none">
   <div class="modal" style="max-width:480px;width:94%;">
     <h3>&#x1F4C5; Kalenderabonnement</h3>
-    <p style="margin-bottom:.6rem;">Planen oppdateres automatisk i kalenderen din. Inneholder alle fag. <strong>Gjør utvalg av parti eller gruppe på elevvisningen først dersom du ikke vil ha alle økter med.</strong></p>
+    <p style="margin-bottom:.5rem;">Planen oppdateres automatisk i kalenderen din. Inneholder alle fag. Gjør utvalg av parti eller gruppe på elevvisningen først dersom du ikke vil ha alle økter med.</p>
+    <p style="font-size:.72rem;background:#f0f5e6;border:1px solid #b5cc7a;border-radius:7px;padding:.45rem .7rem;margin-bottom:.65rem;color:#3d4a1e;"><strong>Forbedring:</strong> Velg NPT-parti og YFF-gruppe på elevvisningen først dersom du vil ha din personlige kalender.</p>
     <p style="font-size:.74rem;margin-bottom:.5rem;">Kalender: <strong id="ical-kalnavn" style="font-family:monospace;"></strong></p>
     <label>Kalenderlenke</label>
     <div style="display:flex;gap:.4rem;margin-bottom:.7rem;">
       <input id="ical-url-felt" type="text" readonly style="font-size:.68rem;font-family:monospace;flex:1;padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;background:var(--bg);">
       <button class="btn-ok" style="flex:none;padding:.4rem .85rem;font-size:.76rem;" onclick="kopierIcalUrl()">&#x1F4CB; Kopier</button>
     </div>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.85rem;">
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.3rem;">
       <a id="ical-gcal-link" href="#" target="_blank" rel="noopener"
          style="display:inline-block;background:#4285f4;color:#fff;text-decoration:none;border-radius:7px;padding:.42rem .9rem;font-size:.76rem;font-weight:600;">
         &#x1F4C5; Google Kalender
@@ -790,12 +791,10 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
         &#xF8FF; Apple Kalender
       </a>
     </div>
+    <p style="font-size:.69rem;color:var(--dempet);margin-bottom:.65rem;">Knappen «Apple Kalender» fungerer på Mac.</p>
+    <p style="font-size:.7rem;color:var(--dempet);margin-bottom:.4rem;"><strong>Outlook:</strong> Legg til kalender → Fra Internett → lim inn lenken.</p>
     <p style="font-size:.7rem;color:var(--dempet);margin-bottom:.4rem;"><strong>iPhone:</strong> Skann QR-koden med kameraet – åpner direkte i Kalender-appen:</p>
     <img id="ical-qr" src="" alt="QR-kode" style="width:140px;height:140px;border:1px solid var(--kant);border-radius:8px;display:block;margin:0 auto .8rem;">
-    <p style="font-size:.7rem;color:var(--dempet);margin-bottom:0;">
-      <strong>Apple Kalender (Mac):</strong> Arkiv → Nytt kalenderabonnement → lim inn lenken.<br>
-      <strong>Outlook:</strong> Legg til kalender → Fra Internett → lim inn lenken.
-    </p>
     <div class="modal-knapper" style="margin-top:.9rem;">
       <button class="btn-avbryt" onclick="document.getElementById('ical-modal').style.display='none'">Lukk</button>
     </div>
@@ -3499,7 +3498,7 @@ function skrivUtElev(){
 
   // Notatlinjer (~9 linjer)
   var notatLinjer='';
-  for(var i=0;i<5;i++)notatLinjer+='<div class="ep-linje"></div>';
+  for(var i=0;i<7;i++)notatLinjer+='<div class="ep-linje"></div>';
 
   // Hel-uke skolerute-bannere
   var bannerHtml='';
