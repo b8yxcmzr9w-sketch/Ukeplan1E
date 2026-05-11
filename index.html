@@ -696,6 +696,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   <div class="modal" style="max-width:480px;width:94%;">
     <h3>&#x1F4C5; Kalenderabonnement</h3>
     <p style="margin-bottom:.6rem;">Planen oppdateres automatisk i kalenderen din. Inneholder alle fag. <strong>Gjør utvalg av parti eller gruppe på elevvisningen først dersom du ikke vil ha alle økter med.</strong></p>
+    <p style="font-size:.74rem;margin-bottom:.5rem;">Kalender: <strong id="ical-kalnavn" style="font-family:monospace;"></strong></p>
     <label>Kalenderlenke</label>
     <div style="display:flex;gap:.4rem;margin-bottom:.7rem;">
       <input id="ical-url-felt" type="text" readonly style="font-size:.68rem;font-family:monospace;flex:1;padding:.4rem .6rem;border:1px solid var(--kant);border-radius:7px;background:var(--bg);">
@@ -3148,14 +3149,32 @@ window.addEventListener('afterprint',function(){
 var _origTitle='';
 function lagIcalUrl(type) {
   var base = SCRIPT_URL;
+  var klasse = encodeURIComponent(cfg().klassenavn || cfg().skolenavn || '');
   if (type === 'laerer') {
-    return base + '?ical=1&laerer=' + encodeURIComponent(aktivLaerer || '');
+    return base + '?ical=1'
+      + '&laerer=' + encodeURIComponent(aktivLaerer || '')
+      + '&fag=' + encodeURIComponent(aktivtFagLaerer || '')
+      + '&klasse=' + klasse;
   }
-  // Alle fag kombinert; valgfri filtrering på parti (NPT) og gruppe (YFF)
-  var params = 'ical=1';
-  if (elevParti && elevParti !== 'p1') params += '&parti=' + encodeURIComponent(elevParti);
+  var params = 'ical=1&klasse=' + klasse;
+  if (elevParti) params += '&parti=' + encodeURIComponent(elevParti);
   if (aktivGruppeElev) params += '&gruppe=' + encodeURIComponent(aktivGruppeElev);
   return base + '?' + params;
+}
+function lagIcalNavn(type) {
+  var klasse = cfg().klassenavn || cfg().skolenavn || '';
+  var base = 'Praksisplan_' + klasse;
+  if (type === 'laerer') {
+    return base + ' - ' + (aktivLaerer || '') + (aktivtFagLaerer ? ' * ' + aktivtFagLaerer : '');
+  }
+  var suffix = '';
+  if (elevParti || aktivGruppeElev) {
+    suffix = ' * ';
+    if (elevParti) suffix += 'P' + String(elevParti).replace(/^p/i, '');
+    if (elevParti && aktivGruppeElev) suffix += ' ';
+    if (aktivGruppeElev) suffix += aktivGruppeElev;
+  }
+  return base + suffix;
 }
 function aapneIcalModal(type) {
   var url = lagIcalUrl(type);
@@ -3166,6 +3185,7 @@ function aapneIcalModal(type) {
   document.getElementById('ical-webcal-link').href = webcalUrl;
   document.getElementById('ical-qr').src =
     'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(webcalUrl);
+  document.getElementById('ical-kalnavn').textContent = lagIcalNavn(type);
   document.getElementById('ical-modal').style.display = 'flex';
 }
 function kopierIcalUrl() {
