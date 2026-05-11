@@ -3528,9 +3528,10 @@ window.addEventListener('afterprint',function(){
 var _origTitle='';
 function lagIcalUrl(type) {
   var base = SCRIPT_URL;
+  var sep = base.indexOf('?') >= 0 ? '&' : '?';
   var klasse = encodeURIComponent(cfg().klassenavn || cfg().skolenavn || '');
   if (type === 'laerer') {
-    return base + '?ical=1'
+    return base + sep + 'ical=1'
       + '&laerer=' + encodeURIComponent(aktivLaerer || '')
       + '&fag=' + encodeURIComponent(aktivtFagLaerer || '')
       + '&klasse=' + klasse;
@@ -3538,7 +3539,7 @@ function lagIcalUrl(type) {
   var params = 'ical=1&klasse=' + klasse;
   if (elevParti) params += '&parti=' + encodeURIComponent(elevParti);
   if (aktivGruppeElev) params += '&gruppe=' + encodeURIComponent(aktivGruppeElev);
-  return base + '?' + params;
+  return base + sep + params;
 }
 function lagIcalNavn(type) {
   var klasse = cfg().klassenavn || cfg().skolenavn || '';
