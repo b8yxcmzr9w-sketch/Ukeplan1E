@@ -505,11 +505,11 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
         <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">I dag</button>
         <button class="pw-btn" id="filter-uker-btn" onclick="togglFilterUker()">Mine økter</button>
         <button class="pw-btn aktiv" id="skjul-tomme" onclick="togglSkjulTomme()">Skjul tomme</button>
-        <button class="pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel()">&#x1F4CB; Lim inn</button>
         <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
         <div class="pw-meny-wrap" id="pw-meny-wrap">
           <button class="pw-btn pw-meny-trigger" id="pw-meny-trigger" onclick="togglPwMeny(event)" title="Flere valg">&#x2022;&#x2022;&#x2022;</button>
           <div class="pw-meny-panel" id="pw-meny-panel">
+            <button class="pw-meny-rad pw-btn" id="btn-lim-inn-plan" onclick="togglLimInnPanel();lukkPwMeny()">&#x1F4CB; Lim inn</button>
             <button class="pw-meny-rad pw-btn" id="btn-skriv-ut" onclick="skrivUt();lukkPwMeny()">&#x1F5A8;&#xFE0F; Skriv ut</button>
             <button class="pw-meny-rad pw-btn" id="btn-ical-laerer" onclick="aapneIcalModal('laerer');lukkPwMeny()" style="display:none;">&#x1F4C5; Kalender</button>
             <button class="pw-meny-rad pw-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger');lukkPwMeny()" style="display:none;">&#x2699;&#xFE0F; Innstillinger</button>
