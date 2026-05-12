@@ -506,7 +506,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
         </div>
         <button class="pw-btn" id="btn-denne-uken" onclick="gaTilDenneUkenGrid()">I dag</button>
         <button class="pw-btn" id="filter-uker-btn" onclick="togglFilterUker()">Mine økter</button>
-        <button class="pw-btn aktiv" id="skjul-tomme" onclick="togglSkjulTomme()">Skjul tomme</button>
+        <button class="pw-btn" id="skjul-tomme" onclick="togglSkjulTomme()">Vis tomme</button>
         <button class="lagre-btn" id="lagre-btn" onclick="lagreTilSheets()">&#x1F4BE; Lagre</button>
         <div class="pw-meny-wrap" id="pw-meny-wrap">
           <button class="pw-btn pw-meny-trigger" id="pw-meny-trigger" onclick="togglPwMeny(event)" title="Flere valg">&#x2022;&#x2022;&#x2022;</button>
@@ -1818,7 +1818,7 @@ function oppdaterStickyTop(){
   });
 }
 function laererOpts(valgt){
-  var navn=['','Alle'].concat(allData.laerere.map(function(l){return l.navn;}));
+  var navn=['','Alle'].concat(allData.laerere.slice().sort(function(a,b){return a.navn.localeCompare(b.navn,'nb');}).map(function(l){return l.navn;}));
   return navn.map(function(n){return '<option value="'+n+'"'+(n===valgt?' selected':'')+'>'+( n||'-')+'</option>';}).join('');
 }
 function autoResize(el){el.style.height='22px';el.style.height=el.scrollHeight+'px';}
@@ -2083,7 +2083,7 @@ function leggTilPasteRad(prefill){
   var tr=document.createElement('tr');
   var p=prefill||{};
   var dagOpts=[{v:'',t:'─ Dag ─'}].concat(ALLE_DAGER.map(function(d){return {v:d,t:DAG_FULLT[d]};}));
-  var laererOpts2=[{v:'',t:'-'},{v:'Alle',t:'Alle'}].concat(allData.laerere.map(function(l){return {v:l.navn,t:l.navn};}));
+  var laererOpts2=[{v:'',t:'-'},{v:'Alle',t:'Alle'}].concat(allData.laerere.slice().sort(function(a,b){return a.navn.localeCompare(b.navn,'nb');}).map(function(l){return {v:l.navn,t:l.navn};}));
   var ukeEl=mkInput('text','Uke','width:42px;');if(p.uke)ukeEl.value=p.uke;
   tr.appendChild(mkTd(ukeEl));
   var dagEl=mkSelect(dagOpts);setSelect(dagEl,p.dag||'');
@@ -2936,7 +2936,7 @@ function byggHurtigRad(){
   }
   // Lærere
   var laeOpts='<option value="">-</option><option value="Alle">Alle</option>'+
-    allData.laerere.map(function(l){return '<option value="'+l.navn+'"'+(l.navn===aktivLaerer?' selected':'')+'>'+l.navn+'</option>';}).join('');
+    allData.laerere.slice().sort(function(a,b){return a.navn.localeCompare(b.navn,'nb');}).map(function(l){return '<option value="'+l.navn+'"'+(l.navn===aktivLaerer?' selected':'')+'>'+l.navn+'</option>';}).join('');
   el.innerHTML=
     '<input class="h-uke" id="h-uke" type="text" placeholder="Uke">'+
     '<select class="h-dag" id="h-dag">'+dagOpts+'</select>'+
@@ -3468,16 +3468,18 @@ function skrivUt(){
   var tittel='Praksisplan'+(c.klassenavn?' - '+c.klassenavn:'')+(c.skoleaar?' | '+c.skoleaar:'')+' | '+aktivtFagLaerer+' | '+(visAlle?'Alle uker':'Mine uker - '+(aktivLaerer||''));
   var hdr=document.getElementById('print-header');
   hdr.textContent=tittel;hdr.style.display='block';
-  var skjulBtn=document.getElementById('skjul-tomme'),varSjult=skjulBtn&&skjulBtn.classList.contains('aktiv');
+  // Ved utskrift: sikre at tomme er skjult (aktiv=false for «Vis tomme»-knappen)
+  var skjulBtn=document.getElementById('skjul-tomme');
+  var varVisteEmpty=skjulBtn&&skjulBtn.classList.contains('aktiv'); // brukeren hadde «Vis tomme» aktiv
   var utBtn=document.getElementById('btn-skriv-ut');
   if(utBtn)utBtn.classList.add('aktiv');
-  if(!varSjult&&skjulBtn){skjulBtn.classList.add('aktiv');oppdaterSkjulTommeTekst();}
+  if(varVisteEmpty&&skjulBtn){skjulBtn.classList.remove('aktiv');} // skjul tomme under print
   renderGrid();
   setTimeout(function(){
     window.print();
     hdr.style.display='none';
     if(utBtn)utBtn.classList.remove('aktiv');
-    if(!varSjult&&skjulBtn){skjulBtn.classList.remove('aktiv');oppdaterSkjulTommeTekst();}
+    if(varVisteEmpty&&skjulBtn){skjulBtn.classList.add('aktiv');} // gjenopprett
     renderGrid();
   },200);
 }
@@ -3488,8 +3490,9 @@ function togglSkjulTomme(){
 }
 function oppdaterSkjulTommeTekst(){/* tekst er fast – ingen endring */}
 function erSkjulTomme(){
+  // Knappen heter nå «Vis tomme» – aktiv = brukeren VIL se tomme = IKKE skjul
   var btn=document.getElementById('skjul-tomme');
-  return btn&&btn.classList.contains('aktiv');
+  return !btn||!btn.classList.contains('aktiv');
 }
 // ===== FILTER UKER (toggle-knapp) =====
 function erVisAlle(){
