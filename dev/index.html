@@ -2226,9 +2226,9 @@ async function tolkMedAI(){
       Array.prototype.slice.call(tbody.querySelectorAll('tr')).forEach(function(tr){
         if(erTomRad(tr))tbody.removeChild(tr);
       });
-      // Post-prosesser: fyll inn konfigurert dag hvis AI ikke fant dag og det bare er én
+      // Post-prosesser: fyll inn første konfigurerte dag hvis AI ikke fant dag
       data.rader.forEach(function(r){
-        if(!r.dag&&konfigDager.length===1)r.dag=konfigDager[0];
+        if(!r.dag&&konfigDager.length)r.dag=konfigDager[0];
         leggTilPasteRad({uke:r.uke,dag:r.dag,parti:r.parti,gruppe:r.gruppe,fag:r.fag,
           aktivitet:kap(r.aktivitet),oppmote:kap(r.oppmote),info:kap(r.info),laerer:r.laerer});
       });
@@ -2311,7 +2311,12 @@ function limInnOkter(){
       kOk++;return;
     }
     var dk=DAG_MAP[dagNorm]||dagNorm;
-    if(ALLE_DAGER.indexOf(dk)<0){kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+': Ugyldig dag "'+dagR+'"');return;}
+    if(ALLE_DAGER.indexOf(dk)<0){
+      // Prøv å bruke første konfigurerte dag for faget som fallback
+      var _fd=aktiveDagerForFag(aktivtFagLaerer);
+      if(_fd.length){dk=_fd[0];}
+      else{kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+': Ugyldig dag "'+dagR+'"');return;}
+    }
     var bl=erBlokert(ukeR,dk);
     if(bl.blokkert&&!erSrIgnorert(bl.type)){kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+', '+((DAG_FULLT[dk])||dk)+': Blokkert av skolerute ('+bl.type+': '+bl.beskrivelse+')');return;}
     var pk=erYFF||aktivtFagLaerer==='Fellesfag'?pkR:(pkR&&pkR.startsWith('p')?pkR:'p'+pkR);
