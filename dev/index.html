@@ -2669,7 +2669,18 @@ function slettFellesfagFag(navn){
 }
 function renderSrTyper(){document.getElementById('sr-typer-liste').innerHTML=srTyper.map(function(t,i){return '<div class="gruppe-rad"><input type="text" value="'+t+'" onchange="srTyper['+i+']=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')"><button class="btn-slett-lite" onclick="srTyper.splice('+i+',1);renderSrTyper();visInnstAdvarsel(\'btn-lagre-skolerute\')">Slett</button></div>';}).join('');}
 function leggTilSrType(){var inp=document.getElementById('ny-sr-type'),val=inp?inp.value.trim():'';if(!val)return;if(srTyper.indexOf(val)<0)srTyper.push(val);inp.value='';renderSrTyper();visInnstAdvarsel('btn-lagre-skolerute');}
+function _srSorteringsNøkkel(sr){
+  var dagOrder={mandag:1,tirsdag:2,onsdag:3,torsdag:4,fredag:5};
+  var ukeStr=String(sr.uke||'');
+  // Datoformat DD.MM → konverter til uke
+  var uke=srUkeTilNummer(ukeStr);
+  var ukeN=uke?parseInt(uke):999;
+  var skoleUke=ukeN>=30?ukeN:ukeN+100; // uke 30-52 = 30-52, uke 1-29 = 101-129
+  var dagN=dagOrder[(sr.dag||'').toLowerCase()]||0;
+  return skoleUke*10+dagN;
+}
 function renderSrTabell(){
+  allData.skolerute.sort(function(a,b){return _srSorteringsNøkkel(a)-_srSorteringsNøkkel(b);});
   var tbody=document.getElementById('sr-tbody');
   tbody.innerHTML=allData.skolerute.map(function(rad,i){
     var typeOpts=srTyper.map(function(t){return '<option value="'+t+'"'+(t===rad.type?' selected':'')+'>'+t+'</option>';}).join('');
