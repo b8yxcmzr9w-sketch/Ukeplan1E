@@ -1072,10 +1072,11 @@ function erBlokert(uke,dag){
 }
 function visToast(msg,feil,vedvarer){
   var t=document.getElementById('toast');
-  t.textContent=(feil?'Advarsel: ':'')+msg;
-  t.style.background=feil?'#8b2020':'#3d4a1e';
+  if(feil==='advarsel'){t.textContent=msg;t.style.background='#92400e';}
+  else if(feil){t.textContent='Advarsel: '+msg;t.style.background='#8b2020';}
+  else{t.textContent=msg;t.style.background='#3d4a1e';}
   t.style.display='block';
-  if(!vedvarer)setTimeout(function(){t.style.display='none';},4000);
+  if(!vedvarer)setTimeout(function(){t.style.display='none';},feil==='advarsel'?6000:4000);
 }
 async function hentArk(arknavn){
   var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hentArk',arknavn:arknavn})});
@@ -1605,7 +1606,16 @@ function renderElev(){
       else if(fagNavn==='Fellesfag')grupper=cfg().aktiveFag||[];
       else grupper=partier();
     }
-    grupper.forEach(function(pk){
+    // Samle alle gruppenøkler: konfigurerte + eventuelle lagrede under andre navn
+    var alleGrupper=grupper.slice();
+    if(uke&&uke.dager){
+      Object.keys(uke.dager).forEach(function(dk){
+        Object.keys(uke.dager[dk]||{}).forEach(function(gk){
+          if(alleGrupper.indexOf(gk)<0)alleGrupper.push(gk);
+        });
+      });
+    }
+    alleGrupper.forEach(function(pk){
       var harData=dager.some(function(dk){
         var slot=sikrSlot(uke&&uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);
         return slot.aktivitet||slot.oppmote||slot.laerer;
@@ -1870,23 +1880,20 @@ function renderGrid(){
   else grupper=partier();
   // Bygg dager-liste: aktive dager for faget + alle dager med data
   var dagerSet={};
-  if(erFellesfag){
-    // Konfigurerte dager
-    aktiveDagerForFag('Fellesfag').forEach(function(d){dagerSet[d]=true;});
-    // Dager med faktiske data for et Fellesfag-fag (selv om dagen ikke er konfigurert)
-    planData.uker.forEach(function(u){grupper.forEach(function(pk){Object.keys(u.dager||{}).forEach(function(dk){
+  // Hjelpefunksjon: legg til alle dager som har faktiske data (uavhengig av gruppenøkkel)
+  function skannDataDager(uker){
+    uker.forEach(function(u){Object.keys(u.dager||{}).forEach(function(dk){
       if(ALLE_DAGER.indexOf(dk)<0)return;
-      var s=u.dager[dk]&&u.dager[dk][pk];
-      if(s&&(s.aktivitet||s.oppmote||s.laerer))dagerSet[dk]=true;
-    });});});
+      var dagData=u.dager[dk];if(!dagData)return;
+      Object.keys(dagData).forEach(function(gk){var s=dagData[gk];if(s&&(s.aktivitet||s.oppmote||s.laerer))dagerSet[dk]=true;});
+    });});
+  }
+  if(erFellesfag){
+    aktiveDagerForFag('Fellesfag').forEach(function(d){dagerSet[d]=true;});
+    skannDataDager(planData.uker);
   } else {
     aktiveDagerForFag(aktivtFagLaerer).forEach(function(d){dagerSet[d]=true;});
-    // Dager med faktiske data vises selv om de ikke er konfigurert
-    planData.uker.forEach(function(u){grupper.forEach(function(pk){Object.keys(u.dager||{}).forEach(function(dk){
-      if(ALLE_DAGER.indexOf(dk)<0)return;
-      var s=u.dager[dk]&&u.dager[dk][pk];
-      if(s&&(s.aktivitet||s.oppmote||s.laerer))dagerSet[dk]=true;
-    });});});
+    skannDataDager(planData.uker);
   }
   // Konfigurerte dager (for å sjekke tomme rader)
   var dagerKfg=erFellesfag?aktiveDagerForFag('Fellesfag'):aktiveDagerForFag(aktivtFagLaerer);
@@ -1983,6 +1990,14 @@ function renderGrid(){
           return false; // Skjul tom rad på ikke-konfigurert dag (NPT/NNA/YFF)
         }
         return skalVises(slot);});
+      // Inkluder også data lagret under gruppenøkler som ikke lenger finnes i grupper-listen
+      // (f.eks. omdøpte YFF-grupper – data forsvinner ikke fra visningen)
+      var storedDagData=(uke.dager&&uke.dager[dk])||{};
+      Object.keys(storedDagData).forEach(function(pk){
+        if(grupper.indexOf(pk)>=0||visibleGr.indexOf(pk)>=0)return;
+        var slot=endringer[uke.uke+'|'+dk+'|'+pk]||sikrSlot(storedDagData[pk]);
+        if(!erTom(slot))visibleGr.push(pk);
+      });
       if(!visibleGr.length)return;
       var bl=erBlokert(uke.uke,dk);
       if(bl.blokkert&&!erSrIgnorert(bl.type)){
@@ -2008,6 +2023,8 @@ function setFelt(ui,dk,pk,felt,v){
   var nk=uke.uke+'|'+dk+'|'+pk;
   if(!endringer[nk])endringer[nk]=JSON.parse(JSON.stringify(sikrSlot(uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null)));
   endringer[nk][felt]=v;aktiverLagreBtn();
+  // Advar dersom lærer legger inn data på en dag som ikke er konfigurert for faget
+  if(v){var _kfg=aktiveDagerForFag(aktivtFagLaerer);if(_kfg.length&&_kfg.indexOf(dk)<0)visToast('⚠️ '+(DAG_FULLT[dk]||dk)+' er ikke konfigurert for '+aktivtFagLaerer+'. Sjekk innstillinger.','advarsel');}
   // Oppdater uke-objektet direkte
   if(!uke.dager)uke.dager={};
   if(!uke.dager[dk])uke.dager[dk]={};
@@ -2303,6 +2320,18 @@ function limInnOkter(){
     } else{kKlare[nk]=nySlot;kOk++;}
   });
   Object.assign(endringer,kKlare);aktiverLagreBtn();renderGrid();
+  // Advar dersom noen av de nye øktene er på dager som ikke er konfigurert for faget
+  var _limKfg=aktiveDagerForFag(aktivtFagLaerer);
+  if(_limKfg.length){
+    var _advarselDager=[];
+    Object.keys(kKlare).concat(kKo.map(function(k){return k.nk;})).forEach(function(nk){
+      var dk=nk.split('|')[1];
+      if(ALLE_DAGER.indexOf(dk)>=0&&_limKfg.indexOf(dk)<0){
+        var dn=DAG_FULLT[dk]||dk;if(_advarselDager.indexOf(dn)<0)_advarselDager.push(dn);
+      }
+    });
+    if(_advarselDager.length)visToast('⚠️ Dag(er) ikke konfigurert for '+aktivtFagLaerer+': '+_advarselDager.join(', ')+'. Sjekk innstillinger.','advarsel');
+  }
   if(kKo.length>0){kIdx=0;visKonflikt();}
   else{visResultat();if(kOk>0)document.getElementById('paste-input').value='';}
 }
@@ -2933,6 +2962,8 @@ function hurtigLeggTil(){
   var lae=document.getElementById('h-lae').value;
   if(!uke){visToast('Skriv inn ukenummer',true);document.getElementById('h-uke').focus();return;}
   if(!akt){visToast('Aktivitet er påkrevd',true);document.getElementById('h-akt').focus();return;}
+  var _hKfg=aktiveDagerForFag(aktivtFagLaerer);
+  var _hDagAdvarsel=_hKfg.length&&_hKfg.indexOf(dag)<0;
   var linje;
   if(aktivtFagLaerer==='NNA')linje=[uke,dag,akt,opp,inf,lae].join(';');
   else linje=[uke,dag,pk,akt,opp,inf,lae].join(';');
@@ -2946,6 +2977,7 @@ function hurtigLeggTil(){
   document.getElementById('h-akt').value='';
   document.getElementById('h-opp').value='';
   document.getElementById('h-inf').value='';
+  if(_hDagAdvarsel)visToast('⚠️ '+(DAG_FULLT[dag]||dag)+' er ikke konfigurert for '+aktivtFagLaerer+'. Sjekk innstillinger for faget.','advarsel');
   lagreTilSheets(true);
 }
 function oppdaterLimInnTittel(){
