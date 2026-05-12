@@ -852,9 +852,16 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 <script>
 var SCRIPT_URL='https://script.google.com/macros/s/AKfycbwXS2ZUkMJaKCCFkLXLDyr_gZp3_FROCb_zJBrNEcIQRNSA30eTaeq3-ju6qrZvhEqn/exec?dev=1';
 var _sesjon={};
-function sesjonSet(k,v){try{sessionStorage.setItem(k,v);}catch(e){_sesjon[k]=v;}}
-function sesjonGet(k){try{return sessionStorage.getItem(k);}catch(e){return _sesjon[k]||null;}}
-function sesjonFjern(k){try{sessionStorage.removeItem(k);}catch(e){delete _sesjon[k];}}
+var SESJON_MS=3*24*60*60*1000; // 3 dager
+function sesjonSet(k,v){
+  try{localStorage.setItem('prak_'+k,JSON.stringify({v:v,exp:Date.now()+SESJON_MS}));}
+  catch(e){_sesjon[k]=v;}}
+function sesjonGet(k){
+  try{var r=localStorage.getItem('prak_'+k);if(!r)return null;
+    var d=JSON.parse(r);if(d.exp&&Date.now()>d.exp){localStorage.removeItem('prak_'+k);return null;}
+    return d.v;}
+  catch(e){return _sesjon[k]||null;}}
+function sesjonFjern(k){try{localStorage.removeItem('prak_'+k);}catch(e){delete _sesjon[k];}}
 
 // ===== TILSTEDEVÆRELSE =====
 async function oppdaterTilstede(venter){
@@ -1189,6 +1196,20 @@ async function hentData(manuell){
     allData.plan['YFF']=parseplanRader(d['Plan_YFF']||[['Uke','Dag','Gruppe','Aktivitet','Oppmoete','Info','Laerer']],'yff');
     allData.plan['Fellesfag']=parseplanRader(d['Plan_Fag']||[['Uke','Dag','Fag','Aktivitet','Oppmoete','Info','Laerer']],'fellesfag');
     oppdaterHeader();byggLaererVelger();byggElevFagVelger();endringer={};passivLagreBtn();
+    // Fullfør auto-gjenopprettet sesjon: sett farge, admin-badge, start heartbeat
+    if(aktivLaerer){
+      var _alL=allData.laerere.find(function(x){return x.navn===aktivLaerer;});
+      if(!_alL){loggUt();} // Læreren finnes ikke lenger – logg ut stille
+      else{
+        var _chip=document.getElementById('innlogget-chip');
+        if(_chip)_chip.style.background=laererFarge(aktivLaerer);
+        document.getElementById('admin-badge').style.display=erAdmin()?'inline-block':'none';
+        document.getElementById('btn-innst').style.display=erAdmin()?'inline-block':'none';
+        document.getElementById('btn-profil').style.display='inline-block';
+        document.getElementById('btn-ical-laerer').style.display='inline-block';
+        if(!heartbeatInterval){startHeartbeat();oppdaterTilstede().then(function(t){if(t&&t.aktive)oppdaterOnlineIndikator(t.aktive);}).catch(function(){});}
+      }
+    }
     passivElevOppdater();
     var na=new Date().toLocaleTimeString('no',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('sist-oppdatert').textContent='Sist oppdatert: '+na;
@@ -1731,6 +1752,7 @@ async function loggInn(){
     if(l){l.admin=json.admin;l.farge=json.farge;}
     aktivLaerer=json.navn;
     sesjonSet('praksisToken',json.token);
+    sesjonSet('praksisNavn',json.navn);
     feilEl.textContent='';
   }catch(e){feilEl.textContent='Feil: '+e.message;return;}
   document.getElementById('login-wrap').style.display='none';
@@ -1767,6 +1789,7 @@ function loggUt(){
   var oi=document.getElementById('online-indikator');if(oi)oi.innerHTML='';
   var vb=document.getElementById('vente-banner');if(vb)vb.style.display='none';
   sesjonFjern('praksisToken');
+  sesjonFjern('praksisNavn');
   aktivLaerer=null;endringer={};passivLagreBtn();_laererNavIdx=-1;
   document.getElementById('login-wrap').style.display='flex';
   document.getElementById('rediger-skjerm').style.display='none';
@@ -3820,6 +3843,21 @@ function scrollTilDenneUkenVedOppstart(){
   }
   setTimeout(prøv,300);
 }
+// ── Auto-gjenopprett sesjon fra localStorage (maks 3 dager) ─────────────────
+function autoGjenopprettSesjon(){
+  var token=sesjonGet('praksisToken');
+  var navn=sesjonGet('praksisNavn');
+  if(!token||!navn)return;
+  // Sett aktivLaerer FØR hentData – hentData sin if(aktivLaerer)-blokk renderer grid
+  aktivLaerer=navn;
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('rediger-skjerm').style.display='block';
+  var chip=document.getElementById('innlogget-chip');
+  if(chip){chip.textContent=navn;chip.style.background='#3d4a1e';chip.style.display='inline-block';}
+  var loBtn=document.getElementById('logg-ut-btn');if(loBtn)loBtn.style.display='inline-block';
+  // Farge, admin-badge og tilstedeværelse settes i hentData etter allData er lastet
+}
+autoGjenopprettSesjon();
 byttHovedFane('elev');
 hentData();
 window.addEventListener('resize', oppdaterStickyTop);
