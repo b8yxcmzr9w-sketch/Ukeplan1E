@@ -2019,7 +2019,7 @@ function renderGrid(){
       Object.keys(storedDagData).forEach(function(pk){
         if(grupper.indexOf(pk)>=0||visibleGr.indexOf(pk)>=0)return;
         var slot=endringer[uke.uke+'|'+dk+'|'+pk]||sikrSlot(storedDagData[pk]);
-        if(!erTom(slot))visibleGr.push(pk);
+        if(!erTom(slot)&&skalVises(slot))visibleGr.push(pk);
       });
       if(!visibleGr.length)return;
       var bl=erBlokert(uke.uke,dk);
