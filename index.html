@@ -419,9 +419,25 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   /* ── Sist oppdatert ── */
   .sist-oppdatert{padding:.3rem .85rem 0;}
 }
+#beta-velkomst-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;}
+#beta-velkomst-boks{background:#fff;border-radius:14px;padding:2rem 1.8rem;max-width:400px;width:92vw;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3);}
+#beta-velkomst-boks .beta-ikon{font-size:2.2rem;margin-bottom:.5rem;}
+#beta-velkomst-boks h2{font-size:1.05rem;color:#c0392b;margin:.2rem 0 .7rem;}
+#beta-velkomst-boks p{font-size:.82rem;color:#444;line-height:1.55;margin-bottom:.5rem;}
+#beta-velkomst-boks .btn-beta-ok{margin-top:1.1rem;background:#c0392b;color:#fff;border:none;border-radius:8px;padding:.6rem 2rem;font-size:.9rem;font-weight:700;cursor:pointer;}
+#beta-velkomst-boks .btn-beta-ok:hover{background:#a93226;}
 </style>
 </head>
 <body>
+<div id="beta-velkomst-overlay">
+  <div id="beta-velkomst-boks">
+    <div class="beta-ikon">🧪</div>
+    <h2>Betaversjon – under utvikling</h2>
+    <p>Dette er en <strong>testversjon</strong> av praksisplan. Den kan inneholde feil og mangler, og innhold kan bli nullstilt uten varsel.</p>
+    <p>Feil, problemer eller tilbakemeldinger meldes til <strong>Geir</strong>.</p>
+    <button class="btn-beta-ok" onclick="document.getElementById('beta-velkomst-overlay').style.display='none'">Jeg forstår – gå til beta</button>
+  </div>
+</div>
 <header>
   <div class="hdr-left">
     <img class="hdr-logo" id="hdr-logo" src="" alt="" style="display:none">
@@ -2208,7 +2224,8 @@ async function tolkMedAI(){
   try{
     var laerereNavn=(allData.laerere||[]).map(function(l){return l.navn;}).filter(Boolean);
     var dagsDato=new Date().toLocaleDateString('nb-NO',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' (uke '+getCurrentISOWeek()+')';
-    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||'',laerere:laerereNavn,dagsDato:dagsDato})});
+    var konfigDager=aktiveDagerForFag(aktivtFagLaerer);
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||'',laerere:laerereNavn,dagsDato:dagsDato,konfigDager:konfigDager})});
     var data=await res.json();
     if(data.ok&&data.rader&&data.rader.length){
       function kap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
@@ -2224,7 +2241,9 @@ async function tolkMedAI(){
       Array.prototype.slice.call(tbody.querySelectorAll('tr')).forEach(function(tr){
         if(erTomRad(tr))tbody.removeChild(tr);
       });
+      // Post-prosesser: fyll inn første konfigurerte dag hvis AI ikke fant dag
       data.rader.forEach(function(r){
+        if(!r.dag&&konfigDager.length)r.dag=konfigDager[0];
         leggTilPasteRad({uke:r.uke,dag:r.dag,parti:r.parti,gruppe:r.gruppe,fag:r.fag,
           aktivitet:kap(r.aktivitet),oppmote:kap(r.oppmote),info:kap(r.info),laerer:r.laerer});
       });
@@ -2250,7 +2269,8 @@ async function tolkSkolerute(){
   if(btn){btn.disabled=true;btn.textContent='⏳ Tolker...';}
   if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='<span class="ai-spinner"></span>Henter svar fra Gemini AI…';}
   try{
-    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkSkolerute',token:token,tekst:tekst})});
+    var skoleaar=cfg().skoleaar||'2025/2026';
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkSkolerute',token:token,tekst:tekst,skoleaar:skoleaar})});
     var data=await res.json();
     if(data.ok&&data.rader&&data.rader.length){
       data.rader.forEach(function(r){
@@ -2307,7 +2327,12 @@ function limInnOkter(){
       kOk++;return;
     }
     var dk=DAG_MAP[dagNorm]||dagNorm;
-    if(ALLE_DAGER.indexOf(dk)<0){kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+': Ugyldig dag "'+dagR+'"');return;}
+    if(ALLE_DAGER.indexOf(dk)<0){
+      // Prøv å bruke første konfigurerte dag for faget som fallback
+      var _fd=aktiveDagerForFag(aktivtFagLaerer);
+      if(_fd.length){dk=_fd[0];}
+      else{kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+': Ugyldig dag "'+dagR+'"');return;}
+    }
     var bl=erBlokert(ukeR,dk);
     if(bl.blokkert&&!erSrIgnorert(bl.type)){kFeil.push('#'+(kFeil.length+1)+' Uke '+ukeR+', '+((DAG_FULLT[dk])||dk)+': Blokkert av skolerute ('+bl.type+': '+bl.beskrivelse+')');return;}
     var pk=erYFF||aktivtFagLaerer==='Fellesfag'?pkR:(pkR&&pkR.startsWith('p')?pkR:'p'+pkR);
@@ -2659,12 +2684,47 @@ function slettFellesfagFag(navn){
 }
 function renderSrTyper(){document.getElementById('sr-typer-liste').innerHTML=srTyper.map(function(t,i){return '<div class="gruppe-rad"><input type="text" value="'+t+'" onchange="srTyper['+i+']=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')"><button class="btn-slett-lite" onclick="srTyper.splice('+i+',1);renderSrTyper();visInnstAdvarsel(\'btn-lagre-skolerute\')">Slett</button></div>';}).join('');}
 function leggTilSrType(){var inp=document.getElementById('ny-sr-type'),val=inp?inp.value.trim():'';if(!val)return;if(srTyper.indexOf(val)<0)srTyper.push(val);inp.value='';renderSrTyper();visInnstAdvarsel('btn-lagre-skolerute');}
+function _srSorteringsNøkkel(sr){
+  var dagOrder={mandag:1,tirsdag:2,onsdag:3,torsdag:4,fredag:5};
+  var ukeStr=String(sr.uke||'');
+  // Datoformat DD.MM → konverter til uke
+  var uke=srUkeTilNummer(ukeStr);
+  var ukeN=uke?parseInt(uke):999;
+  var skoleUke=ukeN>=30?ukeN:ukeN+100; // uke 30-52 = 30-52, uke 1-29 = 101-129
+  var dagN=dagOrder[(sr.dag||'').toLowerCase()]||0;
+  return skoleUke*10+dagN;
+}
+function _srDuplikatIndekser(){
+  // Returnerer Set av indekser som har en duplikat (samme uke+dag finnes mer enn én gang)
+  var sett={};
+  allData.skolerute.forEach(function(r,i){
+    var nøkkel=(String(r.uke||'')+'\x00'+(r.dag||'')).toLowerCase();
+    if(!nøkkel.replace('\x00',''))return; // tom rad
+    if(!sett[nøkkel])sett[nøkkel]=[];
+    sett[nøkkel].push(i);
+  });
+  var dupIdx=new Set();
+  Object.keys(sett).forEach(function(k){if(sett[k].length>1)sett[k].forEach(function(i){dupIdx.add(i);});});
+  return dupIdx;
+}
 function renderSrTabell(){
+  allData.skolerute.sort(function(a,b){return _srSorteringsNøkkel(a)-_srSorteringsNøkkel(b);});
+  var dupIdx=_srDuplikatIndekser();
   var tbody=document.getElementById('sr-tbody');
   tbody.innerHTML=allData.skolerute.map(function(rad,i){
+    var erDup=dupIdx.has(i);
+    var rowStyle=erDup?'background:#fff3cd;':'';
+    var dupMerk=erDup?'<span title="Duplikat – vurder å slette" style="color:#856404;margin-right:.2rem;font-size:.8rem;">⚠️</span>':'';
     var typeOpts=srTyper.map(function(t){return '<option value="'+t+'"'+(t===rad.type?' selected':'')+'>'+t+'</option>';}).join('');
-    return '<tr><td><input type="text" value="'+(rad.uke||'')+'" onchange="allData.skolerute['+i+'].uke=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')" placeholder="Uke/dato"></td><td><input type="text" value="'+(rad.dag||'')+'" onchange="allData.skolerute['+i+'].dag=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')" placeholder="tom=hel uke"></td><td><select onchange="allData.skolerute['+i+'].type=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')">'+typeOpts+'</select></td><td><input type="text" value="'+(rad.beskrivelse||'')+'" onchange="allData.skolerute['+i+'].beskrivelse=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')"></td><td><button class="btn-slett-lite" onclick="allData.skolerute.splice('+i+',1);renderSrTabell();visInnstAdvarsel(\'btn-lagre-skolerute\')">Slett</button></td></tr>';
+    var dagVal=(rad.dag||'').toLowerCase();
+    var dagOpts=[['','— hel uke —'],['mandag','Mandag'],['tirsdag','Tirsdag'],['onsdag','Onsdag'],['torsdag','Torsdag'],['fredag','Fredag']].map(function(o){return '<option value="'+o[0]+'"'+(o[0]===dagVal?' selected':'')+'>'+o[1]+'</option>';}).join('');
+    return '<tr style="'+rowStyle+'"><td>'+dupMerk+'<input type="text" value="'+(rad.uke||'')+'" onchange="allData.skolerute['+i+'].uke=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')" placeholder="Uke/dato"></td><td><select onchange="allData.skolerute['+i+'].dag=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')">'+dagOpts+'</select></td><td><select onchange="allData.skolerute['+i+'].type=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')">'+typeOpts+'</select></td><td><input type="text" value="'+(rad.beskrivelse||'')+'" onchange="allData.skolerute['+i+'].beskrivelse=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')"></td><td><button class="btn-slett-lite" onclick="allData.skolerute.splice('+i+',1);renderSrTabell();visInnstAdvarsel(\'btn-lagre-skolerute\')">Slett</button></td></tr>';
   }).join('');
+  // Vis advarsel om duplikater
+  var statusEl=document.getElementById('ai-status-sr');
+  if(dupIdx.size&&statusEl&&statusEl.style.display!=='none'){
+    statusEl.innerHTML='⚠️ '+dupIdx.size+' rad(er) ser ut som duplikater (markert i gult) – slett unødvendige før du lagrer';
+  }
 }
 function leggTilSrRad(){allData.skolerute.push({uke:'',dag:'',type:srTyper[0]||'ferie',beskrivelse:''});renderSrTabell();visInnstAdvarsel('btn-lagre-skolerute');}
 function limInnSkolerute(){
@@ -2679,8 +2739,13 @@ function limInnSkolerute(){
     if(erSrIgnorert(type))return;
     allData.skolerute.push({uke:uke,dag:dag.toLowerCase(),type:type,beskrivelse:besk});ok++;
   });
+  var statusEl=document.getElementById('ai-status-sr');
+  if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='';}
   renderSrTabell();
-  document.getElementById('sr-resultat').textContent=(ok?'OK '+ok+' rader. ':'')+feil.join(', ');
+  var dupAntall=_srDuplikatIndekser().size;
+  var melding=(ok?'✅ '+ok+' rader lagt til. ':'')+feil.join(', ');
+  if(dupAntall)melding+=(melding?' – ':'')+'⚠️ '+dupAntall+' duplikat(er) markert i gult – slett unødvendige før lagring';
+  document.getElementById('sr-resultat').textContent=melding;
 }
 function _oppdaterSoppelTeller(){
   var tbody=document.getElementById('soppel-tbody');
