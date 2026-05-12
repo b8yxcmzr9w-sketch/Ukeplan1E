@@ -2209,7 +2209,8 @@ async function tolkMedAI(){
   try{
     var laerereNavn=(allData.laerere||[]).map(function(l){return l.navn;}).filter(Boolean);
     var dagsDato=new Date().toLocaleDateString('nb-NO',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' (uke '+getCurrentISOWeek()+')';
-    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||'',laerere:laerereNavn,dagsDato:dagsDato})});
+    var konfigDager=aktiveDagerForFag(aktivtFagLaerer);
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkMedAI',token:token,tekst:tekst,fag:aktivtFagLaerer,laerer:aktivLaerer||'',laerere:laerereNavn,dagsDato:dagsDato,konfigDager:konfigDager})});
     var data=await res.json();
     if(data.ok&&data.rader&&data.rader.length){
       function kap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
@@ -2225,7 +2226,9 @@ async function tolkMedAI(){
       Array.prototype.slice.call(tbody.querySelectorAll('tr')).forEach(function(tr){
         if(erTomRad(tr))tbody.removeChild(tr);
       });
+      // Post-prosesser: fyll inn konfigurert dag hvis AI ikke fant dag og det bare er én
       data.rader.forEach(function(r){
+        if(!r.dag&&konfigDager.length===1)r.dag=konfigDager[0];
         leggTilPasteRad({uke:r.uke,dag:r.dag,parti:r.parti,gruppe:r.gruppe,fag:r.fag,
           aktivitet:kap(r.aktivitet),oppmote:kap(r.oppmote),info:kap(r.info),laerer:r.laerer});
       });
