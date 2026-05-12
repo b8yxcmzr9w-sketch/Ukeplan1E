@@ -223,7 +223,7 @@ function doPost(e) {
     if (body.action === 'fjernTilstede')    return lagSvar(fjernTilstedeAction(body.token));
     if (body.action === 'hentVersjon')      return lagSvar({ ok: true, versjon: hentVersjon_() });
     if (body.action === 'tolkMedAI')        return lagSvar(tolkMedAIAction_(body.token, body.tekst || '', body.fag || 'NPT', body.laerer || '', body.laerere || [], body.dagsDato || '', body.konfigDager || []));
-    if (body.action === 'tolkSkolerute')    return lagSvar(tolkSkoleruteAction_(body.token, body.tekst || ''));
+    if (body.action === 'tolkSkolerute')    return lagSvar(tolkSkoleruteAction_(body.token, body.tekst || '', body.skoleaar || ''));
     if (body.action === 'appendSøppeldunk') return lagSvar(appendSøppeldunkAction_(body.token, body.rader || []));
     if (body.action === 'tømSøppeldunk')    return lagSvar(tømSøppeldunkAction_(body.token));
     if (body.action === 'slettSøppelRad')   return lagSvar(slettSøppelRadAction_(body.token, body.radData || []));
@@ -590,18 +590,51 @@ function tolkMedAIAction_(token, tekst, fag, laerer, laerere, dagsDato, konfigDa
   } catch(e) { return { ok: false, feil: e.message }; }
 }
 
-function tolkSkoleruteAction_(token, tekst) {
+function tolkSkoleruteAction_(token, tekst, skoleaar) {
   var session = validerToken(token);
   if (!session) return { ok: false, feil: 'Ikke innlogget', utloept: true };
   if (!tekst) return { ok: false, feil: 'Ingen tekst' };
+  var aarInfo = skoleaar || '2025/2026';
+  var aarDeler = aarInfo.split('/');
+  var aar1 = aarDeler[0] || '2025';
+  var aar2 = aarDeler[1] || '2026';
   try {
     var prompt =
-      'Du er assistent for en norsk naturbruksskole. Konverter følgende skolerute-tekst til strukturert format.\n\n' +
-      'Format (semikolonseparert, én rad per linje):\nuke;dag;type;beskrivelse\n\n' +
-      'Gyldige typer (bruk nøyaktig): ferie, fridag, høytidsdag, eksamen, annet\n' +
-      'Dag: la stå tomt hvis hel uke, ellers: mandag tirsdag onsdag torsdag fredag\n' +
-      'Uke: norsk ISO-ukenummer (f.eks. 40) eller datoformat (f.eks. 17.05)\n\n' +
-      'Eksempel:\n40;;ferie;Høstferie\n17.05;torsdag;høytidsdag;17. mai\n\n' +
+      'Du er assistent for en norsk naturbruksskole. Konverter følgende skolerute til strukturert format for skoleåret ' + aarInfo + '.\n\n' +
+      'FORMAT (semikolonseparert, én rad per linje):\nuke;dag;type;beskrivelse\n\n' +
+      'Gyldige typer (bruk nøyaktig):\n' +
+      '- ferie          → ferieuke eller flerdag-ferie (hel uke = tomt dag-felt)\n' +
+      '- fridag         → enkeltdag fri for elever (planleggingsdag, klemdag, o.l.)\n' +
+      '- høytidsdag     → norsk rød dag (17. mai, 1. mai, Kristi himmelfartsdag, 2. pinsedag, 1. nyttårsdag, osv.)\n' +
+      '- planleggingsdag → planleggingsdag (fridag for elever, ikke for lærere)\n' +
+      '- eksamen        → eksamensperiode\n' +
+      '- annet          → øvrig merknad\n\n' +
+      'UKE-FELT: Bruk norsk ISO 8601-ukenummer (heltall). ' +
+      'Uker 30–52 tilhører ' + aar1 + ', uker 1–29 tilhører ' + aar2 + '.\n' +
+      'For enkeltdager med kjent dato, bruk datoformat DD.MM (f.eks. 17.05 eller 01.05).\n\n' +
+      'DAG-FELT: tomt = hel uke/gjelder alle dager. Ellers: mandag tirsdag onsdag torsdag fredag.\n\n' +
+      'VIKTIG – utled ALT som impliseres av teksten:\n' +
+      '1. JULEFERIE: Hvis "siste skoledag før jul" og/eller "første skoledag etter jul" er oppgitt:\n' +
+      '   - Beregn hvilke ISO-uker som er helt fri mellom disse datoene\n' +
+      '   - Inkluder én rad per ferieuke med type "ferie" og beskrivelse "Juleferie"\n' +
+      '   - Eksempel: siste skoledag fredag 19. des ' + aar1 + ' og første skoledag mandag 5. jan ' + aar2 + '\n' +
+      '     → uke 52 (' + aar1 + ');;ferie;Juleferie  og  1 (' + aar2 + ');;ferie;Juleferie\n' +
+      '2. ENKELTDAGER: Oppgi også "siste skoledag" og "første skoledag" som egne rader (type: annet)\n' +
+      '3. PLANLEGGINGSDAGER: Fridag for elever – bruk type "planleggingsdag"\n' +
+      '4. KLEMDAG/FRIDAG etter høytidsdag: bruk type "fridag"\n' +
+      '5. Norske faste høytidsdager du alltid skal inkludere hvis de faller på en ukedag:\n' +
+      '   1. mai (' + aar2 + '), 17. mai (' + aar2 + '), Kristi himmelfartsdag (39 dager etter påskedag), ' +
+      '   2. pinsedag (50 dager etter påskedag)\n\n' +
+      'EKSEMPEL på output:\n' +
+      '41;;ferie;Høstferie\n' +
+      '19.12;fredag;annet;Siste skoledag før juleferie\n' +
+      '52;;ferie;Juleferie\n' +
+      '1;;ferie;Juleferie\n' +
+      '05.01;mandag;annet;Første skoledag etter jul\n' +
+      '9;;ferie;Vinterferie\n' +
+      '14;;ferie;Påskeferie\n' +
+      '01.05;torsdag;høytidsdag;1. mai\n' +
+      '17.05;lørdag;høytidsdag;17. mai\n\n' +
       'Tekst:\n' + tekst + '\n\n' +
       'Svar KUN med de konverterte linjene, ingen forklaring.';
     var raw = kallGemini_(prompt);

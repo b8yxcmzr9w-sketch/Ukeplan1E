@@ -2254,7 +2254,8 @@ async function tolkSkolerute(){
   if(btn){btn.disabled=true;btn.textContent='⏳ Tolker...';}
   if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='<span class="ai-spinner"></span>Henter svar fra Gemini AI…';}
   try{
-    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkSkolerute',token:token,tekst:tekst})});
+    var skoleaar=cfg().skoleaar||'2025/2026';
+    var res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'tolkSkolerute',token:token,tekst:tekst,skoleaar:skoleaar})});
     var data=await res.json();
     if(data.ok&&data.rader&&data.rader.length){
       data.rader.forEach(function(r){
