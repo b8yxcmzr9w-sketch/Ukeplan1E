@@ -113,7 +113,7 @@ tr.slot-rad-data:hover{filter:brightness(0.93);cursor:pointer;}
 .pw-meny-wrap{position:relative;display:inline-flex;}
 .pw-meny-trigger{letter-spacing:.12em;padding:0 .65rem;}
 .pw-meny-trigger.lagre-aktiv{border-color:var(--groen);color:var(--groen);}
-.pw-meny-panel{display:none;position:absolute;top:calc(100% + 5px);right:0;background:var(--kort);border:1.5px solid var(--kant);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.13);z-index:50;min-width:160px;overflow:hidden;flex-direction:column;}
+.pw-meny-panel{display:none;position:fixed;top:0;right:0;background:var(--kort);border:1.5px solid var(--kant);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.13);z-index:200;min-width:160px;overflow:hidden;flex-direction:column;}
 .pw-meny-panel.open{display:flex;}
 .pw-meny-rad{width:100%;text-align:left;border:none;border-radius:0;border-bottom:1px solid var(--kant);padding:.55rem .85rem;font-size:.78rem;font-weight:600;cursor:pointer;background:var(--kort);color:var(--nav);transition:background .12s;height:auto;}
 .pw-meny-rad:last-child{border-bottom:none;}
@@ -3529,9 +3529,15 @@ function togglFilterUker(){
   renderGrid();
 }
 // ── ••• dropdown-meny ────────────────────────────────────────────────────────
-function togglPwMeny(e){e&&e.stopPropagation();var p=document.getElementById('pw-meny-panel');p.classList.toggle('open');}
+function _posisjonerMeny(panel,trigger){
+  var r=trigger.getBoundingClientRect();
+  panel.style.top=(r.bottom+4)+'px';
+  panel.style.right=Math.max(4,window.innerWidth-r.right)+'px';
+  panel.style.left='auto';
+}
+function togglPwMeny(e){e&&e.stopPropagation();var p=document.getElementById('pw-meny-panel');var t=document.getElementById('pw-meny-trigger');if(!p.classList.contains('open')&&t)_posisjonerMeny(p,t);p.classList.toggle('open');}
 function lukkPwMeny(){var p=document.getElementById('pw-meny-panel');if(p)p.classList.remove('open');}
-function togglElevMeny(e){e&&e.stopPropagation();var p=document.getElementById('elev-meny-panel');p.classList.toggle('open');}
+function togglElevMeny(e){e&&e.stopPropagation();var p=document.getElementById('elev-meny-panel');var t=document.getElementById('elev-meny-trigger');if(!p.classList.contains('open')&&t)_posisjonerMeny(p,t);p.classList.toggle('open');}
 function lukkElevMeny(){var p=document.getElementById('elev-meny-panel');if(p)p.classList.remove('open');}
 document.addEventListener('click',function(e){
   var w=document.getElementById('pw-meny-wrap');if(w&&!w.contains(e.target))lukkPwMeny();
