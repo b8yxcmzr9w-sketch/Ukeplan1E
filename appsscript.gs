@@ -222,7 +222,7 @@ function doPost(e) {
     if (body.action === 'hentTilstede')     return lagSvar(hentTilstedeAction(body.token));
     if (body.action === 'fjernTilstede')    return lagSvar(fjernTilstedeAction(body.token));
     if (body.action === 'hentVersjon')      return lagSvar({ ok: true, versjon: hentVersjon_() });
-    if (body.action === 'tolkMedAI')        return lagSvar(tolkMedAIAction_(body.token, body.tekst || '', body.fag || 'NPT', body.laerer || '', body.laerere || [], body.dagsDato || ''));
+    if (body.action === 'tolkMedAI')        return lagSvar(tolkMedAIAction_(body.token, body.tekst || '', body.fag || 'NPT', body.laerer || '', body.laerere || [], body.dagsDato || '', body.konfigDager || []));
     if (body.action === 'tolkSkolerute')    return lagSvar(tolkSkoleruteAction_(body.token, body.tekst || ''));
     if (body.action === 'appendSøppeldunk') return lagSvar(appendSøppeldunkAction_(body.token, body.rader || []));
     if (body.action === 'tømSøppeldunk')    return lagSvar(tømSøppeldunkAction_(body.token));
@@ -500,7 +500,8 @@ function inkrementerVersjon_(ss) {
 // ===== GEMINI AI =====
 
 function kallGemini_(prompt) {
-  var KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY') || 'AIzaSyBGyKhCeBv2cQqxcbDh1SMyaDs2XYpeeTw';
+  var KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  if (!KEY) throw new Error('GEMINI_KEY mangler i Script Properties');
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + KEY;
   var payload = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
   var sisteFeil = '';
@@ -536,12 +537,13 @@ function kallGemini_(prompt) {
   throw new Error('Gemini-feil: ' + sisteFeil);
 }
 
-function tolkMedAIAction_(token, tekst, fag, laerer, laerere, dagsDato) {
+function tolkMedAIAction_(token, tekst, fag, laerer, laerere, dagsDato, konfigDager) {
   var session = validerToken(token);
   if (!session) return { ok: false, feil: 'Ikke innlogget', utloept: true };
   if (!tekst) return { ok: false, feil: 'Ingen tekst' };
   var standardLaerer = laerer || session.navn || '';
   var laererListe = (laerere && laerere.length) ? laerere : (standardLaerer ? [standardLaerer] : []);
+  var dagListe = (konfigDager && konfigDager.length) ? konfigDager : [];
   try {
     var kolFmt = {
       'NNA':       'uke;dag;aktivitet;oppmøte;info;lærer\nEks: 32;mandag;Stell av sauer;Klasse A;;Ola',
@@ -549,6 +551,12 @@ function tolkMedAIAction_(token, tekst, fag, laerer, laerere, dagsDato) {
       'Fellesfag': 'uke;dag;fag;aktivitet;oppmøte;info;lærer\nEks: 32;tirsdag;Biologi;Celledeling;Klasse A;;Kari'
     };
     var fmt = kolFmt[fag] || 'uke;dag;parti;aktivitet;oppmøte;info;lærer\nEks: 32;mandag;A;Stell av dyr;Klasse A;;Ola';
+    var dagInstr = '';
+    if (dagListe.length === 1) {
+      dagInstr = 'Konfigurert dag for dette faget: ' + dagListe[0] + '. Hvis dag ikke er eksplisitt nevnt i teksten, bruk «' + dagListe[0] + '».\n';
+    } else if (dagListe.length > 1) {
+      dagInstr = 'Konfigurerte dager for dette faget: ' + dagListe.join(', ') + '. Hvis dag ikke er eksplisitt nevnt i teksten, velg den mest passende av disse dagene basert på kontekst. La dag-feltet stå tomt kun hvis det er helt umulig å avgjøre.\n';
+    }
     var prompt =
       'Du er assistent for en norsk naturbruksskole. Konverter følgende tekst til strukturerte undervisningsøkter.\n\n' +
       'Format (semikolonseparert, én økt per linje):\n' + fmt + '\n\n' +
@@ -562,6 +570,7 @@ function tolkMedAIAction_(token, tekst, fag, laerer, laerere, dagsDato) {
       '- Info: Tilleggsinformasjon, utstyr, beskjeder (f.eks. "Ta med godt humør", "Husk støvler")\n' +
       '- Lærer: Ansvarlig lærer\n\n' +
       'Dager (lowercase): mandag tirsdag onsdag torsdag fredag\n' +
+      dagInstr +
       (dagsDato ? 'Dagens dato: ' + dagsDato + '\n' : '') +
       'Ukenummer: ISO 8601 norske uker. Hvis teksten inneholder relative datoer som «neste tirsdag», «på fredag», «neste uke», «om to uker», skal du beregne korrekt ISO-ukenummer basert på dagens dato.\n' +
       (laererListe.length ? 'Gyldige lærernavn: ' + laererListe.join(', ') + '\n' : '') +
@@ -620,9 +629,8 @@ function appendSøppeldunkAction_(token, rader) {
     ark = ss.insertSheet('Søppeldunk');
     ark.getRange(1,1,1,10).setValues([['Tidspunkt','Slettet av','Fag','Uke','Dag','Parti','Aktivitet','Oppmøte','Info','Lærer']]);
   }
-  rader.forEach(function(rad) {
-    ark.appendRow(rad);
-  });
+  var sistRad = ark.getLastRow();
+  ark.getRange(sistRad + 1, 1, rader.length, rader[0].length).setValues(rader);
   return { ok: true };
 }
 
@@ -660,7 +668,8 @@ function slettSøppelRadAction_(token, radData) {
 }
 
 function testGemini() {
-  var KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY') || 'AIzaSyBGyKhCeBv2cQqxcbDh1SMyaDs2XYpeeTw';
+  var KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  if (!KEY) throw new Error('GEMINI_KEY mangler i Script Properties');
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + KEY;
   var res = UrlFetchApp.fetch(url, {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
