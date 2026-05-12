@@ -2679,13 +2679,35 @@ function _srSorteringsNøkkel(sr){
   var dagN=dagOrder[(sr.dag||'').toLowerCase()]||0;
   return skoleUke*10+dagN;
 }
+function _srDuplikatIndekser(){
+  // Returnerer Set av indekser som har en duplikat (samme uke+dag finnes mer enn én gang)
+  var sett={};
+  allData.skolerute.forEach(function(r,i){
+    var nøkkel=(String(r.uke||'')+'\x00'+(r.dag||'')).toLowerCase();
+    if(!nøkkel.replace('\x00',''))return; // tom rad
+    if(!sett[nøkkel])sett[nøkkel]=[];
+    sett[nøkkel].push(i);
+  });
+  var dupIdx=new Set();
+  Object.keys(sett).forEach(function(k){if(sett[k].length>1)sett[k].forEach(function(i){dupIdx.add(i);});});
+  return dupIdx;
+}
 function renderSrTabell(){
   allData.skolerute.sort(function(a,b){return _srSorteringsNøkkel(a)-_srSorteringsNøkkel(b);});
+  var dupIdx=_srDuplikatIndekser();
   var tbody=document.getElementById('sr-tbody');
   tbody.innerHTML=allData.skolerute.map(function(rad,i){
+    var erDup=dupIdx.has(i);
+    var rowStyle=erDup?'background:#fff3cd;':'';
+    var dupMerk=erDup?'<span title="Duplikat – vurder å slette" style="color:#856404;margin-right:.2rem;font-size:.8rem;">⚠️</span>':'';
     var typeOpts=srTyper.map(function(t){return '<option value="'+t+'"'+(t===rad.type?' selected':'')+'>'+t+'</option>';}).join('');
-    return '<tr><td><input type="text" value="'+(rad.uke||'')+'" onchange="allData.skolerute['+i+'].uke=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')" placeholder="Uke/dato"></td><td><input type="text" value="'+(rad.dag||'')+'" onchange="allData.skolerute['+i+'].dag=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')" placeholder="tom=hel uke"></td><td><select onchange="allData.skolerute['+i+'].type=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')">'+typeOpts+'</select></td><td><input type="text" value="'+(rad.beskrivelse||'')+'" onchange="allData.skolerute['+i+'].beskrivelse=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')"></td><td><button class="btn-slett-lite" onclick="allData.skolerute.splice('+i+',1);renderSrTabell();visInnstAdvarsel(\'btn-lagre-skolerute\')">Slett</button></td></tr>';
+    return '<tr style="'+rowStyle+'"><td>'+dupMerk+'<input type="text" value="'+(rad.uke||'')+'" onchange="allData.skolerute['+i+'].uke=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')" placeholder="Uke/dato"></td><td><input type="text" value="'+(rad.dag||'')+'" onchange="allData.skolerute['+i+'].dag=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')" placeholder="tom=hel uke"></td><td><select onchange="allData.skolerute['+i+'].type=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')">'+typeOpts+'</select></td><td><input type="text" value="'+(rad.beskrivelse||'')+'" onchange="allData.skolerute['+i+'].beskrivelse=this.value;visInnstAdvarsel(\'btn-lagre-skolerute\')"></td><td><button class="btn-slett-lite" onclick="allData.skolerute.splice('+i+',1);renderSrTabell();visInnstAdvarsel(\'btn-lagre-skolerute\')">Slett</button></td></tr>';
   }).join('');
+  // Vis advarsel om duplikater
+  var statusEl=document.getElementById('ai-status-sr');
+  if(dupIdx.size&&statusEl&&statusEl.style.display!=='none'){
+    statusEl.innerHTML='⚠️ '+dupIdx.size+' rad(er) ser ut som duplikater (markert i gult) – slett unødvendige før du lagrer';
+  }
 }
 function leggTilSrRad(){allData.skolerute.push({uke:'',dag:'',type:srTyper[0]||'ferie',beskrivelse:''});renderSrTabell();visInnstAdvarsel('btn-lagre-skolerute');}
 function limInnSkolerute(){
@@ -2700,8 +2722,13 @@ function limInnSkolerute(){
     if(erSrIgnorert(type))return;
     allData.skolerute.push({uke:uke,dag:dag.toLowerCase(),type:type,beskrivelse:besk});ok++;
   });
+  var statusEl=document.getElementById('ai-status-sr');
+  if(statusEl){statusEl.style.display='flex';statusEl.innerHTML='';}
   renderSrTabell();
-  document.getElementById('sr-resultat').textContent=(ok?'OK '+ok+' rader. ':'')+feil.join(', ');
+  var dupAntall=_srDuplikatIndekser().size;
+  var melding=(ok?'✅ '+ok+' rader lagt til. ':'')+feil.join(', ');
+  if(dupAntall)melding+=(melding?' – ':'')+'⚠️ '+dupAntall+' duplikat(er) markert i gult – slett unødvendige før lagring';
+  document.getElementById('sr-resultat').textContent=melding;
 }
 function _oppdaterSoppelTeller(){
   var tbody=document.getElementById('soppel-tbody');

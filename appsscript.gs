@@ -619,7 +619,7 @@ function tolkSkoleruteAction_(token, tekst, skoleaar) {
       '   - Inkluder én rad per ferieuke med type "ferie" og beskrivelse "Juleferie"\n' +
       '   - Eksempel: siste skoledag fredag 19. des ' + aar1 + ' og første skoledag mandag 5. jan ' + aar2 + '\n' +
       '     → uke 52 (' + aar1 + ');;ferie;Juleferie  og  1 (' + aar2 + ');;ferie;Juleferie\n' +
-      '2. ENKELTDAGER: Oppgi også "siste skoledag" og "første skoledag" som egne rader (type: annet)\n' +
+      '2. "Siste skoledag før jul" og "Første skoledag etter jul/påske" skal IKKE inkluderes som egne rader – de brukes kun til å beregne ferieukene.\n' +
       '3. PLANLEGGINGSDAGER: Fridag for elever – bruk type "planleggingsdag"\n' +
       '4. KLEMDAG/FRIDAG etter høytidsdag: bruk type "fridag"\n' +
       '5. Norske faste høytidsdager du alltid skal inkludere hvis de faller på en ukedag:\n' +
@@ -627,10 +627,8 @@ function tolkSkoleruteAction_(token, tekst, skoleaar) {
       '   2. pinsedag (50 dager etter påskedag)\n\n' +
       'EKSEMPEL på output:\n' +
       '41;;ferie;Høstferie\n' +
-      '19.12;fredag;annet;Siste skoledag før juleferie\n' +
       '52;;ferie;Juleferie\n' +
       '1;;ferie;Juleferie\n' +
-      '05.01;mandag;annet;Første skoledag etter jul\n' +
       '9;;ferie;Vinterferie\n' +
       '14;;ferie;Påskeferie\n' +
       '01.05;torsdag;høytidsdag;1. mai\n' +
