@@ -419,25 +419,10 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   /* ── Sist oppdatert ── */
   .sist-oppdatert{padding:.3rem .85rem 0;}
 }
-#beta-velkomst-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;}
-#beta-velkomst-boks{background:#fff;border-radius:14px;padding:2rem 1.8rem;max-width:400px;width:92vw;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3);}
-#beta-velkomst-boks .beta-ikon{font-size:2.2rem;margin-bottom:.5rem;}
-#beta-velkomst-boks h2{font-size:1.05rem;color:#c0392b;margin:.2rem 0 .7rem;}
-#beta-velkomst-boks p{font-size:.82rem;color:#444;line-height:1.55;margin-bottom:.5rem;}
-#beta-velkomst-boks .btn-beta-ok{margin-top:1.1rem;background:#c0392b;color:#fff;border:none;border-radius:8px;padding:.6rem 2rem;font-size:.9rem;font-weight:700;cursor:pointer;}
-#beta-velkomst-boks .btn-beta-ok:hover{background:#a93226;}
 </style>
 </head>
 <body>
-<div id="beta-velkomst-overlay">
-  <div id="beta-velkomst-boks">
-    <div class="beta-ikon">🧪</div>
-    <h2>Betaversjon – under utvikling</h2>
-    <p>Dette er en <strong>testversjon</strong> av praksisplan. Den kan inneholde feil og mangler, og innhold kan bli nullstilt uten varsel.</p>
-    <p>Feil, problemer eller tilbakemeldinger meldes til <strong>Geir</strong>.</p>
-    <button class="btn-beta-ok" onclick="document.getElementById('beta-velkomst-overlay').style.display='none'">Jeg forstår – gå til beta</button>
-  </div>
-</div>
+<div style="background:#555;color:#fff;text-align:center;font-size:.72rem;padding:.2rem;letter-spacing:.04em;">DEV – testmiljø (eget Sheets)</div>
 <header>
   <div class="hdr-left">
     <img class="hdr-logo" id="hdr-logo" src="" alt="" style="display:none">
@@ -865,7 +850,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 </div>
 <div class="toast" id="toast" onclick="document.getElementById('toast').style.display='none'"></div>
 <script>
-var SCRIPT_URL='https://script.google.com/macros/s/AKfycbwXS2ZUkMJaKCCFkLXLDyr_gZp3_FROCb_zJBrNEcIQRNSA30eTaeq3-ju6qrZvhEqn/exec';
+var SCRIPT_URL='https://script.google.com/macros/s/AKfycbwXS2ZUkMJaKCCFkLXLDyr_gZp3_FROCb_zJBrNEcIQRNSA30eTaeq3-ju6qrZvhEqn/exec?dev=1';
 var _sesjon={};
 var SESJON_MS=3*24*60*60*1000; // 3 dager
 function sesjonSet(k,v){
@@ -2034,7 +2019,7 @@ function renderGrid(){
       Object.keys(storedDagData).forEach(function(pk){
         if(grupper.indexOf(pk)>=0||visibleGr.indexOf(pk)>=0)return;
         var slot=endringer[uke.uke+'|'+dk+'|'+pk]||sikrSlot(storedDagData[pk]);
-        if(!erTom(slot))visibleGr.push(pk);
+        if(!erTom(slot)&&skalVises(slot))visibleGr.push(pk);
       });
       if(!visibleGr.length)return;
       var bl=erBlokert(uke.uke,dk);
