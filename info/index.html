@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bruksanvisning – Praksisplan for lærere</title>
+<style>
+  :root {
+    --nav: #3d4a1e;
+    --groen: #6B8C2A;
+    --oransje: #A0722A;
+    --bg: #f5f4ef;
+    --kant: #ddd8c4;
+    --tekst: #1a1a14;
+    --dempet: #5a5a40;
+    --rod: #c0392b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--tekst);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Topptekst ── */
+  .guide-header {
+    background: var(--nav);
+    color: #fff;
+    padding: 2rem 2.5rem 1.6rem;
+  }
+  .guide-header h1 { font-size: 1.45rem; font-weight: 700; margin-bottom: .3rem; }
+  .guide-header p { font-size: .88rem; opacity: .75; }
+
+  /* ── Innhold ── */
+  .innhold {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── Innholdsfortegnelse ── */
+  .toc {
+    background: #fff;
+    border: 1px solid var(--kant);
+    border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 2.2rem;
+  }
+  .toc h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: var(--dempet); margin-bottom: .6rem; }
+  .toc ol { padding-left: 1.2rem; }
+  .toc li { font-size: .88rem; margin-bottom: .25rem; }
+  .toc a { color: var(--groen); text-decoration: none; font-weight: 600; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* ── Seksjoner ── */
+  .seksjon {
+    background: #fff;
+    border: 1px solid var(--kant);
+    border-radius: 12px;
+    margin-bottom: 1.8rem;
+    overflow: hidden;
+  }
+  .seksjon-hdr {
+    background: var(--nav);
+    color: #fff;
+    padding: .7rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .seksjon-hdr .nr {
+    background: rgba(255,255,255,.2);
+    border-radius: 50%;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; font-weight: 700; flex-shrink: 0;
+  }
+  .seksjon-hdr h2 { font-size: .95rem; font-weight: 700; }
+  .seksjon-body { padding: 1.2rem 1.3rem; }
+
+  /* ── Steg ── */
+  .steg {
+    display: flex;
+    gap: .9rem;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+  }
+  .steg:last-child { margin-bottom: 0; }
+  .steg-nr {
+    background: var(--groen);
+    color: #fff;
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .74rem; font-weight: 700;
+    flex-shrink: 0;
+    margin-top: .1rem;
+  }
+  .steg-tekst { flex: 1; }
+  .steg-tekst p { font-size: .88rem; }
+
+  /* ── Knapp-visuals ── */
+  .btn-demo {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    border-radius: 7px;
+    padding: .18rem .55rem;
+    font-size: .78rem;
+    font-weight: 600;
+    vertical-align: middle;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .btn-nav   { background: var(--nav);   color: #fff; }
+  .btn-groen { background: var(--groen); color: #fff; }
+  .btn-lys   { background: #f0efe6; color: var(--nav); border: 1px solid var(--kant); }
+  .btn-rod   { background: var(--rod);   color: #fff; animation: puls 1.8s ease-in-out infinite; }
+  .btn-meny  { background: rgba(255,255,255,.13); color: #fff; border: 1.5px solid rgba(255,255,255,.3); border-radius: 20px; padding: .18rem .65rem; font-size: .78rem; font-weight: 600; font-family: inherit; }
+  @keyframes puls {
+    0%,100% { opacity: 1; }
+    50%      { opacity: .7; }
+  }
+
+  /* ── Verktøylinje-demo ── */
+  .verktoy-demo {
+    background: var(--nav);
+    border-radius: 9px;
+    padding: .55rem .85rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+    margin: .8rem 0;
+    font-family: "Segoe UI", sans-serif;
+  }
+  .verktoy-demo .sep { color: rgba(255,255,255,.25); font-size: .8rem; }
+  .uke-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(255,255,255,.13);
+    border: 1.5px solid rgba(255,255,255,.22);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .uke-nav span { color: #fff; font-size: .78rem; padding: .16rem .5rem; }
+  .uke-nav button {
+    background: transparent; border: none;
+    color: rgba(255,255,255,.8); cursor: default;
+    padding: .16rem .38rem; font-size: .8rem;
+  }
+
+  /* ── Hurtigrad-demo ── */
+  .hurtigrad-demo {
+    background: var(--nav);
+    border-radius: 9px;
+    padding: .45rem .75rem;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    flex-wrap: wrap;
+    margin: .8rem 0;
+    font-family: "Segoe UI", sans-serif;
+  }
+  .hurtigrad-demo input, .hurtigrad-demo select {
+    font-size: .7rem;
+    font-family: inherit;
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 5px;
+    padding: .22rem .35rem;
+    background: rgba(255,255,255,.92);
+    color: var(--tekst);
+  }
+  .hurtigrad-demo input.h-uke   { width: 40px; }
+  .hurtigrad-demo input.h-akt   { width: 120px; }
+  .hurtigrad-demo input.h-opp   { width: 100px; }
+  .hurtigrad-demo input.h-inf   { width: 90px; }
+  .hurtigrad-demo select.h-dag  { width: 70px; }
+  .hurtigrad-demo select.h-pk   { width: 50px; }
+  .hurtigrad-demo select.h-lae  { width: 80px; }
+
+  /* ── Kontekstmeny-demo ── */
+  .ctx-demo {
+    display: inline-block;
+    background: #fff;
+    border: 1px solid var(--kant);
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.15);
+    overflow: hidden;
+    font-size: .82rem;
+    margin: .8rem 0;
+  }
+  .ctx-rad {
+    padding: .5rem .95rem;
+    border-bottom: 1px solid #eee;
+    cursor: default;
+  }
+  .ctx-rad:last-child { border-bottom: none; color: var(--rod); }
+
+  /* ── Info-boks ── */
+  .info-boks {
+    background: #fffbe8;
+    border-left: 3px solid #e0c84a;
+    border-radius: 0 7px 7px 0;
+    padding: .65rem .9rem;
+    margin: .75rem 0;
+    font-size: .85rem;
+    line-height: 1.55;
+  }
+  .info-boks.viktig {
+    background: #fdecea;
+    border-left-color: var(--rod);
+  }
+  .info-boks.tips {
+    background: #edf5e0;
+    border-left-color: var(--groen);
+  }
+
+  /* ── Passord-boks ── */
+  .passord-boks {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: #f4f3ee;
+    border: 1px solid var(--kant);
+    border-radius: 8px;
+    padding: .4rem .8rem;
+    font-size: .92rem;
+    margin: .4rem 0;
+  }
+  .passord-boks .pw { font-size: 1.3rem; font-weight: 700; letter-spacing: .12em; color: var(--nav); }
+
+  /* ── Login-demo ── */
+  .login-demo {
+    background: #fff;
+    border: 1px solid var(--kant);
+    border-radius: 12px;
+    padding: 1.2rem 1.3rem;
+    max-width: 280px;
+    margin: .8rem 0;
+  }
+  .login-demo h3 { font-size: .88rem; margin-bottom: .15rem; }
+  .login-demo p  { font-size: .72rem; color: var(--dempet); margin-bottom: .7rem; }
+  .login-demo select, .login-demo input {
+    width: 100%; padding: .38rem .55rem;
+    border: 1px solid var(--kant); border-radius: 6px;
+    font-size: .8rem; margin-bottom: .4rem;
+    font-family: inherit; background: var(--bg);
+  }
+  .login-demo .btn-logg-inn {
+    width: 100%; padding: .46rem;
+    background: var(--nav); color: #fff;
+    border: none; border-radius: 7px;
+    font-size: .82rem; font-weight: 600;
+    font-family: inherit; cursor: default;
+  }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff; font-size: 12pt; }
+    .guide-header { background: var(--nav) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .seksjon { break-inside: avoid; }
+    .seksjon-hdr { background: var(--nav) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .btn-rod { animation: none !important; }
+  }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--kant); margin: 1rem 0; }
+</style>
+</head>
+<body>
+
+<div class="guide-header">
+  <h1>📋 Bruksanvisning – Praksisplan</h1>
+  <p>For lærere &nbsp;·&nbsp; ukeplan1e.ganddal.net</p>
+</div>
+
+<div class="innhold">
+
+  <!-- Innholdsfortegnelse -->
+  <div class="toc">
+    <h2>Innhold</h2>
+    <ol>
+      <li><a href="#logg-inn">Logge inn og bytte passord</a></li>
+      <li><a href="#ny-okt">Legge inn ny økt i NPT</a></li>
+      <li><a href="#oppdater">Oppdatere en økt</a></li>
+      <li><a href="#kontekst">Kopiere, flytte og slette en økt</a></li>
+    </ol>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- 1. LOGGE INN                                           -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="seksjon" id="logg-inn">
+    <div class="seksjon-hdr">
+      <span class="nr">1</span>
+      <h2>Logge inn og bytte passord</h2>
+    </div>
+    <div class="seksjon-body">
+
+      <div class="steg">
+        <div class="steg-nr">1</div>
+        <div class="steg-tekst">
+          <p>Gå til <strong>ukeplan1e.ganddal.net</strong> i nettleseren. Siden åpner med elevvisningen.</p>
+        </div>
+      </div>
+
+      <div class="steg">
+        <div class="steg-nr">2</div>
+        <div class="steg-tekst">
+          <p>Klikk på <span class="btn-demo btn-meny">•••</span>-knappen øverst til høyre i navigasjonslinjen, og velg <strong>🔑 Lærerside</strong> fra menyen.</p>
+        </div>
+      </div>
+
+      <div class="steg">
+        <div class="steg-nr">3</div>
+        <div class="steg-tekst">
+          <p>Innloggingsskjemaet vises. Velg ditt navn, skriv inn passordet og klikk <strong>Logg inn</strong>.</p>
+          <div class="login-demo">
+            <h3>Rediger praksisplan</h3>
+            <p>Logg inn med ditt navn og passord</p>
+            <select><option>Velg navn...</option></select>
+            <input type="password" placeholder="Passord">
+            <button class="btn-logg-inn">Logg inn</button>
+          </div>
+          <div class="passord-boks">
+            🔑 Midlertidig passord: <span class="pw">2026</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="steg">
+        <div class="steg-nr">4</div>
+        <div class="steg-tekst">
+          <p><strong>Bytte passord:</strong> Klikk på <span class="btn-demo btn-lys">•••</span>-menyen øverst til høyre (vises etter innlogging) → velg <strong>👤 Profil</strong> → fyll ut nåværende og nytt passord → klikk <strong>Lagre passord</strong>.</p>
+          <div class="info-boks tips">
+            💡 Du kan bytte passord når som helst. Passordet må være minst 4 tegn.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- 2. LEGGE INN NY ØKT                                    -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="seksjon" id="ny-okt">
+    <div class="seksjon-hdr">
+      <span class="nr">2</span>
+      <h2>Legge inn ny økt i NPT</h2>
+    </div>
+    <div class="seksjon-body">
+
+      <div class="steg">
+        <div class="steg-nr">1</div>
+        <div class="steg-tekst">
+          <p>Etter innlogging vises verktøylinjen øverst. Klikk fanen <strong>NPT</strong> for å jobbe med praksisøkter.</p>
+        </div>
+      </div>
+
+      <div class="steg">
+        <div class="steg-nr">2</div>
+        <div class="steg-tekst">
+          <p><strong>Bli kjent med visningsknappene</strong> i verktøylinjen:</p>
+          <div class="verktoy-demo">
+            <div class="uke-nav">
+              <button>←</button>
+              <span>Uke 20</span>
+              <button>→</button>
+            </div>
+            <span class="btn-demo btn-lys" style="border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.13);color:#fff;">I dag</span>
+            <span class="btn-demo btn-lys" style="border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.13);color:#fff;">Mine økter</span>
+            <span class="btn-demo btn-lys" style="border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.13);color:#fff;">Vis tomme</span>
+            <span class="btn-demo btn-rod">💾 Lagre</span>
+          </div>
+          <ul style="font-size:.86rem;padding-left:1.2rem;margin-top:.4rem;line-height:1.8;">
+            <li><strong>I dag</strong> – hopper til uken du er i nå</li>
+            <li><strong>Mine økter</strong> – viser kun dine egne oppføringer (klikk igjen for å se alle)</li>
+            <li><strong>Vis tomme</strong> – viser tomme rader i tabellen slik at du kan skrive rett inn</li>
+          </ul>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <p style="font-size:.85rem;font-weight:700;margin-bottom:.6rem;">To måter å legge inn en økt:</p>
+
+      <div class="steg">
+        <div class="steg-nr">A</div>
+        <div class="steg-tekst">
+          <p><strong>Skriv direkte i tabellen</strong> – klikk på <span class="btn-demo btn-lys">Vis tomme</span> slik at tomme rader vises. Klikk i ønsket felt (Aktivitet, Oppmøte eller Info) og skriv.</p>
+          <div class="info-boks tips">
+            💡 Finnes det ingen tomme rader for uke/dag du trenger, bruk metode B nedenfor.
+          </div>
+        </div>
+      </div>
+
+      <div class="steg">
+        <div class="steg-nr">B</div>
+        <div class="steg-tekst">
+          <p><strong>Bruk hurtigraden</strong> – den mørke raden rett under fanene. Fyll ut feltene og klikk <span class="btn-demo btn-groen">+ Legg til</span>.</p>
+          <div class="hurtigrad-demo">
+            <input class="h-uke" type="text" placeholder="Uke">
+            <select class="h-dag"><option>Man</option><option>Tir</option><option>Ons</option></select>
+            <select class="h-pk"><option>P1</option><option>P2</option></select>
+            <select class="h-lae"><option>Lærer</option></select>
+            <input class="h-akt" type="text" placeholder="Aktivitet (påkrevd)">
+            <input class="h-opp" type="text" placeholder="Oppmøte">
+            <input class="h-inf" type="text" placeholder="Info">
+            <span class="btn-demo btn-groen">+ Legg til</span>
+          </div>
+          <ul style="font-size:.83rem;padding-left:1.2rem;line-height:1.75;">
+            <li><strong>Uke</strong> – ukenummeret (f.eks. 20)</li>
+            <li><strong>Dag</strong> – Man / Tir / Ons / Tor / Fre</li>
+            <li><strong>P1/P2</strong> – parti</li>
+            <li><strong>Aktivitet</strong> – obligatorisk felt</li>
+            <li><strong>Oppmøte</strong> – sted og klokkeslett (valgfritt)</li>
+            <li><strong>Info</strong> – tilleggsinformasjon (valgfritt)</li>
+          </ul>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="info-boks viktig">
+        ⚠️ <strong>Husk å lagre!</strong> Etter at du har gjort endringer blir <span class="btn-demo btn-rod">💾 Lagre</span>-knappen <strong>rød og pulserende</strong>. Klikk den for å lagre til Google Sheets. Endringer som ikke lagres, vil forsvinne om du forlater siden.
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- 3. OPPDATERE EN ØKT                                    -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="seksjon" id="oppdater">
+    <div class="seksjon-hdr">
+      <span class="nr">3</span>
+      <h2>Oppdatere en økt</h2>
+    </div>
+    <div class="seksjon-body">
+
+      <div class="steg">
+        <div class="steg-nr">1</div>
+        <div class="steg-tekst">
+          <p>Finn raden i tabellen du vil endre. Klikk direkte i tekstfeltet (Aktivitet, Oppmøte eller Info) og skriv den nye teksten. For å endre lærer, velg fra nedtrekkslisten i Lærer-kolonnen.</p>
+        </div>
+      </div>
+
+      <div class="steg">
+        <div class="steg-nr">2</div>
+        <div class="steg-tekst">
+          <p>Klikk <span class="btn-demo btn-rod">💾 Lagre</span> (rød knapp øverst) for å lagre endringen.</p>
+        </div>
+      </div>
+
+      <div class="info-boks">
+        💡 Bruk <span class="btn-demo btn-lys">Mine økter</span> for å filtrere frem kun dine egne rader, slik at det er lettere å finne det du vil endre.
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- 4. KOPIERE, FLYTTE OG SLETTE                           -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="seksjon" id="kontekst">
+    <div class="seksjon-hdr">
+      <span class="nr">4</span>
+      <h2>Kopiere, flytte og slette en økt</h2>
+    </div>
+    <div class="seksjon-body">
+
+      <div class="steg">
+        <div class="steg-nr">1</div>
+        <div class="steg-tekst">
+          <p><strong>Høyreklikk</strong> på raden du vil behandle. En liten meny dukker opp:</p>
+          <div class="ctx-demo">
+            <div class="ctx-rad">📋 Kopier til hurtigrad</div>
+            <div class="ctx-rad">➡️ Flytt til annen dato</div>
+            <div class="ctx-rad">🗑️ Slett økt</div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="steg">
+        <div class="steg-nr">📋</div>
+        <div class="steg-tekst">
+          <p><strong>Kopier til hurtigrad</strong> – fyller hurtigraden øverst med innholdet fra den valgte øktens. Du kan deretter justere uke, dag eller parti og klikke <span class="btn-demo btn-groen">+ Legg til</span> for å opprette en kopi på en ny dato.</p>
+        </div>
+      </div>
+
+      <div class="steg">
+        <div class="steg-nr">➡️</div>
+        <div class="steg-tekst">
+          <p><strong>Flytt til annen dato</strong> – en dialogboks åpner seg. Velg ny uke, dag og parti, og klikk <span class="btn-demo btn-groen">Flytt</span>. Øktens innhold flyttes automatisk, og den opprinnelige plassen tømmes.</p>
+        </div>
+      </div>
+
+      <div class="steg">
+        <div class="steg-nr">🗑️</div>
+        <div class="steg-tekst">
+          <p><strong>Slett økt</strong> – sletter og lagrer automatisk. Slettede oppføringer kan gjenfinnes under <strong>Innstillinger → Søppeldunk</strong>.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="info-boks">
+        🔙 <strong>Tilbake til elevvisningen:</strong> Klikk <span class="btn-demo btn-lys">✕</span>-knappen helt til høyre i verktøylinjen for å gå tilbake til elevvisningen.
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /innhold -->
+
+</body>
+</html>
