@@ -1451,7 +1451,7 @@ function hentUkeForFag(fagNavn, ukenummer){
 }
 
 var elevVisMode='alt';
-var elevParti='p1';
+var elevParti='';
 
 function byttElevVis(mode){
   elevVisMode=mode;
@@ -1627,9 +1627,9 @@ function renderElev(){
       else if(fagNavn==='Fellesfag')grupper=cfg().aktiveFag||[];
       else grupper=partier();
     }
-    // Samle alle gruppenøkler: konfigurerte + eventuelle lagrede under andre navn
+    // Samle alle gruppenøkler: konfigurerte + orphaned (kun i alt-modus, ikke ved aktivt filter)
     var alleGrupper=grupper.slice();
-    if(uke&&uke.dager){
+    if(elevVisMode!=='utvalg'&&uke&&uke.dager){
       Object.keys(uke.dager).forEach(function(dk){
         Object.keys(uke.dager[dk]||{}).forEach(function(gk){
           if(alleGrupper.indexOf(gk)<0)alleGrupper.push(gk);
@@ -3650,8 +3650,8 @@ function lagIcalUrl(type) {
       + '&klasse=' + klasse;
   }
   var params = 'ical=1&klasse=' + klasse;
-  if (elevParti) params += '&parti=' + encodeURIComponent(elevParti);
-  if (aktivGruppeElev) params += '&gruppe=' + encodeURIComponent(aktivGruppeElev);
+  if (elevVisMode==='utvalg'&&elevParti) params += '&parti=' + encodeURIComponent(elevParti);
+  if (elevVisMode==='utvalg'&&aktivGruppeElev) params += '&gruppe=' + encodeURIComponent(aktivGruppeElev);
   return base + sep + params;
 }
 function lagIcalNavn(type) {
@@ -3734,7 +3734,16 @@ function skrivUtElev(){
       // Per fag
       FASTE_FANER.forEach(function(fagNavn){
         var uke=allData.plan[fagNavn]&&allData.plan[fagNavn].uker.find(function(u){return String(u.uke)===ukenummer;})||null;
-        var grupper=fagNavn==='YFF'?yffGrupper():fagNavn==='NNA'?['nna']:fagNavn==='Fellesfag'?(cfg().aktiveFag||[]):partier();
+        var fag=allData.fag.find(function(f){return f.navn===fagNavn;})||{grupper:[]};
+        var grupper;
+        if(elevVisMode==='utvalg'){
+          if(fagNavn==='YFF')grupper=[aktivGruppeElev];
+          else if(fagNavn==='NNA')grupper=['nna'];
+          else if(fagNavn==='Fellesfag')grupper=cfg().aktiveFag||[];
+          else grupper=[elevParti];
+        } else {
+          grupper=fagNavn==='YFF'?(fag.grupper&&fag.grupper.length?fag.grupper:yffGrupper()):fagNavn==='NNA'?['nna']:fagNavn==='Fellesfag'?(cfg().aktiveFag||[]):partier();
+        }
         var farge=fagFarger[fagNavn]||'#888';
         grupper.forEach(function(pk){
           var slot=sikrSlot(uke&&uke.dager&&uke.dager[dk]?uke.dager[dk][pk]:null);
