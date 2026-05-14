@@ -2928,7 +2928,7 @@ function _byggLaerereRader(){
 function _byggFagRader(){
   var yffDager=Array.from(document.querySelectorAll('.yff-dag-cb:checked')).map(function(el){return el.value;});
   var yffFag=allData.fag.find(function(f){return f.navn==='YFF';});
-  if(yffFag){yffFag.dager=yffDager;}else{allData.fag.push({navn:'YFF',type:'standard',grupper:yffGrupper(),dager:yffDager});}
+  if(yffFag){yffFag.dager=yffDager;yffFag.grupper=yffGrupper();}else{allData.fag.push({navn:'YFF',type:'standard',grupper:yffGrupper(),dager:yffDager});}
   var nnaDager=Array.from(document.querySelectorAll('.nna-dag-cb:checked')).map(function(el){return el.value;});
   var nnaFag=allData.fag.find(function(f){return f.navn==='NNA';});
   if(nnaFag){nnaFag.dager=nnaDager;}else{allData.fag.push({navn:'NNA',type:'standard',grupper:[],dager:nnaDager});}
