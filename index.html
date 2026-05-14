@@ -2976,7 +2976,7 @@ function lagreNptInnst(){
   _lagreSek('btn-lagre-npt','💾 Lagre',async function(){await skrivTilSheets('Innstillinger',_byggInnstRader());});
 }
 function lagreNnaInnst(){_lagreSek('btn-lagre-nna','💾 Lagre',async function(){await skrivTilSheets('Fag',_byggFagRader());await hentData(true);});}
-function lagreYffInnst(){_lagreSek('btn-lagre-yff','💾 Lagre',async function(){await skrivTilSheets('Innstillinger',_byggInnstRader());await skrivTilSheets('Fag',_byggFagRader());await hentData(true);});}
+function lagreYffInnst(){_lagreSek('btn-lagre-yff','💾 Lagre',async function(){await skrivTilSheets('Innstillinger',_byggInnstRader());await skrivTilSheets('Fag',_byggFagRader());await hentData(true);byggElevUtvalg();});}
 function lagreLaerereInnst(){_lagreSek('btn-lagre-laerere','💾 Lagre',async function(){await skrivTilSheets('Lærere',_byggLaerereRader());await hentData(true);});}
 function lagreFellesfag(){_lagreSek('btn-lagre-fellesfag','💾 Lagre',async function(){await skrivTilSheets('Fag',_byggFagRader());await hentData(true);});}
 function lagreSkolerute(){_lagreSek('btn-lagre-skolerute','💾 Lagre',async function(){await skrivTilSheets('Skolerute',_byggSkolerute());await hentData(true);});}
