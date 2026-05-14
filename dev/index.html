@@ -1149,6 +1149,9 @@ async function hentData(manuell){
       else if(k==='antall partier')c.antallPartier=parseInt(v)||2;
       else if(k==='logo url')c.logoUrl=v;
       else if(k==='yff grupper')c.yffGrupper=v.split(',').map(function(x){return x.trim();}).filter(Boolean);
+      else if(k==='nna dager')c.nnaDager=v.split(',').map(function(x){return x.trim();}).filter(Boolean);
+      else if(k==='yff dager')c.yffDager=v.split(',').map(function(x){return x.trim();}).filter(Boolean);
+      else if(k.startsWith('ff dager ')){if(!c.ffDager)c.ffDager={};var _fn=k.slice('ff dager '.length);c.ffDager[_fn]=v.split(',').map(function(x){return x.trim();}).filter(Boolean);}
       else if(k==='sr typer')srTyper=v.split(',').map(function(x){return x.trim();}).filter(Boolean);
       else if(k==='aktive fag')c.aktiveFag=v.split(',').map(function(x){return x.trim();}).filter(Boolean);
       else if(k==='versjon'){sisteVersjon=parseInt(v)||0;}
@@ -1175,6 +1178,16 @@ async function hentData(manuell){
         dager:dager
       });
     });
+    // Override allData.fag med data fra Innstillinger (primærkilde for dager og YFF-grupper)
+    var _ci=allData.innstillinger;
+    if(_ci){
+      allData.fag.forEach(function(f){
+        if(f.navn==='YFF'){if(_ci.yffGrupper&&_ci.yffGrupper.length)f.grupper=_ci.yffGrupper;if(_ci.yffDager&&_ci.yffDager.length)f.dager=_ci.yffDager;}
+        else if(f.navn==='NNA'){if(_ci.nnaDager&&_ci.nnaDager.length)f.dager=_ci.nnaDager;}
+        else if(_ci.ffDager&&_ci.ffDager[f.navn])f.dager=_ci.ffDager[f.navn];
+      });
+      (_ci.aktiveFag||[]).forEach(function(fn){if(!allData.fag.find(function(f){return f.navn===fn;})){allData.fag.push({navn:fn,type:'standard',grupper:[],dager:(_ci.ffDager&&_ci.ffDager[fn])||[]});}});
+    }
     var srRader=d['Skolerute']||[];
     allData.skolerute=[];
     srRader.forEach(function(rad,i){
@@ -2903,7 +2916,12 @@ function _byggInnstRader(){
   var dager=Array.from(document.querySelectorAll('#dag-checkboxes input:checked')).map(function(el){return el.value;});
   var g=yffGrupper();
   var aktiveFag=cfg().aktiveFag||allData.fag.map(function(f){return f.navn;});
-  return [['Noekkel','Verdi'],
+  // Synkroniser checkbox-verdier til allData.fag hvis seksjonene er synlige
+  var _nnaCbs=document.querySelectorAll('.nna-dag-cb');
+  if(_nnaCbs.length){var _nf=allData.fag.find(function(f){return f.navn==='NNA';});if(_nf)_nf.dager=Array.from(document.querySelectorAll('.nna-dag-cb:checked')).map(function(el){return el.value;});}
+  var _yffCbs=document.querySelectorAll('.yff-dag-cb');
+  if(_yffCbs.length){var _yf=allData.fag.find(function(f){return f.navn==='YFF';});if(_yf){_yf.dager=Array.from(document.querySelectorAll('.yff-dag-cb:checked')).map(function(el){return el.value;});_yf.grupper=g;}}
+  var rader=[['Noekkel','Verdi'],
     ['Skolenavn',document.getElementById('cfg-skole').value.trim()],
     ['Klassenavn',document.getElementById('cfg-klasse').value.trim()],
     ['Skoleår',document.getElementById('cfg-skoleaar').value.trim()],
@@ -2918,6 +2936,15 @@ function _byggInnstRader(){
     ['Torsdag',dager.indexOf('torsdag')>=0?'TRUE':'FALSE'],
     ['Fredag',dager.indexOf('fredag')>=0?'TRUE':'FALSE']
   ];
+  // Dager per fag lagres i Innstillinger-arket (primærkilde)
+  allData.fag.forEach(function(f){
+    if(f.dager&&f.dager.length){
+      if(f.navn==='YFF')rader.push(['YFF Dager',f.dager.join(',')]);
+      else if(f.navn==='NNA')rader.push(['NNA Dager',f.dager.join(',')]);
+      else if(f.navn!=='NPT')rader.push(['FF Dager '+f.navn,f.dager.join(',')]);
+    }
+  });
+  return rader;
 }
 function _byggLaerereRader(){
   document.querySelectorAll('.admin-cb').forEach(function(cb){var l=allData.laerere.find(function(x){return x.navn===cb.value;});if(l)l.admin=cb.checked;});
@@ -2928,7 +2955,7 @@ function _byggLaerereRader(){
 function _byggFagRader(){
   var yffDager=Array.from(document.querySelectorAll('.yff-dag-cb:checked')).map(function(el){return el.value;});
   var yffFag=allData.fag.find(function(f){return f.navn==='YFF';});
-  if(yffFag){yffFag.dager=yffDager;}else{allData.fag.push({navn:'YFF',type:'standard',grupper:yffGrupper(),dager:yffDager});}
+  if(yffFag){yffFag.dager=yffDager;yffFag.grupper=yffGrupper();}else{allData.fag.push({navn:'YFF',type:'standard',grupper:yffGrupper(),dager:yffDager});}
   var nnaDager=Array.from(document.querySelectorAll('.nna-dag-cb:checked')).map(function(el){return el.value;});
   var nnaFag=allData.fag.find(function(f){return f.navn==='NNA';});
   if(nnaFag){nnaFag.dager=nnaDager;}else{allData.fag.push({navn:'NNA',type:'standard',grupper:[],dager:nnaDager});}
@@ -2975,10 +3002,10 @@ function lagreNptInnst(){
   if(!dager.length){visToast('Velg minst én NPT-dag',true);return;}
   _lagreSek('btn-lagre-npt','💾 Lagre',async function(){await skrivTilSheets('Innstillinger',_byggInnstRader());});
 }
-function lagreNnaInnst(){_lagreSek('btn-lagre-nna','💾 Lagre',async function(){await skrivTilSheets('Fag',_byggFagRader());await hentData(true);});}
-function lagreYffInnst(){_lagreSek('btn-lagre-yff','💾 Lagre',async function(){await skrivTilSheets('Innstillinger',_byggInnstRader());await skrivTilSheets('Fag',_byggFagRader());await hentData(true);});}
+function lagreNnaInnst(){_lagreSek('btn-lagre-nna','💾 Lagre',async function(){await skrivTilSheets('Innstillinger',_byggInnstRader());await hentData(true);});}
+function lagreYffInnst(){_lagreSek('btn-lagre-yff','💾 Lagre',async function(){await skrivTilSheets('Innstillinger',_byggInnstRader());await hentData(true);byggElevUtvalg();});}
 function lagreLaerereInnst(){_lagreSek('btn-lagre-laerere','💾 Lagre',async function(){await skrivTilSheets('Lærere',_byggLaerereRader());await hentData(true);});}
-function lagreFellesfag(){_lagreSek('btn-lagre-fellesfag','💾 Lagre',async function(){await skrivTilSheets('Fag',_byggFagRader());await hentData(true);});}
+function lagreFellesfag(){_lagreSek('btn-lagre-fellesfag','💾 Lagre',async function(){await skrivTilSheets('Innstillinger',_byggInnstRader());await hentData(true);});}
 function lagreSkolerute(){_lagreSek('btn-lagre-skolerute','💾 Lagre',async function(){await skrivTilSheets('Skolerute',_byggSkolerute());await hentData(true);});}
 function byggHurtigRad(){
   var el=document.getElementById('hurtig-rad');
@@ -3034,6 +3061,12 @@ function hurtigLeggTil(){
   var inf=(document.getElementById('h-inf').value||'').trim();
   var lae=document.getElementById('h-lae').value;
   if(!uke){visToast('Skriv inn ukenummer',true);document.getElementById('h-uke').focus();return;}
+  var _hUkeNr=parseInt(uke);
+  if(isNaN(_hUkeNr)||_hUkeNr<1||_hUkeNr>52){visToast('Ugyldig ukenummer – skriv et tall mellom 1 og 52',true);document.getElementById('h-uke').focus();return;}
+  if(_hUkeNr>=27&&_hUkeNr<=33){visToast('Uke '+_hUkeNr+' er sommerferie og utenfor skoleåret (gyldige uker: 34–52 og 1–26)',true);document.getElementById('h-uke').focus();return;}
+  var _hFerieUke=(allData.plan[aktivtFagLaerer]?allData.plan[aktivtFagLaerer].uker:[]).find(function(u){return String(u.uke)===String(_hUkeNr)&&u.ferie;});
+  if(!_hFerieUke)_hFerieUke=allData.skolerute.some(function(sr){return!erSrIgnorert(sr.type)&&String(sr.uke).trim()===String(_hUkeNr)&&!sr.dag;});
+  if(_hFerieUke&&!confirm('Uke '+_hUkeNr+' er markert som fri/ferie i skoleruta. Legg til økt likevel?')){document.getElementById('h-uke').focus();return;}
   if(!akt){visToast('Aktivitet er påkrevd',true);document.getElementById('h-akt').focus();return;}
   var _hKfg=aktiveDagerForFag(aktivtFagLaerer);
   var _hDagAdvarsel=_hKfg.length&&_hKfg.indexOf(dag)<0;
