@@ -3034,6 +3034,12 @@ function hurtigLeggTil(){
   var inf=(document.getElementById('h-inf').value||'').trim();
   var lae=document.getElementById('h-lae').value;
   if(!uke){visToast('Skriv inn ukenummer',true);document.getElementById('h-uke').focus();return;}
+  var _hUkeNr=parseInt(uke);
+  if(isNaN(_hUkeNr)||_hUkeNr<1||_hUkeNr>52){visToast('Ugyldig ukenummer – skriv et tall mellom 1 og 52',true);document.getElementById('h-uke').focus();return;}
+  if(_hUkeNr>=27&&_hUkeNr<=33){visToast('Uke '+_hUkeNr+' er sommerferie og utenfor skoleåret (gyldige uker: 34–52 og 1–26)',true);document.getElementById('h-uke').focus();return;}
+  var _hFerieUke=(allData.plan[aktivtFagLaerer]?allData.plan[aktivtFagLaerer].uker:[]).find(function(u){return String(u.uke)===String(_hUkeNr)&&u.ferie;});
+  if(!_hFerieUke)_hFerieUke=allData.skolerute.some(function(sr){return!erSrIgnorert(sr.type)&&String(sr.uke).trim()===String(_hUkeNr)&&!sr.dag;});
+  if(_hFerieUke&&!confirm('Uke '+_hUkeNr+' er markert som fri/ferie i skoleruta. Legg til økt likevel?')){document.getElementById('h-uke').focus();return;}
   if(!akt){visToast('Aktivitet er påkrevd',true);document.getElementById('h-akt').focus();return;}
   var _hKfg=aktiveDagerForFag(aktivtFagLaerer);
   var _hDagAdvarsel=_hKfg.length&&_hKfg.indexOf(dag)<0;
