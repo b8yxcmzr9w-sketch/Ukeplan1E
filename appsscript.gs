@@ -698,6 +698,66 @@ function slettSøppelRadAction_(token, radData) {
   return { ok: true }; // Ikke funnet – allerede borte
 }
 
+function kopierProdTilDev() {
+  var ARK_SOM_KOPIERES = ['Innstillinger','Lærere','Fag','Skolerute','Plan_NPT','Plan_NNA','Plan_YFF','Plan_Fag'];
+  var prod = SpreadsheetApp.openById(PROD_SHEETS_ID);
+  var dev  = SpreadsheetApp.openById(DEV_SHEETS_ID);
+  ARK_SOM_KOPIERES.forEach(function(navn) {
+    var kilde = prod.getSheetByName(navn);
+    if (!kilde) { Logger.log('Hopper over (finnes ikke i prod): ' + navn); return; }
+    var maal = dev.getSheetByName(navn);
+    if (!maal) maal = dev.insertSheet(navn);
+    maal.clearContents();
+    var data = kilde.getDataRange().getValues();
+    if (data.length) maal.getRange(1, 1, data.length, data[0].length).setValues(data);
+    Logger.log('Kopiert: ' + navn + ' (' + data.length + ' rader)');
+  });
+  Logger.log('Ferdig – alle ark kopiert fra prod til dev.');
+}
+
+function sjekkYffGrupper() {
+  var ss = SpreadsheetApp.openById(PROD_SHEETS_ID);
+
+  // Hent konfigurerte grupper fra Fag-arket
+  var fagArk = ss.getSheetByName('Fag');
+  var konfGrupper = [];
+  if (fagArk) {
+    fagArk.getDataRange().getValues().forEach(function(rad) {
+      if (String(rad[0]).trim() === 'YFF') {
+        konfGrupper = String(rad[2]).split(',').map(function(g) { return g.trim(); }).filter(Boolean);
+      }
+    });
+  }
+  Logger.log('Konfigurerte YFF-grupper: ' + konfGrupper.join(', '));
+
+  // Sjekk Plan_YFF
+  var yffArk = ss.getSheetByName('Plan_YFF');
+  if (!yffArk) { Logger.log('Plan_YFF ikke funnet'); return; }
+  var rader = yffArk.getDataRange().getValues();
+  Logger.log('Antall rader i Plan_YFF (inkl. header): ' + rader.length);
+
+  var grupperIData = {};
+  var mismatch = [];
+  for (var i = 1; i < rader.length; i++) {
+    var r = rader[i];
+    if (!r[0]) continue;
+    var grp = String(r[2]).trim();
+    grupperIData[grp] = (grupperIData[grp] || 0) + 1;
+    if (grp && konfGrupper.indexOf(grp) < 0) {
+      mismatch.push('Rad ' + (i+1) + ': uke=' + r[0] + ', dag=' + r[1] + ', gruppe="' + grp + '", aktivitet=' + r[3]);
+    }
+  }
+
+  Logger.log('Grupper i data: ' + Object.keys(grupperIData).map(function(k) { return k + ' (' + grupperIData[k] + ' rader)'; }).join(', '));
+
+  if (mismatch.length) {
+    Logger.log('⚠️ ' + mismatch.length + ' rader med gruppenavn som ikke matcher konfigurasjonen:');
+    mismatch.forEach(function(m) { Logger.log('  ' + m); });
+  } else {
+    Logger.log('✅ Alle rader har gruppenavn som matcher konfigurasjonen.');
+  }
+}
+
 function testGemini() {
   var KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
   if (!KEY) throw new Error('GEMINI_KEY mangler i Script Properties');
