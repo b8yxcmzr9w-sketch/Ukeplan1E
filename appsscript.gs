@@ -720,15 +720,31 @@ function sjekkYffGrupper() {
 
   // Hent konfigurerte grupper fra Fag-arket
   var fagArk = ss.getSheetByName('Fag');
-  var konfGrupper = [];
+  var konfGrupperFag = [];
   if (fagArk) {
     fagArk.getDataRange().getValues().forEach(function(rad) {
       if (String(rad[0]).trim() === 'YFF') {
-        konfGrupper = String(rad[2]).split(',').map(function(g) { return g.trim(); }).filter(Boolean);
+        konfGrupperFag = String(rad[2]).split(',').map(function(g) { return g.trim(); }).filter(Boolean);
       }
     });
   }
-  Logger.log('Konfigurerte YFF-grupper: ' + konfGrupper.join(', '));
+  Logger.log('YFF-grupper i Fag-arket: ' + konfGrupperFag.join(', '));
+
+  // Hent konfigurerte grupper fra Innstillinger-arket
+  var innstArk = ss.getSheetByName('Innstillinger');
+  var konfGrupperInnst = [];
+  if (innstArk) {
+    innstArk.getDataRange().getValues().forEach(function(rad) {
+      var k = String(rad[0]).trim().toLowerCase();
+      if (k === 'yff grupper' || k === 'yffgrupper') {
+        konfGrupperInnst = String(rad[1]).split(',').map(function(g) { return g.trim(); }).filter(Boolean);
+      }
+    });
+  }
+  Logger.log('YFF-grupper i Innstillinger-arket: ' + (konfGrupperInnst.length ? konfGrupperInnst.join(', ') : '(ingen funnet)'));
+
+  var konfGrupper = konfGrupperInnst.length ? konfGrupperInnst : konfGrupperFag;
+  Logger.log('Bruker som konfigurert: ' + konfGrupper.join(', '));
 
   // Sjekk Plan_YFF
   var yffArk = ss.getSheetByName('Plan_YFF');
