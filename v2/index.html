@@ -415,7 +415,7 @@ header .spacer { flex: 1; }
 <div id="modal-login" class="modal-bg skjult">
   <div class="modal">
     <h3>Logg inn</h3>
-    <div class="felt"><label>Navn</label><input id="login-navn" type="text" autocomplete="username"></div>
+    <div class="felt"><label>Navn</label><input id="login-navn" type="text" autocomplete="username" onkeydown="if(event.key==='Enter'){const p=el('login-passord');p.value?loggInn():p.focus();}"></div>
     <div class="felt"><label>Passord</label><input id="login-passord" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loggInn()"></div>
     <p id="login-feil" class="feil-tekst skjult"></p>
     <div class="modal-bunn">
