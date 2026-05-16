@@ -392,8 +392,21 @@ header .spacer { flex: 1; }
     <div class="kort">
       <h3 style="margin-bottom:10px">Lim inn skolerute</h3>
       <p style="font-size:.88rem;color:var(--grå);margin-bottom:12px">Lim inn tekst fra skoleruten. AI trekker ut ferier, høytider og planleggingsdager.</p>
-      <div class="felt"><textarea id="skolerute-tekst" rows="8" placeholder="Lim inn skolerute her..."></textarea></div>
+      <div class="felt"><textarea id="skolerute-tekst" rows="6" placeholder="Lim inn skolerute her..."></textarea></div>
       <button class="btn btn-p" onclick="tolkSkolerute(event)">Tolk med AI</button>
+    </div>
+    <div id="skolerute-forslag" class="kort skjult">
+      <h3 style="margin-bottom:6px">Velg rader som skal legges til</h3>
+      <p style="font-size:.83rem;color:var(--grå);margin-bottom:10px">Rader markert med gult finnes allerede (samme fra-dato). Fjern avkrysning for å utelate.</p>
+      <div style="overflow-x:auto">
+        <table class="parse-tabell">
+          <thead><tr><th style="width:32px"><input type="checkbox" id="sr-velg-alle" onchange="srVelgAlle(this)" checked></th><th>Fra dato</th><th>Til dato</th><th>Navn</th><th>Type</th></tr></thead>
+          <tbody id="skolerute-forslag-tbody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="leggTilValgteSkoleruterader()">Legg til valgte</button>
+      </div>
     </div>
   </div>
 
@@ -1105,10 +1118,59 @@ async function tolkSkolerute(ev) {
   const res = await api('parseSkolerute', { token: S.bruker.token, isAdmin: true, tekst });
   btn.textContent = 'Tolk med AI'; btn.disabled = false;
   if (!res.ok) { visMelding(res.error, 'feil'); return; }
-  const tbody = el('skolerute-tbody');
+
+  // Hent eksisterende datoer for duplikatsjekk
+  const eksisterende = new Set(
+    Array.from(el('skolerute-tbody').querySelectorAll('tr'))
+      .map(tr => tr.querySelectorAll('input[type=date]')[0]?.value).filter(Boolean)
+  );
+
+  const tbody = el('skolerute-forslag-tbody');
   tbody.innerHTML = '';
-  sorterSkolerute(res.rader).forEach(r => leggTilSkoleruteTr(tbody, r));
-  el('skolerute-preview').classList.remove('skjult');
+  sorterSkolerute(res.rader).forEach(r => {
+    const duplikat = eksisterende.has(r.fraDato);
+    const tr = document.createElement('tr');
+    if (duplikat) tr.style.background = '#fff9db';
+    tr.innerHTML = `
+      <td style="text-align:center"><input type="checkbox" ${duplikat ? '' : 'checked'} class="sr-cbx"></td>
+      <td>${r.fraDato || ''}</td>
+      <td>${r.tilDato || ''}</td>
+      <td>${r.navn || ''}</td>
+      <td>${r.type || ''}</td>`;
+    tr.dataset.rad = JSON.stringify(r);
+    tbody.appendChild(tr);
+  });
+  el('sr-velg-alle').checked = true;
+  el('skolerute-forslag').classList.remove('skjult');
+}
+
+function srVelgAlle(cbx) {
+  el('skolerute-forslag-tbody').querySelectorAll('.sr-cbx').forEach(c => c.checked = cbx.checked);
+}
+
+async function leggTilValgteSkoleruterader() {
+  const valgte = [];
+  el('skolerute-forslag-tbody').querySelectorAll('tr').forEach(tr => {
+    if (tr.querySelector('.sr-cbx')?.checked) valgte.push(JSON.parse(tr.dataset.rad));
+  });
+  if (!valgte.length) { visMelding('Ingen rader valgt', 'info'); return; }
+
+  // Hent eksisterende rader fra tabellen
+  const eksisterende = [];
+  el('skolerute-tbody').querySelectorAll('tr').forEach(tr => {
+    const c = tr.querySelectorAll('input, select');
+    if (c[0].value || c[2].value)
+      eksisterende.push({ fraDato: c[0].value, tilDato: c[1].value, navn: c[2].value, type: c[3].value });
+  });
+
+  const alleRader = sorterSkolerute([...eksisterende, ...valgte]);
+  const res = await api('saveSkolerute', { token: S.bruker.token, isAdmin: true, rader: alleRader });
+  if (res.ok) {
+    visMelding(`${valgte.length} rad(er) lagt til`);
+    el('skolerute-forslag').classList.add('skjult');
+    el('skolerute-tekst').value = '';
+    await lastSkolerute();
+  } else visMelding(res.error, 'feil');
 }
 
 function leggTilSkoleruterad() {
