@@ -22,6 +22,20 @@
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--tekst); background: #f0f2f0; min-height: 100vh; }
 .skjult { display: none !important; }
 
+/* ── Lastelinje ────────────────────────────────────────────────────────────── */
+#lastelinje {
+  position: fixed; top: 0; left: 0; height: 3px;
+  background: #74c69d; z-index: 999;
+  width: 0; transition: width .3s ease; pointer-events: none;
+}
+#lastelinje.aktiv { animation: laste 1.8s ease-in-out infinite; }
+@keyframes laste {
+  0%   { width: 0;    opacity: 1; }
+  70%  { width: 85%;  opacity: 1; }
+  100% { width: 85%;  opacity: 1; }
+}
+#lastelinje.ferdig { width: 100% !important; animation: none; transition: width .15s ease; }
+
 /* ── Header ────────────────────────────────────────────────────────────────── */
 header {
   background: var(--grønn); color: white; padding: 12px 20px;
@@ -210,6 +224,8 @@ header .spacer { flex: 1; }
 </style>
 </head>
 <body>
+
+<div id="lastelinje"></div>
 
 <!-- Header -->
 <header id="app-header">
@@ -501,14 +517,36 @@ const S = {
 };
 
 // ── API ───────────────────────────────────────────────────────────────────────
+function lastStart() {
+  const l = el('lastelinje');
+  l.classList.remove('ferdig');
+  l.classList.add('aktiv');
+}
+function lastSlutt() {
+  const l = el('lastelinje');
+  l.classList.remove('aktiv');
+  l.classList.add('ferdig');
+  setTimeout(() => { l.classList.remove('ferdig'); l.style.width = '0'; }, 300);
+}
+
 async function api(action, data = {}) {
-  const body = new URLSearchParams({ data: JSON.stringify({ action, ...data }) });
-  const resp = await fetch(SCRIPT_URL, { method: 'POST', body });
-  return resp.json();
+  lastStart();
+  try {
+    const body = new URLSearchParams({ data: JSON.stringify({ action, ...data }) });
+    const resp = await fetch(SCRIPT_URL, { method: 'POST', body });
+    return resp.json();
+  } finally {
+    lastSlutt();
+  }
 }
 async function apiGet(params = {}) {
-  const resp = await fetch(SCRIPT_URL + '?' + new URLSearchParams(params));
-  return resp.json();
+  lastStart();
+  try {
+    const resp = await fetch(SCRIPT_URL + '?' + new URLSearchParams(params));
+    return resp.json();
+  } finally {
+    lastSlutt();
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
