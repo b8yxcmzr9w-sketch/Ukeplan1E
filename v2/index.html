@@ -1093,12 +1093,14 @@ function redigerBruker(b) {
 }
 
 async function lagreBruker() {
-  const navn = el('bruker-navn').value.trim();
+  const navn     = el('bruker-navn').value.trim();
+  const origNavn = el('bruker-orig-navn').value.trim();
   if (!navn) { visInlineError('bruker-feil', 'Navn er påkrevd'); return; }
   const res = await api('saveBruker', {
     token: S.bruker.token, isAdmin: true,
     bruker: {
       navn,
+      origNavn: origNavn || navn,
       passord:  el('bruker-passord').value || null,
       klasser:  el('bruker-klasser').value.trim(),
       erAdmin:  el('bruker-er-admin').checked
