@@ -1128,17 +1128,19 @@ function leggTilSkoleruteTr(tbody, r) {
 
 async function lagreSkolerute() {
   const rader = [];
-  let ugyldig = 0;
+  let ugyldig = [];
   el('skolerute-tbody').querySelectorAll('tr').forEach(tr => {
     const c = tr.querySelectorAll('input, select');
-    if (!(c[0].value || c[2].value)) return;
     const fra = c[0].value;
     const til = c[1].value || fra;
-    if (fra && til && til < fra) { tr.style.background = '#fff0f0'; ugyldig++; return; }
+    const navn = c[2].value.trim();
+    if (!fra && !navn) return; // tom rad
+    if (navn && !fra) { tr.style.background = '#fff0f0'; ugyldig.push(`«${navn}» mangler fra-dato`); return; }
+    if (fra && til && til < fra) { tr.style.background = '#fff0f0'; ugyldig.push(`«${navn}»: til-dato er før fra-dato`); return; }
     tr.style.background = '';
-    rader.push({ fraDato: fra, tilDato: til, navn: c[2].value, type: c[3].value });
+    rader.push({ fraDato: fra, tilDato: til, navn, type: c[3].value });
   });
-  if (ugyldig) { visMelding(`${ugyldig} rad(er) har ugyldig datoområde (til-dato er før fra-dato)`, 'feil'); return; }
+  if (ugyldig.length) { visMelding(ugyldig.join(' / '), 'feil'); return; }
   const res = await api('saveSkolerute', { token: S.bruker.token, isAdmin: true, rader });
   if (res.ok) {
     visMelding('Skolerute lagret!');
