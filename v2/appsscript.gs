@@ -8,16 +8,29 @@ function doGet(e) {
     return ContentService.createTextOutput(buildIcal(p.klasse || '', p.nptParti || '', p.yffGruppe || ''))
       .setMimeType(ContentService.MimeType.TEXT);
   }
-  const uke = parseInt(p.uke);
   const ar = parseInt(p.ar || new Date().getFullYear());
   const klasse = p.klasse || '';
   const sheet = getSheet('Plan');
   if (!sheet) return jsonResponse({ ok: false, error: 'Plan-fane mangler' });
   const vals = sheet.getDataRange().getValues();
+  const ferieSheet = getSheet('Skolerute');
+
+  // Multi-uke request (for liste-visning)
+  if (p.fraUke && p.tilUke) {
+    const fraUke = parseInt(p.fraUke);
+    const tilUke = parseInt(p.tilUke);
+    const rows = vals.length < 2 ? [] : vals.slice(1)
+      .filter(r => r[0] && parseInt(r[1]) === ar && parseInt(r[2]) >= fraUke && parseInt(r[2]) <= tilUke && (!klasse || r[4] === klasse))
+      .map(rowToObj);
+    const ferie = ferieSheet ? getFerierForRange(ferieSheet, fraUke, tilUke, ar) : [];
+    return jsonResponse({ ok: true, rows, ferie });
+  }
+
+  // Single-uke request
+  const uke = parseInt(p.uke);
   const rows = vals.length < 2 ? [] : vals.slice(1)
     .filter(r => r[0] && parseInt(r[2]) === uke && parseInt(r[1]) === ar && (!klasse || r[4] === klasse))
     .map(rowToObj);
-  const ferieSheet = getSheet('Skolerute');
   const ferie = ferieSheet ? getFerierForUke(ferieSheet, uke, ar) : [];
   return jsonResponse({ ok: true, rows, ferie });
 }
@@ -446,6 +459,22 @@ function getKonfigObj() {
     obj[r[0]].push({ nokkel: r[1], verdi: r[2] });
   });
   return obj;
+}
+
+function getFerierForRange(sheet, fraUke, tilUke, ar) {
+  const jan4 = new Date(ar, 0, 4);
+  const mandag = new Date(jan4);
+  mandag.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (fraUke - 1) * 7);
+  const sondag = new Date(jan4);
+  sondag.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (tilUke - 1) * 7 + 6);
+  return sheet.getDataRange().getValues().slice(1)
+    .filter(r => r[0] && new Date(r[0]) <= sondag && new Date(r[1]) >= mandag)
+    .map(r => ({
+      fraDato: r[0] instanceof Date ? Utilities.formatDate(r[0], 'Europe/Oslo', 'yyyy-MM-dd') : String(r[0] || ''),
+      tilDato: r[1] instanceof Date ? Utilities.formatDate(r[1], 'Europe/Oslo', 'yyyy-MM-dd') : String(r[1] || ''),
+      navn:    String(r[2] || ''),
+      type:    String(r[3] || 'Ferie')
+    }));
 }
 
 function getFerierForUke(sheet, uke, ar) {

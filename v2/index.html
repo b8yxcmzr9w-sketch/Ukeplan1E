@@ -250,6 +250,27 @@ header .spacer { flex: 1; }
 @keyframes toastInn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
 @keyframes toastUt  { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(30px); } }
 
+/* ── Liste-visning ─────────────────────────────────────────────────────────── */
+.liste-tabell { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.liste-tabell th {
+  background: var(--grønn); color: white; padding: 9px 8px;
+  text-align: left; font-weight: 600; white-space: nowrap;
+  position: sticky; top: 0; z-index: 5;
+}
+.liste-tabell td { padding: 7px 8px; border-bottom: 1px solid var(--kant); vertical-align: middle; }
+.liste-tabell tbody tr:hover td { background: var(--grå-lys); }
+.liste-ferie-rad td {
+  background: #fff3cd; font-weight: 600; color: #856404;
+  text-align: center; padding: 7px; font-size: .88rem;
+}
+.liste-ferie-rad:hover td { background: #ffeea3 !important; }
+.liste-uke-hode td {
+  background: var(--grønn-svak); font-weight: 700; color: var(--grønn);
+  font-size: .8rem; letter-spacing: .05em; padding: 5px 8px;
+  text-transform: uppercase;
+}
+.liste-uke-hode:hover td { background: var(--grønn-svak) !important; }
+
 /* ── Utskrift ──────────────────────────────────────────────────────────────── */
 @media print {
   header, .uke-nav button, .filter-bar, .rediger-kn,
@@ -295,6 +316,7 @@ header .spacer { flex: 1; }
     <span class="uke-label" id="uke-label">Uke –</span>
     <input type="number" id="uke-input" min="1" max="53" oninput="gaTilUke(this.value)">
     <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
+    <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
     <button class="btn btn-s btn-sm" onclick="window.print()">Skriv ut</button>
     <button class="btn btn-s btn-sm" onclick="abonnerIcal()">📅 Kalender</button>
   </div>
@@ -322,20 +344,62 @@ header .spacer { flex: 1; }
 
   <!-- Plan-fane -->
   <div id="admin-fane-plan">
-    <div class="uke-nav">
+
+    <!-- Uke-navigasjon (ukesmodus) -->
+    <div id="laerer-uke-nav" class="uke-nav">
       <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
       <span class="uke-label" id="laerer-uke-label">Uke –</span>
       <input type="number" id="laerer-uke-input" min="1" max="53" oninput="gaTilUke(this.value)">
       <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
+      <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
+      <div class="spacer" style="flex:1"></div>
       <button class="btn btn-p btn-sm" onclick="klargjorNyOkt()">+ Ny økt</button>
       <button class="btn btn-s btn-sm skjult" id="btn-lim-inn" onclick="klargjorParse()">📋 Lim inn plan</button>
+      <button class="btn btn-s btn-sm" onclick="byttListeModus(true)" title="Vis som liste">📋 Liste</button>
     </div>
-    <div class="filter-bar">
+
+    <!-- Liste-navigasjon (listemodus) -->
+    <div id="laerer-liste-nav" class="uke-nav skjult">
+      <button class="btn btn-s btn-sm" onclick="listNavigasjon(-6)">← Forrige</button>
+      <span class="uke-label" id="liste-uke-label">Uke –</span>
+      <button class="btn btn-s btn-sm" onclick="listNavigasjon(6)">Neste →</button>
+      <button class="btn btn-s btn-sm" onclick="gaTilNaaListe()">Nå</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn-s btn-sm" onclick="byttListeModus(false)" title="Vis som ukeplan">📅 Ukeplan</button>
+    </div>
+
+    <!-- Gruppe-filter (ukesmodus) -->
+    <div id="laerer-uke-filter" class="filter-bar">
       <select id="laerer-filter-gruppe" onchange="oppdaterLaererVisning()">
         <option value="">Alle grupper</option>
       </select>
     </div>
+
+    <!-- Fag/lærer-filter (listemodus) -->
+    <div id="laerer-liste-filter" class="filter-bar skjult">
+      <select id="liste-filter-fag" onchange="oppdaterListeVisning()">
+        <option value="">Alle fag</option>
+      </select>
+      <select id="liste-filter-laerer" onchange="oppdaterListeVisning()">
+        <option value="">Alle lærere</option>
+      </select>
+    </div>
+
+    <!-- Ukesinnhold -->
     <div id="laerer-uke-innhold"></div>
+
+    <!-- Listeinnhold -->
+    <div id="laerer-liste-innhold" class="skjult">
+      <div style="overflow-x:auto">
+        <table class="liste-tabell">
+          <thead><tr>
+            <th>Uke</th><th>Dag</th><th>Fag</th><th>Gruppe</th>
+            <th>Tid</th><th>Oppmøtested</th><th>Lærer</th><th>Aktivitet</th><th>Info</th><th></th>
+          </tr></thead>
+          <tbody id="liste-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- Konfig-fane -->
@@ -595,14 +659,18 @@ const DAGER = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag'];
 
 // ── Tilstand ──────────────────────────────────────────────────────────────────
 const S = {
-  visning: 'landing',
-  bruker:  null,   // {navn, token, erAdmin, klasser}
-  klasse:  '',
-  uke:     0,
-  ar:      new Date().getFullYear(),
-  konfig:  { fag:[], grupperYFF:[], grupperNPT:[], klasser:[], skoleinfo:{} },
-  ukedata: [],
-  ferie:   []
+  visning:      'landing',
+  bruker:       null,   // {navn, token, erAdmin, klasser}
+  klasse:       '',
+  uke:          0,
+  ar:           new Date().getFullYear(),
+  konfig:       { fag:[], grupperYFF:[], grupperNPT:[], klasser:[], skoleinfo:{} },
+  ukedata:      [],
+  ferie:        [],
+  listeModus:   false,  // false = ukesvisning, true = listevisning
+  listedata:    [],     // alle rows for 6-uker-vinduet
+  listeFerie:   [],     // alle ferieperioder for vinduet
+  listeFraUke:  0       // første uke i listen
 };
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -681,7 +749,18 @@ function startUke() {
 }
 
 function bytteUke(delta) {
-  S.uke = Math.max(1, Math.min(53, S.uke + delta));
+  let nyUke = Math.max(1, Math.min(53, S.uke + delta));
+  if (S.visning === 'elev' && delta > 0) {
+    const maks = Math.min(53, ukeNummer(new Date()) + 6);
+    nyUke = Math.min(nyUke, maks);
+  }
+  S.uke = nyUke;
+  syncUkeInput();
+  lastUkedata();
+}
+
+function gaTilNaaUke() {
+  S.uke = startUke();
   syncUkeInput();
   lastUkedata();
 }
@@ -731,6 +810,16 @@ function visLaerer() {
 
   if (!S.klasse) S.klasse = S.konfig.skoleinfo?.skole_klasse || '';
   oppdaterKlasseBadge();
+
+  // Alltid start i ukesmodus
+  S.listeModus = false;
+  el('laerer-uke-nav').classList.remove('skjult');
+  el('laerer-liste-nav').classList.add('skjult');
+  el('laerer-uke-filter').classList.remove('skjult');
+  el('laerer-liste-filter').classList.add('skjult');
+  el('laerer-uke-innhold').classList.remove('skjult');
+  el('laerer-liste-innhold').classList.add('skjult');
+
   S.uke = startUke();
   syncUkeInput();
   lastUkedata();
@@ -960,8 +1049,11 @@ async function lagreOkt() {
     info:  el('okt-info').value.trim(),
     tid:   el('okt-tid').value
   });
-  if (res.ok) { lukkModal('modal-ny-okt'); lastUkedata(); }
-  else visInlineError('okt-feil', res.error);
+  if (res.ok) {
+    lukkModal('modal-ny-okt');
+    if (S.listeModus) lastListedata();
+    else lastUkedata();
+  } else visInlineError('okt-feil', res.error);
 }
 
 async function slettOkt(id) {
@@ -1537,6 +1629,149 @@ function kopierIcalUrl() {
       document.execCommand('copy');
       visMelding('Lenke kopiert!');
     });
+}
+
+// ── Liste-visning ─────────────────────────────────────────────────────────────
+function byttListeModus(tilListe) {
+  S.listeModus = tilListe;
+  el('laerer-uke-nav').classList.toggle('skjult', tilListe);
+  el('laerer-liste-nav').classList.toggle('skjult', !tilListe);
+  el('laerer-uke-filter').classList.toggle('skjult', tilListe);
+  el('laerer-liste-filter').classList.toggle('skjult', !tilListe);
+  el('laerer-uke-innhold').classList.toggle('skjult', tilListe);
+  el('laerer-liste-innhold').classList.toggle('skjult', !tilListe);
+
+  if (tilListe) {
+    S.listeFraUke = startUke();
+    lastListedata();
+  }
+}
+
+async function lastListedata() {
+  const tilUke = Math.min(53, S.listeFraUke + 5);
+  el('liste-uke-label').textContent = `Uke ${S.listeFraUke}–${tilUke}`;
+  const res = await apiGet({ fraUke: S.listeFraUke, tilUke, ar: S.ar, klasse: S.klasse });
+  if (res.ok) { S.listedata = res.rows || []; S.listeFerie = res.ferie || []; }
+  fyllListeFilter();
+  oppdaterListeVisning();
+}
+
+function gaTilNaaListe() {
+  S.listeFraUke = startUke();
+  lastListedata();
+}
+
+function listNavigasjon(delta) {
+  S.listeFraUke = Math.max(1, S.listeFraUke + delta);
+  lastListedata();
+}
+
+function fyllListeFilter() {
+  const fagSel = el('liste-filter-fag');
+  const valgtFag = fagSel.value;
+  fagSel.innerHTML = '<option value="">Alle fag</option>';
+  [...new Set(S.listedata.map(r => r.fag).filter(Boolean))].sort((a,b) => a.localeCompare(b,'nb'))
+    .forEach(f => fagSel.innerHTML += `<option value="${f}">${f}</option>`);
+  fagSel.value = valgtFag;
+
+  const laererSel = el('liste-filter-laerer');
+  const valgtLaerer = laererSel.value;
+  laererSel.innerHTML = '<option value="">Alle lærere</option>';
+  [...new Set(S.listedata.map(r => r.laerer).filter(n => n && n !== '?'))].sort((a,b) => a.localeCompare(b,'nb'))
+    .forEach(l => laererSel.innerHTML += `<option value="${l}">${l}</option>`);
+  laererSel.value = valgtLaerer;
+}
+
+function oppdaterListeVisning() {
+  const filtrertFag    = el('liste-filter-fag').value;
+  const filtrertLaerer = el('liste-filter-laerer').value;
+  const dagOrden = { Mandag:0, Tirsdag:1, Onsdag:2, Torsdag:3, Fredag:4 };
+  const tilUke = Math.min(53, S.listeFraUke + 5);
+
+  const tbody = el('liste-tbody');
+  tbody.innerHTML = '';
+
+  for (let uke = S.listeFraUke; uke <= tilUke; uke++) {
+    // Finn ferieperioder som overlapper denne uken
+    const jan4 = new Date(S.ar, 0, 4);
+    const man = new Date(jan4);
+    man.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (uke - 1) * 7);
+    const son = new Date(man); son.setDate(man.getDate() + 6);
+    const manStr = man.toISOString().slice(0,10);
+    const sonStr = son.toISOString().slice(0,10);
+    const ukeFerie = S.listeFerie.filter(f => {
+      const fra = f.fraDato || ''; const til = f.tilDato || f.fraDato || '';
+      return fra <= sonStr && til >= manStr;
+    });
+
+    const ukeRader = S.listedata
+      .filter(r => parseInt(r.uke) === uke)
+      .filter(r => !filtrertFag    || r.fag    === filtrertFag)
+      .filter(r => !filtrertLaerer || r.laerer === filtrertLaerer);
+
+    if (!ukeFerie.length && !ukeRader.length) continue;
+
+    // Uke-header
+    const ukeHode = document.createElement('tr');
+    ukeHode.className = 'liste-uke-hode';
+    ukeHode.innerHTML = `<td colspan="10">Uke ${uke}</td>`;
+    tbody.appendChild(ukeHode);
+
+    // Ferie-rad(er)
+    if (ukeFerie.length) {
+      const ferieRad = document.createElement('tr');
+      ferieRad.className = 'liste-ferie-rad';
+      ferieRad.innerHTML = `<td colspan="10">🌿 ${ukeFerie.map(f => f.navn).join(' / ')}</td>`;
+      tbody.appendChild(ferieRad);
+    }
+
+    // Økt-rader sortert etter dag, deretter fag
+    const sorterte = [...ukeRader].sort((a, b) => {
+      const da = dagOrden[a.dag] ?? 9; const db = dagOrden[b.dag] ?? 9;
+      if (da !== db) return da - db;
+      return (a.fag || '').localeCompare(b.fag || '', 'nb');
+    });
+    sorterte.forEach(r => {
+      const tr = document.createElement('tr');
+      const gruppen = r.gruppe && r.gruppe !== 'Alle' ? `<span class="gruppe-badge">${r.gruppe}</span>` : '';
+      const infoIkon = r.info ? `<span title="${r.info.replace(/"/g,'&quot;')}">ℹ️</span>` : '';
+      tr.innerHTML = `
+        <td>${r.uke}</td>
+        <td>${r.dag}</td>
+        <td><span class="fag-badge">${r.fag}</span></td>
+        <td>${gruppen}</td>
+        <td style="white-space:nowrap">${r.tid || ''}</td>
+        <td>${r.oppmotested || ''}</td>
+        <td>${r.laerer || ''}</td>
+        <td>${r.aktivitet || ''}</td>
+        <td>${infoIkon}</td>
+        <td><button class="btn btn-s btn-sm" onclick='kopierOkt(${JSON.stringify(r)})' title="Kopier økt">📋</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  if (!tbody.children.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="10" style="text-align:center;color:var(--grå);padding:30px">Ingen registrerte aktiviteter i denne perioden.</td>';
+    tbody.appendChild(tr);
+  }
+}
+
+function kopierOkt(r) {
+  klargjorNyOkt();
+  el('okt-tittel').textContent = 'Kopier økt';
+  el('okt-id').value           = '';   // ny økt – ikke overskriv original
+  el('okt-klasse').value       = r.klasse || S.klasse;
+  el('okt-fag').value          = r.fag;
+  oppdaterOktGruppe();
+  el('okt-gruppe').value       = r.gruppe;
+  el('okt-dag').value          = r.dag;
+  el('okt-uke').value          = r.uke;
+  el('okt-laerer').value       = r.laerer || '';
+  el('okt-aktivitet').value    = r.aktivitet || '';
+  el('okt-oppmotested').value  = r.oppmotested || '';
+  el('okt-info').value         = r.info || '';
+  el('okt-tid').value          = r.tid || '';
 }
 
 // ── Modal-hjelper ─────────────────────────────────────────────────────────────
