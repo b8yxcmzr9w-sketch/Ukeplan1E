@@ -405,6 +405,7 @@ header .spacer { flex: 1; }
         </table>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-s btn-sm" onclick="lukkSkoleruteForslag()">Avbryt</button>
         <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="leggTilValgteSkoleruterader()">Legg til valgte</button>
       </div>
     </div>
@@ -1146,6 +1147,12 @@ async function tolkSkolerute(ev) {
 
 function srVelgAlle(cbx) {
   el('skolerute-forslag-tbody').querySelectorAll('.sr-cbx').forEach(c => c.checked = cbx.checked);
+}
+
+function lukkSkoleruteForslag() {
+  el('skolerute-forslag').classList.add('skjult');
+  el('skolerute-tekst').value = '';
+  el('skolerute-forslag-tbody').innerHTML = '';
 }
 
 async function leggTilValgteSkoleruterader() {
