@@ -661,6 +661,11 @@ header .spacer { flex: 1; }
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxcfuPgUgQJ4-SEHgfPcWXwhyg6xtvkslln80T82mSg22sZG2bIyjm3cBskYJ_xHF_iUw/exec';
 const DAGER = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag'];
 
+// ── Uke-cache ─────────────────────────────────────────────────────────────────
+const ukeCache = new Map(); // key: "ar-uke-klasse"
+function _cacheKey(uke, ar, klasse) { return `${ar}-${uke}-${klasse}`; }
+function cacheSlett(uke, ar, klasse) { ukeCache.delete(_cacheKey(uke, ar, klasse)); }
+
 // ── Tilstand ──────────────────────────────────────────────────────────────────
 const S = {
   visning:      'landing',
@@ -849,10 +854,29 @@ async function lastUkedata() {
     el(innholdId).innerHTML = '<p class="tom-uke">Klassenavn er ikke satt i Innstillinger.</p>';
     return;
   }
-  const res = await apiGet({ uke: S.uke, ar: S.ar, klasse });
-  if (res.ok) { S.ukedata = res.rows || []; S.ferie = res.ferie || []; }
+  const key = _cacheKey(S.uke, S.ar, klasse);
+  if (ukeCache.has(key)) {
+    const c = ukeCache.get(key);
+    S.ukedata = c.rows; S.ferie = c.ferie;
+  } else {
+    const res = await apiGet({ uke: S.uke, ar: S.ar, klasse });
+    if (res.ok) {
+      S.ukedata = res.rows || []; S.ferie = res.ferie || [];
+      ukeCache.set(key, { rows: S.ukedata, ferie: S.ferie });
+    }
+  }
   if (S.visning === 'elev') oppdaterElevVisning();
   else oppdaterLaererVisning();
+
+  // Forhåndsinnlast nabouker stille i bakgrunnen
+  [-1, 1].forEach(d => {
+    const u = Math.max(1, Math.min(53, S.uke + d));
+    const k = _cacheKey(u, S.ar, klasse);
+    if (!ukeCache.has(k))
+      apiGet({ uke: u, ar: S.ar, klasse }).then(r => {
+        if (r.ok) ukeCache.set(k, { rows: r.rows || [], ferie: r.ferie || [] });
+      });
+  });
 }
 
 // ── Elev-rendering ────────────────────────────────────────────────────────────
@@ -1053,6 +1077,7 @@ async function lagreOkt() {
   });
   if (res.ok) {
     lukkModal('modal-ny-okt');
+    cacheSlett(parseInt(el('okt-uke').value), S.ar, S.klasse);
     if (S.listeModus) lastListedata();
     else lastUkedata();
   } else visInlineError('okt-feil', res.error);
@@ -1061,7 +1086,7 @@ async function lagreOkt() {
 async function slettOkt(id) {
   if (!confirm('Slett denne økten?')) return;
   const res = await api('delete', { token: S.bruker.token, id });
-  if (res.ok) lastUkedata();
+  if (res.ok) { cacheSlett(S.uke, S.ar, S.klasse); lastUkedata(); }
 }
 
 // ── Parse ─────────────────────────────────────────────────────────────────────
@@ -1268,7 +1293,7 @@ async function lagreParsetPlan() {
     if (!res.ok) feil++;
   }
   if (feil) visMelding(`${feil} rader feilet. Prøv igjen.`, 'feil');
-  else { lukkModal('modal-parse'); lastUkedata(); visMelding(`${rader.length} økt(er) lagret`); }
+  else { lukkModal('modal-parse'); ukeCache.clear(); lastUkedata(); visMelding(`${rader.length} økt(er) lagret`); }
 }
 
 // ── Admin – Konfig ────────────────────────────────────────────────────────────
