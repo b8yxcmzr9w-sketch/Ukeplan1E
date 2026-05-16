@@ -384,9 +384,9 @@ header .spacer { flex: 1; }
     </div>
     <div id="skolerute-preview" class="kort skjult">
       <h3 style="margin-bottom:10px">Gjennomgå og lagre</h3>
-      <div style="overflow-x:auto">
+      <div style="overflow:auto;max-height:55vh">
         <table class="parse-tabell">
-          <thead><tr><th>Fra dato</th><th>Til dato</th><th>Navn</th><th>Type</th><th></th></tr></thead>
+          <thead><tr style="position:sticky;top:0;background:var(--grå-lys);z-index:1"><th>Fra dato</th><th>Til dato</th><th>Navn</th><th>Type</th><th></th></tr></thead>
           <tbody id="skolerute-tbody"></tbody>
         </table>
       </div>
