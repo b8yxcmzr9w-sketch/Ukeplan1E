@@ -1107,7 +1107,7 @@ async function tolkSkolerute(ev) {
   if (!res.ok) { visMelding(res.error, 'feil'); return; }
   const tbody = el('skolerute-tbody');
   tbody.innerHTML = '';
-  res.rader.forEach(r => leggTilSkoleruteTr(tbody, r));
+  sorterSkolerute(res.rader).forEach(r => leggTilSkoleruteTr(tbody, r));
   el('skolerute-preview').classList.remove('skjult');
 }
 
@@ -1160,12 +1160,16 @@ async function lagreSkolerute() {
   } else visMelding(res.error, 'feil');
 }
 
+function sorterSkolerute(rader) {
+  return [...rader].sort((a, b) => (a.fraDato || '').localeCompare(b.fraDato || ''));
+}
+
 async function lastSkolerute() {
   const res = await api('getSkolerute', { token: S.bruker.token, isAdmin: true });
   if (!res.ok) return;
   const tbody = el('skolerute-tbody');
   tbody.innerHTML = '';
-  res.rader.forEach(r => leggTilSkoleruteTr(tbody, r));
+  sorterSkolerute(res.rader).forEach(r => leggTilSkoleruteTr(tbody, r));
   el('skolerute-preview').classList.remove('skjult');
 }
 
