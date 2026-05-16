@@ -532,6 +532,7 @@ header .spacer { flex: 1; }
           </tr></thead>
           <tbody id="parse-tbody"></tbody>
         </table>
+        <datalist id="laerer-datalist"></datalist>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn btn-s btn-sm" onclick="leggTilParseRad()">+ Rad</button>
@@ -1011,6 +1012,22 @@ function erIFerie(dato, skoleruteRader) {
   return skoleruteRader.some(r => ds >= (r.fraDato || '') && ds <= (r.tilDato || r.fraDato || ''));
 }
 
+// Sjekker om et parsert lærernavn matcher en registrert bruker
+// «Lars» matcher «Lars Eriksen», «Lars E» matcher «Lars Eriksen» via initial
+function matcherLærer(parsedNavn, registrerteNavn) {
+  const pdeler = parsedNavn.trim().toLowerCase().split(/\s+/);
+  const pFornavn  = pdeler[0];
+  const pInitial  = pdeler[1]?.[0]; // valgfri bokstav/initial
+  return registrerteNavn.some(reg => {
+    const rdeler   = reg.toLowerCase().split(/\s+/);
+    const rFornavn = rdeler[0];
+    const rInitial = rdeler[1]?.[0];
+    if (pFornavn !== rFornavn) return false;
+    if (pInitial && rInitial) return pInitial === rInitial;
+    return true;
+  });
+}
+
 async function tolkPlan(ev) {
   const tekst  = el('parse-tekst').value.trim();
   if (!tekst) return;
@@ -1029,16 +1046,20 @@ async function tolkPlan(ev) {
   btn.textContent = 'Tolk med AI'; btn.disabled = false;
   if (!parseRes.ok) { visMelding(parseRes.error, 'feil'); return; }
 
-  const skoleruteRader = srRes.ok  ? srRes.rader   : [];
-  const brukereNavn    = brukereRes.ok ? brukereRes.brukere.map(b => b.navn.toLowerCase()) : [];
+  const skoleruteRader = srRes.ok    ? srRes.rader   : [];
+  const brukere        = brukereRes.ok ? brukereRes.brukere : [];
+  const brukereNavn    = brukere.map(b => b.navn);
+
+  // Fyll datalist med registrerte brukernavn
+  el('laerer-datalist').innerHTML = brukereNavn.map(n => `<option value="${n}">`).join('');
 
   visParseResultat(parseRes.rader, fag, klasse, skoleruteRader);
 
-  // Finn lærere som ikke er registrert
+  // Finn lærere uten treff – bruker fornavn+initial-matching
   const ukjente = [...new Set(
     parseRes.rader
       .map(r => r.laerer)
-      .filter(n => n && n !== '?' && !brukereNavn.includes(n.toLowerCase()))
+      .filter(n => n && n !== '?' && !matcherLærer(n, brukereNavn))
   )];
   visParseLaererForslag(ukjente);
 }
@@ -1068,7 +1089,7 @@ function parseRad(r, fag, klasse, feil, skoleruteRader = []) {
     <td><input value="${r.uke    || ''}" style="width:48px"></td>
     <td><input value="${r.dag    || ''}"></td>
     <td><input value="${r.gruppe || 'Alle'}"></td>
-    <td><input value="${r.laerer || ''}"></td>
+    <td><input value="${r.laerer || ''}" list="laerer-datalist"></td>
     <td><input value="${r.aktivitet   || ''}"></td>
     <td><input value="${r.oppmotested || ''}"></td>
     <td><input value="${r.info  || ''}"></td>
@@ -1080,20 +1101,25 @@ function parseRad(r, fag, klasse, feil, skoleruteRader = []) {
 function visParseLaererForslag(ukjente) {
   const div = el('parse-laerer-forslag');
   if (!ukjente.length) { div.classList.add('skjult'); return; }
-  div.dataset.ukjente = JSON.stringify(ukjente);
+  const rader = ukjente.map(n => `
+    <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
+      <input type="checkbox" class="pl-cbx" value="${n}" checked>
+      <span>${n}</span>
+      <span style="color:var(--grå);font-size:.8rem">– passord blir «${n}»</span>
+    </label>`).join('');
   div.innerHTML = `
-    <strong>Ukjente lærere:</strong> ${ukjente.map(n => `<em>${n}</em>`).join(', ')}<br>
-    <span style="color:var(--grå)">Disse er ikke registrert som brukere. De kan legges til med passord = navn – læreren må bytte passord ved første innlogging.</span>
-    <div style="margin-top:8px">
-      <button class="btn btn-s btn-sm" onclick="leggTilParseLaerere()">+ Legg til ${ukjente.length} lærer(e)</button>
-    </div>`;
+    <strong style="display:block;margin-bottom:6px">Ukjente lærere – opprette bruker?</strong>
+    <span style="color:var(--grå);font-size:.82rem">Velg hvem som skal legges til. Passord = navn, og læreren må bytte passord ved første innlogging.</span>
+    <div style="margin:8px 0">${rader}</div>
+    <button class="btn btn-s btn-sm" onclick="leggTilParseLaerere()">Legg til valgte</button>`;
   div.classList.remove('skjult');
 }
 
 async function leggTilParseLaerere() {
-  const ukjente = JSON.parse(el('parse-laerer-forslag').dataset.ukjente || '[]');
+  const valgte = [...el('parse-laerer-forslag').querySelectorAll('.pl-cbx:checked')].map(c => c.value);
+  if (!valgte.length) { visMelding('Ingen valgt', 'info'); return; }
   let ok = 0;
-  for (const navn of ukjente) {
+  for (const navn of valgte) {
     const res = await api('saveBruker', {
       token: S.bruker.token, isAdmin: true,
       bruker: { navn, origNavn: navn, passord: navn, klasser: 'Alle', erAdmin: false, maByttePassord: true }
