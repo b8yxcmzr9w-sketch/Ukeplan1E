@@ -389,11 +389,18 @@ header .spacer { flex: 1; }
         <button id="btn-lagre-skolerute" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreSkolerute()" disabled>Lagre skolerute</button>
       </div>
     </div>
-    <div class="kort">
-      <h3 style="margin-bottom:10px">Lim inn skolerute</h3>
-      <p style="font-size:.88rem;color:var(--grå);margin-bottom:12px">Lim inn tekst fra skoleruten. AI trekker ut ferier, høytider og planleggingsdager.</p>
-      <div class="felt"><textarea id="skolerute-tekst" rows="6" placeholder="Lim inn skolerute her..."></textarea></div>
-      <button class="btn btn-p" onclick="tolkSkolerute(event)">Tolk med AI</button>
+    <div class="kort" style="padding-bottom:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-bottom:16px" onclick="toggleLimInn()">
+        <h3>Lim inn skolerute</h3>
+        <span id="lim-inn-pil" style="font-size:1.1rem;color:var(--grå)">▼</span>
+      </div>
+      <div id="lim-inn-innhold">
+        <p style="font-size:.88rem;color:var(--grå);margin-bottom:12px">Lim inn tekst fra skoleruten. AI trekker ut ferier, høytider og planleggingsdager.</p>
+        <div class="felt"><textarea id="skolerute-tekst" rows="6" placeholder="Lim inn skolerute her..."></textarea></div>
+        <div style="padding-bottom:16px">
+          <button class="btn btn-p" onclick="tolkSkolerute(event)">Tolk med AI</button>
+        </div>
+      </div>
     </div>
     <div id="skolerute-forslag" class="kort skjult">
       <h3 style="margin-bottom:6px">Velg rader som skal legges til</h3>
@@ -1153,6 +1160,13 @@ function lukkSkoleruteForslag() {
   el('skolerute-forslag').classList.add('skjult');
   el('skolerute-tekst').value = '';
   el('skolerute-forslag-tbody').innerHTML = '';
+}
+
+function toggleLimInn() {
+  const innhold = el('lim-inn-innhold');
+  const pil = el('lim-inn-pil');
+  const skjult = innhold.classList.toggle('skjult');
+  pil.textContent = skjult ? '▶' : '▼';
 }
 
 async function leggTilValgteSkoleruterader() {
