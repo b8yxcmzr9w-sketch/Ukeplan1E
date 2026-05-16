@@ -466,6 +466,9 @@ header .spacer { flex: 1; }
 <div id="modal-passord" class="modal-bg skjult">
   <div class="modal">
     <h3>Bytt passord</h3>
+    <p id="pass-hint" class="skjult" style="font-size:.85rem;color:var(--grønn);background:var(--grønn-svak);padding:9px 12px;border-radius:var(--radius);margin-bottom:12px">
+      👋 Første innlogging: ditt nåværende passord er brukernavnet ditt. Velg et nytt passord.
+    </p>
     <div class="felt"><label>Nåværende passord</label><input id="pass-gammelt" type="password"></div>
     <div class="felt"><label>Nytt passord</label><input id="pass-nytt" type="password"></div>
     <div class="felt"><label>Bekreft nytt passord</label><input id="pass-bekreft" type="password"></div>
@@ -534,6 +537,7 @@ header .spacer { flex: 1; }
         <button class="btn btn-s btn-sm" onclick="leggTilParseRad()">+ Rad</button>
         <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreParsetPlan()">Lagre valgte</button>
       </div>
+      <div id="parse-laerer-forslag" class="skjult" style="margin-top:14px;padding:12px;background:#fffbea;border-left:3px solid #f59e0b;border-radius:var(--radius);font-size:.88rem"></div>
     </div>
     <div class="modal-bunn">
       <button class="btn btn-s" onclick="lukkModal('modal-parse')">Lukk</button>
@@ -845,6 +849,14 @@ async function loggInn() {
   sessionStorage.setItem('bruker', JSON.stringify(S.bruker));
   lukkModal('modal-login');
   oppdaterBrukerHeader();
+  if (res.maByttePassord) {
+    el('pass-hint').classList.remove('skjult');
+    el('pass-gammelt').value = '';
+    el('pass-nytt').value = '';
+    el('pass-bekreft').value = '';
+    el('pass-feil').classList.add('skjult');
+    visModal('modal-passord');
+  }
   visLaerer();
 }
 
@@ -868,8 +880,11 @@ async function byttPassord() {
   const bekreft = el('pass-bekreft').value;
   if (nytt !== bekreft) { visInlineError('pass-feil', 'Passordene stemmer ikke overens'); return; }
   const res = await api('changePassord', { token: S.bruker.token, gammeltPassord: gammelt, nyttPassord: nytt });
-  if (res.ok) { lukkModal('modal-passord'); visMelding('Passord endret!'); }
-  else visInlineError('pass-feil', res.error);
+  if (res.ok) {
+    lukkModal('modal-passord');
+    el('pass-hint').classList.add('skjult');
+    visMelding('Passord endret!');
+  } else visInlineError('pass-feil', res.error);
 }
 
 // ── Økt CRUD ──────────────────────────────────────────────────────────────────
@@ -979,6 +994,23 @@ function oppdaterParseGruppe() {
   }
 }
 
+// ── Parse-hjelpere ────────────────────────────────────────────────────────────
+function ukeDagTilDato(uke, dag, ar) {
+  const offset = { Mandag:0, Tirsdag:1, Onsdag:2, Torsdag:3, Fredag:4 };
+  if (!uke || !dag || offset[dag] === undefined) return null;
+  const jan4   = new Date(ar, 0, 4);
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (uke - 1) * 7);
+  const d = new Date(monday);
+  d.setDate(monday.getDate() + offset[dag]);
+  return d;
+}
+
+function erIFerie(dato, skoleruteRader) {
+  const ds = dato.toISOString().slice(0, 10);
+  return skoleruteRader.some(r => ds >= (r.fraDato || '') && ds <= (r.tilDato || r.fraDato || ''));
+}
+
 async function tolkPlan(ev) {
   const tekst  = el('parse-tekst').value.trim();
   if (!tekst) return;
@@ -987,30 +1019,52 @@ async function tolkPlan(ev) {
   const gruppe = fag === 'YFF' ? el('parse-gruppe').value : '';
   const btn = ev.target;
   btn.textContent = 'Tolker...'; btn.disabled = true;
-  const res = await api('parse', { token: S.bruker.token, isAdmin: S.bruker.erAdmin, tekst, fag, klasse, gruppe });
+
+  const [parseRes, brukereRes, srRes] = await Promise.all([
+    api('parse',        { token: S.bruker.token, isAdmin: S.bruker.erAdmin, tekst, fag, klasse, gruppe }),
+    api('getBrukere',   { token: S.bruker.token, isAdmin: true }),
+    api('getSkolerute', { token: S.bruker.token, isAdmin: true })
+  ]);
+
   btn.textContent = 'Tolk med AI'; btn.disabled = false;
-  if (!res.ok) { visMelding(res.error, 'feil'); return; }
-  visParseResultat(res.rader, fag, klasse);
+  if (!parseRes.ok) { visMelding(parseRes.error, 'feil'); return; }
+
+  const skoleruteRader = srRes.ok  ? srRes.rader   : [];
+  const brukereNavn    = brukereRes.ok ? brukereRes.brukere.map(b => b.navn.toLowerCase()) : [];
+
+  visParseResultat(parseRes.rader, fag, klasse, skoleruteRader);
+
+  // Finn lærere som ikke er registrert
+  const ukjente = [...new Set(
+    parseRes.rader
+      .map(r => r.laerer)
+      .filter(n => n && n !== '?' && !brukereNavn.includes(n.toLowerCase()))
+  )];
+  visParseLaererForslag(ukjente);
 }
 
-function visParseResultat(rader, fag, klasse) {
+function visParseResultat(rader, fag, klasse, skoleruteRader = []) {
   const tbody = el('parse-tbody');
   tbody.innerHTML = '';
   rader.forEach(r => {
     const feil = !r.aktivitet || r.laerer === '?';
-    tbody.appendChild(parseRad(r, fag, klasse, feil));
+    tbody.appendChild(parseRad(r, fag, klasse, feil, skoleruteRader));
   });
-  el('parse-velg-alle').checked = true;
+  pOppdaterVelgAlle();
   el('parse-resultat').classList.remove('skjult');
 }
 
-function parseRad(r, fag, klasse, feil) {
+function parseRad(r, fag, klasse, feil, skoleruteRader = []) {
+  const dato   = ukeDagTilDato(r.uke, r.dag, S.ar);
+  const iFerie = dato ? erIFerie(dato, skoleruteRader) : false;
   const tr = document.createElement('tr');
-  if (feil) tr.className = 'rad-feil';
+  if (iFerie)      tr.style.background = '#fff9db';
+  else if (feil)   tr.className = 'rad-feil';
   tr.dataset.fag    = fag;
   tr.dataset.klasse = klasse;
+  if (iFerie) tr.title = 'Denne dagen er registrert i skoleruta – automatisk avkrysset av';
   tr.innerHTML = `
-    <td style="text-align:center"><input type="checkbox" class="p-cbx" checked></td>
+    <td style="text-align:center"><input type="checkbox" class="p-cbx" ${iFerie ? '' : 'checked'}></td>
     <td><input value="${r.uke    || ''}" style="width:48px"></td>
     <td><input value="${r.dag    || ''}"></td>
     <td><input value="${r.gruppe || 'Alle'}"></td>
@@ -1021,6 +1075,33 @@ function parseRad(r, fag, klasse, feil) {
     <td><input value="${r.tid   || ''}" style="width:60px"></td>
     <td><button class="btn btn-f btn-sm" onclick="this.closest('tr').remove();pOppdaterVelgAlle()">✕</button></td>`;
   return tr;
+}
+
+function visParseLaererForslag(ukjente) {
+  const div = el('parse-laerer-forslag');
+  if (!ukjente.length) { div.classList.add('skjult'); return; }
+  div.dataset.ukjente = JSON.stringify(ukjente);
+  div.innerHTML = `
+    <strong>Ukjente lærere:</strong> ${ukjente.map(n => `<em>${n}</em>`).join(', ')}<br>
+    <span style="color:var(--grå)">Disse er ikke registrert som brukere. De kan legges til med passord = navn – læreren må bytte passord ved første innlogging.</span>
+    <div style="margin-top:8px">
+      <button class="btn btn-s btn-sm" onclick="leggTilParseLaerere()">+ Legg til ${ukjente.length} lærer(e)</button>
+    </div>`;
+  div.classList.remove('skjult');
+}
+
+async function leggTilParseLaerere() {
+  const ukjente = JSON.parse(el('parse-laerer-forslag').dataset.ukjente || '[]');
+  let ok = 0;
+  for (const navn of ukjente) {
+    const res = await api('saveBruker', {
+      token: S.bruker.token, isAdmin: true,
+      bruker: { navn, origNavn: navn, passord: navn, klasser: 'Alle', erAdmin: false, maByttePassord: true }
+    });
+    if (res.ok) ok++;
+  }
+  if (ok) visMelding(`${ok} lærer(e) lagt til`);
+  el('parse-laerer-forslag').classList.add('skjult');
 }
 
 function pVelgAlle(cbx) {
