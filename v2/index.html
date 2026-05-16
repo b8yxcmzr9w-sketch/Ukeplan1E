@@ -89,11 +89,15 @@ header .spacer { flex: 1; }
 .uke-nav {
   display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
 }
-.uke-label { font-size: 1.1rem; font-weight: 600; flex: 1; min-width: 80px; }
-.uke-nav input[type=number] {
-  width: 68px; padding: 6px 8px; border: 1px solid var(--kant);
-  border-radius: var(--radius); font-size: .93rem;
+.uke-label { font-size: 1.05rem; font-weight: 600; white-space: nowrap; }
+.uke-nav .uke-nr-input {
+  width: 46px; padding: 5px 6px; border: 1px solid var(--kant);
+  border-radius: var(--radius); font-size: 1.05rem; font-weight: 600;
+  text-align: center; background: white;
+  -moz-appearance: textfield;
 }
+.uke-nav .uke-nr-input::-webkit-inner-spin-button,
+.uke-nav .uke-nr-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
 /* ── Filter ────────────────────────────────────────────────────────────────── */
 .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -313,8 +317,8 @@ header .spacer { flex: 1; }
 <div id="view-elev" class="container">
   <div class="uke-nav">
     <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
-    <span class="uke-label" id="uke-label">Uke –</span>
-    <input type="number" id="uke-input" min="1" max="53" oninput="gaTilUke(this.value)">
+    <span class="uke-label">Uke</span>
+    <input type="number" id="uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" oninput="gaTilUke(this.value)">
     <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
     <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
     <button class="btn btn-s btn-sm" onclick="window.print()">Skriv ut</button>
@@ -348,8 +352,8 @@ header .spacer { flex: 1; }
     <!-- Uke-navigasjon (ukesmodus) -->
     <div id="laerer-uke-nav" class="uke-nav">
       <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
-      <span class="uke-label" id="laerer-uke-label">Uke –</span>
-      <input type="number" id="laerer-uke-input" min="1" max="53" oninput="gaTilUke(this.value)">
+      <span class="uke-label">Uke</span>
+      <input type="number" id="laerer-uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" oninput="gaTilUke(this.value)">
       <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
       <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
       <div class="spacer" style="flex:1"></div>
@@ -771,9 +775,7 @@ function gaTilUke(val) {
 }
 
 function syncUkeInput() {
-  const lbl = S.visning === 'elev' ? 'uke-label' : 'laerer-uke-label';
   const inp = S.visning === 'elev' ? 'uke-input' : 'laerer-uke-input';
-  el(lbl).textContent = 'Uke ' + S.uke;
   el(inp).value = S.uke;
 }
 
