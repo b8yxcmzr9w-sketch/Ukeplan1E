@@ -168,12 +168,23 @@ header .spacer { flex: 1; }
 .fane.aktiv { color: var(--grønn); border-bottom-color: var(--grønn); font-weight: 600; }
 
 /* ── Konfig-liste-rad ──────────────────────────────────────────────────────── */
-.konfig-rad { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.konfig-rad input, .konfig-rad select {
+.konfig-rad { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.konfig-rad > input, .konfig-rad select {
   flex: 1; padding: 7px 10px; border: 1px solid var(--kant);
-  border-radius: var(--radius); font-size: .9rem;
+  border-radius: var(--radius); font-size: .9rem; min-width: 100px;
 }
 .konfig-rad select { flex: 0 0 160px; }
+.dag-cbx-gruppe { display: flex; gap: 2px; flex-shrink: 0; }
+.dag-cbx-gruppe label {
+  display: flex; align-items: center; gap: 3px; padding: 5px 7px;
+  border: 1px solid var(--kant); border-radius: var(--radius);
+  font-size: .8rem; cursor: pointer; user-select: none;
+  background: white; transition: background .1s, border-color .1s;
+}
+.dag-cbx-gruppe label:has(input:checked) {
+  background: var(--grønn-svak); border-color: var(--grønn-lys); color: var(--grønn); font-weight: 600;
+}
+.dag-cbx-gruppe input[type=checkbox] { display: none; }
 
 /* ── Parse-tabell ──────────────────────────────────────────────────────────── */
 .parse-tabell { width: 100%; border-collapse: collapse; font-size: .83rem; }
@@ -877,7 +888,10 @@ function oppdaterOktGruppe() {
   const fag = el('okt-fag').value;
   fyllGruppeForFag(el('okt-gruppe'), fag);
   const fc = S.konfig.fag.find(f => f.navn === fag);
-  if (fc && fc.dag) el('okt-dag').value = fc.dag;
+  if (fc && fc.dag) {
+    const dager = fc.dag.split(',').map(d => d.trim()).filter(Boolean);
+    if (dager.length && !dager.includes(el('okt-dag').value)) el('okt-dag').value = dager[0];
+  }
 }
 
 function fyllGruppeForFag(sel, fag) {
@@ -1054,6 +1068,13 @@ function lastKonfig() {
   visKonfigListe('konfig-npt-liste', k.grupperNPT,            false, []);
 }
 
+function dagCheckboxer(valgte) {
+  const aktive = valgte ? valgte.split(',').map(d => d.trim()).filter(Boolean) : [];
+  return `<div class="dag-cbx-gruppe">${DAGER.map(d =>
+    `<label><input type="checkbox" value="${d}" ${aktive.includes(d) ? 'checked' : ''}>${d.slice(0,2)}</label>`
+  ).join('')}</div>`;
+}
+
 function visKonfigListe(id, items, medDag, fagData) {
   el(id).innerHTML = '';
   items.forEach(item => {
@@ -1061,8 +1082,8 @@ function visKonfigListe(id, items, medDag, fagData) {
     const dag    = fagObj ? fagObj.dag : '';
     const div = document.createElement('div');
     div.className = 'konfig-rad';
-    div.innerHTML = `<input value="${item}">
-      ${medDag ? `<select><option value="">Ingen fast dag</option>${DAGER.map(d => `<option value="${d}" ${dag===d?'selected':''}>${d}</option>`).join('')}</select>` : ''}
+    div.innerHTML = `<input type="text" value="${item}">
+      ${medDag ? dagCheckboxer(dag) : ''}
       <button class="btn btn-f btn-sm" onclick="this.parentNode.remove()">✕</button>`;
     el(id).appendChild(div);
   });
@@ -1071,8 +1092,8 @@ function visKonfigListe(id, items, medDag, fagData) {
 function leggTilFag() {
   const div = document.createElement('div');
   div.className = 'konfig-rad';
-  div.innerHTML = `<input placeholder="Fagnavn">
-    <select><option value="">Ingen fast dag</option>${DAGER.map(d => `<option value="${d}">${d}</option>`).join('')}</select>
+  div.innerHTML = `<input type="text" placeholder="Fagnavn">
+    ${dagCheckboxer('')}
     <button class="btn btn-f btn-sm" onclick="this.parentNode.remove()">✕</button>`;
   el('konfig-fag-liste').appendChild(div);
 }
@@ -1099,9 +1120,9 @@ async function lagreNPT() { await lagreKonfigRader(samleKonfig()); }
 function samleKonfig() {
   const rader = [];
   el('konfig-fag-liste').querySelectorAll('.konfig-rad').forEach(div => {
-    const inp = div.querySelector('input');
-    const sel = div.querySelector('select');
-    if (inp.value.trim()) rader.push({ type:'fag', nokkel: inp.value.trim(), verdi: sel ? sel.value : '' });
+    const inp   = div.querySelector('input[type=text]');
+    const dager = [...div.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value).join(',');
+    if (inp && inp.value.trim()) rader.push({ type:'fag', nokkel: inp.value.trim(), verdi: dager });
   });
   [['yff','gruppe_yff'],['npt','gruppe_npt']].forEach(([key, type]) => {
     el(`konfig-${key}-liste`).querySelectorAll('input').forEach(inp => {
