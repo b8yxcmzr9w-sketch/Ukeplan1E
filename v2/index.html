@@ -1118,8 +1118,8 @@ function leggTilSkoleruterad() {
 function leggTilSkoleruteTr(tbody, r) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="date" value="${r.fraDato || ''}"></td>
-    <td><input type="date" value="${r.tilDato || ''}"></td>
+    <td><input type="date" value="${r.fraDato || ''}" onkeydown="return false"></td>
+    <td><input type="date" value="${r.tilDato || ''}" onkeydown="return false"></td>
     <td><input value="${r.navn || ''}"></td>
     <td><select>${['Ferie','Høytid','Planleggingsdag'].map(t => `<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select></td>
     <td><button class="btn btn-f btn-sm" onclick="this.closest('tr').remove()">✕</button></td>`;
