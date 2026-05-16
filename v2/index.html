@@ -386,7 +386,7 @@ header .spacer { flex: 1; }
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn btn-s btn-sm" onclick="leggTilSkoleruterad()">+ Rad</button>
-        <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreSkolerute()">Lagre skolerute</button>
+        <button id="btn-lagre-skolerute" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreSkolerute()" disabled>Lagre skolerute</button>
       </div>
     </div>
     <div class="kort">
@@ -1118,12 +1118,24 @@ function leggTilSkoleruterad() {
 function leggTilSkoleruteTr(tbody, r) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="date" value="${r.fraDato || ''}" onkeydown="return false"></td>
-    <td><input type="date" value="${r.tilDato || ''}" onkeydown="return false"></td>
-    <td><input value="${r.navn || ''}"></td>
-    <td><select>${['Ferie','Høytid','Planleggingsdag'].map(t => `<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select></td>
-    <td><button class="btn btn-f btn-sm" onclick="this.closest('tr').remove()">✕</button></td>`;
+    <td><input type="date" value="${r.fraDato || ''}" onkeydown="return false" onchange="synkTilDato(this);oppdaterLagreKnapp()"></td>
+    <td><input type="date" value="${r.tilDato || ''}" onkeydown="return false" onchange="oppdaterLagreKnapp()"></td>
+    <td><input value="${r.navn || ''}" oninput="oppdaterLagreKnapp()"></td>
+    <td><select onchange="oppdaterLagreKnapp()">${['Ferie','Høytid','Planleggingsdag'].map(t => `<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select></td>
+    <td><button class="btn btn-f btn-sm" onclick="this.closest('tr').remove();oppdaterLagreKnapp()">✕</button></td>`;
   tbody.appendChild(tr);
+  oppdaterLagreKnapp();
+}
+
+function synkTilDato(fraInput) {
+  const tr = fraInput.closest('tr');
+  const tilInput = tr.querySelectorAll('input[type=date]')[1];
+  if (!tilInput.value || tilInput.value < fraInput.value) tilInput.value = fraInput.value;
+}
+
+function oppdaterLagreKnapp() {
+  const harRader = el('skolerute-tbody').querySelector('tr') !== null;
+  el('btn-lagre-skolerute').disabled = !harRader;
 }
 
 async function lagreSkolerute() {
