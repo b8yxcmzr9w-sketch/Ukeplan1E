@@ -1735,9 +1735,11 @@ function oppdaterListeVisning() {
       const tr = document.createElement('tr');
       const gruppen = r.gruppe && r.gruppe !== 'Alle' ? `<span class="gruppe-badge">${r.gruppe}</span>` : '';
       const infoIkon = r.info ? `<span title="${r.info.replace(/"/g,'&quot;')}">ℹ️</span>` : '';
+      const dato = ukeDagTilDato(r.uke, r.dag, S.ar);
+      const datoStr = dato ? String(dato.getDate()).padStart(2,'0') + '.' + String(dato.getMonth()+1).padStart(2,'0') : '';
       tr.innerHTML = `
         <td>${r.uke}</td>
-        <td>${r.dag}</td>
+        <td>${r.dag}${datoStr ? `<br><span style="font-size:.78rem;color:var(--grå)">${datoStr}</span>` : ''}</td>
         <td><span class="fag-badge">${r.fag}</span></td>
         <td>${gruppen}</td>
         <td style="white-space:nowrap">${r.tid || ''}</td>
