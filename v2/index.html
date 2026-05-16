@@ -44,6 +44,10 @@ header {
 header img { height: 40px; border-radius: 4px; object-fit: contain; }
 header .skole-info h1 { font-size: 1.05rem; font-weight: 600; }
 header .skole-info p  { font-size: .78rem; opacity: .8; }
+.hdr-klasse {
+  background: rgba(255,255,255,.2); border-radius: 20px;
+  padding: 3px 12px; font-size: .85rem; font-weight: 600; white-space: nowrap;
+}
 header .spacer { flex: 1; }
 .hdr-btn {
   background: rgba(255,255,255,.15); color: white;
@@ -80,14 +84,6 @@ header .spacer { flex: 1; }
 }
 .felt textarea { resize: vertical; min-height: 80px; }
 .felt input:focus, .felt select:focus, .felt textarea:focus { outline: none; border-color: var(--grønn-lys); }
-
-/* ── Landing ───────────────────────────────────────────────────────────────── */
-#view-landing {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 70vh; padding: 40px 20px; text-align: center;
-}
-#view-landing h2 { font-size: 1.4rem; margin-bottom: 10px; color: var(--grønn); }
-#view-landing p { color: var(--grå); margin-bottom: 8px; line-height: 1.6; }
 
 /* ── Uke-navigasjon ────────────────────────────────────────────────────────── */
 .uke-nav {
@@ -264,22 +260,16 @@ header .spacer { flex: 1; }
     <h1 id="hdr-navn">Ukeplan</h1>
     <p id="hdr-adresse" class="skjult"></p>
   </div>
+  <span id="hdr-klasse" class="hdr-klasse skjult"></span>
   <div class="spacer"></div>
   <button id="btn-logg-inn" class="hdr-btn" onclick="visModal('modal-login')">Logg inn</button>
   <button id="btn-bruker-meny" class="hdr-btn skjult" onclick="toggleBrukerMeny()"></button>
 </header>
 
-<!-- ═══════════════════════ LANDING ═══════════════════════════════════════════ -->
-<div id="view-landing">
-  <div class="kort" style="max-width:420px;width:100%;padding:32px">
-    <h2>Hei, elev!</h2>
-    <p>For å se ukeplanen din trenger du lenken fra læreren din.</p>
-    <p style="margin-top:12px;font-size:.88rem">Lærere kan logge inn via knappen øverst til høyre.</p>
-  </div>
-</div>
+<div id="view-landing" class="skjult"></div>
 
 <!-- ═══════════════════════ ELEV-VISNING ══════════════════════════════════════ -->
-<div id="view-elev" class="container skjult">
+<div id="view-elev" class="container">
   <div class="uke-nav">
     <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
     <span class="uke-label" id="uke-label">Uke –</span>
@@ -321,9 +311,6 @@ header .spacer { flex: 1; }
       <button class="btn btn-s btn-sm skjult" id="btn-lim-inn" onclick="klargjorParse()">📋 Lim inn plan</button>
     </div>
     <div class="filter-bar">
-      <select id="laerer-filter-klasse" onchange="lastUkedata()">
-        <option value="">Velg klasse</option>
-      </select>
       <select id="laerer-filter-gruppe" onchange="oppdaterLaererVisning()">
         <option value="">Alle grupper</option>
       </select>
@@ -337,6 +324,7 @@ header .spacer { flex: 1; }
       <h3 style="margin-bottom:16px">Skoleinfo</h3>
       <div class="felt"><label>Skolenavn</label><input id="konfig-navn" type="text"></div>
       <div class="felt"><label>Adresse</label><input id="konfig-adresse" type="text"></div>
+      <div class="felt"><label>Klassenavn</label><input id="konfig-klasse" type="text" placeholder="f.eks. 1E"></div>
       <div class="felt"><label>Logo-URL</label><input id="konfig-logo" type="text" placeholder="https://..."></div>
       <button class="btn btn-p btn-sm" onclick="lagreSkoleinfo()">Lagre skoleinfo</button>
     </div>
@@ -346,14 +334,6 @@ header .spacer { flex: 1; }
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn btn-s btn-sm" onclick="leggTilFag()">+ Fag</button>
         <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreFag()">Lagre</button>
-      </div>
-    </div>
-    <div class="kort">
-      <h3 style="margin-bottom:12px">Klasser</h3>
-      <div id="konfig-klasse-liste"></div>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-s btn-sm" onclick="leggTilEnkel('konfig-klasse-liste','Klassenavn (f.eks. 1E)')">+ Klasse</button>
-        <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreKlasser()">Lagre</button>
       </div>
     </div>
     <div class="kort">
@@ -466,8 +446,8 @@ header .spacer { flex: 1; }
   <div class="modal">
     <h3 id="okt-tittel">Ny økt</h3>
     <input type="hidden" id="okt-id">
+    <input type="hidden" id="okt-klasse">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="felt"><label>Klasse</label><select id="okt-klasse"></select></div>
       <div class="felt"><label>Fag</label><select id="okt-fag" onchange="oppdaterOktGruppe()"></select></div>
       <div class="felt"><label>Gruppe / Parti</label><select id="okt-gruppe"></select></div>
       <div class="felt"><label>Dag</label>
@@ -476,7 +456,7 @@ header .spacer { flex: 1; }
         </select>
       </div>
       <div class="felt"><label>Uke</label><input id="okt-uke" type="number" min="1" max="53"></div>
-      <div class="felt"><label>Tid (valgfritt)</label><input id="okt-tid" type="time"></div>
+      <div class="felt" style="grid-column:span 2"><label>Tid (valgfritt)</label><input id="okt-tid" type="time" style="max-width:200px"></div>
     </div>
     <div class="felt"><label>Lærer</label><input id="okt-laerer" type="text"></div>
     <div class="felt"><label>Aktivitet *</label><input id="okt-aktivitet" type="text"></div>
@@ -494,27 +474,29 @@ header .spacer { flex: 1; }
 <div id="modal-parse" class="modal-bg skjult">
   <div class="modal modal-xl">
     <h3>Lim inn plan for tolking</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
-      <div class="felt"><label>Klasse</label><select id="parse-klasse"></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="felt"><label>Fag</label><select id="parse-fag" onchange="oppdaterParseGruppe()"></select></div>
-      <div class="felt" id="parse-gruppe-felt" class="skjult">
+      <div class="felt skjult" id="parse-gruppe-felt">
         <label>YFF-gruppe</label><select id="parse-gruppe"></select>
       </div>
     </div>
     <div class="felt"><textarea id="parse-tekst" rows="9" placeholder="Lim inn tekst fra Word her..."></textarea></div>
     <button class="btn btn-p" onclick="tolkPlan(event)">Tolk med AI</button>
     <div id="parse-resultat" class="skjult" style="margin-top:20px">
-      <h4 style="margin-bottom:6px">Gjennomgå og korriger</h4>
-      <p style="font-size:.83rem;color:var(--grå);margin-bottom:8px">Rader med «?» trenger manuell utfylling. Klikk i celle for å redigere.</p>
+      <h4 style="margin-bottom:4px">Velg rader som skal lagres</h4>
+      <p style="font-size:.83rem;color:var(--grå);margin-bottom:8px">Klikk i en celle for å redigere. Fjern haken for å utelate en rad.</p>
       <div style="overflow-x:auto">
         <table class="parse-tabell">
-          <thead><tr><th>Uke</th><th>Dag</th><th>Gruppe</th><th>Lærer</th><th>Aktivitet</th><th>Oppmøtested</th><th>Info</th><th>Tid</th><th></th></tr></thead>
+          <thead><tr>
+            <th style="width:32px"><input type="checkbox" id="parse-velg-alle" onchange="pVelgAlle(this)" checked></th>
+            <th>Uke</th><th>Dag</th><th>Gruppe</th><th>Lærer</th><th>Aktivitet</th><th>Oppmøtested</th><th>Info</th><th>Tid</th><th></th>
+          </tr></thead>
           <tbody id="parse-tbody"></tbody>
         </table>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn btn-s btn-sm" onclick="leggTilParseRad()">+ Rad</button>
-        <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreParsetPlan()">Lagre alle</button>
+        <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreParsetPlan()">Lagre valgte</button>
       </div>
     </div>
     <div class="modal-bunn">
@@ -617,9 +599,6 @@ async function apiGet(params = {}) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
-  const params = new URLSearchParams(location.search);
-  const klasse = params.get('klasse');
-
   const lagretBruker = sessionStorage.getItem('bruker');
   if (lagretBruker) {
     S.bruker = JSON.parse(lagretBruker);
@@ -629,26 +608,35 @@ async function init() {
   const res = await api('getData');
   if (res.ok) {
     S.konfig = res;
+    S.klasse = res.skoleinfo.skole_klasse || '';
     oppdaterHeader(res.skoleinfo);
   }
 
-  if (klasse) {
-    S.klasse = klasse;
-    S.uke = gjeldeneUke();
-    visElev();
-  } else if (S.bruker) {
+  if (S.bruker) {
     visLaerer();
+  } else {
+    S.uke = startUke();
+    visElev();
   }
-  // else: landing vises (default synlig)
 }
 
 // ── Navigasjon ────────────────────────────────────────────────────────────────
-function gjeldeneUke() {
-  const now = new Date();
-  const jan4 = new Date(now.getFullYear(), 0, 4);
-  const man = new Date(jan4);
+function ukeNummer(dato) {
+  const jan4 = new Date(dato.getFullYear(), 0, 4);
+  const man  = new Date(jan4);
   man.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
-  return Math.max(1, Math.floor((now - man) / 604800000) + 1);
+  return Math.max(1, Math.floor((dato - man) / 604800000) + 1);
+}
+
+function startUke() {
+  const now = new Date();
+  const dag = now.getDay(); // 0=Søn, 6=Lør
+  if (dag === 0 || dag === 6) {
+    const neste = new Date(now);
+    neste.setDate(now.getDate() + (dag === 0 ? 1 : 2));
+    return ukeNummer(neste);
+  }
+  return ukeNummer(now);
 }
 
 function bytteUke(delta) {
@@ -671,10 +659,11 @@ function syncUkeInput() {
 
 // ── Visninger ─────────────────────────────────────────────────────────────────
 function visElev() {
-  el('view-landing').classList.add('skjult');
   el('view-laerer').classList.add('skjult');
   el('view-elev').classList.remove('skjult');
   S.visning = 'elev';
+  if (!S.klasse) S.klasse = S.konfig.skoleinfo?.skole_klasse || '';
+  oppdaterKlasseBadge();
   fyllElevFilter();
   syncUkeInput();
   lastUkedata();
@@ -690,7 +679,6 @@ function fyllElevFilter() {
 }
 
 function visLaerer() {
-  el('view-landing').classList.add('skjult');
   el('view-elev').classList.add('skjult');
   el('view-laerer').classList.remove('skjult');
   S.visning = 'laerer';
@@ -700,12 +688,11 @@ function visLaerer() {
     el('btn-lim-inn').classList.remove('skjult');
   }
 
-  const klSel = el('laerer-filter-klasse');
-  klSel.innerHTML = '<option value="">Velg klasse</option>';
-  S.konfig.klasser.forEach(k => klSel.innerHTML += `<option value="${k}">${k}</option>`);
-
-  S.uke = gjeldeneUke();
+  if (!S.klasse) S.klasse = S.konfig.skoleinfo?.skole_klasse || '';
+  oppdaterKlasseBadge();
+  S.uke = startUke();
   syncUkeInput();
+  lastUkedata();
 }
 
 function oppdaterHeader(si) {
@@ -713,13 +700,21 @@ function oppdaterHeader(si) {
   if (si.skole_navn)    { el('hdr-navn').textContent = si.skole_navn; document.title = si.skole_navn; }
   if (si.skole_adresse) { el('hdr-adresse').textContent = si.skole_adresse; el('hdr-adresse').classList.remove('skjult'); }
   if (si.skole_logo)    { el('hdr-logo').src = si.skole_logo; el('hdr-logo').classList.remove('skjult'); }
+  if (si.skole_klasse)  { S.klasse = si.skole_klasse; oppdaterKlasseBadge(); }
+}
+
+function oppdaterKlasseBadge() {
+  const span = el('hdr-klasse');
+  if (S.klasse) { span.textContent = S.klasse; span.classList.remove('skjult'); }
+  else span.classList.add('skjult');
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 async function lastUkedata() {
-  const klasse = S.visning === 'elev' ? S.klasse : el('laerer-filter-klasse').value;
-  if (!klasse && S.visning === 'laerer') {
-    el('laerer-uke-innhold').innerHTML = '<p class="tom-uke">Velg en klasse for å se planen.</p>';
+  const klasse = S.klasse;
+  if (!klasse) {
+    const innholdId = S.visning === 'elev' ? 'uke-innhold' : 'laerer-uke-innhold';
+    el(innholdId).innerHTML = '<p class="tom-uke">Klassenavn er ikke satt i Innstillinger.</p>';
     return;
   }
   const res = await apiGet({ uke: S.uke, ar: S.ar, klasse });
@@ -852,11 +847,7 @@ function klargjorNyOkt() {
   el('okt-oppmotested').value = '';
   el('okt-info').value = '';
 
-  const klSel = el('okt-klasse');
-  klSel.innerHTML = '';
-  S.konfig.klasser.forEach(k => klSel.innerHTML += `<option value="${k}">${k}</option>`);
-  const gjeldende = el('laerer-filter-klasse').value;
-  if (gjeldende) klSel.value = gjeldende;
+  el('okt-klasse').value = S.klasse;
 
   const fagSel = el('okt-fag');
   fagSel.innerHTML = '';
@@ -926,14 +917,12 @@ async function slettOkt(id) {
 
 // ── Parse ─────────────────────────────────────────────────────────────────────
 function klargjorParse() {
-  const klSel = el('parse-klasse');
-  klSel.innerHTML = '';
-  S.konfig.klasser.forEach(k => klSel.innerHTML += `<option value="${k}">${k}</option>`);
   const fagSel = el('parse-fag');
   fagSel.innerHTML = '';
   S.konfig.fag.forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
   oppdaterParseGruppe();
   el('parse-tekst').value = '';
+  el('parse-tbody').innerHTML = '';
   el('parse-resultat').classList.add('skjult');
   visModal('modal-parse');
 }
@@ -955,7 +944,7 @@ async function tolkPlan(ev) {
   const tekst  = el('parse-tekst').value.trim();
   if (!tekst) return;
   const fag    = el('parse-fag').value;
-  const klasse = el('parse-klasse').value;
+  const klasse = S.klasse;
   const gruppe = fag === 'YFF' ? el('parse-gruppe').value : '';
   const btn = ev.target;
   btn.textContent = 'Tolker...'; btn.disabled = true;
@@ -970,35 +959,52 @@ function visParseResultat(rader, fag, klasse) {
   tbody.innerHTML = '';
   rader.forEach(r => {
     const feil = !r.aktivitet || r.laerer === '?';
-    tbody.innerHTML += parseRad(r, fag, klasse, feil);
+    tbody.appendChild(parseRad(r, fag, klasse, feil));
   });
+  el('parse-velg-alle').checked = true;
   el('parse-resultat').classList.remove('skjult');
 }
 
 function parseRad(r, fag, klasse, feil) {
-  return `<tr class="${feil ? 'rad-feil' : ''}" data-fag="${fag}" data-klasse="${klasse}">
-    <td><input value="${r.uke || ''}" style="width:48px"></td>
-    <td><input value="${r.dag || ''}"></td>
+  const tr = document.createElement('tr');
+  if (feil) tr.className = 'rad-feil';
+  tr.dataset.fag    = fag;
+  tr.dataset.klasse = klasse;
+  tr.innerHTML = `
+    <td style="text-align:center"><input type="checkbox" class="p-cbx" checked></td>
+    <td><input value="${r.uke    || ''}" style="width:48px"></td>
+    <td><input value="${r.dag    || ''}"></td>
     <td><input value="${r.gruppe || 'Alle'}"></td>
     <td><input value="${r.laerer || ''}"></td>
-    <td><input value="${r.aktivitet || ''}"></td>
+    <td><input value="${r.aktivitet   || ''}"></td>
     <td><input value="${r.oppmotested || ''}"></td>
-    <td><input value="${r.info || ''}"></td>
-    <td><input value="${r.tid || ''}" style="width:60px"></td>
-    <td><button class="btn btn-f btn-sm" onclick="this.closest('tr').remove()">✕</button></td>
-  </tr>`;
+    <td><input value="${r.info  || ''}"></td>
+    <td><input value="${r.tid   || ''}" style="width:60px"></td>
+    <td><button class="btn btn-f btn-sm" onclick="this.closest('tr').remove();pOppdaterVelgAlle()">✕</button></td>`;
+  return tr;
+}
+
+function pVelgAlle(cbx) {
+  el('parse-tbody').querySelectorAll('.p-cbx').forEach(c => c.checked = cbx.checked);
+}
+
+function pOppdaterVelgAlle() {
+  const alle  = el('parse-tbody').querySelectorAll('.p-cbx');
+  const sjekk = [...alle].every(c => c.checked);
+  el('parse-velg-alle').checked = sjekk;
 }
 
 function leggTilParseRad() {
-  const fag    = el('parse-fag').value;
-  const klasse = el('parse-klasse').value;
-  el('parse-tbody').innerHTML += parseRad({ uke: S.uke, dag:'', gruppe:'Alle' }, fag, klasse, true);
+  const fag = el('parse-fag').value;
+  el('parse-tbody').appendChild(parseRad({ uke: S.uke, dag:'', gruppe:'Alle' }, fag, S.klasse, true));
+  pOppdaterVelgAlle();
 }
 
 async function lagreParsetPlan() {
   const rader = [];
   el('parse-tbody').querySelectorAll('tr').forEach(tr => {
-    const inp = tr.querySelectorAll('input');
+    if (!tr.querySelector('.p-cbx')?.checked) return; // hopp over ikke-valgte
+    const inp = tr.querySelectorAll('input:not([type=checkbox])');
     rader.push({
       ar: S.ar,
       uke: parseInt(inp[0].value),
@@ -1013,6 +1019,7 @@ async function lagreParsetPlan() {
       tid: inp[7].value
     });
   });
+  if (!rader.length) { visMelding('Ingen rader valgt', 'info'); return; }
   const ugyldige = rader.filter(r => !r.aktivitet || !r.uke);
   if (ugyldige.length) { visMelding(`${ugyldige.length} rad(er) mangler aktivitet eller ukenummer.`, 'feil'); return; }
   let feil = 0;
@@ -1040,11 +1047,11 @@ function lastKonfig() {
   const k = S.konfig;
   el('konfig-navn').value    = k.skoleinfo.skole_navn    || '';
   el('konfig-adresse').value = k.skoleinfo.skole_adresse || '';
+  el('konfig-klasse').value  = k.skoleinfo.skole_klasse  || '';
   el('konfig-logo').value    = k.skoleinfo.skole_logo    || '';
-  visKonfigListe('konfig-fag-liste',    k.fag.map(f => f.navn), true,  k.fag);
-  visKonfigListe('konfig-klasse-liste', k.klasser,               false, []);
-  visKonfigListe('konfig-yff-liste',    k.grupperYFF,            false, []);
-  visKonfigListe('konfig-npt-liste',    k.grupperNPT,            false, []);
+  visKonfigListe('konfig-fag-liste', k.fag.map(f => f.navn), true, k.fag);
+  visKonfigListe('konfig-yff-liste', k.grupperYFF,            false, []);
+  visKonfigListe('konfig-npt-liste', k.grupperNPT,            false, []);
 }
 
 function visKonfigListe(id, items, medDag, fagData) {
@@ -1082,12 +1089,12 @@ async function lagreSkoleinfo() {
   rader.push({ type:'skole', nokkel:'skole_navn',    verdi: el('konfig-navn').value.trim() });
   rader.push({ type:'skole', nokkel:'skole_adresse', verdi: el('konfig-adresse').value.trim() });
   rader.push({ type:'skole', nokkel:'skole_logo',    verdi: el('konfig-logo').value.trim() });
+  rader.push({ type:'skole', nokkel:'skole_klasse',  verdi: el('konfig-klasse').value.trim() });
   await lagreKonfigRader(rader);
 }
-async function lagreFag()     { await lagreKonfigRader(samleKonfig()); }
-async function lagreKlasser() { await lagreKonfigRader(samleKonfig()); }
-async function lagreYFF()     { await lagreKonfigRader(samleKonfig()); }
-async function lagreNPT()     { await lagreKonfigRader(samleKonfig()); }
+async function lagreFag() { await lagreKonfigRader(samleKonfig()); }
+async function lagreYFF() { await lagreKonfigRader(samleKonfig()); }
+async function lagreNPT() { await lagreKonfigRader(samleKonfig()); }
 
 function samleKonfig() {
   const rader = [];
@@ -1096,7 +1103,7 @@ function samleKonfig() {
     const sel = div.querySelector('select');
     if (inp.value.trim()) rader.push({ type:'fag', nokkel: inp.value.trim(), verdi: sel ? sel.value : '' });
   });
-  [['klasse','klasse'],['yff','gruppe_yff'],['npt','gruppe_npt']].forEach(([key, type]) => {
+  [['yff','gruppe_yff'],['npt','gruppe_npt']].forEach(([key, type]) => {
     el(`konfig-${key}-liste`).querySelectorAll('input').forEach(inp => {
       if (inp.value.trim()) rader.push({ type, nokkel: inp.value.trim(), verdi: '' });
     });
@@ -1113,7 +1120,11 @@ async function lagreKonfigRader(rader) {
   const res = await api('saveKonfig', { token: S.bruker.token, isAdmin: true, rader });
   if (res.ok) {
     const ny = await api('getData');
-    if (ny.ok) { S.konfig = ny; oppdaterHeader(ny.skoleinfo); }
+    if (ny.ok) {
+      S.konfig = ny;
+      S.klasse = ny.skoleinfo.skole_klasse || S.klasse;
+      oppdaterHeader(ny.skoleinfo);
+    }
     visMelding('Lagret!');
   } else visMelding(res.error, 'feil');
 }
