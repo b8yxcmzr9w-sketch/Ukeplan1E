@@ -1010,8 +1010,9 @@ function byttFane(fane, knapp) {
   ['plan','konfig','skolerute','brukere'].forEach(f =>
     el('admin-fane-' + f).classList.toggle('skjult', f !== fane)
   );
-  if (fane === 'konfig')  lastKonfig();
-  if (fane === 'brukere') lastBrukere();
+  if (fane === 'konfig')    lastKonfig();
+  if (fane === 'skolerute') lastSkolerute();
+  if (fane === 'brukere')   lastBrukere();
 }
 
 function lastKonfig() {
@@ -1129,10 +1130,22 @@ async function lagreSkolerute() {
   const rader = [];
   el('skolerute-tbody').querySelectorAll('tr').forEach(tr => {
     const c = tr.querySelectorAll('input, select');
-    if (c[0].value) rader.push({ fraDato:c[0].value, tilDato:c[1].value, navn:c[2].value, type:c[3].value });
+    if (c[0].value || c[2].value) rader.push({ fraDato:c[0].value, tilDato:c[1].value || c[0].value, navn:c[2].value, type:c[3].value });
   });
   const res = await api('saveSkolerute', { token: S.bruker.token, isAdmin: true, rader });
-  if (res.ok) visMelding('Skolerute lagret!'); else visMelding(res.error, 'feil');
+  if (res.ok) {
+    visMelding('Skolerute lagret!');
+    await lastSkolerute();
+  } else visMelding(res.error, 'feil');
+}
+
+async function lastSkolerute() {
+  const res = await api('getSkolerute', { token: S.bruker.token, isAdmin: true });
+  if (!res.ok) return;
+  const tbody = el('skolerute-tbody');
+  tbody.innerHTML = '';
+  res.rader.forEach(r => leggTilSkoleruteTr(tbody, r));
+  el('skolerute-preview').classList.remove('skjult');
 }
 
 // ── Admin – Brukere ───────────────────────────────────────────────────────────
