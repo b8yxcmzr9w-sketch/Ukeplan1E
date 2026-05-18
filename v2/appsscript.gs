@@ -8,6 +8,9 @@ function doGet(e) {
     return ContentService.createTextOutput(buildIcal(p.klasse || '', p.nptParti || '', p.yffGruppe || ''))
       .setMimeType(ContentService.MimeType.TEXT);
   }
+  if (p.action === 'hentSitater') {
+    return jsonResponse(hentSitater(SpreadsheetApp.openById(SS_ID)));
+  }
   const ar = parseInt(p.ar || new Date().getFullYear());
   const klasse = p.klasse || '';
   const sheet = getSheet('Plan');
@@ -50,7 +53,8 @@ function doPost(e) {
     getBrukere:     handleGetBrukere,
     saveBruker:     handleSaveBruker,
     deleteBruker:   handleDeleteBruker,
-    changePassord:  handleChangePassord
+    changePassord:  handleChangePassord,
+    genererSitater: handleGenererSitater
   };
   const fn = handlers[d.action];
   if (!fn) return jsonResponse({ ok: false, error: 'Ukjent action: ' + d.action });
@@ -369,6 +373,56 @@ Spesialregler:
 
 Tekst:
 ${tekst}`;
+}
+
+// ── Sitater ───────────────────────────────────────────────────────────────────
+
+function hentSitater(ss) {
+  const sheet = ss.getSheetByName('Sitater');
+  if (!sheet) return { ok: true, sitater: [] };
+  return {
+    ok: true,
+    sitater: sheet.getDataRange().getValues().slice(1)
+      .filter(r => r[0])
+      .map(r => ({ sitat: String(r[0]), kilde: String(r[1] || 'Ukjent') }))
+  };
+}
+
+function handleGenererSitater(d) {
+  if (!verifyToken(d.token)) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  if (!key) return jsonResponse({ ok: false, error: 'GEMINI_KEY mangler i Script Properties' });
+  try {
+    const sitater = callGemini(key, buildSitatPrompt());
+    if (!Array.isArray(sitater)) throw new Error('Gemini returnerte ikke en array');
+    const ss = SpreadsheetApp.openById(SS_ID);
+    let sheet = ss.getSheetByName('Sitater');
+    if (!sheet) sheet = ss.insertSheet('Sitater');
+    sheet.clearContents();
+    sheet.appendRow(['Sitat', 'Kilde']);
+    sitater.forEach(s => sheet.appendRow([String(s.sitat || ''), String(s.kilde || 'Ukjent')]));
+    return jsonResponse({ ok: true, sitater });
+  } catch(err) {
+    return jsonResponse({ ok: false, error: 'Gemini-feil: ' + err.message });
+  }
+}
+
+function buildSitatPrompt() {
+  return `Du er en samler av gode sitater til en norsk videregående skole med naturbruksprofil.
+
+Generer nøyaktig 30 sitater fordelt slik:
+- 8 om livsglede og optimisme
+- 7 om fellesskap og samarbeid
+- 6 om natur, dyr og livet på gården
+- 5 om dagen i dag / øyeblikket
+- 4 morsomme pappavitser eller lette one-liners
+
+Bruk kjente, ekte sitater der det finnes. Oversett til norsk om nødvendig.
+Alle sitater skal være anstendige og passe for ungdom 16–19 år.
+Pappavitsene skal faktisk være morsomme.
+
+Returner KUN en JSON-array, ingen annen tekst:
+[{"sitat": "Teksten her.", "kilde": "Navn eller Ukjent"}]`;
 }
 
 // ── Gemini ────────────────────────────────────────────────────────────────────

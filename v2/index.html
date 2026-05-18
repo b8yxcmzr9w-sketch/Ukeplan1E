@@ -298,19 +298,23 @@ header .spacer { flex: 1; }
 /* ── Print-hode (skjult normalt, synlig ved utskrift) ──────────────────────── */
 .print-hode { display: none; }
 
-/* ── Laste-overlay (elev) ──────────────────────────────────────────────────── */
-#elev-laster {
+/* ── Laste-overlay (felles) ────────────────────────────────────────────────── */
+#laste-overlay {
   position: fixed; inset: 0;
-  background: rgba(255,255,255,.72);
+  background: rgba(255,255,255,.82);
   display: flex; align-items: center; justify-content: center;
   z-index: 80;
 }
+.laste-innhold { display: flex; flex-direction: column; align-items: center; gap: 20px; max-width: 420px; padding: 0 24px; }
 .laste-spinner {
   width: 52px; height: 52px;
   border: 5px solid var(--kant); border-top-color: var(--grønn);
   border-radius: 50%; animation: snurr .75s linear infinite;
 }
 @keyframes snurr { to { transform: rotate(360deg); } }
+#laste-sitat-boks { text-align: center; }
+.laste-sitat-tekst { font-size: 1rem; font-style: italic; color: var(--tekst); line-height: 1.6; margin-bottom: 6px; }
+.laste-sitat-kilde { font-size: .82rem; color: var(--grå); }
 
 /* ── Uke-grid (elev, desktop – 5 dager side om side) ──────────────────────── */
 .uke-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
@@ -343,7 +347,7 @@ header .spacer { flex: 1; }
 
   /* Skjul navigasjon og UI-kontroller */
   header, .uke-nav, .filter-bar, .rediger-kn,
-  #elev-laster, #btn-logg-inn, #btn-bruker-meny, .fane-bar,
+  #laste-overlay, #btn-logg-inn, #btn-bruker-meny, .fane-bar,
   #admin-fane-konfig, #admin-fane-skolerute, #admin-fane-brukere,
   #lastelinje, #toast-beholder, #view-laerer, #view-landing,
   .info-mer-kn { display: none !important; }
@@ -433,9 +437,15 @@ header .spacer { flex: 1; }
   <div class="print-hode-sub"    id="print-hode-sub"></div>
 </div>
 
-<!-- Laste-overlay (elev) -->
-<div id="elev-laster" class="skjult">
-  <div class="laste-spinner"></div>
+<!-- Laste-overlay (felles for elev og lærer) -->
+<div id="laste-overlay" class="skjult">
+  <div class="laste-innhold">
+    <div class="laste-spinner"></div>
+    <div id="laste-sitat-boks" class="skjult">
+      <p class="laste-sitat-tekst" id="laste-sitat-tekst"></p>
+      <p class="laste-sitat-kilde" id="laste-sitat-kilde"></p>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════════ ELEV-VISNING ══════════════════════════════════════ -->
@@ -579,6 +589,16 @@ header .spacer { flex: 1; }
           <button class="btn btn-s btn-sm" onclick="leggTilEnkel('konfig-npt-liste','Partinavn (f.eks. P3)')">+ Parti</button>
           <button id="btn-lagre-npt" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreNPT()" disabled>Lagre</button>
         </div>
+      </div>
+    </div>
+    <div class="kort">
+      <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
+        <h3>Laste-sitater</h3><span class="konfig-pil">▼</span>
+      </div>
+      <div class="konfig-kort-innhold">
+        <p style="font-size:.88rem;color:var(--grå);margin-bottom:12px">Genererer 30 sitater med AI (livsglede, fellesskap, gården, øyeblikket, pappahumor). Vises etter 6 sekunder ved lasting.</p>
+        <button id="btn-oppdater-sitater" class="btn btn-p btn-sm" onclick="oppdaterSitater()">✨ Oppdater sitater</button>
+        <span id="sitater-status" style="font-size:.83rem;color:var(--grå);margin-left:10px"></span>
       </div>
     </div>
   </div>
@@ -808,7 +828,8 @@ const S = {
   listeFraUke:  0,      // første uke i listen
   bufferFra:    null,   // {uke, ar} – start av cachet buffer
   bufferTil:    null,   // {uke, ar} – slutt av cachet buffer
-  bufferLaster: false
+  bufferLaster: false,
+  sitater:      []
 };
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -858,6 +879,8 @@ async function init() {
     S.klasse = res.skoleinfo.skole_klasse || '';
     oppdaterHeader(res.skoleinfo);
   }
+
+  lastSitaterAsynkront(); // brannogkjøring – blokkerer ikke oppstart
 
   if (S.bruker) {
     visLaerer();
@@ -964,9 +987,9 @@ function visLaerer() {
   el('view-laerer').classList.remove('skjult');
   S.visning = 'laerer';
 
-  if (S.bruker && S.bruker.erAdmin) {
-    el('admin-fane-bar').classList.remove('skjult');
+  if (S.bruker) {
     el('btn-lim-inn').classList.remove('skjult');
+    if (S.bruker.erAdmin) el('admin-fane-bar').classList.remove('skjult');
   }
 
   if (!S.klasse) S.klasse = S.konfig.skoleinfo?.skole_klasse || '';
@@ -1027,6 +1050,59 @@ function ferieSymbol(type) {
   return '📅';
 }
 
+// ── Laste-overlay ─────────────────────────────────────────────────────────────
+let _lasteTimer = null;
+
+function visOverlay() {
+  el('laste-overlay').classList.remove('skjult');
+  el('laste-sitat-boks').classList.add('skjult');
+  _lasteTimer = setTimeout(() => {
+    const s = tilfeldigSitat();
+    if (!s) return;
+    el('laste-sitat-tekst').textContent = '«' + s.sitat + '»';
+    el('laste-sitat-kilde').textContent = '— ' + s.kilde;
+    el('laste-sitat-boks').classList.remove('skjult');
+  }, 6000);
+}
+
+function skjulOverlay() {
+  clearTimeout(_lasteTimer);
+  el('laste-overlay').classList.add('skjult');
+  el('laste-sitat-boks').classList.add('skjult');
+}
+
+function tilfeldigSitat() {
+  if (!S.sitater.length) return null;
+  return S.sitater[Math.floor(Math.random() * S.sitater.length)];
+}
+
+async function lastSitaterAsynkront() {
+  try {
+    const res = await apiGet({ action: 'hentSitater' });
+    if (res.ok && Array.isArray(res.sitater)) S.sitater = res.sitater;
+  } catch(e) { /* stille feil – sitater er pyntedetalj */ }
+}
+
+async function oppdaterSitater() {
+  const btn = el('btn-oppdater-sitater');
+  const status = el('sitater-status');
+  btn.disabled = true; btn.textContent = '⏳ Genererer…';
+  status.textContent = '';
+  try {
+    const res = await api('genererSitater', {});
+    if (res.ok) {
+      S.sitater = res.sitater;
+      status.textContent = res.sitater.length + ' sitater lagret';
+    } else {
+      status.textContent = 'Feil: ' + (res.error || 'ukjent');
+    }
+  } catch(e) {
+    status.textContent = 'Feil: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '✨ Oppdater sitater';
+  }
+}
+
 async function lastUkedata() {
   const klasse = S.klasse;
   if (!klasse) {
@@ -1039,7 +1115,7 @@ async function lastUkedata() {
     const c = ukeCache.get(key);
     S.ukedata = c.rows; S.ferie = c.ferie;
   } else {
-    if (S.visning === 'elev') el('elev-laster').classList.remove('skjult');
+    visOverlay();
     try {
       const res = await apiGet({ uke: S.uke, ar: S.ar, klasse });
       if (res.ok) {
@@ -1048,7 +1124,7 @@ async function lastUkedata() {
         ukeCache.set(key, { rows: S.ukedata, ferie: S.ferie });
       }
     } finally {
-      if (S.visning === 'elev') el('elev-laster').classList.add('skjult');
+      skjulOverlay();
     }
   }
   if (S.visning === 'elev') oppdaterElevVisning();
