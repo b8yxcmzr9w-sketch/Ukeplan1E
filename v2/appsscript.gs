@@ -484,8 +484,13 @@ function getFerierForUke(sheet, uke, ar) {
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   return sheet.getDataRange().getValues().slice(1)
-    .filter(r => r[0] && new Date(r[0]) <= sunday && new Date(r[1]) >= monday)
-    .map(r => ({ fraDato: r[0], tilDato: r[1], navn: r[2], type: r[3] }));
+    .filter(r => r[0] && new Date(r[0]) <= sunday && new Date(r[1] || r[0]) >= monday)
+    .map(r => ({
+      fraDato: r[0] instanceof Date ? Utilities.formatDate(r[0], 'Europe/Oslo', 'yyyy-MM-dd') : String(r[0] || ''),
+      tilDato: (r[1] || r[0]) instanceof Date ? Utilities.formatDate(r[1] || r[0], 'Europe/Oslo', 'yyyy-MM-dd') : String(r[1] || r[0] || ''),
+      navn:    String(r[2] || ''),
+      type:    String(r[3] || 'Ferie')
+    }));
 }
 
 // ── Autorisasjon (kjør én gang fra editor for å godkjenne UrlFetchApp) ───────

@@ -701,6 +701,7 @@ const DAGER = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag'];
 const ukeCache = new Map(); // key: "ar-uke-klasse"
 function _cacheKey(uke, ar, klasse) { return `${ar}-${uke}-${klasse}`; }
 function cacheSlett(uke, ar, klasse) { ukeCache.delete(_cacheKey(uke, ar, klasse)); }
+function cacheReset() { ukeCache.clear(); S.bufferFra = null; S.bufferTil = null; }
 
 // ── Tilstand ──────────────────────────────────────────────────────────────────
 const S = {
@@ -715,7 +716,10 @@ const S = {
   listeModus:   false,  // false = ukesvisning, true = listevisning
   listedata:    [],     // alle rows for 6-uker-vinduet
   listeFerie:   [],     // alle ferieperioder for vinduet
-  listeFraUke:  0       // første uke i listen
+  listeFraUke:  0,      // første uke i listen
+  bufferFra:    null,   // {uke, ar} – start av cachet buffer
+  bufferTil:    null,   // {uke, ar} – slutt av cachet buffer
+  bufferLaster: false
 };
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -769,7 +773,8 @@ async function init() {
   if (S.bruker) {
     visLaerer();
   } else {
-    S.uke = startUke();
+    const ref = startUkeAr();
+    S.uke = ref.uke; S.ar = ref.ar;
     visElev();
   }
 }
@@ -782,30 +787,54 @@ function ukeNummer(dato) {
   return Math.max(1, Math.floor((dato - man) / 604800000) + 1);
 }
 
-function startUke() {
-  const now = new Date();
-  const dag = now.getDay(); // 0=Søn, 6=Lør
-  if (dag === 0 || dag === 6) {
-    const neste = new Date(now);
-    neste.setDate(now.getDate() + (dag === 0 ? 1 : 2));
-    return ukeNummer(neste);
-  }
-  return ukeNummer(now);
+// Et år har 53 ISO-uker hvis 1. jan eller 31. des er torsdag
+function maxUkerIAr(ar) {
+  const d1 = new Date(ar, 0, 1).getDay();
+  const d2 = new Date(ar, 11, 31).getDay();
+  return (d1 === 4 || d2 === 4) ? 53 : 52;
 }
 
-function bytteUke(delta) {
-  let nyUke = Math.max(1, Math.min(53, S.uke + delta));
-  if (S.visning === 'elev' && delta > 0) {
-    const maks = Math.min(53, ukeNummer(new Date()) + 6);
-    nyUke = Math.min(nyUke, maks);
+// Flytt (uke, ar) med delta steg – håndterer årsgrenser
+function nesteUkeAr(uke, ar, delta) {
+  let u = uke, a = ar;
+  const s = delta > 0 ? 1 : -1;
+  for (let i = 0; i < Math.abs(delta); i++) {
+    u += s;
+    if (u > maxUkerIAr(a)) { u = 1; a++; }
+    else if (u < 1) { a--; u = maxUkerIAr(a); }
   }
-  S.uke = nyUke;
+  return { uke: u, ar: a };
+}
+
+// Returner {uke, ar} for gjeldende eller neste mandag
+function startUkeAr() {
+  const now = new Date();
+  const dag = now.getDay();
+  let dato = now;
+  if (dag === 0 || dag === 6) {
+    dato = new Date(now);
+    dato.setDate(now.getDate() + (dag === 0 ? 1 : 2));
+  }
+  return { uke: ukeNummer(dato), ar: dato.getFullYear() };
+}
+
+function startUke() { return startUkeAr().uke; }
+
+function bytteUke(delta) {
+  const ny = nesteUkeAr(S.uke, S.ar, delta);
+  if (S.visning === 'elev' && delta > 0) {
+    const ref = startUkeAr();
+    const maks = nesteUkeAr(ref.uke, ref.ar, 6);
+    if (ny.ar > maks.ar || (ny.ar === maks.ar && ny.uke > maks.uke)) return;
+  }
+  S.uke = ny.uke; S.ar = ny.ar;
   syncUkeInput();
   lastUkedata();
 }
 
 function gaTilNaaUke() {
-  S.uke = startUke();
+  const { uke, ar } = startUkeAr();
+  S.uke = uke; S.ar = ar;
   syncUkeInput();
   lastUkedata();
 }
@@ -863,7 +892,8 @@ function visLaerer() {
   el('laerer-uke-innhold').classList.remove('skjult');
   el('laerer-liste-innhold').classList.add('skjult');
 
-  S.uke = startUke();
+  const ref = startUkeAr();
+  S.uke = ref.uke; S.ar = ref.ar;
   syncUkeInput();
   lastUkedata();
 }
@@ -883,6 +913,24 @@ function oppdaterKlasseBadge() {
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
+// Normaliser én ferie-oppføring til ISO-datostringer (YYYY-MM-DD)
+function normFerie1(f) {
+  const ts = v => v ? (typeof v === 'string' ? v.slice(0,10)
+    : new Date(v).toISOString().slice(0,10)) : '';
+  return { ...f, fraDato: ts(f.fraDato), tilDato: ts(f.tilDato || f.fraDato) };
+}
+
+// Sjekk om en (normalisert) ferie-oppføring overlapper med en gitt uke
+function erFerieIUke(f, uke, ar) {
+  const jan4 = new Date(ar, 0, 4);
+  const man = new Date(jan4);
+  man.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (uke - 1) * 7);
+  const son = new Date(man); son.setDate(man.getDate() + 6);
+  const fra = (f.fraDato || '').slice(0,10);
+  const til = (f.tilDato || f.fraDato || '').slice(0,10);
+  return fra <= son.toISOString().slice(0,10) && til >= man.toISOString().slice(0,10);
+}
+
 async function lastUkedata() {
   const klasse = S.klasse;
   if (!klasse) {
@@ -897,22 +945,101 @@ async function lastUkedata() {
   } else {
     const res = await apiGet({ uke: S.uke, ar: S.ar, klasse });
     if (res.ok) {
-      S.ukedata = res.rows || []; S.ferie = res.ferie || [];
+      S.ukedata = res.rows || [];
+      S.ferie = (res.ferie || []).map(normFerie1);
       ukeCache.set(key, { rows: S.ukedata, ferie: S.ferie });
     }
   }
   if (S.visning === 'elev') oppdaterElevVisning();
   else oppdaterLaererVisning();
 
-  // Forhåndsinnlast nabouker stille i bakgrunnen
-  [-1, 1].forEach(d => {
-    const u = Math.max(1, Math.min(53, S.uke + d));
-    const k = _cacheKey(u, S.ar, klasse);
-    if (!ukeCache.has(k))
-      apiGet({ uke: u, ar: S.ar, klasse }).then(r => {
-        if (r.ok) ukeCache.set(k, { rows: r.rows || [], ferie: r.ferie || [] });
+  // Bufferinitialisering ved første last, deretter glidende vindu
+  if (!S.bufferFra) {
+    oppdaterBufferGreenser(S.uke, S.ar, S.uke, S.ar);
+    const fra = nesteUkeAr(S.uke, S.ar, -6);
+    const til = nesteUkeAr(S.uke, S.ar,  6);
+    ladBufferRange(fra.uke, fra.ar, til.uke, til.ar); // bakgrunn
+  } else {
+    sjekkOgUtvideBuffer();
+  }
+}
+
+// ── Buffer ────────────────────────────────────────────────────────────────────
+function oppdaterBufferGreenser(fraUke, fraAr, tilUke, tilAr) {
+  if (!S.bufferFra || fraAr < S.bufferFra.ar || (fraAr === S.bufferFra.ar && fraUke < S.bufferFra.uke))
+    S.bufferFra = { uke: fraUke, ar: fraAr };
+  if (!S.bufferTil || tilAr > S.bufferTil.ar || (tilAr === S.bufferTil.ar && tilUke > S.bufferTil.uke))
+    S.bufferTil = { uke: tilUke, ar: tilAr };
+}
+
+async function ladBufferRange(fraUke, fraAr, tilUke, tilAr) {
+  if (S.bufferLaster) return;
+  S.bufferLaster = true;
+  try {
+    if (fraAr === tilAr) {
+      await ladBufferEnkelAr(fraUke, tilUke, fraAr);
+    } else {
+      // Spenner over to kalenderår – to parallelle kall
+      await Promise.all([
+        ladBufferEnkelAr(fraUke, maxUkerIAr(fraAr), fraAr),
+        ladBufferEnkelAr(1, tilUke, tilAr)
+      ]);
+    }
+  } finally {
+    S.bufferLaster = false;
+  }
+}
+
+async function ladBufferEnkelAr(fraUke, tilUke, ar) {
+  const klasse = S.klasse;
+  if (!klasse) return;
+  fraUke = Math.max(1, fraUke);
+  tilUke = Math.min(maxUkerIAr(ar), tilUke);
+  if (fraUke > tilUke) return;
+
+  // Last kun uker som mangler i cache
+  const mangler = [];
+  for (let u = fraUke; u <= tilUke; u++)
+    if (!ukeCache.has(_cacheKey(u, ar, klasse))) mangler.push(u);
+  if (!mangler.length) { oppdaterBufferGreenser(fraUke, ar, tilUke, ar); return; }
+
+  const fra = mangler[0], til = mangler[mangler.length - 1];
+  const res = await apiGet({ fraUke: fra, tilUke: til, ar, klasse });
+  if (!res.ok) return;
+
+  const rows  = res.rows || [];
+  const ferie = (res.ferie || []).map(normFerie1);
+  for (let u = fra; u <= til; u++) {
+    const key = _cacheKey(u, ar, klasse);
+    if (!ukeCache.has(key))
+      ukeCache.set(key, {
+        rows:  rows.filter(r => parseInt(r.uke) === u),
+        ferie: ferie.filter(f => erFerieIUke(f, u, ar))
       });
-  });
+  }
+  oppdaterBufferGreenser(fra, ar, til, ar);
+}
+
+function sjekkOgUtvideBuffer() {
+  if (S.bufferLaster || !S.bufferFra || !S.bufferTil) return;
+
+  // Innen 3 uker fra buffer-slutt → last 6 uker fremover
+  const treFrem = nesteUkeAr(S.bufferTil.uke, S.bufferTil.ar, -3);
+  if (S.ar > treFrem.ar || (S.ar === treFrem.ar && S.uke >= treFrem.uke)) {
+    const fra = nesteUkeAr(S.bufferTil.uke, S.bufferTil.ar, 1);
+    const til = nesteUkeAr(S.bufferTil.uke, S.bufferTil.ar, 6);
+    ladBufferRange(fra.uke, fra.ar, til.uke, til.ar);
+    return;
+  }
+
+  // Innen 3 uker fra buffer-start → last 6 uker bakover
+  const treBak = nesteUkeAr(S.bufferFra.uke, S.bufferFra.ar, 3);
+  if (S.ar < treBak.ar || (S.ar === treBak.ar && S.uke <= treBak.uke)) {
+    const til = nesteUkeAr(S.bufferFra.uke, S.bufferFra.ar, -1);
+    const fra = nesteUkeAr(S.bufferFra.uke, S.bufferFra.ar, -6);
+    ladBufferRange(fra.uke, fra.ar, til.uke, til.ar);
+    return;
+  }
 }
 
 // ── Elev-rendering ────────────────────────────────────────────────────────────
@@ -1344,7 +1471,7 @@ async function lagreParsetPlan() {
     if (!res.ok) feil++;
   }
   if (feil) visMelding(`${feil} rader feilet. Prøv igjen.`, 'feil');
-  else { lukkModal('modal-parse'); ukeCache.clear(); lastUkedata(); visMelding(`${rader.length} økt(er) lagret`); }
+  else { lukkModal('modal-parse'); cacheReset(); lastUkedata(); visMelding(`${rader.length} økt(er) lagret`); }
 }
 
 // ── Admin – Konfig ────────────────────────────────────────────────────────────
