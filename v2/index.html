@@ -137,9 +137,13 @@ header .spacer { flex: 1; }
   background: #e9ecef; color: var(--grå);
   font-size: .78rem; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
 }
-.aktivitet-tekst { font-weight: 500; flex: 1; line-height: 1.4; overflow-wrap: break-word; min-width: 0; }
+.aktivitet-tekst {
+  font-weight: 500; line-height: 1.4;
+  overflow-wrap: break-word; hyphens: auto;
+  flex-basis: 100%; margin-top: 2px;
+}
 .meta { font-size: .82rem; color: var(--grå); display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-.meta span { overflow-wrap: break-word; min-width: 0; max-width: 100%; }
+.meta span { overflow-wrap: break-word; hyphens: auto; min-width: 0; max-width: 100%; }
 .info-boks {
   font-size: .82rem; color: var(--grå); font-style: italic;
   margin-top: 5px; line-height: 1.5;
