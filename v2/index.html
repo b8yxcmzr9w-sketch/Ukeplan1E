@@ -275,13 +275,43 @@ header .spacer { flex: 1; }
 }
 .liste-uke-hode:hover td { background: var(--grønn-svak) !important; }
 
+/* ── Print-hode (skjult normalt, synlig ved utskrift) ──────────────────────── */
+.print-hode { display: none; }
+
 /* ── Utskrift ──────────────────────────────────────────────────────────────── */
 @media print {
-  header, .uke-nav button, .filter-bar, .rediger-kn,
-  #btn-logg-inn, #btn-bruker-meny, .fane-bar, #admin-fane-konfig,
-  #admin-fane-skolerute, #admin-fane-brukere { display: none !important; }
-  .okt-kort { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
-  body { background: white; }
+  /* Gjenta print-hode på hvert ark */
+  .print-hode {
+    display: block; position: fixed; top: 0; left: 0; right: 0;
+    background: white; padding: 7px 16px 5px;
+    border-bottom: 2px solid #2d6a4f; z-index: 100;
+  }
+  .print-hode-tittel { font-size: .95rem; font-weight: 700; }
+  .print-hode-sub    { font-size: .78rem; color: #555; }
+
+  /* Skjul navigasjon og UI-kontroller */
+  header, .uke-nav, .filter-bar, .rediger-kn,
+  #btn-logg-inn, #btn-bruker-meny, .fane-bar,
+  #admin-fane-konfig, #admin-fane-skolerute, #admin-fane-brukere { display: none !important; }
+
+  body   { background: white; }
+  .container { padding: 4px 12px; margin-top: 46px; }
+
+  /* Kompakte økt-kort */
+  .okt-kort {
+    box-shadow: none; border: 1px solid #ccc;
+    page-break-inside: avoid;
+    padding: 6px 10px; margin-bottom: 5px;
+    border-left-width: 3px;
+  }
+  .dag-seksjon  { margin-bottom: 8px; }
+  .dag-tittel   { font-size: .78rem; padding: 3px 0; margin-bottom: 5px; }
+  .okt-hode     { gap: 5px; margin-bottom: 3px; }
+  .fag-badge, .gruppe-badge { font-size: .72rem; padding: 1px 5px; }
+  .aktivitet-tekst { font-size: .84rem; }
+  .meta         { font-size: .74rem; gap: 8px; margin-top: 2px; }
+  .info-boks    { font-size: .74rem; padding: 3px 8px; margin-top: 4px; }
+  .ferie-banner { padding: 8px; font-size: .88rem; margin-bottom: 8px; }
 }
 
 /* ── Mobil ─────────────────────────────────────────────────────────────────── */
@@ -312,6 +342,12 @@ header .spacer { flex: 1; }
 </header>
 
 <div id="view-landing" class="skjult"></div>
+
+<!-- Print-hode (vises kun ved utskrift, gjentatt øverst på hvert ark) -->
+<div class="print-hode">
+  <div class="print-hode-tittel" id="print-hode-tittel"></div>
+  <div class="print-hode-sub"    id="print-hode-sub"></div>
+</div>
 
 <!-- ═══════════════════════ ELEV-VISNING ══════════════════════════════════════ -->
 <div id="view-elev" class="container">
@@ -884,6 +920,14 @@ function oppdaterElevVisning() {
   const nptParti  = el('filter-npt').value;
   const yffGruppe = el('filter-yff').value;
   visUkeMedFilter(el('uke-innhold'), S.ukedata, S.ferie, nptParti, yffGruppe, false);
+  oppdaterPrintHode();
+}
+
+function oppdaterPrintHode() {
+  const navn = S.konfig.skoleinfo?.skole_navn || 'Ukeplan';
+  const klasse = S.klasse || '';
+  el('print-hode-tittel').textContent = navn + (klasse ? ' – ' + klasse : '');
+  el('print-hode-sub').textContent = 'Uke ' + S.uke + ' / ' + S.ar;
 }
 
 function oppdaterLaererVisning() {
@@ -894,16 +938,23 @@ function oppdaterLaererVisning() {
 }
 
 function visUkeMedFilter(container, data, ferie, nptParti, yffGruppe, kanRedigere) {
+  container.innerHTML = '';
+
+  // Vis skolerute-innslag (ferie, høytid, planleggingsdag) øverst
   if (ferie.length) {
-    container.innerHTML = `<div class="ferie-banner">🌿 ${ferie.map(f => f.navn).join(' / ')}</div>`;
-    return;
+    const banner = document.createElement('div');
+    banner.className = 'ferie-banner';
+    banner.innerHTML = '🌿 ' + ferie.map(f => f.navn).join(' / ');
+    container.appendChild(banner);
   }
+
   const rader = data.filter(r => skalVises(r, nptParti, yffGruppe));
   if (!rader.length) {
-    container.innerHTML = '<div class="tom-uke">Ingen registrerte aktiviteter denne uken.</div>';
+    if (!ferie.length)
+      container.innerHTML = '<div class="tom-uke">Ingen registrerte aktiviteter denne uken.</div>';
     return;
   }
-  container.innerHTML = '';
+
   DAGER.forEach(dag => {
     const dr = rader.filter(r => r.dag === dag || r.dag === 'Alle');
     if (!dr.length) return;
