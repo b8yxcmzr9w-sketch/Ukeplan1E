@@ -148,6 +148,7 @@ header .spacer { flex: 1; }
   font-size: .82rem; color: var(--grå); font-style: italic;
   margin-top: 5px; line-height: 1.5;
 }
+.info-laerer { font-style: normal; }
 .info-mer-kn {
   display: none;
   background: none; border: none; color: var(--grønn);
@@ -1278,7 +1279,6 @@ function lagOktKort(r, kanRedigere) {
         <button class="btn btn-s btn-sm" onclick='redigerOkt(${JSON.stringify(r)})'>✏️</button>
         <button class="btn btn-f btn-sm" onclick="slettOkt('${r.id}')">🗑</button>
        </div>` : '';
-  const laererHtml = r.laerer ? `<span>👤 ${r.laerer}</span>` : '';
   div.innerHTML = `${redBtn}
     <div class="okt-hode">
       <span class="fag-badge" data-fag="${r.fag}">${r.fag}</span>${gruppen}
@@ -1287,12 +1287,13 @@ function lagOktKort(r, kanRedigere) {
     <div class="meta">
       ${r.tid ? `<span>🕐 ${r.tid}</span>` : ''}
       ${r.oppmotested ? `<span>📍 ${r.oppmotested}</span>` : ''}
-      ${laererHtml}
     </div>`;
-  if (r.info) {
+  if (r.info || r.laerer) {
     const infoDiv = document.createElement('div');
     infoDiv.className = 'info-boks info-klippet';
-    infoDiv.textContent = r.info;
+    let html = r.info ? `<span>${r.info}</span>` : '';
+    if (r.laerer) html += `${r.info ? '<br>' : ''}<span class="info-laerer">👤 ${r.laerer}</span>`;
+    infoDiv.innerHTML = html;
     div.appendChild(infoDiv);
     const merBtn = document.createElement('button');
     merBtn.className = 'info-mer-kn';
