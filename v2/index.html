@@ -344,10 +344,20 @@ header .spacer { flex: 1; }
   /* Skjul navigasjon og UI-kontroller */
   header, .uke-nav, .filter-bar, .rediger-kn,
   #elev-laster, #btn-logg-inn, #btn-bruker-meny, .fane-bar,
-  #admin-fane-konfig, #admin-fane-skolerute, #admin-fane-brukere { display: none !important; }
+  #admin-fane-konfig, #admin-fane-skolerute, #admin-fane-brukere,
+  #lastelinje, #toast-beholder, #view-laerer, #view-landing,
+  .info-mer-kn { display: none !important; }
 
-  body      { background: white; }
+  /* Fjern min-height som ellers lager blank side 2 */
+  body      { background: white; min-height: 0; }
   .container { padding: 2px 8px; margin-top: 40px; }
+
+  /* Info vises alltid i sin helhet ved utskrift */
+  .info-boks.info-klippet {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    overflow: visible !important;
+  }
 
   /* 5-kolonners dag-grid beholdes i print */
   .uke-grid { grid-template-columns: repeat(5, 1fr) !important; gap: 6px; }
