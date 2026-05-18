@@ -278,44 +278,85 @@ header .spacer { flex: 1; }
 /* ── Print-hode (skjult normalt, synlig ved utskrift) ──────────────────────── */
 .print-hode { display: none; }
 
+/* ── Laste-overlay (elev) ──────────────────────────────────────────────────── */
+#elev-laster {
+  position: fixed; inset: 0;
+  background: rgba(255,255,255,.72);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 80;
+}
+.laste-spinner {
+  width: 52px; height: 52px;
+  border: 5px solid var(--kant); border-top-color: var(--grønn);
+  border-radius: 50%; animation: snurr .75s linear infinite;
+}
+@keyframes snurr { to { transform: rotate(360deg); } }
+
+/* ── Uke-grid (elev, desktop – 5 dager side om side) ──────────────────────── */
+.uke-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.dag-kolonne { display: flex; flex-direction: column; min-width: 0; }
+.dag-kolonne-hode {
+  background: var(--grønn); color: white;
+  font-size: .78rem; font-weight: 700; text-transform: uppercase;
+  padding: 6px 9px 5px; border-radius: var(--radius) var(--radius) 0 0;
+  letter-spacing: .04em; line-height: 1.35;
+}
+.dag-kolonne-dato { display: block; font-size: .78rem; font-weight: 400; opacity: .85; text-transform: none; letter-spacing: 0; }
+.dag-kolonne-innhold { flex: 1; padding: 6px 0; display: flex; flex-direction: column; gap: 6px; }
+.dag-tom { color: var(--grå); font-size: .82rem; text-align: center; padding: 12px 0; }
+.uke-hele { margin-bottom: 8px; }
+
 /* ── Utskrift ──────────────────────────────────────────────────────────────── */
 @media print {
+  @page { size: A4 landscape; margin: 1.2cm; }
+
   /* Gjenta print-hode på hvert ark */
   .print-hode {
     display: block; position: fixed; top: 0; left: 0; right: 0;
-    background: white; padding: 7px 16px 5px;
+    background: white; padding: 6px 16px 4px;
     border-bottom: 2px solid #2d6a4f; z-index: 100;
   }
-  .print-hode-tittel { font-size: .95rem; font-weight: 700; }
-  .print-hode-sub    { font-size: .78rem; color: #555; }
+  .print-hode-tittel { font-size: .9rem; font-weight: 700; }
+  .print-hode-sub    { font-size: .75rem; color: #555; }
 
   /* Skjul navigasjon og UI-kontroller */
   header, .uke-nav, .filter-bar, .rediger-kn,
-  #btn-logg-inn, #btn-bruker-meny, .fane-bar,
+  #elev-laster, #btn-logg-inn, #btn-bruker-meny, .fane-bar,
   #admin-fane-konfig, #admin-fane-skolerute, #admin-fane-brukere { display: none !important; }
 
-  body   { background: white; }
-  .container { padding: 4px 12px; margin-top: 46px; }
+  body      { background: white; }
+  .container { padding: 2px 8px; margin-top: 40px; }
+
+  /* 5-kolonners dag-grid beholdes i print */
+  .uke-grid { grid-template-columns: repeat(5, 1fr) !important; gap: 6px; }
+  .dag-kolonne-hode { font-size: .7rem; padding: 4px 6px 3px; }
+  .dag-kolonne-innhold { padding: 4px 0; gap: 4px; }
+  .dag-tom  { padding: 6px 0; font-size: .75rem; }
 
   /* Kompakte økt-kort */
   .okt-kort {
     box-shadow: none; border: 1px solid #ccc;
     page-break-inside: avoid;
-    padding: 6px 10px; margin-bottom: 5px;
+    padding: 5px 7px; margin-bottom: 4px;
     border-left-width: 3px;
   }
-  .dag-seksjon  { margin-bottom: 8px; }
-  .dag-tittel   { font-size: .78rem; padding: 3px 0; margin-bottom: 5px; }
-  .okt-hode     { gap: 5px; margin-bottom: 3px; }
-  .fag-badge, .gruppe-badge { font-size: .72rem; padding: 1px 5px; }
-  .aktivitet-tekst { font-size: .84rem; }
-  .meta         { font-size: .74rem; gap: 8px; margin-top: 2px; }
-  .info-boks    { font-size: .74rem; padding: 3px 8px; margin-top: 4px; }
-  .ferie-banner { padding: 8px; font-size: .88rem; margin-bottom: 8px; }
+  .dag-seksjon  { margin-bottom: 6px; }
+  .dag-tittel   { font-size: .75rem; padding: 3px 0; margin-bottom: 4px; }
+  .okt-hode     { gap: 4px; margin-bottom: 2px; }
+  .fag-badge, .gruppe-badge { font-size: .68rem; padding: 1px 4px; }
+  .aktivitet-tekst { font-size: .78rem; }
+  .meta         { font-size: .7rem; gap: 6px; margin-top: 2px; }
+  .info-boks    { font-size: .7rem; padding: 3px 6px; margin-top: 3px; }
+  .ferie-banner { padding: 6px; font-size: .82rem; margin-bottom: 6px; }
+  .uke-hele     { margin-bottom: 6px; }
 }
 
 /* ── Mobil ─────────────────────────────────────────────────────────────────── */
-@media (max-width: 600px) {
+@media screen and (max-width: 720px) {
+  .uke-grid { grid-template-columns: 1fr; }
+  .dag-kolonne-hode { border-radius: var(--radius); }
+}
+@media screen and (max-width: 600px) {
   .container { padding: 12px; }
   .modal { padding: 16px; }
   .parse-tabell { font-size: .76rem; }
@@ -347,6 +388,11 @@ header .spacer { flex: 1; }
 <div class="print-hode">
   <div class="print-hode-tittel" id="print-hode-tittel"></div>
   <div class="print-hode-sub"    id="print-hode-sub"></div>
+</div>
+
+<!-- Laste-overlay (elev) -->
+<div id="elev-laster" class="skjult">
+  <div class="laste-spinner"></div>
 </div>
 
 <!-- ═══════════════════════ ELEV-VISNING ══════════════════════════════════════ -->
@@ -943,11 +989,16 @@ async function lastUkedata() {
     const c = ukeCache.get(key);
     S.ukedata = c.rows; S.ferie = c.ferie;
   } else {
-    const res = await apiGet({ uke: S.uke, ar: S.ar, klasse });
-    if (res.ok) {
-      S.ukedata = res.rows || [];
-      S.ferie = (res.ferie || []).map(normFerie1);
-      ukeCache.set(key, { rows: S.ukedata, ferie: S.ferie });
+    if (S.visning === 'elev') el('elev-laster').classList.remove('skjult');
+    try {
+      const res = await apiGet({ uke: S.uke, ar: S.ar, klasse });
+      if (res.ok) {
+        S.ukedata = res.rows || [];
+        S.ferie = (res.ferie || []).map(normFerie1);
+        ukeCache.set(key, { rows: S.ukedata, ferie: S.ferie });
+      }
+    } finally {
+      if (S.visning === 'elev') el('elev-laster').classList.add('skjult');
     }
   }
   if (S.visning === 'elev') oppdaterElevVisning();
@@ -1044,10 +1095,80 @@ function sjekkOgUtvideBuffer() {
 
 // ── Elev-rendering ────────────────────────────────────────────────────────────
 function oppdaterElevVisning() {
-  const nptParti  = el('filter-npt').value;
-  const yffGruppe = el('filter-yff').value;
-  visUkeMedFilter(el('uke-innhold'), S.ukedata, S.ferie, nptParti, yffGruppe, false);
+  visElevUke();
   oppdaterPrintHode();
+}
+
+function visElevUke() {
+  const container  = el('uke-innhold');
+  const nptParti   = el('filter-npt').value;
+  const yffGruppe  = el('filter-yff').value;
+  const data       = S.ukedata || [];
+  const ferie      = S.ferie  || [];
+  container.innerHTML = '';
+
+  // ── Ferie-banner ────────────────────────────────────────────────────────────
+  if (ferie.length) {
+    const banner = document.createElement('div');
+    banner.className = 'ferie-banner uke-hele';
+    banner.innerHTML = '🌿 ' + ferie.map(f => f.navn).join(' / ');
+    container.appendChild(banner);
+  }
+
+  const rader = data.filter(r => skalVises(r, nptParti, yffGruppe));
+
+  // ── "Alle"-dag-økter: full bredderad over grid ───────────────────────────────
+  const alleRader = rader.filter(r => r.dag === 'Alle');
+  if (alleRader.length) {
+    const alleRad = document.createElement('div');
+    alleRad.className = 'uke-hele';
+    alleRader.forEach(r => alleRad.appendChild(lagOktKort(r, false)));
+    container.appendChild(alleRad);
+  }
+
+  // ── 5-kolonne daggrid ────────────────────────────────────────────────────────
+  const grid = document.createElement('div');
+  grid.className = 'uke-grid';
+
+  DAGER.forEach(dag => {
+    const dagRader = rader.filter(r => r.dag === dag);
+
+    const kol = document.createElement('div');
+    kol.className = 'dag-kolonne';
+
+    // Dato DD.MM
+    const dato = ukeDagTilDato(S.uke, dag, S.ar);
+    const datoStr = dato
+      ? String(dato.getDate()).padStart(2,'0') + '.' + String(dato.getMonth()+1).padStart(2,'0')
+      : '';
+
+    const hode = document.createElement('div');
+    hode.className = 'dag-kolonne-hode';
+    hode.innerHTML = `${dag}<span class="dag-kolonne-dato">${datoStr}</span>`;
+    kol.appendChild(hode);
+
+    const innhold = document.createElement('div');
+    innhold.className = 'dag-kolonne-innhold';
+
+    if (dagRader.length) {
+      dagRader.forEach(r => innhold.appendChild(lagOktKort(r, false)));
+    } else {
+      const tom = document.createElement('div');
+      tom.className = 'dag-tom';
+      tom.textContent = '–';
+      innhold.appendChild(tom);
+    }
+
+    kol.appendChild(innhold);
+    grid.appendChild(kol);
+  });
+
+  container.appendChild(grid);
+
+  // ── Tom uke (ingen rader og ingen ferie) ─────────────────────────────────────
+  if (!rader.length && !ferie.length) {
+    container.innerHTML = '<div class="tom-uke">Ingen registrerte aktiviteter denne uken.</div>';
+  }
 }
 
 function oppdaterPrintHode() {
