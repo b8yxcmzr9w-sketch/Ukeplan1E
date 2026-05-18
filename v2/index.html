@@ -126,6 +126,13 @@ header .spacer { flex: 1; }
   font-size: .78rem; font-weight: 700; padding: 2px 8px;
   border-radius: 20px; white-space: nowrap; flex-shrink: 0;
 }
+/* ── Fag-badge farger per fag ──────────────────────────────────────────────── */
+.fag-badge[data-fag="NPT"] { background: #f3e5d8; color: #7c5842; }
+.fag-badge[data-fag="NNA"] { background: #d8f3dc; color: #2d6a4f; }
+.fag-badge[data-fag="YFF"] { background: #dbeafe; color: #1e5fa6; }
+.fag-badge[data-fag="NOR"],.fag-badge[data-fag="MAT"],.fag-badge[data-fag="ENG"],
+.fag-badge[data-fag="NAT"],.fag-badge[data-fag="SAM"],.fag-badge[data-fag="KRO"],
+.fag-badge[data-fag="REL"] { background: #f3f0ff; color: #5b21b6; }
 .gruppe-badge {
   background: #e9ecef; color: var(--grå);
   font-size: .78rem; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
@@ -133,8 +140,8 @@ header .spacer { flex: 1; }
 .aktivitet-tekst { font-weight: 500; flex: 1; line-height: 1.4; }
 .meta { font-size: .82rem; color: var(--grå); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
 .info-boks {
-  font-size: .83rem; background: #fffbea; border-left: 3px solid #f59e0b;
-  padding: 6px 10px; border-radius: 4px; margin-top: 8px; line-height: 1.5;
+  font-size: .82rem; color: var(--grå); font-style: italic;
+  margin-top: 5px; line-height: 1.5;
 }
 .rediger-kn { position: absolute; top: 9px; right: 9px; display: flex; gap: 4px; }
 
@@ -307,8 +314,10 @@ header .spacer { flex: 1; }
 .uke-hele { margin-bottom: 8px; }
 
 /* ── Utskrift ──────────────────────────────────────────────────────────────── */
+/* @page må stå på toppnivå (utenfor @media print) for at landscape skal virke */
+@page { size: A4 landscape; margin: 1.2cm; }
+
 @media print {
-  @page { size: A4 landscape; margin: 1.2cm; }
 
   /* Gjenta print-hode på hvert ark */
   .print-hode {
@@ -346,7 +355,7 @@ header .spacer { flex: 1; }
   .fag-badge, .gruppe-badge { font-size: .68rem; padding: 1px 4px; }
   .aktivitet-tekst { font-size: .78rem; }
   .meta         { font-size: .7rem; gap: 6px; margin-top: 2px; }
-  .info-boks    { font-size: .7rem; padding: 3px 6px; margin-top: 3px; }
+  .info-boks    { font-size: .7rem; margin-top: 2px; }
   .ferie-banner { padding: 6px; font-size: .82rem; margin-bottom: 6px; }
   .uke-hele     { margin-bottom: 6px; }
 }
@@ -977,6 +986,13 @@ function erFerieIUke(f, uke, ar) {
   return fra <= son.toISOString().slice(0,10) && til >= man.toISOString().slice(0,10);
 }
 
+function ferieSymbol(type) {
+  if (!type || type === 'Ferie')          return '🌿';
+  if (type === 'Høytid')                  return '✝️';
+  if (type === 'Planleggingsdag')         return '📋';
+  return '📅';
+}
+
 async function lastUkedata() {
   const klasse = S.klasse;
   if (!klasse) {
@@ -1111,7 +1127,7 @@ function visElevUke() {
   if (ferie.length) {
     const banner = document.createElement('div');
     banner.className = 'ferie-banner uke-hele';
-    banner.innerHTML = '🌿 ' + ferie.map(f => f.navn).join(' / ');
+    banner.innerHTML = ferie.map(f => `${ferieSymbol(f.type)} ${f.navn}`).join(' · ');
     container.appendChild(banner);
   }
 
@@ -1192,7 +1208,7 @@ function visUkeMedFilter(container, data, ferie, nptParti, yffGruppe, kanRediger
   if (ferie.length) {
     const banner = document.createElement('div');
     banner.className = 'ferie-banner';
-    banner.innerHTML = '🌿 ' + ferie.map(f => f.navn).join(' / ');
+    banner.innerHTML = ferie.map(f => `${ferieSymbol(f.type)} ${f.navn}`).join(' · ');
     container.appendChild(banner);
   }
 
@@ -1229,17 +1245,18 @@ function lagOktKort(r, kanRedigere) {
         <button class="btn btn-s btn-sm" onclick='redigerOkt(${JSON.stringify(r)})'>✏️</button>
         <button class="btn btn-f btn-sm" onclick="slettOkt('${r.id}')">🗑</button>
        </div>` : '';
+  const laererHtml = kanRedigere && r.laerer ? `<span>👤 ${r.laerer}</span>` : '';
   div.innerHTML = `${redBtn}
     <div class="okt-hode">
-      <span class="fag-badge">${r.fag}</span>${gruppen}
+      <span class="fag-badge" data-fag="${r.fag}">${r.fag}</span>${gruppen}
       <span class="aktivitet-tekst">${r.aktivitet}</span>
     </div>
     <div class="meta">
       ${r.tid ? `<span>🕐 ${r.tid}</span>` : ''}
       ${r.oppmotested ? `<span>📍 ${r.oppmotested}</span>` : ''}
-      ${r.laerer ? `<span>👤 ${r.laerer}</span>` : ''}
+      ${laererHtml}
     </div>
-    ${r.info ? `<div class="info-boks">ℹ️ ${r.info}</div>` : ''}`;
+    ${r.info ? `<div class="info-boks">${r.info}</div>` : ''}`;
   return div;
 }
 
@@ -2047,7 +2064,7 @@ function oppdaterListeVisning() {
     if (ukeFerie.length) {
       const ferieRad = document.createElement('tr');
       ferieRad.className = 'liste-ferie-rad';
-      ferieRad.innerHTML = `<td colspan="10">🌿 ${ukeFerie.map(f => f.navn).join(' / ')}</td>`;
+      ferieRad.innerHTML = `<td colspan="10">${ukeFerie.map(f => `${ferieSymbol(f.type)} ${f.navn}`).join(' · ')}</td>`;
       tbody.appendChild(ferieRad);
     }
 
