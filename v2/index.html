@@ -1089,7 +1089,7 @@ async function oppdaterSitater() {
   btn.disabled = true; btn.textContent = '⏳ Genererer…';
   status.textContent = '';
   try {
-    const res = await api('genererSitater', {});
+    const res = await api('genererSitater', { token: S.bruker?.token });
     if (res.ok) {
       S.sitater = res.sitater;
       status.textContent = res.sitater.length + ' sitater lagret';
