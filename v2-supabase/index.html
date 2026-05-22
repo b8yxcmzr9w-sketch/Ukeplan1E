@@ -426,6 +426,7 @@ header .spacer { flex: 1; }
   <span id="hdr-klasse" class="hdr-klasse skjult"></span>
   <div class="spacer"></div>
   <button id="btn-logg-inn" class="hdr-btn" onclick="visModal('modal-login')">Logg inn</button>
+  <button id="btn-til-laerer" class="hdr-btn skjult" onclick="visLaerer()">↩ Lærervisning</button>
   <button id="btn-bruker-meny" class="hdr-btn skjult" onclick="toggleBrukerMeny()"></button>
 </header>
 
@@ -797,6 +798,7 @@ header .spacer { flex: 1; }
 <!-- Bruker-meny -->
 <div id="bruker-meny" class="skjult">
   <div class="bruker-meny-navn" id="bruker-meny-navn"></div>
+  <button class="bruker-meny-btn" onclick="visElev();lukkBrukerMeny()">👁 Elevvisning</button>
   <button class="bruker-meny-btn" onclick="visModal('modal-passord');lukkBrukerMeny()">🔑 Bytt passord</button>
   <button class="bruker-meny-btn rød" onclick="loggUt()">↩ Logg ut</button>
 </div>
@@ -977,6 +979,8 @@ function visElev() {
   fyllElevFilter();
   syncUkeInput();
   lastUkedata();
+  // Vis "Lærervisning"-knapp i headeren kun når man er logget inn
+  el('btn-til-laerer').classList.toggle('skjult', !S.bruker);
 }
 
 function fyllElevFilter() {
@@ -991,6 +995,7 @@ function fyllElevFilter() {
 function visLaerer() {
   el('view-elev').classList.add('skjult');
   el('view-laerer').classList.remove('skjult');
+  el('btn-til-laerer').classList.add('skjult');
   S.visning = 'laerer';
 
   if (S.bruker) {
@@ -1325,6 +1330,7 @@ function oppdaterLaererVisning() {
   const gruppe = el('laerer-filter-gruppe').value;
   // Lærer bruker én samlet gruppe-filter — vis som NPT-filter for enkelhets skyld
   visUkeMedFilter(el('laerer-uke-innhold'), S.ukedata, S.ferie, gruppe, gruppe, true);
+  requestAnimationFrame(sjekkInfoKlipping);
 }
 
 function visUkeMedFilter(container, data, ferie, nptParti, yffGruppe, kanRedigere) {
