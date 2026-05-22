@@ -1748,7 +1748,13 @@ async function lagreParsetPlan() {
     if (!res.ok) feil++;
   }
   if (feil) visMelding(`${feil} rader feilet. Prøv igjen.`, 'feil');
-  else { lukkModal('modal-parse'); cacheReset(); lastUkedata(); visMelding(`${rader.length} økt(er) lagret`); }
+  else {
+    cacheReset(); lastUkedata(); visMelding(`${rader.length} økt(er) lagret`);
+    // Lukk modalen kun hvis alle lærerforslag er behandlet
+    if (el('parse-laerer-forslag').classList.contains('skjult')) {
+      lukkModal('modal-parse');
+    }
+  }
 }
 
 // ── Admin – Konfig ────────────────────────────────────────────────────────────
