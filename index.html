@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Praksisplan</title>
+<title>Ukeplan</title>
 <link rel="icon" type="image/png" href="logo.png">
 <style>
 :root{--bg:#f5f4ef;--kort:#fff;--kant:#ddd8c4;--tekst:#1a1a14;--dempet:#5a5a40;--dempet2:#8a8a6a;--nav:#3d4a1e;--groen:#6B8C2A;--oransje:#A0722A;--gul:#C49A4A;}
@@ -427,7 +427,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
   <div class="hdr-left">
     <img class="hdr-logo" id="hdr-logo" src="" alt="" style="display:none">
     <div class="hdr-titler">
-      <h1 id="header-tittel">Praksisplan</h1>
+      <h1 id="header-tittel">Ukeplan</h1>
       <span class="hdr-sub" id="hdr-sub"></span>
     </div>
   </div>
@@ -486,7 +486,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 <div id="laerer-side">
   <div id="login-wrap">
     <div class="login-kort">
-      <h2>Rediger praksisplan</h2>
+      <h2>Rediger ukeplan</h2>
       <p>Logg inn med ditt navn og passord</p>
       <select id="velg-laerer" onchange="fokusPassord()"><option value="">Velg navn...</option></select>
       <input type="password" id="passord-felt" placeholder="Passord" onkeydown="if(event.key==='Enter')loggInn()">
@@ -3571,7 +3571,7 @@ async function slotAngreSlettet(){
 
 function skrivUt(){
   var c=cfg(),visAlle=erVisAlle();
-  var tittel='Praksisplan'+(c.klassenavn?' - '+c.klassenavn:'')+(c.skoleaar?' | '+c.skoleaar:'')+' | '+aktivtFagLaerer+' | '+(visAlle?'Alle uker':'Mine uker - '+(aktivLaerer||''));
+  var tittel='Ukeplan'+(c.klassenavn?' - '+c.klassenavn:'')+(c.skoleaar?' | '+c.skoleaar:'')+' | '+aktivtFagLaerer+' | '+(visAlle?'Alle uker':'Mine uker - '+(aktivLaerer||''));
   var hdr=document.getElementById('print-header');
   hdr.textContent=tittel;hdr.style.display='block';
   // Ved utskrift: sikre at tomme er skjult (aktiv=false for «Vis tomme»-knappen)
@@ -3690,7 +3690,7 @@ function lagIcalUrl(type) {
 }
 function lagIcalNavn(type) {
   var klasse = cfg().klassenavn || cfg().skolenavn || '';
-  var base = 'Praksisplan_' + klasse;
+  var base = 'Ukeplan_' + klasse;
   if (type === 'laerer') {
     return base + '_' + (aktivLaerer || '') + (aktivtFagLaerer ? '_' + aktivtFagLaerer : '');
   }
