@@ -338,6 +338,23 @@ header .spacer { flex: 1; }
 .laste-sitat-tekst { font-size: 1rem; font-style: italic; color: var(--tekst); line-height: 1.6; margin-bottom: 6px; }
 .laste-sitat-kilde { font-size: .82rem; color: var(--grå); }
 
+/* ── Elev sticky-sone (frossen nav + filtre + ferie-rad) ───────────────────── */
+#elev-sticky-zone {
+  position: sticky;
+  top: 64px; /* tilnærmet header-høyde, justeres av settStickyTopp() */
+  z-index: 30;
+  background: #f0f2f0;
+  margin: 0 -20px;
+  padding: 10px 20px 4px;
+  border-bottom: 2px solid rgba(0,0,0,.07);
+}
+#elev-sticky-zone .uke-nav   { margin-bottom: 10px; }
+#elev-sticky-zone .filter-bar { margin-bottom: 6px; }
+#elev-ferie-slot:not(:empty) { margin-bottom: 4px; }
+@media screen and (max-width: 600px) {
+  #elev-sticky-zone { margin: 0 -12px; padding: 10px 12px 4px; }
+}
+
 /* ── Uke-grid (elev, desktop – 5 dager side om side) ──────────────────────── */
 .uke-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 .dag-kolonne { display: flex; flex-direction: column; min-width: 0; }
@@ -346,11 +363,14 @@ header .spacer { flex: 1; }
   font-size: .78rem; font-weight: 700; text-transform: uppercase;
   padding: 6px 9px 5px; border-radius: var(--radius) var(--radius) 0 0;
   letter-spacing: .04em; line-height: 1.35;
+  position: sticky; /* top settes av settStickyTopp() */
+  z-index: 10;
 }
 .dag-kolonne-dato { display: block; font-size: .78rem; font-weight: 400; opacity: .85; text-transform: none; letter-spacing: 0; }
 .dag-kolonne-innhold { flex: 1; padding: 6px 0; display: flex; flex-direction: column; gap: 6px; }
 .dag-tom { color: var(--grå); font-size: .82rem; text-align: center; padding: 12px 0; }
 .uke-hele { margin-bottom: 8px; }
+#uke-innhold { padding-top: 8px; }
 
 /* ── Utskrift ──────────────────────────────────────────────────────────────── */
 /* @page må stå på toppnivå (utenfor @media print) for at landscape skal virke */
@@ -372,7 +392,16 @@ header .spacer { flex: 1; }
   #laste-overlay, #btn-logg-inn, #btn-bruker-meny, .fane-bar,
   #admin-fane-konfig, #admin-fane-skolerute, #admin-fane-brukere,
   #lastelinje, #toast-beholder, #view-laerer, #view-landing,
-  .info-mer-kn { display: none !important; }
+  .info-mer-kn, #elev-ferie-slot { display: none !important; }
+
+  /* Sticky-sone: opphev sticky og fjern bakgrunn for utskrift */
+  #elev-sticky-zone {
+    position: static !important;
+    background: transparent !important;
+    margin: 0 !important; padding: 0 !important;
+    border-bottom: none !important;
+  }
+  .dag-kolonne-hode { position: static !important; }
 
   /* Fjern min-height som ellers lager blank side 2 */
   body      { background: white; min-height: 0; }
@@ -472,22 +501,27 @@ header .spacer { flex: 1; }
 
 <!-- ═══════════════════════ ELEV-VISNING ══════════════════════════════════════ -->
 <div id="view-elev" class="container">
-  <div class="uke-nav">
-    <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
-    <span class="uke-label">Uke</span>
-    <input type="number" id="uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" onkeydown="if(event.key==='Enter')gaTilUke(this.value)" onblur="gaTilUke(this.value)">
-    <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
-    <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
-    <button class="btn btn-s btn-sm" onclick="window.print()">Skriv ut</button>
-    <button class="btn btn-s btn-sm" onclick="abonnerIcal()">📅 Kalender</button>
-  </div>
-  <div class="filter-bar">
-    <select id="filter-npt" onchange="oppdaterElevVisning()">
-      <option value="">Alle NPT-partier</option>
-    </select>
-    <select id="filter-yff" onchange="oppdaterElevVisning()">
-      <option value="">Alle YFF-grupper</option>
-    </select>
+  <!-- Frossen topp: nav + filtre + ferie-rad -->
+  <div id="elev-sticky-zone">
+    <div class="uke-nav">
+      <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
+      <span class="uke-label">Uke</span>
+      <input type="number" id="uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" onkeydown="if(event.key==='Enter')gaTilUke(this.value)" onblur="gaTilUke(this.value)">
+      <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
+      <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
+      <button class="btn btn-s btn-sm" onclick="window.print()">Skriv ut</button>
+      <button class="btn btn-s btn-sm" onclick="abonnerIcal()">📅 Kalender</button>
+    </div>
+    <div class="filter-bar">
+      <select id="filter-npt" onchange="oppdaterElevVisning()">
+        <option value="">Alle NPT-partier</option>
+      </select>
+      <select id="filter-yff" onchange="oppdaterElevVisning()">
+        <option value="">Alle YFF-grupper</option>
+      </select>
+    </div>
+    <!-- Ferie-rad (fylles av JS) -->
+    <div id="elev-ferie-slot"></div>
   </div>
   <div id="uke-innhold"></div>
 </div>
@@ -1293,7 +1327,24 @@ function sjekkOgUtvideBuffer() {
 function oppdaterElevVisning() {
   visElevUke();
   oppdaterPrintHode();
-  requestAnimationFrame(sjekkInfoKlipping);
+  requestAnimationFrame(() => {
+    settStickyTopp();
+    sjekkInfoKlipping();
+  });
+}
+
+// Beregner riktig top-offset for sticky sone og kolonneoverskrifter
+function settStickyTopp() {
+  const headerEl = document.getElementById('app-header');
+  const zoneEl   = document.getElementById('elev-sticky-zone');
+  if (!headerEl || !zoneEl) return;
+  const headerH  = headerEl.offsetHeight;
+  zoneEl.style.top = headerH + 'px';
+  const zoneH    = zoneEl.offsetHeight;
+  const hoderTop = headerH + zoneH;
+  document.querySelectorAll('#uke-innhold .dag-kolonne-hode').forEach(h => {
+    h.style.top = hoderTop + 'px';
+  });
 }
 
 function sjekkInfoKlipping() {
@@ -1307,11 +1358,13 @@ function sjekkInfoKlipping() {
 
 function visElevUke() {
   const container  = el('uke-innhold');
+  const ferieSlot  = el('elev-ferie-slot');
   const nptParti   = el('filter-npt').value;
   const yffGruppe  = el('filter-yff').value;
   const data       = S.ukedata || [];
   const ferie      = S.ferie  || [];
   container.innerHTML = '';
+  ferieSlot.innerHTML = '';
 
   const rader = data.filter(r => skalVises(r, nptParti, yffGruppe));
 
@@ -1324,10 +1377,10 @@ function visElevUke() {
     container.appendChild(alleRad);
   }
 
-  // ── Ferie all-day rad over daggridet ─────────────────────────────────────────
+  // ── Ferie all-day rad i sticky-sonen (over daggridet) ────────────────────────
   if (ferie.length) {
     const ferieRad = byggFerieAlldagRad(ferie, S.uke, S.ar);
-    if (ferieRad) container.appendChild(ferieRad);
+    if (ferieRad) ferieSlot.appendChild(ferieRad);
   }
 
   // ── 5-kolonne daggrid ────────────────────────────────────────────────────────
