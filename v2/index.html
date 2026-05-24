@@ -1079,10 +1079,17 @@ function ferieFargeklasse(type) {
   return 'ferie-type-annet';
 }
 
+// Lokal datostreng (unngår UTC-skjevhet fra toISOString i norsk sommertid)
+function datoStreng(dato) {
+  return dato.getFullYear() + '-' +
+    String(dato.getMonth() + 1).padStart(2, '0') + '-' +
+    String(dato.getDate()).padStart(2, '0');
+}
+
 // Returnerer ferie-oppføringer fra ferierArr som dekker en gitt dato-objekt
 function ferierForDato(dato, ferierArr) {
   if (!dato || !ferierArr?.length) return [];
-  const ds = dato.toISOString().slice(0, 10);
+  const ds = datoStreng(dato);
   return ferierArr.filter(f => ds >= (f.fraDato || '') && ds <= (f.tilDato || f.fraDato || ''));
 }
 
@@ -1097,7 +1104,7 @@ function byggFerieAlldagRad(ferie, uke, ar) {
     let startKol = -1, endKol = -1;
     datoer.forEach((dato, i) => {
       if (!dato) return;
-      const ds = dato.toISOString().slice(0, 10);
+      const ds = datoStreng(dato);
       if (ds >= fra && ds <= til) { if (startKol < 0) startKol = i; endKol = i; }
     });
     if (startKol < 0) return;
@@ -1641,7 +1648,7 @@ function ukeDagTilDato(uke, dag, ar) {
 }
 
 function erIFerie(dato, skoleruteRader) {
-  const ds = dato.toISOString().slice(0, 10);
+  const ds = datoStreng(dato);
   return skoleruteRader.some(r => ds >= (r.fraDato || '') && ds <= (r.tilDato || r.fraDato || ''));
 }
 
