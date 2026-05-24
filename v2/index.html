@@ -819,7 +819,7 @@ header .spacer { flex: 1; }
 <!-- Bruker-meny -->
 <div id="bruker-meny" class="skjult">
   <div class="bruker-meny-navn" id="bruker-meny-navn"></div>
-  <button class="bruker-meny-btn" onclick="visElev();lukkBrukerMeny()">👁 Elevvisning</button>
+  <button class="bruker-meny-btn" id="btn-bytt-visning" onclick="byttVisning()"></button>
   <button class="bruker-meny-btn" onclick="visModal('modal-passord');lukkBrukerMeny()">🔑 Bytt passord</button>
   <button class="bruker-meny-btn rød" onclick="loggUt()">↩ Logg ut</button>
 </div>
@@ -2329,8 +2329,12 @@ function kopierOkt(r) {
 function visModal(id) { el(id).classList.remove('skjult'); }
 function lukkModal(id) { el(id).classList.add('skjult'); }
 
-function toggleBrukerMeny() { el('bruker-meny').classList.toggle('skjult'); }
-function lukkBrukerMeny()   { el('bruker-meny').classList.add('skjult'); }
+function toggleBrukerMeny() {
+  el('btn-bytt-visning').textContent = S.visning === 'elev' ? '🏫 Lærervisning' : '👁 Elevvisning';
+  el('bruker-meny').classList.toggle('skjult');
+}
+function lukkBrukerMeny() { el('bruker-meny').classList.add('skjult'); }
+function byttVisning() { S.visning === 'elev' ? visLaerer() : visElev(); lukkBrukerMeny(); }
 
 function visInlineError(id, melding) {
   const p = el(id);
