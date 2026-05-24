@@ -338,8 +338,8 @@ header .spacer { flex: 1; }
 .laste-sitat-tekst { font-size: 1rem; font-style: italic; color: var(--tekst); line-height: 1.6; margin-bottom: 6px; }
 .laste-sitat-kilde { font-size: .82rem; color: var(--grå); }
 
-/* ── Elev sticky-sone (frossen nav + filtre + ferie-rad) ───────────────────── */
-#elev-sticky-zone {
+/* ── Felles sticky-sone-stil (brukes av #elev-sticky-zone og #laerer-sticky-zone) ── */
+.sticky-zone {
   position: sticky;
   top: 64px; /* tilnærmet header-høyde, justeres av settStickyTopp() */
   z-index: 30;
@@ -348,12 +348,32 @@ header .spacer { flex: 1; }
   padding: 10px 20px 4px;
   border-bottom: 2px solid rgba(0,0,0,.07);
 }
-#elev-sticky-zone .uke-nav   { margin-bottom: 10px; }
-#elev-sticky-zone .filter-bar { margin-bottom: 6px; }
-#elev-ferie-slot:not(:empty) { margin-bottom: 4px; }
+.sticky-zone .uke-nav    { margin-bottom: 10px; }
+.sticky-zone .filter-bar { margin-bottom: 6px; }
 @media screen and (max-width: 600px) {
-  #elev-sticky-zone { margin: 0 -12px; padding: 10px 12px 4px; }
+  .sticky-zone { margin: 0 -12px; padding: 10px 12px 4px; }
 }
+
+/* ── Lærer 2-raders uke-grid ───────────────────────────────────────────────── */
+.laerer-uke-rad1 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+.laerer-uke-rad2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+.laerer-dag-kol  { display: flex; flex-direction: column; min-width: 0; }
+.laerer-dag-hode {
+  background: var(--grønn); color: white;
+  font-size: .82rem; font-weight: 700; text-transform: uppercase;
+  padding: 6px 9px 5px; border-radius: var(--radius) var(--radius) 0 0;
+  letter-spacing: .04em; line-height: 1.35;
+}
+.laerer-dag-innhold { flex: 1; padding: 6px 0; display: flex; flex-direction: column; gap: 6px; }
+.laerer-uke-alle   { margin-bottom: 8px; }
+@media screen and (max-width: 720px) {
+  .laerer-uke-rad1,
+  .laerer-uke-rad2 { grid-template-columns: 1fr; }
+  .laerer-dag-hode { border-radius: var(--radius); }
+}
+
+/* ── Elev sticky-sone (arver .sticky-zone) ─────────────────────────────────── */
+#elev-ferie-slot:not(:empty) { margin-bottom: 4px; }
 
 /* ── Uke-grid (elev, desktop – 5 dager side om side) ──────────────────────── */
 .uke-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
@@ -394,8 +414,8 @@ header .spacer { flex: 1; }
   #lastelinje, #toast-beholder, #view-laerer, #view-landing,
   .info-mer-kn, #elev-ferie-slot { display: none !important; }
 
-  /* Sticky-sone: opphev sticky og fjern bakgrunn for utskrift */
-  #elev-sticky-zone {
+  /* Sticky-soner: opphev sticky og fjern bakgrunn for utskrift */
+  .sticky-zone {
     position: static !important;
     background: transparent !important;
     margin: 0 !important; padding: 0 !important;
@@ -502,7 +522,7 @@ header .spacer { flex: 1; }
 <!-- ═══════════════════════ ELEV-VISNING ══════════════════════════════════════ -->
 <div id="view-elev" class="container">
   <!-- Frossen topp: nav + filtre + ferie-rad -->
-  <div id="elev-sticky-zone">
+  <div id="elev-sticky-zone" class="sticky-zone">
     <div class="uke-nav">
       <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
       <span class="uke-label">Uke</span>
@@ -540,45 +560,50 @@ header .spacer { flex: 1; }
   <!-- Plan-fane -->
   <div id="admin-fane-plan">
 
-    <!-- Uke-navigasjon (ukesmodus) -->
-    <div id="laerer-uke-nav" class="uke-nav">
-      <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
-      <span class="uke-label">Uke</span>
-      <input type="number" id="laerer-uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" onkeydown="if(event.key==='Enter')gaTilUke(this.value)" onblur="gaTilUke(this.value)">
-      <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
-      <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
-      <div class="spacer" style="flex:1"></div>
-      <button class="btn btn-p btn-sm" onclick="klargjorNyOkt()">+ Ny økt</button>
-      <button class="btn btn-s btn-sm skjult" id="btn-lim-inn" onclick="klargjorParse()">📋 Lim inn plan</button>
-      <button class="btn btn-s btn-sm" onclick="byttListeModus(true)" title="Vis som liste">📋 Liste</button>
-    </div>
+    <!-- Frossen nav + filter (begge modi) -->
+    <div id="laerer-sticky-zone" class="sticky-zone">
 
-    <!-- Liste-navigasjon (listemodus) -->
-    <div id="laerer-liste-nav" class="uke-nav skjult">
-      <button class="btn btn-s btn-sm" onclick="listNavigasjon(-6)">← Forrige</button>
-      <span class="uke-label" id="liste-uke-label">Uke –</span>
-      <button class="btn btn-s btn-sm" onclick="listNavigasjon(6)">Neste →</button>
-      <button class="btn btn-s btn-sm" onclick="gaTilNaaListe()">Nå</button>
-      <div class="spacer" style="flex:1"></div>
-      <button class="btn btn-s btn-sm" onclick="byttListeModus(false)" title="Vis som ukeplan">📅 Ukeplan</button>
-    </div>
+      <!-- Uke-navigasjon (ukesmodus) -->
+      <div id="laerer-uke-nav" class="uke-nav">
+        <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
+        <span class="uke-label">Uke</span>
+        <input type="number" id="laerer-uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" onkeydown="if(event.key==='Enter')gaTilUke(this.value)" onblur="gaTilUke(this.value)">
+        <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
+        <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
+        <div class="spacer" style="flex:1"></div>
+        <button class="btn btn-p btn-sm" onclick="klargjorNyOkt()">+ Ny økt</button>
+        <button class="btn btn-s btn-sm skjult" id="btn-lim-inn" onclick="klargjorParse()">📋 Lim inn plan</button>
+        <button class="btn btn-s btn-sm" onclick="byttListeModus(true)" title="Vis som liste">📋 Liste</button>
+      </div>
 
-    <!-- Gruppe-filter (ukesmodus) -->
-    <div id="laerer-uke-filter" class="filter-bar">
-      <select id="laerer-filter-gruppe" onchange="oppdaterLaererVisning()">
-        <option value="">Alle grupper</option>
-      </select>
-    </div>
+      <!-- Liste-navigasjon (listemodus) -->
+      <div id="laerer-liste-nav" class="uke-nav skjult">
+        <button class="btn btn-s btn-sm" onclick="listNavigasjon(-6)">← Forrige</button>
+        <span class="uke-label" id="liste-uke-label">Uke –</span>
+        <button class="btn btn-s btn-sm" onclick="listNavigasjon(6)">Neste →</button>
+        <button class="btn btn-s btn-sm" onclick="gaTilNaaListe()">Nå</button>
+        <div class="spacer" style="flex:1"></div>
+        <button class="btn btn-s btn-sm" onclick="byttListeModus(false)" title="Vis som ukeplan">📅 Ukeplan</button>
+      </div>
 
-    <!-- Fag/lærer-filter (listemodus) -->
-    <div id="laerer-liste-filter" class="filter-bar skjult">
-      <select id="liste-filter-fag" onchange="oppdaterListeVisning()">
-        <option value="">Alle fag</option>
-      </select>
-      <select id="liste-filter-laerer" onchange="oppdaterListeVisning()">
-        <option value="">Alle lærere</option>
-      </select>
-    </div>
+      <!-- Gruppe-filter (ukesmodus) -->
+      <div id="laerer-uke-filter" class="filter-bar">
+        <select id="laerer-filter-gruppe" onchange="oppdaterLaererVisning()">
+          <option value="">Alle grupper</option>
+        </select>
+      </div>
+
+      <!-- Fag/lærer-filter (listemodus) -->
+      <div id="laerer-liste-filter" class="filter-bar skjult">
+        <select id="liste-filter-fag" onchange="oppdaterListeVisning()">
+          <option value="">Alle fag</option>
+        </select>
+        <select id="liste-filter-laerer" onchange="oppdaterListeVisning()">
+          <option value="">Alle lærere</option>
+        </select>
+      </div>
+
+    </div><!-- /laerer-sticky-zone -->
 
     <!-- Ukesinnhold -->
     <div id="laerer-uke-innhold"></div>
@@ -1333,18 +1358,32 @@ function oppdaterElevVisning() {
   });
 }
 
-// Beregner riktig top-offset for sticky sone og kolonneoverskrifter
+// Beregner riktig top-offset for alle sticky soner og kolonneoverskrifter
 function settStickyTopp() {
   const headerEl = document.getElementById('app-header');
-  const zoneEl   = document.getElementById('elev-sticky-zone');
-  if (!headerEl || !zoneEl) return;
-  const headerH  = headerEl.offsetHeight;
-  zoneEl.style.top = headerH + 'px';
-  const zoneH    = zoneEl.offsetHeight;
-  const hoderTop = headerH + zoneH;
-  document.querySelectorAll('#uke-innhold .dag-kolonne-hode').forEach(h => {
-    h.style.top = hoderTop + 'px';
-  });
+  if (!headerEl) return;
+  const headerH = headerEl.offsetHeight;
+
+  // Elev-sone
+  const elevZone = document.getElementById('elev-sticky-zone');
+  if (elevZone) {
+    elevZone.style.top = headerH + 'px';
+    const zoneH = elevZone.offsetHeight;
+    document.querySelectorAll('#uke-innhold .dag-kolonne-hode').forEach(h => {
+      h.style.top = (headerH + zoneH) + 'px';
+    });
+  }
+
+  // Lærer-sone
+  const laererZone = document.getElementById('laerer-sticky-zone');
+  if (laererZone) {
+    laererZone.style.top = headerH + 'px';
+    const zoneH = laererZone.offsetHeight;
+    // Tabell-overskrifter i listevisning stikker rett under sonen
+    document.querySelectorAll('.liste-tabell th').forEach(th => {
+      th.style.top = (headerH + zoneH) + 'px';
+    });
+  }
 }
 
 function sjekkInfoKlipping() {
@@ -1440,40 +1479,90 @@ function oppdaterLaererVisning() {
   const gruppe = el('laerer-filter-gruppe').value;
   // Lærer bruker én samlet gruppe-filter — vis som NPT-filter for enkelhets skyld
   visUkeMedFilter(el('laerer-uke-innhold'), S.ukedata, S.ferie, gruppe, gruppe, true);
+  requestAnimationFrame(settStickyTopp);
 }
 
 function visUkeMedFilter(container, data, ferie, nptParti, yffGruppe, kanRedigere) {
   container.innerHTML = '';
-
   const rader = data.filter(r => skalVises(r, nptParti, yffGruppe));
-  let harNoe = false;
 
-  DAGER.forEach(dag => {
-    const dr = rader.filter(r => r.dag === dag || r.dag === 'Alle');
+  // Sjekk om det finnes noe å vise
+  const harNoe = DAGER.some(dag => {
     const dato = ukeDagTilDato(S.uke, dag, S.ar);
-    const ferieIDag = ferierForDato(dato, ferie);
-    if (!dr.length && !ferieIDag.length) return;
-
-    harNoe = true;
-    const sek = document.createElement('div');
-    sek.className = 'dag-seksjon';
-    sek.innerHTML = `<div class="dag-tittel">${dag}</div>`;
-
-    // Ferie-kort øverst i dag-seksjonen
-    ferieIDag.forEach(f => {
-      const div = document.createElement('div');
-      div.className = `ferie-dag-kort ${ferieFargeklasse(f.type)}`;
-      div.textContent = `${ferieSymbol(f.type)} ${f.navn}`;
-      sek.appendChild(div);
-    });
-
-    dr.forEach(r => sek.appendChild(lagOktKort(r, kanRedigere)));
-    container.appendChild(sek);
-  });
+    return rader.some(r => r.dag === dag) || ferierForDato(dato, ferie).length > 0;
+  }) || rader.some(r => r.dag === 'Alle');
 
   if (!harNoe) {
     container.innerHTML = '<div class="tom-uke">Ingen registrerte aktiviteter denne uken.</div>';
+    return;
   }
+
+  // ── "Alle"-dag-aktiviteter: full bredderad øverst ────────────────────────────
+  const alleRader = rader.filter(r => r.dag === 'Alle');
+  if (alleRader.length) {
+    const alleRad = document.createElement('div');
+    alleRad.className = 'laerer-uke-alle';
+    alleRader.forEach(r => alleRad.appendChild(lagOktKort(r, kanRedigere)));
+    container.appendChild(alleRad);
+  }
+
+  // ── Rad 1: Mandag, Tirsdag, Onsdag (3 kolonner) ──────────────────────────────
+  const rad1 = document.createElement('div');
+  rad1.className = 'laerer-uke-rad1';
+  ['Mandag', 'Tirsdag', 'Onsdag'].forEach(dag =>
+    rad1.appendChild(byggLaererDagKol(dag, rader, ferie, kanRedigere))
+  );
+  container.appendChild(rad1);
+
+  // ── Rad 2: Torsdag, Fredag (2 kolonner) ──────────────────────────────────────
+  const rad2 = document.createElement('div');
+  rad2.className = 'laerer-uke-rad2';
+  ['Torsdag', 'Fredag'].forEach(dag =>
+    rad2.appendChild(byggLaererDagKol(dag, rader, ferie, kanRedigere))
+  );
+  container.appendChild(rad2);
+}
+
+function byggLaererDagKol(dag, rader, ferie, kanRedigere) {
+  const dato      = ukeDagTilDato(S.uke, dag, S.ar);
+  const ferieIDag = ferierForDato(dato, ferie);
+  const dagRader  = rader.filter(r => r.dag === dag);
+
+  const kol = document.createElement('div');
+  kol.className = 'laerer-dag-kol';
+
+  // Dag-overskrift med dato
+  const datoStr = dato
+    ? String(dato.getDate()).padStart(2,'0') + '.' + String(dato.getMonth()+1).padStart(2,'0')
+    : '';
+  const hode = document.createElement('div');
+  hode.className = 'laerer-dag-hode';
+  hode.innerHTML = `${dag}<span class="dag-kolonne-dato">${datoStr}</span>`;
+  kol.appendChild(hode);
+
+  const innhold = document.createElement('div');
+  innhold.className = 'laerer-dag-innhold';
+
+  // Ferie-kort
+  ferieIDag.forEach(f => {
+    const div = document.createElement('div');
+    div.className = `ferie-dag-kort ${ferieFargeklasse(f.type)}`;
+    div.textContent = `${ferieSymbol(f.type)} ${f.navn}`;
+    innhold.appendChild(div);
+  });
+
+  // Aktivitetskort
+  if (dagRader.length) {
+    dagRader.forEach(r => innhold.appendChild(lagOktKort(r, kanRedigere)));
+  } else if (!ferieIDag.length) {
+    const tom = document.createElement('div');
+    tom.className = 'dag-tom';
+    tom.textContent = '–';
+    innhold.appendChild(tom);
+  }
+
+  kol.appendChild(innhold);
+  return kol;
 }
 
 function skalVises(r, nptParti, yffGruppe) {
