@@ -475,7 +475,7 @@ header .spacer { flex: 1; }
   <div class="uke-nav">
     <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
     <span class="uke-label">Uke</span>
-    <input type="number" id="uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" oninput="gaTilUke(this.value)">
+    <input type="number" id="uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" onkeydown="if(event.key==='Enter')gaTilUke(this.value)" onblur="gaTilUke(this.value)">
     <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
     <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
     <button class="btn btn-s btn-sm" onclick="window.print()">Skriv ut</button>
@@ -510,7 +510,7 @@ header .spacer { flex: 1; }
     <div id="laerer-uke-nav" class="uke-nav">
       <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
       <span class="uke-label">Uke</span>
-      <input type="number" id="laerer-uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" oninput="gaTilUke(this.value)">
+      <input type="number" id="laerer-uke-input" class="uke-nr-input" min="1" max="53" inputmode="numeric" onkeydown="if(event.key==='Enter')gaTilUke(this.value)" onblur="gaTilUke(this.value)">
       <button class="btn btn-s btn-sm" onclick="bytteUke(1)">Neste →</button>
       <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
       <div class="spacer" style="flex:1"></div>
@@ -819,6 +819,7 @@ header .spacer { flex: 1; }
 <!-- Bruker-meny -->
 <div id="bruker-meny" class="skjult">
   <div class="bruker-meny-navn" id="bruker-meny-navn"></div>
+  <button class="bruker-meny-btn" onclick="visElev();lukkBrukerMeny()">👁 Elevvisning</button>
   <button class="bruker-meny-btn" onclick="visModal('modal-passord');lukkBrukerMeny()">🔑 Bytt passord</button>
   <button class="bruker-meny-btn rød" onclick="loggUt()">↩ Logg ut</button>
 </div>
@@ -1310,7 +1311,6 @@ function visElevUke() {
   const yffGruppe  = el('filter-yff').value;
   const data       = S.ukedata || [];
   const ferie      = S.ferie  || [];
-  console.log('[DEBUG] visElevUke – uke:', S.uke, 'ar:', S.ar, 'ferie:', JSON.stringify(ferie));
   container.innerHTML = '';
 
   const rader = data.filter(r => skalVises(r, nptParti, yffGruppe));
@@ -2053,8 +2053,7 @@ function synkTilDato(fraInput) {
 }
 
 function oppdaterLagreKnapp() {
-  const harRader = el('skolerute-tbody').querySelector('tr') !== null;
-  el('btn-lagre-skolerute').disabled = !harRader;
+  el('btn-lagre-skolerute').disabled = false;
 }
 
 async function lagreSkolerute() {
@@ -2090,6 +2089,7 @@ async function lastSkolerute() {
   tbody.innerHTML = '';
   sorterSkolerute(res.rader).forEach(r => leggTilSkoleruteTr(tbody, r));
   el('skolerute-preview').classList.remove('skjult');
+  el('btn-lagre-skolerute').disabled = true; // passiv inntil bruker gjør en endring
 }
 
 // ── Admin – Brukere ───────────────────────────────────────────────────────────

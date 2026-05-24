@@ -362,7 +362,10 @@ function buildSkolerutePrompt(tekst) {
 - fraDato (ISO-dato "YYYY-MM-DD")
 - tilDato (ISO-dato "YYYY-MM-DD")
 - navn (f.eks. "Høstferie", "Juleferie", "Planleggingsdag")
-- type ("Ferie", "Høytid" eller "Planleggingsdag")
+- type: bruk én av disse tre:
+  • "Høytid" – religiøse eller nasjonale høytidsdager (jul/juleferie, påske/påskeferie, Kristi Himmelfartsdag, pinse/2. pinsedag, 1. mai, 17. mai)
+  • "Ferie" – ordinære skoleferier uten religiøs/nasjonal betydning (høstferie, vinterferie, sommerferie, planleggingsdag-fri-dag)
+  • "Planleggingsdag" – planleggingsdager der skolen er stengt for elever
 
 VIKTIG: Bruk KUN datoer som eksplisitt er nevnt i teksten. Ikke legg til høytider, fridager eller merkedager som ikke er nevnt — selv om du vet at de finnes.
 
