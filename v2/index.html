@@ -165,6 +165,28 @@ header .spacer { flex: 1; }
 }
 .tom-uke { text-align: center; color: var(--grå); padding: 40px 20px; font-size: .95rem; }
 
+/* ── Ferie all-day rad (elev – strekker seg over daggrid-kolonner) ─────────── */
+.ferie-alldag-rad {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 6px;
+}
+.ferie-alldag-item {
+  border-radius: 5px; padding: 4px 8px; font-size: .78rem; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default;
+}
+/* ── Ferie dag-kort (lærer – vises per dag-seksjon) ─────────────────────────── */
+.ferie-dag-kort {
+  border-radius: 6px; padding: 6px 10px; font-size: .83rem; font-weight: 600; margin-bottom: 2px;
+}
+/* ── Ferie farger ────────────────────────────────────────────────────────────── */
+.ferie-type-ferie    { background: #fef9c3; color: #713f12; }
+.ferie-type-hoytid   { background: #fce7f3; color: #831843; }
+.ferie-type-plan     { background: #dbeafe; color: #1e3a8a; }
+.ferie-type-annet    { background: #f3f4f6; color: #374151; }
+@media (max-width: 600px) {
+  .ferie-alldag-rad { grid-template-columns: 1fr; }
+  .ferie-alldag-item { grid-column: 1 !important; }
+}
+
 /* ── Modaler ───────────────────────────────────────────────────────────────── */
 .modal-bg {
   position: fixed; inset: 0; background: rgba(0,0,0,.45);
@@ -1050,6 +1072,46 @@ function ferieSymbol(type) {
   return '📅';
 }
 
+function ferieFargeklasse(type) {
+  if (!type || type === 'Ferie') return 'ferie-type-ferie';
+  if (type === 'Høytid')        return 'ferie-type-hoytid';
+  if (type === 'Planleggingsdag') return 'ferie-type-plan';
+  return 'ferie-type-annet';
+}
+
+// Returnerer ferie-oppføringer fra ferierArr som dekker en gitt dato-objekt
+function ferierForDato(dato, ferierArr) {
+  if (!dato || !ferierArr?.length) return [];
+  const ds = dato.toISOString().slice(0, 10);
+  return ferierArr.filter(f => ds >= (f.fraDato || '') && ds <= (f.tilDato || f.fraDato || ''));
+}
+
+// Bygger en CSS-grid-rad med fargede span som strekker seg over aktuelle ukedager
+function byggFerieAlldagRad(ferie, uke, ar) {
+  const datoer = DAGER.map(dag => ukeDagTilDato(uke, dag, ar));
+  const rad = document.createElement('div');
+  rad.className = 'ferie-alldag-rad';
+  let harNoe = false;
+  ferie.forEach(f => {
+    const fra = f.fraDato || '', til = f.tilDato || f.fraDato || '';
+    let startKol = -1, endKol = -1;
+    datoer.forEach((dato, i) => {
+      if (!dato) return;
+      const ds = dato.toISOString().slice(0, 10);
+      if (ds >= fra && ds <= til) { if (startKol < 0) startKol = i; endKol = i; }
+    });
+    if (startKol < 0) return;
+    harNoe = true;
+    const div = document.createElement('div');
+    div.className = `ferie-alldag-item ${ferieFargeklasse(f.type)}`;
+    div.style.gridColumn = `${startKol + 1} / ${endKol + 2}`;
+    div.title = f.navn;
+    div.textContent = `${ferieSymbol(f.type)} ${f.navn}`;
+    rad.appendChild(div);
+  });
+  return harNoe ? rad : null;
+}
+
 // ── Laste-overlay ─────────────────────────────────────────────────────────────
 let _lasteTimer = null;
 
@@ -1243,14 +1305,6 @@ function visElevUke() {
   const ferie      = S.ferie  || [];
   container.innerHTML = '';
 
-  // ── Ferie-banner ────────────────────────────────────────────────────────────
-  if (ferie.length) {
-    const banner = document.createElement('div');
-    banner.className = 'ferie-banner uke-hele';
-    banner.innerHTML = ferie.map(f => `${ferieSymbol(f.type)} ${f.navn}`).join(' · ');
-    container.appendChild(banner);
-  }
-
   const rader = data.filter(r => skalVises(r, nptParti, yffGruppe));
 
   // ── "Alle"-dag-økter: full bredderad over grid ───────────────────────────────
@@ -1260,6 +1314,12 @@ function visElevUke() {
     alleRad.className = 'uke-hele';
     alleRader.forEach(r => alleRad.appendChild(lagOktKort(r, false)));
     container.appendChild(alleRad);
+  }
+
+  // ── Ferie all-day rad over daggridet ─────────────────────────────────────────
+  if (ferie.length) {
+    const ferieRad = byggFerieAlldagRad(ferie, S.uke, S.ar);
+    if (ferieRad) container.appendChild(ferieRad);
   }
 
   // ── 5-kolonne daggrid ────────────────────────────────────────────────────────
@@ -1324,30 +1384,35 @@ function oppdaterLaererVisning() {
 function visUkeMedFilter(container, data, ferie, nptParti, yffGruppe, kanRedigere) {
   container.innerHTML = '';
 
-  // Vis skolerute-innslag (ferie, høytid, planleggingsdag) øverst
-  if (ferie.length) {
-    const banner = document.createElement('div');
-    banner.className = 'ferie-banner';
-    banner.innerHTML = ferie.map(f => `${ferieSymbol(f.type)} ${f.navn}`).join(' · ');
-    container.appendChild(banner);
-  }
-
   const rader = data.filter(r => skalVises(r, nptParti, yffGruppe));
-  if (!rader.length) {
-    if (!ferie.length)
-      container.innerHTML = '<div class="tom-uke">Ingen registrerte aktiviteter denne uken.</div>';
-    return;
-  }
+  let harNoe = false;
 
   DAGER.forEach(dag => {
     const dr = rader.filter(r => r.dag === dag || r.dag === 'Alle');
-    if (!dr.length) return;
+    const dato = ukeDagTilDato(S.uke, dag, S.ar);
+    const ferieIDag = ferierForDato(dato, ferie);
+    if (!dr.length && !ferieIDag.length) return;
+
+    harNoe = true;
     const sek = document.createElement('div');
     sek.className = 'dag-seksjon';
     sek.innerHTML = `<div class="dag-tittel">${dag}</div>`;
+
+    // Ferie-kort øverst i dag-seksjonen
+    ferieIDag.forEach(f => {
+      const div = document.createElement('div');
+      div.className = `ferie-dag-kort ${ferieFargeklasse(f.type)}`;
+      div.textContent = `${ferieSymbol(f.type)} ${f.navn}`;
+      sek.appendChild(div);
+    });
+
     dr.forEach(r => sek.appendChild(lagOktKort(r, kanRedigere)));
     container.appendChild(sek);
   });
+
+  if (!harNoe) {
+    container.innerHTML = '<div class="tom-uke">Ingen registrerte aktiviteter denne uken.</div>';
+  }
 }
 
 function skalVises(r, nptParti, yffGruppe) {
