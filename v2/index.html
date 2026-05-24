@@ -1310,6 +1310,7 @@ function visElevUke() {
   const yffGruppe  = el('filter-yff').value;
   const data       = S.ukedata || [];
   const ferie      = S.ferie  || [];
+  console.log('[DEBUG] visElevUke – uke:', S.uke, 'ar:', S.ar, 'ferie:', JSON.stringify(ferie));
   container.innerHTML = '';
 
   const rader = data.filter(r => skalVises(r, nptParti, yffGruppe));
