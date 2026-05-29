@@ -55,7 +55,9 @@ function doPost(e) {
     saveBruker:     handleSaveBruker,
     deleteBruker:   handleDeleteBruker,
     changePassord:  handleChangePassord,
-    genererSitater: handleGenererSitater
+    genererSitater: handleGenererSitater,
+    getBackup:      handleGetBackup,
+    slettAlt:       handleSlettAlt
   };
   const fn = handlers[d.action];
   if (!fn) return jsonResponse({ ok: false, error: 'Ukjent action: ' + d.action });
@@ -297,6 +299,39 @@ function handleDeleteBruker(d) {
       }
     }
     return jsonResponse({ ok: false, error: 'Bruker ikke funnet' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleGetBackup(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin')
+    return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  const plan      = getSheet('Plan');
+  const skolerute = getSheet('Skolerute');
+  const planData      = plan      ? plan.getDataRange().getValues()      : [];
+  const skoleruteData = skolerute ? skolerute.getDataRange().getValues() : [];
+  return jsonResponse({ ok: true, plan: planData, skolerute: skoleruteData, eksportert: new Date().toISOString() });
+}
+
+function handleSlettAlt(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin')
+    return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    if (d.slettPlan) {
+      const plan = getSheet('Plan');
+      if (plan && plan.getLastRow() > 1) plan.deleteRows(2, plan.getLastRow() - 1);
+    }
+    if (d.slettSkolerute) {
+      const sr = getSheet('Skolerute');
+      if (sr && sr.getLastRow() > 1) sr.deleteRows(2, sr.getLastRow() - 1);
+    }
+    SpreadsheetApp.flush();
+    return jsonResponse({ ok: true });
   } finally {
     lock.releaseLock();
   }

@@ -701,6 +701,31 @@ header .spacer { flex: 1; }
         <span id="sitater-status" style="font-size:.83rem;color:var(--grå);margin-left:10px"></span>
       </div>
     </div>
+
+    <div class="kort">
+      <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
+        <h3>Klasselenker</h3><span class="konfig-pil">▼</span>
+      </div>
+      <div class="konfig-kort-innhold skjult">
+        <p style="font-size:.88rem;color:var(--grå);margin-bottom:14px">Del lenker og QR-koder med elevene — én per klasse.</p>
+        <div id="klasse-lenker-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:14px"></div>
+        <button class="btn btn-s btn-sm" onclick="skrivUtAlleKlasseKort()">🖨️ Skriv ut alle</button>
+      </div>
+    </div>
+
+    <div class="kort" style="border-color:var(--rød-lys,#fdd);border-width:1px">
+      <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
+        <h3 style="color:var(--rød)">Avansert</h3><span class="konfig-pil">▼</span>
+      </div>
+      <div class="konfig-kort-innhold skjult">
+        <p style="font-size:.88rem;color:var(--grå);margin-bottom:14px">Brukes ved nytt skoleår. Last ned backup <em>før</em> du sletter.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-s btn-sm" onclick="lastNedBackup()">⬇️ Last ned backup (JSON)</button>
+          <button class="btn btn-f btn-sm" onclick="bekreftSlettPlan()">🗑️ Slett alle økter</button>
+          <button class="btn btn-f btn-sm" onclick="bekreftSlettSkolerute()">🗑️ Slett skolerute</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Skolerute-fane -->
@@ -2121,6 +2146,7 @@ function lastKonfig() {
   visKonfigListe('konfig-yff-liste', [...k.grupperYFF].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   visKonfigListe('konfig-npt-liste', [...k.grupperNPT].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   visKonfigListe('konfig-klasse-liste', [...(k.klasser || [])].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
+  fyllKlasseLenkerGrid();
 
   // Event-delegering: aktiver knapp ved endring i lister
   ['konfig-fag-liste','konfig-yff-liste','konfig-npt-liste','konfig-klasse-liste'].forEach(listId => {
@@ -2488,6 +2514,74 @@ async function lagreMinProfil() {
   sessionStorage.setItem('bruker', JSON.stringify(S.bruker));
   lukkModal('modal-min-profil');
   visMelding('Profil lagret!');
+}
+
+// ── Klasselenker ──────────────────────────────────────────────────────────────
+function fyllKlasseLenkerGrid() {
+  const grid = el('klasse-lenker-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const klasser = S.konfig.klasser || [];
+  klasser.forEach(k => {
+    const url = location.origin + location.pathname + '?klasse=' + encodeURIComponent(k);
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(url);
+    const div = document.createElement('div');
+    div.style.cssText = 'text-align:center;padding:12px;border:1px solid var(--kant);border-radius:var(--radius);background:var(--hvit)';
+    div.innerHTML = `
+      <div style="font-weight:700;margin-bottom:8px;color:var(--grønn)">${k}</div>
+      <img src="${qrUrl}" alt="QR ${k}" style="width:120px;height:120px;display:block;margin:0 auto 8px">
+      <input type="text" readonly value="${url}" style="width:100%;font-size:.68rem;font-family:monospace;background:var(--grå-lys);border:1px solid var(--kant);border-radius:4px;padding:4px 6px;box-sizing:border-box;cursor:text" onclick="this.select()">`;
+    grid.appendChild(div);
+  });
+}
+
+function skrivUtAlleKlasseKort() {
+  const klasser = S.konfig.klasser || [];
+  if (!klasser.length) return;
+  const kortHtml = klasser.map(k => {
+    const url = location.origin + location.pathname + '?klasse=' + encodeURIComponent(k);
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(url);
+    return `<div style="display:inline-block;width:200px;text-align:center;padding:16px;border:1px solid #ccc;border-radius:8px;margin:8px;vertical-align:top">
+      <div style="font-size:1.2rem;font-weight:700;margin-bottom:8px">${k}</div>
+      <img src="${qrUrl}" style="width:150px;height:150px;display:block;margin:0 auto 8px">
+      <div style="font-size:.65rem;word-break:break-all;color:#555">${url}</div>
+    </div>`;
+  }).join('');
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Klasselenker</title></head><body style="font-family:sans-serif;padding:20px">
+    <h2 style="margin-bottom:16px">${S.konfig.skoleinfo?.skole_navn || 'Ukeplan'} – Klasselenker</h2>
+    <div>${kortHtml}</div>
+    <script>window.onload=()=>window.print()<\/script></body></html>`);
+  win.document.close();
+}
+
+// ── Nytt skoleår ──────────────────────────────────────────────────────────────
+async function lastNedBackup() {
+  visMelding('Henter backup…');
+  const res = await api('getBackup', { token: S.bruker.token });
+  if (!res.ok) { visMelding(res.error, 'feil'); return; }
+  const json = JSON.stringify({ plan: res.plan, skolerute: res.skolerute, eksportert: res.eksportert }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'ukeplan-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function bekreftSlettPlan() {
+  if (!confirm('Slett ALLE økter permanent?\nDette kan ikke angres — last ned backup først.')) return;
+  if (!confirm('Er du helt sikker? Alle planlagte økter slettes.')) return;
+  const res = await api('slettAlt', { token: S.bruker.token, slettPlan: true });
+  if (res.ok) { cacheReset(); lastUkedata(); visMelding('Alle økter slettet'); }
+  else visMelding(res.error, 'feil');
+}
+
+async function bekreftSlettSkolerute() {
+  if (!confirm('Slett skoleruten permanent?\nDette kan ikke angres — last ned backup først.')) return;
+  const res = await api('slettAlt', { token: S.bruker.token, slettSkolerute: true });
+  if (res.ok) visMelding('Skolerute slettet');
+  else visMelding(res.error, 'feil');
 }
 
 // ── iCal ──────────────────────────────────────────────────────────────────────
