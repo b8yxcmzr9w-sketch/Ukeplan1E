@@ -828,7 +828,8 @@ header .spacer { flex: 1; }
     <h3>Lim inn plan for tolking</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="felt"><label>Fag</label><select id="parse-fag" onchange="oppdaterParseGruppe()"></select></div>
-      <div class="felt skjult" id="parse-gruppe-felt">
+      <div class="felt"><label>Klasse</label><select id="parse-klasse"></select></div>
+      <div class="felt skjult" id="parse-gruppe-felt" style="grid-column:span 2">
         <label>YFF-gruppe</label><select id="parse-gruppe"></select>
       </div>
     </div>
@@ -1617,14 +1618,15 @@ function lagOktKort(r, kanRedigere) {
   const div = document.createElement('div');
   div.className = 'okt-kort';
   const gruppen = r.gruppe && r.gruppe !== 'Alle' ? `<span class="gruppe-badge">${r.gruppe}</span>` : '';
+  const alleBadge = kanRedigere && r.klasse === 'Alle' ? '<span class="gruppe-badge" title="Gjelder alle klasser" style="background:#fff3cd;color:#856404">★ Alle</span>' : '';
   const redBtn = kanRedigere
     ? `<div class="rediger-kn">
         <button class="btn btn-s btn-sm" onclick='redigerOkt(${JSON.stringify(r)})'>✏️</button>
-        <button class="btn btn-f btn-sm" onclick="slettOkt('${r.id}')">🗑</button>
+        <button class="btn btn-f btn-sm" onclick="slettOkt('${r.id}','${r.klasse}')">🗑</button>
        </div>` : '';
   div.innerHTML = `${redBtn}
     <div class="okt-hode">
-      <span class="fag-badge" data-fag="${r.fag}">${r.fag}</span>${gruppen}
+      <span class="fag-badge" data-fag="${r.fag}">${r.fag}</span>${gruppen}${alleBadge}
       <span class="aktivitet-tekst">${r.aktivitet}</span>
     </div>
     <div class="meta">
@@ -1723,9 +1725,9 @@ function klargjorNyOkt() {
 
   const klasseSel = el('okt-klasse');
   const klasser = S.konfig.klasser && S.konfig.klasser.length ? S.konfig.klasser : (S.klasse ? [S.klasse] : []);
-  klasseSel.innerHTML = klasser.map(k =>
-    `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`
-  ).join('');
+  klasseSel.innerHTML =
+    `<option value="Alle">– Alle klasser –</option>` +
+    klasser.map(k => `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`).join('');
 
   const fagSel = el('okt-fag');
   fagSel.innerHTML = '';
@@ -1788,16 +1790,22 @@ async function lagreOkt() {
   });
   if (res.ok) {
     lukkModal('modal-ny-okt');
-    cacheSlett(parseInt(el('okt-uke').value), S.ar, el('okt-klasse').value || S.klasse);
+    const lagretKlasse = el('okt-klasse').value || S.klasse;
+    if (lagretKlasse === 'Alle') cacheReset();
+    else cacheSlett(parseInt(el('okt-uke').value), S.ar, lagretKlasse);
     if (S.listeModus) lastListedata();
     else lastUkedata();
   } else visInlineError('okt-feil', res.error);
 }
 
-async function slettOkt(id) {
+async function slettOkt(id, klasse) {
   if (!confirm('Slett denne økten?')) return;
   const res = await api('delete', { token: S.bruker.token, id });
-  if (res.ok) { cacheSlett(S.uke, S.ar, S.klasse); lastUkedata(); }
+  if (res.ok) {
+    if (!klasse || klasse === 'Alle') cacheReset();
+    else cacheSlett(S.uke, S.ar, klasse);
+    lastUkedata();
+  }
 }
 
 // ── Parse ─────────────────────────────────────────────────────────────────────
@@ -1806,6 +1814,13 @@ function klargjorParse() {
   fagSel.innerHTML = '';
   S.konfig.fag.forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
   oppdaterParseGruppe();
+
+  const parsKlasseSel = el('parse-klasse');
+  const klasser = S.konfig.klasser && S.konfig.klasser.length ? S.konfig.klasser : [];
+  parsKlasseSel.innerHTML =
+    `<option value="Alle">– Alle klasser –</option>` +
+    klasser.map(k => `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`).join('');
+
   el('parse-tekst').value = '';
   el('parse-tbody').innerHTML = '';
   el('parse-resultat').classList.add('skjult');
@@ -1862,7 +1877,7 @@ async function tolkPlan(ev) {
   const tekst  = el('parse-tekst').value.trim();
   if (!tekst) return;
   const fag    = el('parse-fag').value;
-  const klasse = S.klasse;
+  const klasse = el('parse-klasse').value || S.klasse;
   const gruppe = fag === 'YFF' ? el('parse-gruppe').value : '';
   const btn = ev.target;
   btn.textContent = 'Tolker...'; btn.disabled = true;

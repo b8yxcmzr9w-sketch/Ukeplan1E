@@ -23,7 +23,7 @@ function doGet(e) {
     const fraUke = parseInt(p.fraUke);
     const tilUke = parseInt(p.tilUke);
     const rows = vals.length < 2 ? [] : vals.slice(1)
-      .filter(r => r[0] && parseInt(r[1]) === ar && parseInt(r[2]) >= fraUke && parseInt(r[2]) <= tilUke && (!klasse || r[4] === klasse))
+      .filter(r => r[0] && parseInt(r[1]) === ar && parseInt(r[2]) >= fraUke && parseInt(r[2]) <= tilUke && (!klasse || r[4] === klasse || r[4] === 'Alle'))
       .map(rowToObj);
     const ferie = ferieSheet ? getFerierForRange(ferieSheet, fraUke, tilUke, ar) : [];
     return jsonResponse({ ok: true, rows, ferie });
@@ -32,7 +32,7 @@ function doGet(e) {
   // Single-uke request
   const uke = parseInt(p.uke);
   const rows = vals.length < 2 ? [] : vals.slice(1)
-    .filter(r => r[0] && parseInt(r[2]) === uke && parseInt(r[1]) === ar && (!klasse || r[4] === klasse))
+    .filter(r => r[0] && parseInt(r[2]) === uke && parseInt(r[1]) === ar && (!klasse || r[4] === klasse || r[4] === 'Alle'))
     .map(rowToObj);
   const ferie = ferieSheet ? getFerierForUke(ferieSheet, uke, ar) : [];
   return jsonResponse({ ok: true, rows, ferie });
@@ -471,7 +471,7 @@ function buildIcal(klasse, nptParti, yffGruppe) {
   let events = '';
   vals.forEach(r => {
     if (!r[0]) return;
-    if (klasse && r[4] !== klasse) return;
+    if (klasse && r[4] !== klasse && r[4] !== 'Alle') return;
     if (r[5] === 'NPT' && nptParti  && r[6] !== nptParti  && r[6] !== 'Alle') return;
     if (r[5] === 'YFF' && yffGruppe && r[6] !== yffGruppe && r[6] !== 'Alle') return;
     if (!r[8]) return;
