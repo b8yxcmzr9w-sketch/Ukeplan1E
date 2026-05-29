@@ -919,10 +919,31 @@ header .spacer { flex: 1; }
   </div>
 </div>
 
+<!-- Min profil -->
+<div id="modal-min-profil" class="modal-bg skjult">
+  <div class="modal" style="max-width:420px">
+    <h3>Min profil</h3>
+    <div class="felt"><label>Navn</label><input id="profil-navn" type="text" disabled style="background:var(--grå-lys);color:var(--grå)"></div>
+    <div class="felt"><label>Rolle</label><input id="profil-rolle" type="text" disabled style="background:var(--grå-lys);color:var(--grå)"></div>
+    <div class="felt"><label>Klasser <span style="font-weight:400;color:var(--grå)">(kommaseparert eller «Alle»)</span></label>
+      <input id="profil-klasser" type="text" placeholder="1E,2E eller Alle">
+    </div>
+    <div class="felt"><label>Fag <span style="font-weight:400;color:var(--grå)">(kommaseparert eller «Alle»)</span></label>
+      <input id="profil-fag" type="text" placeholder="NNA,YFF eller Alle">
+    </div>
+    <p id="profil-feil" class="feil-tekst skjult"></p>
+    <div class="modal-bunn">
+      <button class="btn btn-s" onclick="lukkModal('modal-min-profil')">Avbryt</button>
+      <button class="btn btn-p" onclick="lagreMinProfil()">Lagre</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bruker-meny -->
 <div id="bruker-meny" class="skjult">
   <div class="bruker-meny-navn" id="bruker-meny-navn"></div>
   <button class="bruker-meny-btn" id="btn-bytt-visning" onclick="byttVisning()"></button>
+  <button class="bruker-meny-btn" onclick="visMinProfil();lukkBrukerMeny()">👤 Min profil</button>
   <button class="bruker-meny-btn" onclick="visModal('modal-passord');lukkBrukerMeny()">🔑 Bytt passord</button>
   <button class="bruker-meny-btn rød" onclick="loggUt()">↩ Logg ut</button>
 </div>
@@ -941,7 +962,7 @@ function cacheReset() { ukeCache.clear(); S.bufferFra = null; S.bufferTil = null
 // ── Tilstand ──────────────────────────────────────────────────────────────────
 const S = {
   visning:      'landing',
-  bruker:       null,   // {navn, token, erAdmin, klasser}
+  bruker:       null,   // {navn, token, erAdmin, klasser, rolle, fag}
   klasse:       '',
   uke:          0,
   ar:           new Date().getFullYear(),
@@ -998,6 +1019,8 @@ async function init() {
   const lagretBruker = sessionStorage.getItem('bruker');
   if (lagretBruker) {
     S.bruker = JSON.parse(lagretBruker);
+    if (!S.bruker.rolle) S.bruker.rolle = S.bruker.erAdmin ? 'skoleadmin' : 'laerer';
+    if (!S.bruker.fag)   S.bruker.fag   = 'Alle';
     oppdaterBrukerHeader();
   }
 
@@ -1117,10 +1140,24 @@ function visLaerer() {
 
   if (S.bruker) {
     el('btn-lim-inn').classList.remove('skjult');
-    if (S.bruker.erAdmin) el('admin-fane-bar').classList.remove('skjult');
+    const rolle = S.bruker.rolle || 'laerer';
+    if (rolle === 'skoleadmin' || rolle === 'kontaktlaerer') {
+      el('admin-fane-bar').classList.remove('skjult');
+    }
+    // skjul skoleadmin-faner for kontaktlærer
+    document.querySelectorAll('.fane-skoleadmin').forEach(btn => {
+      btn.style.display = rolle === 'skoleadmin' ? '' : 'none';
+    });
+    // ny-bruker-knapp kun for skoleadmin
+    const btnNy = el('btn-ny-bruker');
+    if (btnNy) btnNy.style.display = rolle === 'skoleadmin' ? '' : 'none';
   }
 
-  if (!S.klasse) S.klasse = S.konfig.skoleinfo?.skole_klasse || (S.konfig.klasser && S.konfig.klasser[0]) || '';
+  if (!S.klasse) {
+    const brukerKlasser = S.bruker?.klasser;
+    const forsteKlasse  = brukerKlasser && brukerKlasser !== 'Alle' ? brukerKlasser.split(',')[0].trim() : null;
+    S.klasse = forsteKlasse || S.konfig.skoleinfo?.skole_klasse || (S.konfig.klasser && S.konfig.klasser[0]) || '';
+  }
   oppdaterKlasseBadge();
 
   // Vis og fyll klassevelger
@@ -1675,7 +1712,7 @@ async function loggInn() {
   if (!navn || !passord) return;
   const res = await api('login', { navn, passord });
   if (!res.ok) { visInlineError('login-feil', res.error); return; }
-  S.bruker = { navn: res.navn, token: res.token, erAdmin: res.erAdmin, klasser: res.klasser };
+  S.bruker = { navn: res.navn, token: res.token, erAdmin: res.erAdmin, klasser: res.klasser, rolle: res.rolle || (res.erAdmin ? 'skoleadmin' : 'laerer'), fag: res.fag || 'Alle' };
   sessionStorage.setItem('bruker', JSON.stringify(S.bruker));
   lukkModal('modal-login');
   oppdaterBrukerHeader();
@@ -1762,6 +1799,7 @@ function redigerOkt(r) {
 function oppdaterOktGruppe() {
   const fag = el('okt-fag').value;
   fyllGruppeForFag(el('okt-gruppe'), fag);
+  if (fag === 'YFF') el('okt-klasse').value = 'Alle';
   const fc = S.konfig.fag.find(f => f.navn === fag);
   if (fc && fc.dag) {
     const dager = fc.dag.split(',').map(d => d.trim()).filter(Boolean);
@@ -1841,6 +1879,7 @@ function oppdaterParseGruppe() {
     felt.classList.remove('skjult');
     sel.innerHTML = '';
     S.konfig.grupperYFF.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
+    el('parse-klasse').value = 'Alle';
   } else {
     felt.classList.add('skjult');
   }
@@ -2331,39 +2370,45 @@ async function lastSkolerute() {
 async function lastBrukere() {
   const res = await api('getBrukere', { token: S.bruker.token, isAdmin: true });
   if (!res.ok) return;
+  const rolle      = S.bruker.rolle || 'laerer';
+  const kanRedigere = rolle === 'skoleadmin';
+  const rolleLabel  = { skoleadmin: 'Skoleadmin', kontaktlaerer: 'Kontaktlærer', laerer: 'Lærer' };
   const liste = el('bruker-liste');
   liste.innerHTML = '';
   res.brukere.forEach(b => {
+    const bRolle = b.rolle || (b.erAdmin ? 'skoleadmin' : 'laerer');
     const div = document.createElement('div');
     div.className = 'bruker-rad';
     div.innerHTML = `
       <div class="bruker-info">
-        <div class="navn">${b.navn} ${b.erAdmin ? '<span class="admin-badge">Admin</span>' : ''}</div>
-        <div class="detalj">Klasser: ${b.klasser || 'Alle'}</div>
+        <div class="navn">${b.navn} <span class="admin-badge">${rolleLabel[bRolle] || bRolle}</span></div>
+        <div class="detalj">Klasser: ${b.klasser || 'Alle'} · Fag: ${b.fag || 'Alle'}</div>
       </div>
-      <button class="btn btn-s btn-sm" onclick='redigerBruker(${JSON.stringify(b)})'>Rediger</button>
-      <button class="btn btn-f btn-sm" onclick="slettBruker('${b.navn}')">Slett</button>`;
+      ${kanRedigere ? `<button class="btn btn-s btn-sm" onclick='redigerBruker(${JSON.stringify(b)})'>Rediger</button>
+      <button class="btn btn-f btn-sm" onclick="slettBruker('${b.navn}')">Slett</button>` : ''}`;
     liste.appendChild(div);
   });
 }
 
 function klargjorNyBruker() {
   el('bruker-modal-tittel').textContent = 'Ny bruker';
-  el('bruker-orig-navn').value = '';
-  el('bruker-navn').value = '';
-  el('bruker-passord').value = '';
-  el('bruker-klasser').value = '';
-  el('bruker-er-admin').checked = false;
+  el('bruker-orig-navn').value  = '';
+  el('bruker-navn').value       = '';
+  el('bruker-passord').value    = '';
+  el('bruker-klasser').value    = '';
+  el('bruker-rolle').value      = 'laerer';
+  el('bruker-fag').value        = 'Alle';
   visModal('modal-ny-bruker');
 }
 
 function redigerBruker(b) {
   el('bruker-modal-tittel').textContent = 'Rediger bruker';
-  el('bruker-orig-navn').value   = b.navn;
-  el('bruker-navn').value        = b.navn;
-  el('bruker-passord').value     = '';
-  el('bruker-klasser').value     = b.klasser || 'Alle';
-  el('bruker-er-admin').checked  = b.erAdmin;
+  el('bruker-orig-navn').value  = b.navn;
+  el('bruker-navn').value       = b.navn;
+  el('bruker-passord').value    = '';
+  el('bruker-klasser').value    = b.klasser || 'Alle';
+  el('bruker-rolle').value      = b.rolle || (b.erAdmin ? 'skoleadmin' : 'laerer');
+  el('bruker-fag').value        = b.fag || 'Alle';
   visModal('modal-ny-bruker');
 }
 
@@ -2371,6 +2416,7 @@ async function lagreBruker() {
   const navn     = el('bruker-navn').value.trim();
   const origNavn = el('bruker-orig-navn').value.trim();
   if (!navn) { visInlineError('bruker-feil', 'Navn er påkrevd'); return; }
+  const rolle = el('bruker-rolle').value;
   const res = await api('saveBruker', {
     token: S.bruker.token, isAdmin: true,
     bruker: {
@@ -2378,7 +2424,9 @@ async function lagreBruker() {
       origNavn: origNavn || navn,
       passord:  el('bruker-passord').value || null,
       klasser:  el('bruker-klasser').value.trim(),
-      erAdmin:  el('bruker-er-admin').checked
+      erAdmin:  rolle === 'skoleadmin',
+      rolle,
+      fag:      el('bruker-fag').value.trim() || 'Alle'
     }
   });
   if (res.ok) { lukkModal('modal-ny-bruker'); lastBrukere(); }
@@ -2389,6 +2437,29 @@ async function slettBruker(navn) {
   if (!confirm(`Slett «${navn}»?`)) return;
   const res = await api('deleteBruker', { token: S.bruker.token, isAdmin: true, navn });
   if (res.ok) lastBrukere(); else visMelding(res.error, 'feil');
+}
+
+// ── Min profil ────────────────────────────────────────────────────────────────
+function visMinProfil() {
+  const b = S.bruker;
+  el('profil-navn').value    = b.navn;
+  el('profil-rolle').value   = { skoleadmin: 'Skoleadmin', kontaktlaerer: 'Kontaktlærer', laerer: 'Lærer' }[b.rolle] || b.rolle;
+  el('profil-klasser').value = b.klasser || 'Alle';
+  el('profil-fag').value     = b.fag     || 'Alle';
+  el('profil-feil').classList.add('skjult');
+  visModal('modal-min-profil');
+}
+
+async function lagreMinProfil() {
+  const klasser = el('profil-klasser').value.trim() || 'Alle';
+  const fag     = el('profil-fag').value.trim()     || 'Alle';
+  const res = await api('saveMinProfil', { token: S.bruker.token, klasser, fag });
+  if (!res.ok) { visInlineError('profil-feil', res.error); return; }
+  S.bruker.klasser = klasser;
+  S.bruker.fag     = fag;
+  sessionStorage.setItem('bruker', JSON.stringify(S.bruker));
+  lukkModal('modal-min-profil');
+  visMelding('Profil lagret!');
 }
 
 // ── iCal ──────────────────────────────────────────────────────────────────────
