@@ -79,6 +79,7 @@ function handleLogin(d) {
     maByttePassord: !!(user[4] && String(user[4]).toUpperCase() === 'TRUE'),
     rolle,
     fag: String(user[6] || 'Alle'),
+    yffGruppe: String(user[7] || ''),
     token: makeToken(d.navn, user[1])
   });
 }
@@ -314,6 +315,7 @@ function handleSaveMinProfil(d) {
       if (rows[i][0] === caller.navn) {
         sheet.getRange(i + 1, 4).setValue(d.klasser || 'Alle');
         sheet.getRange(i + 1, 7).setValue(d.fag || 'Alle');
+        sheet.getRange(i + 1, 8).setValue(d.yffGruppe || '');
         SpreadsheetApp.flush();
         return jsonResponse({ ok: true });
       }
@@ -373,7 +375,7 @@ function getUserByToken(token) {
     if (rows[i][0] === navn && token === makeToken(navn, rows[i][1])) {
       const erAdmin = String(rows[i][2]).toUpperCase() === 'TRUE';
       const rolle = rows[i][5] ? String(rows[i][5]) : (erAdmin ? 'skoleadmin' : 'laerer');
-      return { navn: rows[i][0], erAdmin, klasser: rows[i][3] || 'Alle', rolle, fag: String(rows[i][6] || 'Alle') };
+      return { navn: rows[i][0], erAdmin, klasser: rows[i][3] || 'Alle', rolle, fag: String(rows[i][6] || 'Alle'), yffGruppe: String(rows[i][7] || '') };
     }
   }
   return null;
@@ -621,7 +623,7 @@ function setupSheets() {
   const ss = SpreadsheetApp.openById(SS_ID);
   const faner = [
     { navn: 'Plan',      headers: ['ID','År','Uke','Dag','Klasse','Fag','Gruppe','Lærer','Aktivitet','Oppmøtested','Info','Tid','SistEndret'] },
-    { navn: 'Brukere',   headers: ['Navn','PassordHash','ErAdmin','Klasser','MaByttePassord','Rolle','Fag'] },
+    { navn: 'Brukere',   headers: ['Navn','PassordHash','ErAdmin','Klasser','MaByttePassord','Rolle','Fag','YffGruppe'] },
     { navn: 'Konfig',    headers: ['Type','Nøkkel','Verdi'] },
     { navn: 'Skolerute', headers: ['FraDato','TilDato','Navn','Type'] }
   ];
