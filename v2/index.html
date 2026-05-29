@@ -675,7 +675,6 @@ header .spacer { flex: 1; }
       <div class="konfig-kort-innhold">
         <div class="felt"><label>Skolenavn</label><input id="konfig-navn" type="text" oninput="aktiverNarmesteLagreKnapp(this)"></div>
         <div class="felt"><label>Adresse</label><input id="konfig-adresse" type="text" oninput="aktiverNarmesteLagreKnapp(this)"></div>
-        <div class="felt"><label>Klassenavn</label><input id="konfig-klasse" type="text" placeholder="f.eks. 1E" oninput="aktiverNarmesteLagreKnapp(this)"></div>
         <div class="felt"><label>Logo-URL</label><input id="konfig-logo" type="text" placeholder="https://..." oninput="aktiverNarmesteLagreKnapp(this)"></div>
         <button id="btn-lagre-skoleinfo" class="btn btn-p btn-sm" onclick="lagreSkoleinfo()" disabled>Lagre skoleinfo</button>
       </div>
@@ -1073,7 +1072,7 @@ async function init() {
   const res = await api('getData');
   if (res.ok) {
     S.konfig = res;
-    S.klasse = urlKlasse || res.skoleinfo.skole_klasse || (res.klasser && res.klasser[0]) || '';
+    S.klasse = urlKlasse || (res.klasser && res.klasser[0]) || '';
     oppdaterHeader(res.skoleinfo);
   }
 
@@ -1163,7 +1162,7 @@ function visElev() {
   el('view-laerer').classList.add('skjult');
   el('view-elev').classList.remove('skjult');
   S.visning = 'elev';
-  if (!S.klasse) S.klasse = S.konfig.skoleinfo?.skole_klasse || '';
+  if (!S.klasse) S.klasse = (S.konfig.klasser && S.konfig.klasser[0]) || '';
   oppdaterKlasseBadge();
   fyllElevFilter();
   syncUkeInput();
@@ -1218,7 +1217,7 @@ function visLaerer() {
   if (!S.klasse) {
     const brukerKlasser = S.bruker?.klasser;
     const forsteKlasse  = brukerKlasser && brukerKlasser !== 'Alle' ? brukerKlasser.split(',')[0].trim() : null;
-    S.klasse = forsteKlasse || S.konfig.skoleinfo?.skole_klasse || (S.konfig.klasser && S.konfig.klasser[0]) || '';
+    S.klasse = forsteKlasse || (S.konfig.klasser && S.konfig.klasser[0]) || '';
   }
   oppdaterKlasseBadge();
 
@@ -1250,7 +1249,6 @@ function oppdaterHeader(si) {
   if (si.skole_navn)    { el('hdr-navn').textContent = si.skole_navn; document.title = si.skole_navn; }
   if (si.skole_adresse) { el('hdr-adresse').textContent = si.skole_adresse; el('hdr-adresse').classList.remove('skjult'); }
   if (si.skole_logo)    { el('hdr-logo').src = si.skole_logo; el('hdr-logo').classList.remove('skjult'); }
-  if (si.skole_klasse)  { S.klasse = si.skole_klasse; oppdaterKlasseBadge(); }
 }
 
 function oppdaterKlasseBadge() {
@@ -2184,7 +2182,6 @@ function lastKonfig() {
   const k = S.konfig;
   el('konfig-navn').value    = k.skoleinfo.skole_navn    || '';
   el('konfig-adresse').value = k.skoleinfo.skole_adresse || '';
-  el('konfig-klasse').value  = k.skoleinfo.skole_klasse  || '';
   el('konfig-logo').value    = k.skoleinfo.skole_logo    || '';
 
   // Deaktiver alle lagre-knapper ved lasting
@@ -2249,7 +2246,6 @@ async function lagreSkoleinfo() {
   rader.push({ type:'skole', nokkel:'skole_navn',    verdi: el('konfig-navn').value.trim() });
   rader.push({ type:'skole', nokkel:'skole_adresse', verdi: el('konfig-adresse').value.trim() });
   rader.push({ type:'skole', nokkel:'skole_logo',    verdi: el('konfig-logo').value.trim() });
-  rader.push({ type:'skole', nokkel:'skole_klasse',  verdi: el('konfig-klasse').value.trim() });
   await lagreKonfigRader(rader, 'btn-lagre-skoleinfo');
 }
 async function lagreYFF() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-yff'); }
@@ -2364,7 +2360,7 @@ async function lagreKonfigRader(rader, lagreBtnId) {
     const ny = await api('getData');
     if (ny.ok) {
       S.konfig = ny;
-      S.klasse = ny.skoleinfo.skole_klasse || S.klasse;
+      S.klasse = S.klasse || (ny.klasser && ny.klasser[0]) || '';
       oppdaterHeader(ny.skoleinfo);
     }
     if (lagreBtnId) { const b = el(lagreBtnId); if (b) b.disabled = true; }
