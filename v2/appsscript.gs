@@ -98,9 +98,9 @@ function handleSave(d) {
       const vals = sheet.getDataRange().getValues();
       for (let i = 1; i < vals.length; i++) {
         if (String(vals[i][0]) === String(d.id)) {
-          sheet.getRange(i + 1, 1, 1, 13).setValues([[
+          sheet.getRange(i + 1, 1, 1, 14).setValues([[
             d.id, d.ar, d.uke, d.dag, d.klasse, d.fag, d.gruppe,
-            d.laerer, d.aktivitet, d.oppmotested, d.info, d.tid || '', now
+            d.laerer, d.aktivitet, d.oppmotested, d.info, d.tid || '', now, d.lagretAv || ''
           ]]);
           SpreadsheetApp.flush();
           return jsonResponse({ ok: true });
@@ -109,7 +109,7 @@ function handleSave(d) {
     }
     const id = String(Date.now());
     sheet.appendRow([id, d.ar, d.uke, d.dag, d.klasse, d.fag, d.gruppe,
-      d.laerer, d.aktivitet, d.oppmotested, d.info, d.tid || '', now]);
+      d.laerer, d.aktivitet, d.oppmotested, d.info, d.tid || '', now, d.lagretAv || '']);
     SpreadsheetApp.flush();
     return jsonResponse({ ok: true, id });
   } finally {
@@ -591,7 +591,7 @@ function jsonResponse(obj) {
 }
 
 function rowToObj(r) {
-  return { id: r[0], ar: r[1], uke: r[2], dag: r[3], klasse: r[4], fag: r[5], gruppe: r[6], laerer: r[7], aktivitet: r[8], oppmotested: r[9], info: r[10], tid: r[11], sistEndret: r[12] };
+  return { id: r[0], ar: r[1], uke: r[2], dag: r[3], klasse: r[4], fag: r[5], gruppe: r[6], laerer: r[7], aktivitet: r[8], oppmotested: r[9], info: r[10], tid: r[11], sistEndret: r[12], lagretAv: r[13] || '' };
 }
 
 function getKonfigObj() {
@@ -657,7 +657,7 @@ function listModels() {
 function setupSheets() {
   const ss = SpreadsheetApp.openById(SS_ID);
   const faner = [
-    { navn: 'Plan',      headers: ['ID','År','Uke','Dag','Klasse','Fag','Gruppe','Lærer','Aktivitet','Oppmøtested','Info','Tid','SistEndret'] },
+    { navn: 'Plan',      headers: ['ID','År','Uke','Dag','Klasse','Fag','Gruppe','Lærer','Aktivitet','Oppmøtested','Info','Tid','SistEndret','LagretAv'] },
     { navn: 'Brukere',   headers: ['Navn','PassordHash','ErAdmin','Klasser','MaByttePassord','Rolle','Fag','YffGruppe'] },
     { navn: 'Konfig',    headers: ['Type','Nøkkel','Verdi'] },
     { navn: 'Skolerute', headers: ['FraDato','TilDato','Navn','Type'] }

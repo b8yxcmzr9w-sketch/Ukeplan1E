@@ -1852,21 +1852,32 @@ function fyllGruppeForFag(sel, fag) {
 async function lagreOkt() {
   const aktivitet = el('okt-aktivitet').value.trim();
   if (!aktivitet) { visInlineError('okt-feil', 'Aktivitet er påkrevd'); return; }
-  const id = el('okt-id').value;
+  const id     = el('okt-id').value;
+  const uke    = parseInt(el('okt-uke').value);
+  const dag    = el('okt-dag').value;
+  const klasse = el('okt-klasse').value;
+  const fag    = el('okt-fag').value;
+  const gruppe = el('okt-gruppe').value;
+
+  // Duplikatsjekk
+  const duplikat = S.ukedata.find(r =>
+    String(r.id) !== String(id) &&
+    r.uke == uke && r.dag === dag && r.klasse === klasse &&
+    r.fag === fag && r.gruppe === gruppe
+  );
+  if (duplikat && !confirm(`Det finnes allerede en ${fag}-økt (${dag} uke ${uke}, ${klasse}).\nLagre likevel?`)) return;
+
   const res = await api('save', {
     token: S.bruker.token,
     id:    id || null,
     ar:    S.ar,
-    uke:   parseInt(el('okt-uke').value),
-    dag:   el('okt-dag').value,
-    klasse: el('okt-klasse').value,
-    fag:   el('okt-fag').value,
-    gruppe: el('okt-gruppe').value,
-    laerer: el('okt-laerer').value.trim(),
+    uke, dag, klasse, fag, gruppe,
+    laerer:      el('okt-laerer').value.trim(),
     aktivitet,
     oppmotested: el('okt-oppmotested').value.trim(),
-    info:  el('okt-info').value.trim(),
-    tid:   el('okt-tid').value
+    info:        el('okt-info').value.trim(),
+    tid:         el('okt-tid').value,
+    lagretAv:    S.bruker?.navn || ''
   });
   if (res.ok) {
     lukkModal('modal-ny-okt');
@@ -2096,7 +2107,7 @@ async function lagreParsetPlan() {
   if (ugyldige.length) { visMelding(`${ugyldige.length} rad(er) mangler aktivitet eller ukenummer.`, 'feil'); return; }
   let feil = 0;
   for (const r of rader) {
-    const res = await api('save', { token: S.bruker.token, ...r });
+    const res = await api('save', { token: S.bruker.token, lagretAv: S.bruker?.navn || '', ...r });
     if (!res.ok) feil++;
   }
   if (feil) visMelding(`${feil} rader feilet. Prøv igjen.`, 'feil');
