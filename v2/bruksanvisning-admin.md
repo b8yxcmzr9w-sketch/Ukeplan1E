@@ -10,8 +10,9 @@ Som skoleadmin har du tilgang til alle faner under **Admin**:
 
 | Fane | Innhold |
 |---|---|
+| Klasse | Fag, standard dager og NPT-partier per klasse |
 | Brukere | Opprett, rediger og slett brukere |
-| Innstillinger | Skoleinfo, fag, klasser, lenker, avansert |
+| Innstillinger | Skoleinfo, YFF-grupper, klasser, lenker, avansert |
 | Skolerute | Legg inn ferie og fridager |
 
 ---
@@ -34,16 +35,19 @@ Klikk **Rediger** eller **Slett** ved siden av brukerens navn i listen.
 
 ---
 
+## Klasse-fanen
+
+Se **Tillegg – Kontaktlærer** for full beskrivelse. Som skoleadmin kan du i tillegg bruke klassevelgeren til å administrere alle klasser, ikke bare dine egne.
+
+---
+
 ## Innstillinger
 
 ### Skoleinfo
 Sett skolenavn, adresse, standardklasse og logo-URL. Klikk **Lagre** i seksjonen.
 
-### Fag og standard dager
-Legg til fag og angi hvilke dager de normalt undervises (brukes som forslag i Ny økt og parsing).
-
-### YFF-grupper / NPT-partier
-Legg til gruppenavn som lærere kan velge fra i Ny økt og Min profil.
+### YFF-grupper
+Legg til YFF-gruppenavn som gjelder på tvers av klasser. Lærere og elever velger gruppe i Ny økt og filter.
 
 ### Klasser
 Legg til klassenavn (f.eks. `Gård`, `Natur`, `Teknikk`). Klikk **Lagre**.

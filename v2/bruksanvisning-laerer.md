@@ -68,9 +68,9 @@ Du kan abonnere på klassens timeplan i telefonen eller kalenderprogrammet ditt:
 
 Via brukermenyen (ditt navn) → **👤 Min profil** kan du sette:
 
-- **Klasser** – hvilke klasser du underviser (kommaseparert, f.eks. `Gård,Natur` eller `Alle`)
-- **Fag** – hvilke fag du underviser (kommaseparert eller `Alle`)
-- **YFF gruppe** – vises når YFF er i fag-listen; settes automatisk som filter ved innlogging
+- **Klasser** – hvilke klasser du underviser (skriv inn kommaseparert, f.eks. `Gård,Natur`, eller `Alle`)
+- **Fag** – kryss av fagene du underviser i listen. Kun fag som er satt opp i systemet vises
+- **YFF gruppe** – vises automatisk når YFF er avkrysset; settes som filter ved innlogging
 
 ---
 
