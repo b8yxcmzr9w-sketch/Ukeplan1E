@@ -56,8 +56,9 @@ function doPost(e) {
     deleteBruker:   handleDeleteBruker,
     changePassord:  handleChangePassord,
     genererSitater: handleGenererSitater,
-    getBackup:      handleGetBackup,
-    slettAlt:       handleSlettAlt
+    getBackup:          handleGetBackup,
+    slettAlt:           handleSlettAlt,
+    saveKlasseKonfig:   handleSaveKlasseKonfig
   };
   const fn = handlers[d.action];
   if (!fn) return jsonResponse({ ok: false, error: 'Ukjent action: ' + d.action });
@@ -169,13 +170,25 @@ function handleGetData(d) {
   const konfig = getKonfigObj();
   const skoleinfo = {};
   (konfig.skole || []).forEach(k => { skoleinfo[k.nokkel] = k.verdi; });
+  const klasser = (konfig.klasse || []).map(k => k.nokkel);
+
+  // Build class-specific config
+  const klasseKonfig = {};
+  klasser.forEach(k => {
+    klasseKonfig[k] = {
+      fag: (konfig[`fag_${k}`] || []).map(f => ({ navn: f.nokkel, dag: f.verdi })),
+      npt: (konfig[`npt_${k}`] || []).map(g => g.nokkel)
+    };
+  });
+
   return jsonResponse({
     ok: true,
     skoleinfo,
     fag:        (konfig.fag        || []).map(f => ({ navn: f.nokkel, dag: f.verdi })),
     grupperYFF: (konfig.gruppe_yff || []).map(g => g.nokkel),
     grupperNPT: (konfig.gruppe_npt || []).map(g => g.nokkel),
-    klasser:    (konfig.klasse     || []).map(k => k.nokkel)
+    klasser,
+    klasseKonfig
   });
 }
 
@@ -330,6 +343,36 @@ function handleSlettAlt(d) {
       const sr = getSheet('Skolerute');
       if (sr && sr.getLastRow() > 1) sr.deleteRows(2, sr.getLastRow() - 1);
     }
+    SpreadsheetApp.flush();
+    return jsonResponse({ ok: true });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleSaveKlasseKonfig(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller || (caller.rolle !== 'skoleadmin' && caller.rolle !== 'kontaktlaerer'))
+    return jsonResponse({ ok: false, error: 'Kun kontaktlærer eller skoleadmin' });
+  const klasse = d.klasse;
+  if (!klasse) return jsonResponse({ ok: false, error: 'Klasse mangler' });
+  if (caller.rolle === 'kontaktlaerer') {
+    const tillatte = caller.klasser === 'Alle' ? null : caller.klasser.split(',').map(k => k.trim());
+    if (tillatte && !tillatte.includes(klasse))
+      return jsonResponse({ ok: false, error: 'Ikke tilgang til denne klassen' });
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = getSheet('Konfig');
+    SpreadsheetApp.flush();
+    const vals = sheet.getDataRange().getValues();
+    const slett = [`fag_${klasse}`, `npt_${klasse}`];
+    for (let i = vals.length - 1; i >= 1; i--) {
+      if (slett.includes(String(vals[i][0]))) sheet.deleteRow(i + 1);
+    }
+    SpreadsheetApp.flush();
+    d.rader.forEach(r => sheet.appendRow([r.type, r.nokkel, r.verdi || '']));
     SpreadsheetApp.flush();
     return jsonResponse({ ok: true });
   } finally {

@@ -555,6 +555,7 @@ header .spacer { flex: 1; }
   <!-- Admin-faner -->
   <div id="admin-fane-bar" class="fane-bar skjult">
     <button class="fane aktiv" onclick="byttFane('plan', this)">Ukeplan</button>
+    <button class="fane fane-klasse" onclick="byttFane('klasse', this)">Klasse</button>
     <button class="fane fane-skoleadmin" onclick="byttFane('konfig', this)">Innstillinger</button>
     <button class="fane fane-skoleadmin" onclick="byttFane('skolerute', this)">Skolerute</button>
     <button class="fane" onclick="byttFane('brukere', this)">Brukere</button>
@@ -631,6 +632,40 @@ header .spacer { flex: 1; }
     </div>
   </div>
 
+  <!-- Klasse-fane -->
+  <div id="admin-fane-klasse" class="skjult">
+    <div class="kort">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <h3 style="margin:0">Klasseinnstillinger</h3>
+        <select id="klasse-admin-sel" style="font-weight:600" onchange="lastKlasseFane(this.value)"></select>
+      </div>
+      <div class="kort" style="margin-bottom:0">
+        <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
+          <h3>Fag og standard dager</h3><span class="konfig-pil">▼</span>
+        </div>
+        <div class="konfig-kort-innhold">
+          <div id="klasse-fag-liste"></div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-s btn-sm" onclick="leggTilKlasseFag()">+ Fag</button>
+            <button id="btn-lagre-klasse-fag" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreKlasseKonfig()" disabled>Lagre</button>
+          </div>
+        </div>
+      </div>
+      <div class="kort" style="margin-top:14px;margin-bottom:0">
+        <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
+          <h3>NPT-partier</h3><span class="konfig-pil">▼</span>
+        </div>
+        <div class="konfig-kort-innhold">
+          <div id="klasse-npt-liste"></div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-s btn-sm" onclick="leggTilEnkel('klasse-npt-liste','Partinavn (f.eks. P3)')">+ Parti</button>
+            <button id="btn-lagre-klasse-npt" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreKlasseKonfig()" disabled>Lagre</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Konfig-fane -->
   <div id="admin-fane-konfig" class="skjult">
     <div class="kort">
@@ -647,18 +682,6 @@ header .spacer { flex: 1; }
     </div>
     <div class="kort">
       <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
-        <h3>Fag og standard dager</h3><span class="konfig-pil">▼</span>
-      </div>
-      <div class="konfig-kort-innhold">
-        <div id="konfig-fag-liste"></div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-s btn-sm" onclick="leggTilFag()">+ Fag</button>
-          <button id="btn-lagre-fag" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreFag()" disabled>Lagre</button>
-        </div>
-      </div>
-    </div>
-    <div class="kort">
-      <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
         <h3>YFF-grupper</h3><span class="konfig-pil">▼</span>
       </div>
       <div class="konfig-kort-innhold">
@@ -666,18 +689,6 @@ header .spacer { flex: 1; }
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-s btn-sm" onclick="leggTilEnkel('konfig-yff-liste','Gruppenavn')">+ Gruppe</button>
           <button id="btn-lagre-yff" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreYFF()" disabled>Lagre</button>
-        </div>
-      </div>
-    </div>
-    <div class="kort">
-      <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
-        <h3>NPT-partier</h3><span class="konfig-pil">▼</span>
-      </div>
-      <div class="konfig-kort-innhold">
-        <div id="konfig-npt-liste"></div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-s btn-sm" onclick="leggTilEnkel('konfig-npt-liste','Partinavn (f.eks. P3)')">+ Parti</button>
-          <button id="btn-lagre-npt" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreNPT()" disabled>Lagre</button>
         </div>
       </div>
     </div>
@@ -1000,7 +1011,7 @@ const S = {
   klasse:       '',
   uke:          0,
   ar:           new Date().getFullYear(),
-  konfig:       { fag:[], grupperYFF:[], grupperNPT:[], klasser:[], skoleinfo:{} },
+  konfig:       { fag:[], grupperYFF:[], grupperNPT:[], klasser:[], skoleinfo:{}, klasseKonfig:{} },
   ukedata:      [],
   ferie:        [],
   listeModus:   false,  // false = ukesvisning, true = listevisning
@@ -1159,14 +1170,24 @@ function visElev() {
   lastUkedata();
 }
 
+function fagForKlasse(klasse) {
+  const kf = S.konfig.klasseKonfig?.[klasse]?.fag;
+  return kf && kf.length ? kf : S.konfig.fag;
+}
+function nptForKlasse(klasse) {
+  const kf = S.konfig.klasseKonfig?.[klasse]?.npt;
+  return kf && kf.length ? kf : S.konfig.grupperNPT;
+}
+
 function fyllElevFilter() {
+  const nptGrupper = nptForKlasse(S.klasse);
   const npt = el('filter-npt');
   npt.innerHTML = '<option value="">Alle NPT-partier</option>';
-  S.konfig.grupperNPT.forEach(g => npt.innerHTML += `<option value="${g}">${g}</option>`);
+  nptGrupper.forEach(g => npt.innerHTML += `<option value="${g}">${g}</option>`);
   const yff = el('filter-yff');
   yff.innerHTML = '<option value="">Alle YFF-grupper</option>';
   S.konfig.grupperYFF.forEach(g => yff.innerHTML += `<option value="${g}">${g}</option>`);
-  const harGrupper = S.konfig.grupperNPT.length > 0 || S.konfig.grupperYFF.length > 0;
+  const harGrupper = nptGrupper.length > 0 || S.konfig.grupperYFF.length > 0;
   el('ical-tips').classList.toggle('skjult', !harGrupper);
 }
 
@@ -1184,6 +1205,10 @@ function visLaerer() {
     // skjul skoleadmin-faner for kontaktlærer
     document.querySelectorAll('.fane-skoleadmin').forEach(btn => {
       btn.style.display = rolle === 'skoleadmin' ? '' : 'none';
+    });
+    // klasse-fane: synlig for kontaktlærer og skoleadmin
+    document.querySelectorAll('.fane-klasse').forEach(btn => {
+      btn.style.display = (rolle === 'skoleadmin' || rolle === 'kontaktlaerer') ? '' : 'none';
     });
     // ny-bruker-knapp kun for skoleadmin
     const btnNy = el('btn-ny-bruker');
@@ -1742,7 +1767,7 @@ function fyllGruppeFilter(selectId) {
   const sel = el(selectId);
   const val = sel.value;
   sel.innerHTML = '<option value="">Alle grupper</option>';
-  S.konfig.grupperNPT.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
+  nptForKlasse(S.klasse).forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
   S.konfig.grupperYFF.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
   sel.value = val;
 }
@@ -1816,7 +1841,7 @@ function klargjorNyOkt() {
 
   const fagSel = el('okt-fag');
   fagSel.innerHTML = '';
-  S.konfig.fag.forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
+  fagForKlasse(S.klasse).forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
   oppdaterOktGruppe();
   visModal('modal-ny-okt');
 }
@@ -1842,16 +1867,17 @@ function oppdaterOktGruppe() {
   const fag = el('okt-fag').value;
   fyllGruppeForFag(el('okt-gruppe'), fag);
   if (fag === 'YFF') el('okt-klasse').value = 'Alle';
-  const fc = S.konfig.fag.find(f => f.navn === fag);
-  if (fc && fc.dag) {
-    const dager = fc.dag.split(',').map(d => d.trim()).filter(Boolean);
+  const klassFag = fagForKlasse(S.klasse).find(f => f.navn === fag);
+  const dag = klassFag?.dag || S.konfig.fag.find(f => f.navn === fag)?.dag || '';
+  if (dag) {
+    const dager = dag.split(',').map(d => d.trim()).filter(Boolean);
     if (dager.length && !dager.includes(el('okt-dag').value)) el('okt-dag').value = dager[0];
   }
 }
 
 function fyllGruppeForFag(sel, fag) {
   sel.innerHTML = '<option value="Alle">Alle</option>';
-  if (fag === 'NPT') S.konfig.grupperNPT.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
+  if (fag === 'NPT') nptForKlasse(S.klasse).forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
   else if (fag === 'YFF') S.konfig.grupperYFF.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
 }
 
@@ -1909,7 +1935,7 @@ async function slettOkt(id, klasse) {
 function klargjorParse() {
   const fagSel = el('parse-fag');
   fagSel.innerHTML = '';
-  S.konfig.fag.forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
+  fagForKlasse(S.klasse).forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
   oppdaterParseGruppe();
 
   const parsKlasseSel = el('parse-klasse');
@@ -2124,12 +2150,16 @@ async function lagreParsetPlan() {
 function byttFane(fane, knapp) {
   document.querySelectorAll('.fane').forEach(b => b.classList.remove('aktiv'));
   knapp.classList.add('aktiv');
-  ['plan','konfig','skolerute','brukere'].forEach(f =>
+  ['plan','klasse','konfig','skolerute','brukere'].forEach(f =>
     el('admin-fane-' + f).classList.toggle('skjult', f !== fane)
   );
   if (fane === 'konfig')    lastKonfig();
   if (fane === 'skolerute') lastSkolerute();
   if (fane === 'brukere')   lastBrukere();
+  if (fane === 'klasse') {
+    fyllKlasseAdminSel();
+    lastKlasseFane(el('klasse-admin-sel').value);
+  }
 }
 
 function toggleKonfigKort(hode) {
@@ -2153,20 +2183,17 @@ function lastKonfig() {
   el('konfig-logo').value    = k.skoleinfo.skole_logo    || '';
 
   // Deaktiver alle lagre-knapper ved lasting
-  ['btn-lagre-skoleinfo','btn-lagre-fag','btn-lagre-yff','btn-lagre-npt'].forEach(id => {
+  ['btn-lagre-skoleinfo','btn-lagre-yff'].forEach(id => {
     const b = el(id); if (b) b.disabled = true;
   });
 
   // Sorter og vis lister
-  const sortedFag = [...k.fag].sort((a,b) => a.navn.localeCompare(b.navn, 'nb'));
-  visKonfigListe('konfig-fag-liste', sortedFag.map(f => f.navn), true, sortedFag);
   visKonfigListe('konfig-yff-liste', [...k.grupperYFF].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
-  visKonfigListe('konfig-npt-liste', [...k.grupperNPT].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   visKonfigListe('konfig-klasse-liste', [...(k.klasser || [])].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   fyllKlasseLenkerGrid();
 
   // Event-delegering: aktiver knapp ved endring i lister
-  ['konfig-fag-liste','konfig-yff-liste','konfig-npt-liste','konfig-klasse-liste'].forEach(listId => {
+  ['konfig-yff-liste','konfig-klasse-liste'].forEach(listId => {
     const c = el(listId);
     c.oninput  = () => aktiverNarmesteLagreKnapp(c);
     c.onchange = () => aktiverNarmesteLagreKnapp(c);
@@ -2220,9 +2247,7 @@ async function lagreSkoleinfo() {
   rader.push({ type:'skole', nokkel:'skole_klasse',  verdi: el('konfig-klasse').value.trim() });
   await lagreKonfigRader(rader, 'btn-lagre-skoleinfo');
 }
-async function lagreFag() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-fag'); }
 async function lagreYFF() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-yff'); }
-async function lagreNPT() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-npt'); }
 async function lagreKlasser() {
   await lagreKonfigRader(samleKonfig(), 'btn-lagre-klasser');
   fyllKlasseVelger();
@@ -2244,18 +2269,78 @@ function byttLaererKlasse(klasse) {
   S.klasse = klasse;
   cacheReset();
   oppdaterKlasseBadge();
+  fyllGruppeFilter('laerer-filter-gruppe');
   if (S.listeModus) lastListedata();
   else lastUkedata();
 }
 
-function samleKonfig() {
+// ── Klasse-fane ───────────────────────────────────────────────────────────────
+function fyllKlasseAdminSel() {
+  const sel = el('klasse-admin-sel');
+  if (!sel) return;
+  const rolle = S.bruker?.rolle || 'laerer';
+  let klasser = S.konfig.klasser || [];
+  if (rolle !== 'skoleadmin' && S.bruker?.klasser && S.bruker.klasser !== 'Alle') {
+    const mine = S.bruker.klasser.split(',').map(k => k.trim());
+    klasser = klasser.filter(k => mine.includes(k));
+  }
+  sel.innerHTML = klasser.map(k => `<option value="${k}">${k}</option>`).join('');
+  if (!sel.value && klasser.length) sel.value = klasser[0];
+}
+
+function lastKlasseFane(klasse) {
+  if (!klasse) return;
+  const kd = S.konfig.klasseKonfig?.[klasse] || { fag: [], npt: [] };
+  const sortedFag = [...kd.fag].sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+  visKonfigListe('klasse-fag-liste', sortedFag.map(f => f.navn), true, sortedFag);
+  visKonfigListe('klasse-npt-liste', [...kd.npt].sort((a, b) => a.localeCompare(b, 'nb')), false, []);
+  ['btn-lagre-klasse-fag','btn-lagre-klasse-npt'].forEach(id => {
+    const b = el(id); if (b) b.disabled = true;
+  });
+  ['klasse-fag-liste','klasse-npt-liste'].forEach(listId => {
+    const c = el(listId);
+    c.oninput  = () => aktiverNarmesteLagreKnapp(c);
+    c.onchange = () => aktiverNarmesteLagreKnapp(c);
+  });
+}
+
+function leggTilKlasseFag() {
+  const div = document.createElement('div');
+  div.className = 'konfig-rad';
+  div.innerHTML = `<input type="text" placeholder="Fagnavn">
+    ${dagCheckboxer('')}
+    <button class="btn btn-f btn-sm" onclick="aktiverNarmesteLagreKnapp(this);this.parentNode.remove()">✕</button>`;
+  el('klasse-fag-liste').appendChild(div);
+  aktiverNarmesteLagreKnapp(el('klasse-fag-liste'));
+}
+
+async function lagreKlasseKonfig() {
+  const klasse = el('klasse-admin-sel').value;
+  if (!klasse) return;
   const rader = [];
-  el('konfig-fag-liste').querySelectorAll('.konfig-rad').forEach(div => {
+  el('klasse-fag-liste').querySelectorAll('.konfig-rad').forEach(div => {
     const inp   = div.querySelector('input[type=text]');
     const dager = [...div.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value).join(',');
-    if (inp && inp.value.trim()) rader.push({ type:'fag', nokkel: inp.value.trim(), verdi: dager });
+    if (inp && inp.value.trim()) rader.push({ type: `fag_${klasse}`, nokkel: inp.value.trim(), verdi: dager });
   });
-  [['yff','gruppe_yff'],['npt','gruppe_npt'],['klasse','klasse']].forEach(([key, type]) => {
+  el('klasse-npt-liste').querySelectorAll('input').forEach(inp => {
+    if (inp.value.trim()) rader.push({ type: `npt_${klasse}`, nokkel: inp.value.trim(), verdi: '' });
+  });
+  const res = await api('saveKlasseKonfig', { token: S.bruker.token, klasse, rader });
+  if (res.ok) {
+    // oppdater lokal state
+    const ny = await api('getData');
+    if (ny.ok) { S.konfig = ny; oppdaterHeader(ny.skoleinfo); }
+    ['btn-lagre-klasse-fag','btn-lagre-klasse-npt'].forEach(id => {
+      const b = el(id); if (b) b.disabled = true;
+    });
+    visMelding('Klasseinnstillinger lagret!');
+  } else visMelding(res.error, 'feil');
+}
+
+function samleKonfig() {
+  const rader = [];
+  [['yff','gruppe_yff'],['klasse','klasse']].forEach(([key, type]) => {
     el(`konfig-${key}-liste`).querySelectorAll('input').forEach(inp => {
       if (inp.value.trim()) rader.push({ type, nokkel: inp.value.trim(), verdi: '' });
     });
