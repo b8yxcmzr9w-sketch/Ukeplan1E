@@ -968,8 +968,8 @@ header .spacer { flex: 1; }
     <div class="felt"><label>Klasser <span style="font-weight:400;color:var(--grå)">(kommaseparert eller «Alle»)</span></label>
       <input id="profil-klasser" type="text" placeholder="1E,2E eller Alle">
     </div>
-    <div class="felt"><label>Fag <span style="font-weight:400;color:var(--grå)">(kommaseparert eller «Alle»)</span></label>
-      <input id="profil-fag" type="text" placeholder="NNA,YFF eller Alle" oninput="oppdaterProfilYff()">
+    <div class="felt"><label>Fag</label>
+      <div id="profil-fag-cbx" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px"></div>
     </div>
     <div id="profil-yff-felt" class="felt skjult"><label>YFF gruppe</label>
       <select id="profil-yff-gruppe">
@@ -2579,21 +2579,40 @@ async function slettBruker(navn) {
 }
 
 // ── Min profil ────────────────────────────────────────────────────────────────
+function alleFagISystem() {
+  const sett = new Set();
+  S.konfig.fag.forEach(f => sett.add(f.navn));
+  Object.values(S.konfig.klasseKonfig || {}).forEach(kd => (kd.fag || []).forEach(f => sett.add(f.navn)));
+  return [...sett].sort((a, b) => a.localeCompare(b, 'nb'));
+}
+
 function visMinProfil() {
   const b = S.bruker;
   el('profil-navn').value    = b.navn;
   el('profil-rolle').value   = { skoleadmin: 'Skoleadmin', kontaktlaerer: 'Kontaktlærer', laerer: 'Lærer' }[b.rolle] || b.rolle;
-  el('profil-klasser').value = b.klasser  || 'Alle';
-  el('profil-fag').value     = b.fag      || 'Alle';
+  el('profil-klasser').value = b.klasser || 'Alle';
   el('profil-feil').classList.add('skjult');
+
+  // Fyll fagavkrysningsbokser
+  const valgte = (b.fag && b.fag !== 'Alle') ? b.fag.split(',').map(s => s.trim()) : [];
+  const fag    = alleFagISystem();
+  const cbxDiv = el('profil-fag-cbx');
+  cbxDiv.innerHTML = fag.map(f =>
+    `<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+      <input type="checkbox" value="${f}" ${valgte.includes(f) ? 'checked' : ''} onchange="oppdaterProfilYff()">
+      ${f}
+    </label>`
+  ).join('');
+
   oppdaterProfilYff();
   el('profil-yff-gruppe').value = b.yffGruppe || '';
   visModal('modal-min-profil');
 }
 
 function oppdaterProfilYff() {
-  const harYff = el('profil-fag').value.split(',').map(s => s.trim()).includes('YFF');
-  const felt   = el('profil-yff-felt');
+  const harYff = [...el('profil-fag-cbx').querySelectorAll('input[type=checkbox]:checked')]
+    .some(cb => cb.value === 'YFF');
+  const felt = el('profil-yff-felt');
   felt.classList.toggle('skjult', !harYff);
   if (harYff) {
     const sel = el('profil-yff-gruppe');
@@ -2606,7 +2625,8 @@ function oppdaterProfilYff() {
 
 async function lagreMinProfil() {
   const klasser   = el('profil-klasser').value.trim() || 'Alle';
-  const fag       = el('profil-fag').value.trim()     || 'Alle';
+  const valgte    = [...el('profil-fag-cbx').querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
+  const fag       = valgte.length ? valgte.join(',') : 'Alle';
   const yffGruppe = el('profil-yff-felt').classList.contains('skjult') ? '' : el('profil-yff-gruppe').value;
   const res = await api('saveMinProfil', { token: S.bruker.token, klasser, fag, yffGruppe });
   if (!res.ok) { visInlineError('profil-feil', res.error); return; }
