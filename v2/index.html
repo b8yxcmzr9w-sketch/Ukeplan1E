@@ -563,6 +563,12 @@ header .spacer { flex: 1; }
     <!-- Frossen nav + filter (begge modi) -->
     <div id="laerer-sticky-zone" class="sticky-zone">
 
+      <!-- Klasse-velger (vises når flere klasser er konfigurert) -->
+      <div id="laerer-klasse-bar" class="filter-bar skjult" style="margin-bottom:6px">
+        <select id="laerer-klasse-sel" onchange="byttLaererKlasse(this.value)" style="font-weight:600"></select>
+        <button class="btn btn-s btn-sm" onclick="visDelLenke()">🔗 Del lenke</button>
+      </div>
+
       <!-- Uke-navigasjon (ukesmodus) -->
       <div id="laerer-uke-nav" class="uke-nav">
         <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
@@ -674,6 +680,19 @@ header .spacer { flex: 1; }
     </div>
     <div class="kort">
       <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
+        <h3>Klasser</h3><span class="konfig-pil">▼</span>
+      </div>
+      <div class="konfig-kort-innhold">
+        <p style="font-size:.88rem;color:var(--grå);margin-bottom:10px">Legg til alle parallellklasser. Elevene bruker adressen til sin klasse, f.eks. <code style="background:#f0f2f0;padding:2px 5px;border-radius:3px">?klasse=1E</code></p>
+        <div id="konfig-klasse-liste"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-s btn-sm" onclick="leggTilEnkel('konfig-klasse-liste','Klassenavn')">+ Klasse</button>
+          <button id="btn-lagre-klasser" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreKlasser()" disabled>Lagre</button>
+        </div>
+      </div>
+    </div>
+    <div class="kort">
+      <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
         <h3>Laste-sitater</h3><span class="konfig-pil">▼</span>
       </div>
       <div class="konfig-kort-innhold">
@@ -779,8 +798,8 @@ header .spacer { flex: 1; }
   <div class="modal">
     <h3 id="okt-tittel">Ny økt</h3>
     <input type="hidden" id="okt-id">
-    <input type="hidden" id="okt-klasse">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="felt" id="okt-klasse-felt" style="grid-column:span 2"><label>Klasse</label><select id="okt-klasse"></select></div>
       <div class="felt"><label>Fag</label><select id="okt-fag" onchange="oppdaterOktGruppe()"></select></div>
       <div class="felt"><label>Gruppe / Parti</label><select id="okt-gruppe"></select></div>
       <div class="felt"><label>Dag</label>
@@ -875,6 +894,24 @@ header .spacer { flex: 1; }
   </div>
 </div>
 
+<!-- Del lenke / QR -->
+<div id="modal-del-lenke" class="modal-bg skjult">
+  <div class="modal" style="max-width:400px">
+    <h3 style="text-align:center;margin-bottom:6px">Del med klassen</h3>
+    <p id="del-klasse-navn" style="text-align:center;font-weight:700;color:var(--grønn);font-size:1.1rem;margin-bottom:16px"></p>
+    <div id="del-qr-boks" style="text-align:center;margin-bottom:16px;min-height:100px;display:flex;align-items:center;justify-content:center"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <input id="del-url" type="text" readonly style="flex:1;background:var(--grå-lys);font-size:.73rem;font-family:monospace;padding:7px 10px;border:1px solid var(--kant);border-radius:var(--radius);min-width:0">
+      <button class="btn btn-p btn-sm" onclick="kopierDelUrl()">Kopier</button>
+    </div>
+    <p style="font-size:.8rem;color:var(--grå);text-align:center;margin-bottom:16px">Skann QR-koden eller del lenken med elevene.</p>
+    <div class="modal-bunn" style="justify-content:space-between">
+      <button class="btn btn-s" onclick="skrivUtDelKort()">🖨️ Skriv ut</button>
+      <button class="btn btn-s" onclick="lukkModal('modal-del-lenke')">Lukk</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bruker-meny -->
 <div id="bruker-meny" class="skjult">
   <div class="bruker-meny-navn" id="bruker-meny-navn"></div>
@@ -949,6 +986,8 @@ async function apiGet(params = {}) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
+  const urlKlasse = new URLSearchParams(location.search).get('klasse');
+
   const lagretBruker = sessionStorage.getItem('bruker');
   if (lagretBruker) {
     S.bruker = JSON.parse(lagretBruker);
@@ -958,7 +997,7 @@ async function init() {
   const res = await api('getData');
   if (res.ok) {
     S.konfig = res;
-    S.klasse = res.skoleinfo.skole_klasse || '';
+    S.klasse = urlKlasse || res.skoleinfo.skole_klasse || (res.klasser && res.klasser[0]) || '';
     oppdaterHeader(res.skoleinfo);
   }
 
@@ -1074,8 +1113,11 @@ function visLaerer() {
     if (S.bruker.erAdmin) el('admin-fane-bar').classList.remove('skjult');
   }
 
-  if (!S.klasse) S.klasse = S.konfig.skoleinfo?.skole_klasse || '';
+  if (!S.klasse) S.klasse = S.konfig.skoleinfo?.skole_klasse || (S.konfig.klasser && S.konfig.klasser[0]) || '';
   oppdaterKlasseBadge();
+
+  // Vis og fyll klassevelger
+  fyllKlasseVelger();
 
   // Alltid start i ukesmodus
   S.listeModus = false;
@@ -1644,7 +1686,8 @@ function loggUt() {
   S.bruker = null;
   sessionStorage.removeItem('bruker');
   lukkBrukerMeny();
-  location.href = location.pathname;
+  const params = S.klasse ? '?klasse=' + encodeURIComponent(S.klasse) : '';
+  location.href = location.pathname + params;
 }
 
 function oppdaterBrukerHeader() {
@@ -1678,7 +1721,11 @@ function klargjorNyOkt() {
   el('okt-oppmotested').value = '';
   el('okt-info').value = '';
 
-  el('okt-klasse').value = S.klasse;
+  const klasseSel = el('okt-klasse');
+  const klasser = S.konfig.klasser && S.konfig.klasser.length ? S.konfig.klasser : (S.klasse ? [S.klasse] : []);
+  klasseSel.innerHTML = klasser.map(k =>
+    `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`
+  ).join('');
 
   const fagSel = el('okt-fag');
   fagSel.innerHTML = '';
@@ -1741,7 +1788,7 @@ async function lagreOkt() {
   });
   if (res.ok) {
     lukkModal('modal-ny-okt');
-    cacheSlett(parseInt(el('okt-uke').value), S.ar, S.klasse);
+    cacheSlett(parseInt(el('okt-uke').value), S.ar, el('okt-klasse').value || S.klasse);
     if (S.listeModus) lastListedata();
     else lastUkedata();
   } else visInlineError('okt-feil', res.error);
@@ -2002,9 +2049,10 @@ function lastKonfig() {
   visKonfigListe('konfig-fag-liste', sortedFag.map(f => f.navn), true, sortedFag);
   visKonfigListe('konfig-yff-liste', [...k.grupperYFF].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   visKonfigListe('konfig-npt-liste', [...k.grupperNPT].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
+  visKonfigListe('konfig-klasse-liste', [...(k.klasser || [])].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
 
   // Event-delegering: aktiver knapp ved endring i lister
-  ['konfig-fag-liste','konfig-yff-liste','konfig-npt-liste'].forEach(listId => {
+  ['konfig-fag-liste','konfig-yff-liste','konfig-npt-liste','konfig-klasse-liste'].forEach(listId => {
     const c = el(listId);
     c.oninput  = () => aktiverNarmesteLagreKnapp(c);
     c.onchange = () => aktiverNarmesteLagreKnapp(c);
@@ -2061,6 +2109,30 @@ async function lagreSkoleinfo() {
 async function lagreFag() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-fag'); }
 async function lagreYFF() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-yff'); }
 async function lagreNPT() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-npt'); }
+async function lagreKlasser() {
+  await lagreKonfigRader(samleKonfig(), 'btn-lagre-klasser');
+  fyllKlasseVelger();
+}
+
+function fyllKlasseVelger() {
+  const sel = el('laerer-klasse-sel');
+  if (!sel) return;
+  const klasser = S.konfig.klasser || [];
+  sel.innerHTML = klasser.map(k =>
+    `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`
+  ).join('');
+  const bar = el('laerer-klasse-bar');
+  if (bar) bar.classList.toggle('skjult', klasser.length < 2);
+}
+
+function byttLaererKlasse(klasse) {
+  if (!klasse || klasse === S.klasse) return;
+  S.klasse = klasse;
+  cacheReset();
+  oppdaterKlasseBadge();
+  if (S.listeModus) lastListedata();
+  else lastUkedata();
+}
 
 function samleKonfig() {
   const rader = [];
@@ -2069,7 +2141,7 @@ function samleKonfig() {
     const dager = [...div.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value).join(',');
     if (inp && inp.value.trim()) rader.push({ type:'fag', nokkel: inp.value.trim(), verdi: dager });
   });
-  [['yff','gruppe_yff'],['npt','gruppe_npt']].forEach(([key, type]) => {
+  [['yff','gruppe_yff'],['npt','gruppe_npt'],['klasse','klasse']].forEach(([key, type]) => {
     el(`konfig-${key}-liste`).querySelectorAll('input').forEach(inp => {
       if (inp.value.trim()) rader.push({ type, nokkel: inp.value.trim(), verdi: '' });
     });
@@ -2465,6 +2537,54 @@ function kopierOkt(r) {
   el('okt-oppmotested').value  = r.oppmotested || '';
   el('okt-info').value         = r.info || '';
   el('okt-tid').value          = r.tid || '';
+}
+
+// ── Del lenke / QR ────────────────────────────────────────────────────────────
+function visDelLenke() {
+  const klasse = S.klasse;
+  if (!klasse) { visMelding('Ingen klasse valgt', 'info'); return; }
+  const url = location.origin + location.pathname + '?klasse=' + encodeURIComponent(klasse);
+  el('del-url').value = url;
+  el('del-klasse-navn').textContent = klasse;
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=' + encodeURIComponent(url);
+  el('del-qr-boks').innerHTML = `<img src="${qrUrl}" width="220" height="220" alt="QR-kode"
+    style="border-radius:8px;border:6px solid white;box-shadow:0 2px 12px rgba(0,0,0,.12)"
+    onerror="this.parentNode.innerHTML='<span style=color:var(--grå);font-size:.85rem>QR-kode krever internettilgang</span>'">`;
+  visModal('modal-del-lenke');
+}
+
+function kopierDelUrl() {
+  const url = el('del-url').value;
+  navigator.clipboard.writeText(url)
+    .then(() => visMelding('Lenke kopiert!'))
+    .catch(() => { el('del-url').select(); document.execCommand('copy'); visMelding('Lenke kopiert!'); });
+}
+
+function skrivUtDelKort() {
+  const klasse = S.klasse;
+  const url = el('del-url').value;
+  const skoleNavn = S.konfig.skoleinfo?.skole_navn || 'Ukeplan';
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=' + encodeURIComponent(url);
+  const win = window.open('', '_blank', 'width=500,height=720');
+  win.document.write(`<!DOCTYPE html><html lang="no"><head>
+<meta charset="UTF-8"><title>Del – ${klasse}</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center;padding:48px 32px;color:#212529}
+  h1{font-size:1.6rem;margin:0 0 4px;color:#2d6a4f}
+  h2{font-size:1.1rem;color:#6c757d;margin:0 0 28px;font-weight:400}
+  img{display:block;margin:0 auto 20px;border-radius:10px}
+  .url{font-size:.85rem;color:#444;word-break:break-all;max-width:360px;margin:0 auto 10px;background:#f8f9fa;padding:9px 14px;border-radius:6px;font-family:monospace}
+  p{color:#6c757d;font-size:.85rem;margin:8px 0 0}
+  @media print{body{padding:24px 16px}}
+</style></head><body>
+<h1>${skoleNavn}</h1>
+<h2>Ukeplan – ${klasse}</h2>
+<img src="${qrUrl}" width="280" height="280" alt="QR-kode">
+<div class="url">${url}</div>
+<p>Skann QR-koden eller skriv inn adressen i nettleseren.</p>
+<script>window.onload=function(){window.print()};<\/script>
+</body></html>`);
+  win.document.close();
 }
 
 // ── Modal-hjelper ─────────────────────────────────────────────────────────────
