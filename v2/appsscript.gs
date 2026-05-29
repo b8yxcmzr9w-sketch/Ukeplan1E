@@ -42,6 +42,7 @@ function doPost(e) {
   const d = JSON.parse(e.parameter.data);
   const handlers = {
     login:          handleLogin,
+    saveMinProfil:  handleSaveMinProfil,
     save:           handleSave,
     delete:         handleDelete,
     parse:          handleParse,
@@ -68,12 +69,16 @@ function handleLogin(d) {
   const hash = hashPassword(d.passord);
   const user = rows.find(r => r[0] === d.navn && r[1] === hash);
   if (!user) return jsonResponse({ ok: false, error: 'Feil brukernavn eller passord' });
+  const erAdmin = String(user[2]).toUpperCase() === 'TRUE';
+  const rolle = user[5] ? String(user[5]) : (erAdmin ? 'skoleadmin' : 'laerer');
   return jsonResponse({
     ok: true,
     navn: user[0],
-    erAdmin: String(user[2]).toUpperCase() === 'TRUE',
+    erAdmin,
     klasser: user[3] || 'Alle',
     maByttePassord: !!(user[4] && String(user[4]).toUpperCase() === 'TRUE'),
+    rolle,
+    fag: String(user[6] || 'Alle'),
     token: makeToken(d.navn, user[1])
   });
 }
@@ -132,7 +137,6 @@ function handleDelete(d) {
 
 function handleParse(d) {
   if (!verifyToken(d.token)) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
-  if (!d.isAdmin) return jsonResponse({ ok: false, error: 'Kun admin kan laste opp hel plan' });
   const key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
   if (!key) return jsonResponse({ ok: false, error: 'GEMINI_KEY mangler i Script Properties' });
   const konfig = getKonfigObj();
@@ -173,7 +177,8 @@ function handleGetData(d) {
 }
 
 function handleSaveKonfig(d) {
-  if (!verifyToken(d.token) || !d.isAdmin) return jsonResponse({ ok: false, error: 'Kun admin' });
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -190,7 +195,7 @@ function handleSaveKonfig(d) {
 }
 
 function handleGetSkolerute(d) {
-  if (!verifyToken(d.token) || !d.isAdmin) return jsonResponse({ ok: false, error: 'Kun admin' });
+  if (!verifyToken(d.token)) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
   const sheet = getSheet('Skolerute');
   if (!sheet) return jsonResponse({ ok: true, rader: [] });
   const rader = sheet.getDataRange().getValues().slice(1)
@@ -205,7 +210,8 @@ function handleGetSkolerute(d) {
 }
 
 function handleSaveSkolerute(d) {
-  if (!verifyToken(d.token) || !d.isAdmin) return jsonResponse({ ok: false, error: 'Kun admin' });
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -226,16 +232,22 @@ function handleSaveSkolerute(d) {
 }
 
 function handleGetBrukere(d) {
-  if (!verifyToken(d.token) || !d.isAdmin) return jsonResponse({ ok: false, error: 'Kun admin' });
+  if (!verifyToken(d.token)) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
   const rows = getSheet('Brukere').getDataRange().getValues().slice(1);
   return jsonResponse({
     ok: true,
-    brukere: rows.map(r => ({ navn: r[0], erAdmin: String(r[2]).toUpperCase() === 'TRUE', klasser: r[3] || 'Alle' }))
+    brukere: rows.map(r => {
+      const erAdmin = String(r[2]).toUpperCase() === 'TRUE';
+      const rolle = r[5] ? String(r[5]) : (erAdmin ? 'skoleadmin' : 'laerer');
+      return { navn: r[0], erAdmin, klasser: r[3] || 'Alle', rolle, fag: String(r[6] || 'Alle') };
+    })
   });
 }
 
 function handleSaveBruker(d) {
-  if (!verifyToken(d.token) || !d.isAdmin) return jsonResponse({ ok: false, error: 'Kun admin' });
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin')
+    return jsonResponse({ ok: false, error: 'Kun skoleadmin kan endre brukere' });
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -244,17 +256,21 @@ function handleSaveBruker(d) {
     const rows = sheet.getDataRange().getValues();
     const sokNavn = d.bruker.origNavn || d.bruker.navn;
     const maByttePassord = d.bruker.maByttePassord === true;
+    const rolle = d.bruker.rolle || 'laerer';
+    const erAdmin = rolle === 'skoleadmin' || d.bruker.erAdmin === true;
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === sokNavn) {
         const hash = d.bruker.passord ? hashPassword(d.bruker.passord) : rows[i][1];
         const beholdFlag = d.bruker.maByttePassord === undefined ? rows[i][4] : maByttePassord;
-        sheet.getRange(i + 1, 1, 1, 5).setValues([[d.bruker.navn, hash, d.bruker.erAdmin, d.bruker.klasser, beholdFlag || '']]);
+        sheet.getRange(i + 1, 1, 1, 7).setValues([[
+          d.bruker.navn, hash, erAdmin, d.bruker.klasser, beholdFlag || '', rolle, d.bruker.fag || 'Alle'
+        ]]);
         SpreadsheetApp.flush();
         return jsonResponse({ ok: true });
       }
     }
     if (!d.bruker.passord) return jsonResponse({ ok: false, error: 'Passord påkrevd for ny bruker' });
-    sheet.appendRow([d.bruker.navn, hashPassword(d.bruker.passord), d.bruker.erAdmin, d.bruker.klasser, maByttePassord]);
+    sheet.appendRow([d.bruker.navn, hashPassword(d.bruker.passord), erAdmin, d.bruker.klasser, maByttePassord, rolle, d.bruker.fag || 'Alle']);
     SpreadsheetApp.flush();
     return jsonResponse({ ok: true });
   } finally {
@@ -263,7 +279,9 @@ function handleSaveBruker(d) {
 }
 
 function handleDeleteBruker(d) {
-  if (!verifyToken(d.token) || !d.isAdmin) return jsonResponse({ ok: false, error: 'Kun admin' });
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin')
+    return jsonResponse({ ok: false, error: 'Kun skoleadmin kan slette brukere' });
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -273,6 +291,29 @@ function handleDeleteBruker(d) {
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === d.navn) {
         sheet.deleteRow(i + 1);
+        SpreadsheetApp.flush();
+        return jsonResponse({ ok: true });
+      }
+    }
+    return jsonResponse({ ok: false, error: 'Bruker ikke funnet' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleSaveMinProfil(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = getSheet('Brukere');
+    SpreadsheetApp.flush();
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === caller.navn) {
+        sheet.getRange(i + 1, 4).setValue(d.klasser || 'Alle');
+        sheet.getRange(i + 1, 7).setValue(d.fag || 'Alle');
         SpreadsheetApp.flush();
         return jsonResponse({ ok: true });
       }
@@ -320,16 +361,26 @@ function makeToken(navn, passordHash) {
   return navn + ':' + bytes.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
 }
 
-function verifyToken(token) {
-  if (!token) return false;
+function getUserByToken(token) {
+  if (!token) return null;
   const idx = token.indexOf(':');
-  if (idx < 1) return false;
+  if (idx < 1) return null;
   const navn = token.slice(0, idx);
   const sheet = getSheet('Brukere');
-  if (!sheet) return false;
-  const user = sheet.getDataRange().getValues().slice(1).find(r => r[0] === navn);
-  if (!user) return false;
-  return token === makeToken(navn, user[1]);
+  if (!sheet) return null;
+  const rows = sheet.getDataRange().getValues().slice(1);
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0] === navn && token === makeToken(navn, rows[i][1])) {
+      const erAdmin = String(rows[i][2]).toUpperCase() === 'TRUE';
+      const rolle = rows[i][5] ? String(rows[i][5]) : (erAdmin ? 'skoleadmin' : 'laerer');
+      return { navn: rows[i][0], erAdmin, klasser: rows[i][3] || 'Alle', rolle, fag: String(rows[i][6] || 'Alle') };
+    }
+  }
+  return null;
+}
+
+function verifyToken(token) {
+  return !!getUserByToken(token);
 }
 
 // ── AI-prompter ───────────────────────────────────────────────────────────────
@@ -570,7 +621,7 @@ function setupSheets() {
   const ss = SpreadsheetApp.openById(SS_ID);
   const faner = [
     { navn: 'Plan',      headers: ['ID','År','Uke','Dag','Klasse','Fag','Gruppe','Lærer','Aktivitet','Oppmøtested','Info','Tid','SistEndret'] },
-    { navn: 'Brukere',   headers: ['Navn','PassordHash','ErAdmin','Klasser'] },
+    { navn: 'Brukere',   headers: ['Navn','PassordHash','ErAdmin','Klasser','MaByttePassord','Rolle','Fag'] },
     { navn: 'Konfig',    headers: ['Type','Nøkkel','Verdi'] },
     { navn: 'Skolerute', headers: ['FraDato','TilDato','Navn','Type'] }
   ];
