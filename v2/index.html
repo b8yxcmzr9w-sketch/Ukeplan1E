@@ -644,11 +644,9 @@ header .spacer { flex: 1; }
           <h3>Fag og standard dager</h3><span class="konfig-pil">▼</span>
         </div>
         <div class="konfig-kort-innhold">
+          <p style="font-size:.85rem;color:var(--grå);margin-bottom:10px">Kryss av fagene klassen har og sett standard undervisningsdag(er).</p>
           <div id="klasse-fag-liste"></div>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button class="btn btn-s btn-sm" onclick="leggTilKlasseFag()">+ Fag</button>
-            <button id="btn-lagre-klasse-fag" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreKlasseKonfig()" disabled>Lagre</button>
-          </div>
+          <button id="btn-lagre-klasse-fag" class="btn btn-p btn-sm" style="margin-top:10px" onclick="lagreKlasseKonfig()" disabled>Lagre</button>
         </div>
       </div>
       <div class="kort" style="margin-top:14px;margin-bottom:0">
@@ -677,6 +675,19 @@ header .spacer { flex: 1; }
         <div class="felt"><label>Adresse</label><input id="konfig-adresse" type="text" oninput="aktiverNarmesteLagreKnapp(this)"></div>
         <div class="felt"><label>Logo-URL</label><input id="konfig-logo" type="text" placeholder="https://..." oninput="aktiverNarmesteLagreKnapp(this)"></div>
         <button id="btn-lagre-skoleinfo" class="btn btn-p btn-sm" onclick="lagreSkoleinfo()" disabled>Lagre skoleinfo</button>
+      </div>
+    </div>
+    <div class="kort">
+      <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
+        <h3>Tilgjengelige fag</h3><span class="konfig-pil">▼</span>
+      </div>
+      <div class="konfig-kort-innhold">
+        <p style="font-size:.85rem;color:var(--grå);margin-bottom:10px">Fagene som tilbys på klassetrinnet. Kontaktlærer velger fra denne listen.</p>
+        <div id="konfig-fag-liste"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-s btn-sm" onclick="leggTilEnkelFag()">+ Fag</button>
+          <button id="btn-lagre-fag" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreFag()" disabled>Lagre</button>
+        </div>
       </div>
     </div>
     <div class="kort">
@@ -2185,17 +2196,18 @@ function lastKonfig() {
   el('konfig-logo').value    = k.skoleinfo.skole_logo    || '';
 
   // Deaktiver alle lagre-knapper ved lasting
-  ['btn-lagre-skoleinfo','btn-lagre-yff'].forEach(id => {
+  ['btn-lagre-skoleinfo','btn-lagre-fag','btn-lagre-yff'].forEach(id => {
     const b = el(id); if (b) b.disabled = true;
   });
 
   // Sorter og vis lister
+  visKonfigListe('konfig-fag-liste', [...k.fag].sort((a,b) => a.navn.localeCompare(b.navn,'nb')).map(f => f.navn), false, []);
   visKonfigListe('konfig-yff-liste', [...k.grupperYFF].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   visKonfigListe('konfig-klasse-liste', [...(k.klasser || [])].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   fyllKlasseLenkerGrid();
 
   // Event-delegering: aktiver knapp ved endring i lister
-  ['konfig-yff-liste','konfig-klasse-liste'].forEach(listId => {
+  ['konfig-fag-liste','konfig-yff-liste','konfig-klasse-liste'].forEach(listId => {
     const c = el(listId);
     c.oninput  = () => aktiverNarmesteLagreKnapp(c);
     c.onchange = () => aktiverNarmesteLagreKnapp(c);
@@ -2248,6 +2260,14 @@ async function lagreSkoleinfo() {
   rader.push({ type:'skole', nokkel:'skole_logo',    verdi: el('konfig-logo').value.trim() });
   await lagreKonfigRader(rader, 'btn-lagre-skoleinfo');
 }
+function leggTilEnkelFag() {
+  const div = document.createElement('div');
+  div.className = 'konfig-rad';
+  div.innerHTML = `<input type="text" placeholder="Fagnavn"><button class="btn btn-f btn-sm" onclick="aktiverNarmesteLagreKnapp(this);this.parentNode.remove()">✕</button>`;
+  el('konfig-fag-liste').appendChild(div);
+  aktiverNarmesteLagreKnapp(el('konfig-fag-liste'));
+}
+async function lagreFag() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-fag'); }
 async function lagreYFF() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-yff'); }
 async function lagreKlasser() {
   await lagreKonfigRader(samleKonfig(), 'btn-lagre-klasser');
@@ -2292,37 +2312,55 @@ function fyllKlasseAdminSel() {
 function lastKlasseFane(klasse) {
   if (!klasse) return;
   const kd = S.konfig.klasseKonfig?.[klasse] || { fag: [], npt: [] };
-  const sortedFag = [...kd.fag].sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
-  visKonfigListe('klasse-fag-liste', sortedFag.map(f => f.navn), true, sortedFag);
+  const klasseFagMap = Object.fromEntries(kd.fag.map(f => [f.navn, f.dag || '']));
+  const globalFag   = [...S.konfig.fag].sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+
+  const liste = el('klasse-fag-liste');
+  liste.innerHTML = '';
+  if (!globalFag.length) {
+    liste.innerHTML = '<p style="font-size:.85rem;color:var(--grå)">Ingen fag er satt opp av skoleadmin ennå.</p>';
+  } else {
+    globalFag.forEach(f => {
+      const valgt = f.navn in klasseFagMap;
+      const dag   = valgt ? (klasseFagMap[f.navn] || '') : '';
+      const row = document.createElement('div');
+      row.style.cssText = 'margin-bottom:8px';
+      row.innerHTML = `
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+          <input type="checkbox" value="${f.navn}" ${valgt ? 'checked' : ''} onchange="oppdaterKlasseFagRad(this)">
+          ${f.navn}
+        </label>
+        <div class="klasse-fag-dager" style="${valgt ? '' : 'display:none'}margin-left:24px;margin-top:4px">
+          ${dagCheckboxer(dag)}
+        </div>`;
+      liste.appendChild(row);
+    });
+  }
+
   visKonfigListe('klasse-npt-liste', [...kd.npt].sort((a, b) => a.localeCompare(b, 'nb')), false, []);
   ['btn-lagre-klasse-fag','btn-lagre-klasse-npt'].forEach(id => {
     const b = el(id); if (b) b.disabled = true;
   });
-  ['klasse-fag-liste','klasse-npt-liste'].forEach(listId => {
-    const c = el(listId);
-    c.oninput  = () => aktiverNarmesteLagreKnapp(c);
-    c.onchange = () => aktiverNarmesteLagreKnapp(c);
-  });
+  liste.onchange = () => { const b = el('btn-lagre-klasse-fag'); if (b) b.disabled = false; };
+  el('klasse-npt-liste').oninput  = () => aktiverNarmesteLagreKnapp(el('klasse-npt-liste'));
+  el('klasse-npt-liste').onchange = () => aktiverNarmesteLagreKnapp(el('klasse-npt-liste'));
 }
 
-function leggTilKlasseFag() {
-  const div = document.createElement('div');
-  div.className = 'konfig-rad';
-  div.innerHTML = `<input type="text" placeholder="Fagnavn">
-    ${dagCheckboxer('')}
-    <button class="btn btn-f btn-sm" onclick="aktiverNarmesteLagreKnapp(this);this.parentNode.remove()">✕</button>`;
-  el('klasse-fag-liste').appendChild(div);
-  aktiverNarmesteLagreKnapp(el('klasse-fag-liste'));
+function oppdaterKlasseFagRad(cbx) {
+  const dagerDiv = cbx.closest('div').nextElementSibling;
+  dagerDiv.style.display = cbx.checked ? '' : 'none';
+  const b = el('btn-lagre-klasse-fag'); if (b) b.disabled = false;
 }
 
 async function lagreKlasseKonfig() {
   const klasse = el('klasse-admin-sel').value;
   if (!klasse) return;
   const rader = [];
-  el('klasse-fag-liste').querySelectorAll('.konfig-rad').forEach(div => {
-    const inp   = div.querySelector('input[type=text]');
-    const dager = [...div.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value).join(',');
-    if (inp && inp.value.trim()) rader.push({ type: `fag_${klasse}`, nokkel: inp.value.trim(), verdi: dager });
+  el('klasse-fag-liste').querySelectorAll('input[type=checkbox][value]').forEach(cbx => {
+    if (!cbx.checked) return;
+    const dager = [...cbx.closest('div').nextElementSibling.querySelectorAll('input[type=checkbox]:checked')]
+      .map(c => c.value).join(',');
+    rader.push({ type: `fag_${klasse}`, nokkel: cbx.value, verdi: dager });
   });
   el('klasse-npt-liste').querySelectorAll('input').forEach(inp => {
     if (inp.value.trim()) rader.push({ type: `npt_${klasse}`, nokkel: inp.value.trim(), verdi: '' });
@@ -2341,6 +2379,9 @@ async function lagreKlasseKonfig() {
 
 function samleKonfig() {
   const rader = [];
+  el('konfig-fag-liste').querySelectorAll('input[type=text]').forEach(inp => {
+    if (inp.value.trim()) rader.push({ type: 'fag', nokkel: inp.value.trim(), verdi: '' });
+  });
   [['yff','gruppe_yff'],['klasse','klasse']].forEach(([key, type]) => {
     el(`konfig-${key}-liste`).querySelectorAll('input').forEach(inp => {
       if (inp.value.trim()) rader.push({ type, nokkel: inp.value.trim(), verdi: '' });
