@@ -540,6 +540,9 @@ header .spacer { flex: 1; }
         <option value="">Alle YFF-grupper</option>
       </select>
     </div>
+    <p id="ical-tips" class="skjult" style="font-size:.8rem;color:var(--grå);margin:-10px 0 12px;padding:6px 10px;background:var(--grå-lys);border-radius:var(--radius)">
+      💡 Velg ditt NPT-parti og/eller YFF-gruppe i listene over <em>før</em> du abonnerer på kalenderen — da får du bare timene som gjelder deg.
+    </p>
     <!-- Ferie-rad (fylles av JS) -->
     <div id="elev-ferie-slot"></div>
   </div>
@@ -915,7 +918,8 @@ header .spacer { flex: 1; }
 <div id="modal-ical" class="modal-bg skjult">
   <div class="modal" style="max-width:480px">
     <h3>📅 Kalenderabonnement</h3>
-    <p style="font-size:.88rem;color:var(--grå);margin-bottom:14px">Kopier lenken og legg den til som kalenderabonnement i telefonen din.</p>
+    <p style="font-size:.88rem;color:var(--grå);margin-bottom:10px">Kopier lenken og legg den til som kalenderabonnement i telefonen din.</p>
+    <p id="ical-filter-info" style="font-size:.82rem;margin-bottom:12px;padding:6px 10px;background:var(--grå-lys);border-radius:var(--radius)"></p>
     <div style="display:flex;gap:8px;align-items:center">
       <input id="ical-url" type="text" readonly style="flex:1;background:var(--grå-lys);font-size:.78rem;font-family:monospace;cursor:text">
       <button class="btn btn-p btn-sm" onclick="kopierIcalUrl()">Kopier</button>
@@ -1162,6 +1166,8 @@ function fyllElevFilter() {
   const yff = el('filter-yff');
   yff.innerHTML = '<option value="">Alle YFF-grupper</option>';
   S.konfig.grupperYFF.forEach(g => yff.innerHTML += `<option value="${g}">${g}</option>`);
+  const harGrupper = S.konfig.grupperNPT.length > 0 || S.konfig.grupperYFF.length > 0;
+  el('ical-tips').classList.toggle('skjult', !harGrupper);
 }
 
 function visLaerer() {
@@ -2605,6 +2611,21 @@ function abonnerIcal() {
     + (nptParti  ? '&nptParti='  + encodeURIComponent(nptParti)  : '')
     + (yffGruppe ? '&yffGruppe=' + encodeURIComponent(yffGruppe) : '');
   el('ical-url').value = url;
+
+  const deler = [`Klasse: ${S.klasse}`];
+  if (nptParti)  deler.push(`NPT-parti: ${nptParti}`);
+  if (yffGruppe) deler.push(`YFF-gruppe: ${yffGruppe}`);
+  const mangler = [];
+  if (!nptParti  && S.konfig.grupperNPT.length) mangler.push('NPT-parti');
+  if (!yffGruppe && S.konfig.grupperYFF.length) mangler.push('YFF-gruppe');
+  const info = el('ical-filter-info');
+  if (mangler.length) {
+    info.innerHTML = `⚠️ Kalenderen inkluderer <strong>alle ${mangler.join(' og alle ')}</strong>. Gå tilbake og velg ditt parti/din gruppe for en personlig kalender.`;
+    info.style.color = 'var(--oransje, #b45309)';
+  } else {
+    info.innerHTML = `✅ ${deler.join(' · ')}`;
+    info.style.color = 'var(--grønn)';
+  }
   visModal('modal-ical');
 }
 
