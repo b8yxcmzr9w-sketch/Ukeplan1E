@@ -924,8 +924,8 @@ header .spacer { flex: 1; }
         <option value="skoleadmin">Skoleadmin</option>
       </select>
     </div>
-    <div class="felt"><label>Fag <span style="font-weight:400;color:var(--grå)">(kommaseparert eller «Alle»)</span></label>
-      <input id="bruker-fag" type="text" placeholder="NNA,YFF eller Alle">
+    <div class="felt"><label>Fag</label>
+      <div id="bruker-fag-cbx" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px"></div>
     </div>
     <p id="bruker-feil" class="feil-tekst skjult"></p>
     <div class="modal-bunn">
@@ -2571,6 +2571,17 @@ async function lastBrukere() {
   });
 }
 
+function fyllBrukerFagCbx(valgte) {
+  const fag    = alleFagISystem();
+  const aktive = valgte && valgte !== 'Alle' ? valgte.split(',').map(s => s.trim()) : [];
+  el('bruker-fag-cbx').innerHTML = fag.map(f =>
+    `<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+      <input type="checkbox" value="${f}" ${aktive.includes(f) ? 'checked' : ''}>
+      ${f}
+    </label>`
+  ).join('');
+}
+
 function klargjorNyBruker() {
   el('bruker-modal-tittel').textContent = 'Ny bruker';
   el('bruker-orig-navn').value  = '';
@@ -2578,7 +2589,7 @@ function klargjorNyBruker() {
   el('bruker-passord').value    = '';
   el('bruker-klasser').value    = '';
   el('bruker-rolle').value      = 'laerer';
-  el('bruker-fag').value        = 'Alle';
+  fyllBrukerFagCbx('');
   visModal('modal-ny-bruker');
 }
 
@@ -2589,7 +2600,7 @@ function redigerBruker(b) {
   el('bruker-passord').value    = '';
   el('bruker-klasser').value    = b.klasser || 'Alle';
   el('bruker-rolle').value      = b.rolle || (b.erAdmin ? 'skoleadmin' : 'laerer');
-  el('bruker-fag').value        = b.fag || 'Alle';
+  fyllBrukerFagCbx(b.fag || '');
   visModal('modal-ny-bruker');
 }
 
@@ -2597,7 +2608,8 @@ async function lagreBruker() {
   const navn     = el('bruker-navn').value.trim();
   const origNavn = el('bruker-orig-navn').value.trim();
   if (!navn) { visInlineError('bruker-feil', 'Navn er påkrevd'); return; }
-  const rolle = el('bruker-rolle').value;
+  const rolle  = el('bruker-rolle').value;
+  const valgte = [...el('bruker-fag-cbx').querySelectorAll('input[type=checkbox]:checked')].map(c => c.value);
   const res = await api('saveBruker', {
     token: S.bruker.token, isAdmin: true,
     bruker: {
@@ -2607,7 +2619,7 @@ async function lagreBruker() {
       klasser:  el('bruker-klasser').value.trim(),
       erAdmin:  rolle === 'skoleadmin',
       rolle,
-      fag:      el('bruker-fag').value.trim() || 'Alle'
+      fag:      valgte.length ? valgte.join(',') : 'Alle'
     }
   });
   if (res.ok) { lukkModal('modal-ny-bruker'); lastBrukere(); }
