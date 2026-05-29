@@ -1570,10 +1570,7 @@ function visElevUke() {
   }
 
   // ── Ferie all-day rad i sticky-sonen (over daggridet) ────────────────────────
-  if (ferie.length) {
-    const ferieRad = byggFerieAlldagRad(ferie, S.uke, S.ar);
-    if (ferieRad) ferieSlot.appendChild(ferieRad);
-  }
+  // (ikke lenger brukt — ferie vises per dag i kolonnene nedenfor)
 
   // ── 5-kolonne daggrid ────────────────────────────────────────────────────────
   const grid = document.createElement('div');
@@ -1581,12 +1578,12 @@ function visElevUke() {
 
   DAGER.forEach(dag => {
     const dagRader = rader.filter(r => r.dag === dag);
+    const dato     = ukeDagTilDato(S.uke, dag, S.ar);
+    const ferieIDag = ferierForDato(dato, ferie);
 
     const kol = document.createElement('div');
     kol.className = 'dag-kolonne';
 
-    // Dato DD.MM
-    const dato = ukeDagTilDato(S.uke, dag, S.ar);
     const datoStr = dato
       ? String(dato.getDate()).padStart(2,'0') + '.' + String(dato.getMonth()+1).padStart(2,'0')
       : '';
@@ -1599,9 +1596,17 @@ function visElevUke() {
     const innhold = document.createElement('div');
     innhold.className = 'dag-kolonne-innhold';
 
+    // Ferie-kort under dag-overskriften
+    ferieIDag.forEach(f => {
+      const div = document.createElement('div');
+      div.className = `ferie-dag-kort ${ferieFargeklasse(f.type)}`;
+      div.textContent = `${ferieSymbol(f.type)} ${f.navn}`;
+      innhold.appendChild(div);
+    });
+
     if (dagRader.length) {
       dagRader.forEach(r => innhold.appendChild(lagOktKort(r, false)));
-    } else {
+    } else if (!ferieIDag.length) {
       const tom = document.createElement('div');
       tom.className = 'dag-tom';
       tom.textContent = '–';
