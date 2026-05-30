@@ -469,6 +469,40 @@ header .spacer { flex: 1; }
   .info-mer-kn { display: inline; }
 }
 
+/* ── Velkomstskjerm ────────────────────────────────────────────────────────── */
+#view-velkomst {
+  min-height: calc(100vh - 65px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2rem 1.5rem; text-align: center;
+}
+#view-velkomst.skjult { display: none !important; }
+.velkomst-logo { height: 60px; border-radius: 8px; object-fit: contain; margin-bottom: 1.2rem; }
+.velkomst-tittel { font-size: 1.5rem; font-weight: 700; color: var(--grønn); margin-bottom: .4rem; }
+.velkomst-sub {
+  font-size: .92rem; color: var(--grå); margin-bottom: 2rem;
+  max-width: 340px; line-height: 1.55;
+}
+.velkomst-klasser {
+  display: flex; flex-wrap: wrap; gap: .65rem;
+  justify-content: center; max-width: 420px;
+}
+.velkomst-klasse-kn {
+  background: var(--grønn); color: white;
+  border: none; border-radius: var(--radius);
+  padding: .7rem 1.6rem; font-size: 1rem; font-weight: 600;
+  cursor: pointer; transition: background .15s, transform .1s;
+}
+.velkomst-klasse-kn:hover { background: var(--grønn-lys); transform: translateY(-1px); }
+.velkomst-klasse-kn:active { transform: none; }
+.bytt-klasse-kn {
+  background: none; border: none; cursor: pointer;
+  font-size: .75rem; color: rgba(255,255,255,.65);
+  padding: 2px 6px; margin-left: auto;
+  transition: color .15s;
+}
+.bytt-klasse-kn:hover { color: white; }
+
 /* ── Mobil ─────────────────────────────────────────────────────────────────── */
 @media screen and (max-width: 720px) {
   .uke-grid { grid-template-columns: 1fr; }
@@ -519,8 +553,16 @@ header .spacer { flex: 1; }
   </div>
 </div>
 
+<!-- ═══════════════════════ VELKOMSTSKJERM ════════════════════════════════════ -->
+<div id="view-velkomst" class="skjult">
+  <img id="velkomst-logo" src="" alt="" class="velkomst-logo skjult">
+  <h2 id="velkomst-tittel" class="velkomst-tittel">Ukeplan</h2>
+  <p class="velkomst-sub">Her finner du ukeplanen for din klasse. Velg klassen din nedenfor – nettleseren husker valget til neste gang.</p>
+  <div class="velkomst-klasser" id="velkomst-klasser"></div>
+</div>
+
 <!-- ═══════════════════════ ELEV-VISNING ══════════════════════════════════════ -->
-<div id="view-elev" class="container">
+<div id="view-elev" class="container skjult">
   <!-- Frossen topp: nav + filtre + ferie-rad -->
   <div id="elev-sticky-zone" class="sticky-zone">
     <div class="uke-nav">
@@ -531,6 +573,7 @@ header .spacer { flex: 1; }
       <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
       <button class="btn btn-s btn-sm" onclick="window.print()">Skriv ut</button>
       <button class="btn btn-s btn-sm" onclick="abonnerIcal()">📅 Kalender</button>
+      <button class="bytt-klasse-kn" id="btn-bytt-klasse" onclick="byttElevKlasse()" title="Bytt klasse">⇄ Bytt klasse</button>
     </div>
     <div class="filter-bar">
       <select id="filter-npt" onchange="oppdaterElevVisning()">
@@ -1080,19 +1123,66 @@ async function init() {
   const res = await api('getData');
   if (res.ok) {
     S.konfig = res;
-    S.klasse = urlKlasse || (res.klasser && res.klasser[0]) || '';
     oppdaterHeader(res.skoleinfo);
   }
 
-  lastSitaterAsynkront(); // brannogkjøring – blokkerer ikke oppstart
+  lastSitaterAsynkront();
 
   if (S.bruker) {
+    S.klasse = urlKlasse || (res.klasser && res.klasser[0]) || '';
     visLaerer();
   } else {
     const ref = startUkeAr();
     S.uke = ref.uke; S.ar = ref.ar;
-    visElev();
+    const lagretKlasse = localStorage.getItem('ukeplan_elevklasse');
+    if (urlKlasse) {
+      S.klasse = urlKlasse;
+      localStorage.setItem('ukeplan_elevklasse', urlKlasse);
+      visElev();
+    } else if (lagretKlasse && S.konfig.klasser && S.konfig.klasser.includes(lagretKlasse)) {
+      S.klasse = lagretKlasse;
+      visElev();
+    } else {
+      visVelkomst();
+    }
   }
+}
+
+function visVelkomst() {
+  el('view-elev').classList.add('skjult');
+  el('view-laerer').classList.add('skjult');
+  el('view-velkomst').classList.remove('skjult');
+  S.visning = 'velkomst';
+
+  const si = S.konfig.skoleinfo || {};
+  if (si.skole_navn) el('velkomst-tittel').textContent = si.skole_navn;
+  if (si.skole_logo) {
+    const logo = el('velkomst-logo');
+    logo.src = si.skole_logo;
+    logo.classList.remove('skjult');
+  }
+
+  const boks = el('velkomst-klasser');
+  boks.innerHTML = '';
+  (S.konfig.klasser || []).forEach(k => {
+    const kn = document.createElement('button');
+    kn.className = 'velkomst-klasse-kn';
+    kn.textContent = k;
+    kn.onclick = () => velgElevKlasse(k);
+    boks.appendChild(kn);
+  });
+}
+
+function velgElevKlasse(klasse) {
+  S.klasse = klasse;
+  localStorage.setItem('ukeplan_elevklasse', klasse);
+  el('view-velkomst').classList.add('skjult');
+  visElev();
+}
+
+function byttElevKlasse() {
+  localStorage.removeItem('ukeplan_elevklasse');
+  visVelkomst();
 }
 
 // ── Navigasjon ────────────────────────────────────────────────────────────────
@@ -1167,6 +1257,7 @@ function syncUkeInput() {
 
 // ── Visninger ─────────────────────────────────────────────────────────────────
 function visElev() {
+  el('view-velkomst').classList.add('skjult');
   el('view-laerer').classList.add('skjult');
   el('view-elev').classList.remove('skjult');
   S.visning = 'elev';
