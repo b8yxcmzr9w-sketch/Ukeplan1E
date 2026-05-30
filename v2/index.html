@@ -540,9 +540,6 @@ header .spacer { flex: 1; }
         <option value="">Alle YFF-grupper</option>
       </select>
     </div>
-    <p id="ical-tips" class="skjult" style="font-size:.8rem;color:var(--grå);margin:-10px 0 12px;padding:6px 10px;background:var(--grå-lys);border-radius:var(--radius)">
-      💡 Velg ditt NPT-parti og/eller YFF-gruppe i listene over <em>før</em> du abonnerer på kalenderen — da får du bare timene som gjelder deg.
-    </p>
     <!-- Ferie-rad (fylles av JS) -->
     <div id="elev-ferie-slot"></div>
   </div>
@@ -1197,8 +1194,6 @@ function fyllElevFilter() {
   const yff = el('filter-yff');
   yff.innerHTML = '<option value="">Alle YFF-grupper</option>';
   S.konfig.grupperYFF.forEach(g => yff.innerHTML += `<option value="${g}">${g}</option>`);
-  const harGrupper = nptGrupper.length > 0 || S.konfig.grupperYFF.length > 0;
-  el('ical-tips').classList.toggle('skjult', !harGrupper);
 }
 
 function visLaerer() {
