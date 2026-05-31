@@ -59,7 +59,8 @@ function doPost(e) {
     getBackup:          handleGetBackup,
     slettAlt:           handleSlettAlt,
     saveKlasseKonfig:   handleSaveKlasseKonfig,
-    seedTestData:       handleSeedTestData
+    seedTestData:       handleSeedTestData,
+    migrateToV2:        handleMigrateToV2
   };
   const fn = handlers[d.action];
   if (!fn) return jsonResponse({ ok: false, error: 'Ukjent action: ' + d.action });
@@ -691,6 +692,110 @@ function godkjennTillatelser() {
 
 // ── Testdata (kjør én gang fra editor for å populere ark med eksempeldata) ───
 // OBS: Sletter og erstatter innholdet i Konfig, Brukere og Plan!
+
+function handleMigrateToV2(d) {
+  const bruker = getUserByToken(d.token);
+  if (!bruker || bruker.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  try {
+    const rapport = migrateToV2();
+    return jsonResponse({ ok: true, melding: rapport });
+  } catch(e) {
+    return jsonResponse({ ok: false, error: e.message });
+  }
+}
+
+function migrateToV2() {
+  const ss = SpreadsheetApp.openById(SS_ID);
+  const logg = [];
+
+  // ── 1. Finn unike klasser frå Plan-arket ──────────────────────────────────
+  const planSheet = ss.getSheetByName('Plan');
+  const planRader = planSheet.getLastRow() > 1
+    ? planSheet.getRange(2, 1, planSheet.getLastRow() - 1, 14).getValues()
+    : [];
+  const klasserFraPlan = [...new Set(
+    planRader.map(r => String(r[4] || '').trim()).filter(k => k && k !== 'Alle')
+  )].sort();
+  logg.push('Klasser funnet i Plan: ' + (klasserFraPlan.join(', ') || '(ingen)'));
+
+  // ── 2. Les eksisterende Konfig ────────────────────────────────────────────
+  const konfSheet = ss.getSheetByName('Konfig');
+  const konfRader = konfSheet.getLastRow() > 1
+    ? konfSheet.getRange(2, 1, konfSheet.getLastRow() - 1, 3).getValues()
+    : [];
+
+  const eksisterendeTyper = {};
+  konfRader.forEach(r => {
+    const type = String(r[0] || '').trim();
+    if (!type) return;
+    if (!eksisterendeTyper[type]) eksisterendeTyper[type] = [];
+    eksisterendeTyper[type].push({ nokkel: String(r[1] || ''), verdi: String(r[2] || '') });
+  });
+
+  const nyeRader = [];
+
+  // ── 3. Legg til manglende klasse-oppføringer ──────────────────────────────
+  const eksisterendeKlasser = new Set((eksisterendeTyper['klasse'] || []).map(r => r.nokkel));
+  klasserFraPlan.forEach(k => {
+    if (!eksisterendeKlasser.has(k)) {
+      nyeRader.push(['klasse', k, '']);
+      logg.push('La til klasse: ' + k);
+    }
+  });
+
+  // ── 4. Migrer globale fag → fag_<klasse> for klasser som mangler det ──────
+  const globalFag = eksisterendeTyper['fag'] || [];
+  klasserFraPlan.forEach(k => {
+    const harFagKlasse = eksisterendeTyper['fag_' + k] && eksisterendeTyper['fag_' + k].length > 0;
+    if (!harFagKlasse && globalFag.length > 0) {
+      globalFag.forEach(f => {
+        nyeRader.push(['fag_' + k, f.nokkel, f.verdi]); // behold dag fra global
+      });
+      logg.push('Kopierte ' + globalFag.length + ' fag til fag_' + k);
+    }
+  });
+
+  // ── 5. Oppdater globale fag: fjern dag (verdi → '') ───────────────────────
+  let oppdatertFag = false;
+  konfRader.forEach((r, i) => {
+    if (String(r[0]).trim() === 'fag' && String(r[2] || '').trim() !== '') {
+      konfSheet.getRange(i + 2, 3).setValue('');
+      oppdatertFag = true;
+    }
+  });
+  if (oppdatertFag) logg.push('Fjernet dager fra globale fag-oppføringer');
+
+  // Skriv nye rader
+  if (nyeRader.length > 0) {
+    nyeRader.forEach(r => konfSheet.appendRow(r));
+    logg.push('Totalt ' + nyeRader.length + ' nye konfig-rader lagt til');
+  } else {
+    logg.push('Ingen nye konfig-rader nødvendig');
+  }
+
+  // ── 6. Brukere: sikre 8 kolonner (legg til tom YffGruppe hvis mangler) ───
+  const brukerSheet = ss.getSheetByName('Brukere');
+  const brukerRader = brukerSheet.getLastRow() > 1
+    ? brukerSheet.getRange(2, 1, brukerSheet.getLastRow() - 1, 8).getValues()
+    : [];
+  let brukerFix = 0;
+  brukerRader.forEach((r, i) => {
+    // Kol 6 (index 5) = Rolle – sett til 'laerer' hvis tom
+    if (!String(r[5] || '').trim()) {
+      brukerSheet.getRange(i + 2, 6).setValue(r[2] ? 'skoleadmin' : 'laerer');
+      brukerFix++;
+    }
+    // Kol 7 (index 6) = Fag – sett til 'Alle' hvis tom
+    if (!String(r[6] || '').trim()) {
+      brukerSheet.getRange(i + 2, 7).setValue('Alle');
+    }
+    // Kol 8 (index 7) = YffGruppe – blank er OK
+  });
+  if (brukerFix > 0) logg.push('Oppdaterte rolle-felt for ' + brukerFix + ' brukere');
+
+  SpreadsheetApp.flush();
+  return logg.join(' | ');
+}
 
 function handleSeedTestData(d) {
   const bruker = getUserByToken(d.token);

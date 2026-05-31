@@ -788,6 +788,9 @@ header .spacer { flex: 1; }
           <button class="btn btn-f btn-sm" onclick="bekreftSlettPlan()">🗑️ Slett alle økter</button>
           <button class="btn btn-f btn-sm" onclick="bekreftSlettSkolerute()">🗑️ Slett skolerute</button>
           <hr style="border:none;border-top:1px solid var(--kant);margin:4px 0">
+          <p style="font-size:.8rem;color:var(--grå)">Tilpass eksisterende data til ny struktur (trygt å kjøre – endrer ikke Plan-data).</p>
+          <button class="btn btn-s btn-sm" onclick="kjorMigrateToV2()">🔧 Migrer til ny struktur</button>
+          <hr style="border:none;border-top:1px solid var(--kant);margin:4px 0">
           <p style="font-size:.8rem;color:var(--grå)">Kun for testmiljø – fyller inn eksempeldata (1D, 1R, lærere, uke 23).</p>
           <button class="btn btn-s btn-sm" onclick="kjorSeedTestData()">🌱 Legg inn testdata</button>
         </div>
@@ -2847,6 +2850,17 @@ async function bekreftSlettSkolerute() {
   const res = await api('slettAlt', { token: S.bruker.token, slettSkolerute: true });
   if (res.ok) visMelding('Skolerute slettet');
   else visMelding(res.error, 'feil');
+}
+
+async function kjorMigrateToV2() {
+  visMelding('Migrerer data…');
+  const res = await api('migrateToV2', { token: S.bruker.token });
+  if (res.ok) {
+    visMelding('✅ ' + res.melding);
+    setTimeout(() => location.reload(), 2000);
+  } else {
+    visMelding(res.error || 'Feil ved migrering', 'feil');
+  }
 }
 
 async function kjorSeedTestData() {
