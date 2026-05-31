@@ -688,6 +688,106 @@ function godkjennTillatelser() {
   Logger.log('UrlFetchApp er nå autorisert');
 }
 
+// ── Testdata (kjør én gang fra editor for å populere ark med eksempeldata) ───
+// OBS: Sletter og erstatter innholdet i Konfig, Brukere og Plan!
+
+function seedTestData() {
+  const ss = SpreadsheetApp.openById(SS_ID);
+
+  // ── Konfig ────────────────────────────────────────────────────────────────
+  const konfig = ss.getSheetByName('Konfig');
+  if (konfig.getLastRow() > 1) konfig.deleteRows(2, konfig.getLastRow() - 1);
+
+  const konfigData = [
+    // Skoleinfo
+    ['skole', 'skole_navn',    'Øksnevad vgs'],
+    ['skole', 'skole_adresse', 'Øksnevad, 4353 Klepp stasjon'],
+    // Klasser
+    ['klasse', '1E', ''],
+    ['klasse', '1D', ''],
+    ['klasse', '1R', ''],
+    // Globale fagnavn (vist i innstillinger)
+    ['fag', 'Produksjon', ''],
+    ['fag', 'YFF',        ''],
+    ['fag', 'Engelsk',    ''],
+    ['fag', 'Matte',      ''],
+    ['fag', 'Naturfag',   ''],
+    ['fag', 'Gym',        ''],
+    ['fag', 'Aktivitet',  ''],
+    // YFF-grupper
+    ['gruppe_yff', 'Hund',   ''],
+    ['gruppe_yff', 'Storfe', ''],
+    ['gruppe_yff', 'Gris',   ''],
+    // Fag for 1D med standard dag
+    ['fag_1D', 'Produksjon', 'Mandag'],
+    ['fag_1D', 'YFF',        'Onsdag'],
+    ['fag_1D', 'Engelsk',    'Tirsdag'],
+    ['fag_1D', 'Matte',      'Tirsdag'],
+    ['fag_1D', 'Naturfag',   'Onsdag'],
+    ['fag_1D', 'Gym',        'Mandag'],
+    // Fag for 1R med standard dag
+    ['fag_1R', 'Produksjon', 'Mandag'],
+    ['fag_1R', 'Engelsk',    'Tirsdag'],
+    ['fag_1R', 'Matte',      'Mandag'],
+    ['fag_1R', 'Gym',        'Tirsdag'],
+    ['fag_1R', 'Aktivitet',  'Onsdag'],
+  ];
+  konfigData.forEach(r => konfig.appendRow(r));
+
+  // ── Brukere ───────────────────────────────────────────────────────────────
+  const brukere = ss.getSheetByName('Brukere');
+  if (brukere.getLastRow() > 1) brukere.deleteRows(2, brukere.getLastRow() - 1);
+
+  const pass = hashPassword('test123');
+  // [Navn, PassordHash, ErAdmin, Klasser, MaByttePassord, Rolle, Fag, YffGruppe]
+  const brukerData = [
+    ['Admin',         hashPassword('admin123'), true,  'Alle',  false, 'skoleadmin', 'Alle',           ''],
+    ['Anne Cathrine', pass, false, '1D',    false, 'laerer', 'Produksjon,YFF',  'Hund'],
+    ['Kevin',         pass, false, '1D,1R', false, 'laerer', 'Engelsk',         ''],
+    ['Willy',         pass, false, '1D,1R', false, 'laerer', 'Matte,Naturfag',  ''],
+    ['Kristoffer',    pass, false, '1D,1R', false, 'laerer', 'Gym,Aktivitet',   ''],
+    ['Martin',        pass, false, '1R',    false, 'laerer', 'Engelsk',         ''],
+    ['Olav',          pass, false, '1R',    false, 'laerer', 'Produksjon',      ''],
+  ];
+  brukerData.forEach(r => brukere.appendRow(r));
+
+  // ── Plan – eksempeløkter uke 23, 2026 ────────────────────────────────────
+  const plan = ss.getSheetByName('Plan');
+  if (plan.getLastRow() > 1) plan.deleteRows(2, plan.getLastRow() - 1);
+
+  const ar = 2026, uke = 23;
+  const ts = Utilities.formatDate(new Date(), 'Europe/Oslo', 'yyyy-MM-dd HH:mm');
+  let n = 0;
+  const nid = () => 'seed_' + (++n);
+  // [ID, År, Uke, Dag, Klasse, Fag, Gruppe, Lærer, Aktivitet, Oppmøtested, Info, Tid, SistEndret, LagretAv]
+  const planData = [
+    // 1D
+    [nid(), ar, uke, 'Mandag',  '1D', 'Produksjon', '',     'Anne Cathrine', 'Stell og fôring av storfe',   'Fjøs',           '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Mandag',  '1D', 'Gym',        '',     'Kristoffer',    'Friidrett – løping',          'Idrettshall',    '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Tirsdag', '1D', 'Engelsk',    '',     'Kevin',         'Muntlig presentasjon',        'Klasserom',      '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Tirsdag', '1D', 'Matte',      '',     'Willy',         'Algebra – ligninger',         'Klasserom',      '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Onsdag',  '1D', 'YFF',        'Hund', 'Anne Cathrine', 'Lydighetsøvelser',            'Hundegård',      'Ta med godbit',      '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Onsdag',  '1D', 'Naturfag',   '',     'Willy',         'Plantelære – fotosyntese',    'Klasserom',      '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Torsdag', '1D', 'Produksjon', '',     'Anne Cathrine', 'Melking og stell',            'Fjøs',           '',                   '08:00',ts, 'Admin'],
+    [nid(), ar, uke, 'Fredag',  '1D', 'Matte',      '',     'Willy',         'Geometri – areal og volum',  'Klasserom',      '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Fredag',  '1D', 'Engelsk',    '',     'Kevin',         'Skriftlig innlevering',       'Klasserom',      'Leveres digitalt',   '',     ts, 'Admin'],
+    // 1R
+    [nid(), ar, uke, 'Mandag',  '1R', 'Produksjon', '',     'Olav',          'Intro til maskinpark',        'Verksted',       '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Mandag',  '1R', 'Matte',      '',     'Willy',         'Statistikk',                  'Klasserom',      '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Tirsdag', '1R', 'Engelsk',    '',     'Kevin',         'Lesing og tekstforståelse',   'Klasserom',      '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Tirsdag', '1R', 'Gym',        '',     'Kristoffer',    'Friidrett – kast og hopp',    'Idrettshall',    '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Onsdag',  '1R', 'Aktivitet',  '',     'Kristoffer',    'Friluftsdag – kyststi',       'Møt ved bussen', 'Ta med niste',       '09:00',ts, 'Admin'],
+    [nid(), ar, uke, 'Torsdag', '1R', 'Engelsk',    '',     'Martin',        'Grammatikk og setningsbygging','Klasserom',     '',                   '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Fredag',  '1R', 'Produksjon', '',     'Olav',          'Traktorvedlikehold',          'Verksted',       'Arbeidsklær',        '',     ts, 'Admin'],
+    [nid(), ar, uke, 'Fredag',  '1R', 'Matte',      '',     'Willy',         'Prøve – statistikk',          'Klasserom',      'Hjelpemidler: kalkulator', '', ts, 'Admin'],
+  ];
+  planData.forEach(r => plan.appendRow(r));
+
+  Logger.log('✅ Testdata lagt inn: ' + konfigData.length + ' konfig-rader, ' +
+             brukerData.length + ' brukere, ' + planData.length + ' plan-rader.');
+  Logger.log('Passord: Admin → admin123 | alle lærere → test123');
+}
+
 function listModels() {
   const key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
   const resp = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1/models?key=' + key, { muteHttpExceptions: true });
