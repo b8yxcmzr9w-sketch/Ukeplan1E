@@ -47,6 +47,14 @@ header .skole-info p  { font-size: .78rem; opacity: .8; }
 .hdr-klasse {
   background: rgba(255,255,255,.2); border-radius: 20px;
   padding: 3px 12px; font-size: .85rem; font-weight: 600; white-space: nowrap;
+  border: none; color: white; cursor: default;
+  -webkit-appearance: none; appearance: none; outline: none;
+}
+.hdr-klasse.interaktiv {
+  padding-right: 22px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='white' opacity='.75'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+  background-color: rgba(255,255,255,.25);
 }
 header .spacer { flex: 1; }
 .hdr-btn {
@@ -528,7 +536,7 @@ header .spacer { flex: 1; }
     <h1 id="hdr-navn">Ukeplan</h1>
     <p id="hdr-adresse" class="skjult"></p>
   </div>
-  <span id="hdr-klasse" class="hdr-klasse skjult"></span>
+  <select id="hdr-klasse" class="hdr-klasse skjult" onchange="hdrKlasseEndret(this.value)"></select>
   <div class="spacer"></div>
   <button id="btn-logg-inn" class="hdr-btn" onclick="visModal('modal-login')">Logg inn</button>
   <button id="btn-bruker-meny" class="hdr-btn skjult" onclick="toggleBrukerMeny()"></button>
@@ -607,12 +615,6 @@ header .spacer { flex: 1; }
     <!-- Frossen nav + filter (begge modi) -->
     <div id="laerer-sticky-zone" class="sticky-zone">
 
-      <!-- Klasse-velger (vises når flere klasser er konfigurert) -->
-      <div id="laerer-klasse-bar" class="filter-bar skjult" style="margin-bottom:6px">
-        <select id="laerer-klasse-sel" onchange="byttLaererKlasse(this.value)" style="font-weight:600"></select>
-        <button class="btn btn-s btn-sm" onclick="visDelLenke()">🔗 Del lenke</button>
-      </div>
-
       <!-- Uke-navigasjon (ukesmodus) -->
       <div id="laerer-uke-nav" class="uke-nav">
         <button class="btn btn-s btn-sm" onclick="bytteUke(-1)">← Forrige</button>
@@ -624,6 +626,7 @@ header .spacer { flex: 1; }
         <button class="btn btn-p btn-sm" onclick="klargjorNyOkt()">+ Ny økt</button>
         <button class="btn btn-s btn-sm skjult" id="btn-lim-inn" onclick="klargjorParse()">📋 Lim inn plan</button>
         <button class="btn btn-s btn-sm" onclick="byttListeModus(true)" title="Vis som liste">📋 Liste</button>
+        <button class="btn btn-s btn-sm" onclick="visDelLenke()" title="Del elevlenke">🔗</button>
       </div>
 
       <!-- Liste-navigasjon (listemodus) -->
@@ -1355,9 +1358,20 @@ function oppdaterHeader(si) {
 }
 
 function oppdaterKlasseBadge() {
-  const span = el('hdr-klasse');
-  if (S.klasse) { span.textContent = S.klasse; span.classList.remove('skjult'); }
-  else span.classList.add('skjult');
+  const sel = el('hdr-klasse');
+  if (!S.klasse) { sel.classList.add('skjult'); return; }
+  const erLaerer = !!(S.bruker);
+  const klasser = erLaerer ? (S.konfig.klasser || [S.klasse]) : [S.klasse];
+  sel.innerHTML = klasser.map(k =>
+    `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`
+  ).join('');
+  sel.disabled = !erLaerer || klasser.length < 2;
+  sel.classList.toggle('interaktiv', erLaerer && klasser.length > 1);
+  sel.classList.remove('skjult');
+}
+
+function hdrKlasseEndret(klasse) {
+  if (S.bruker) byttLaererKlasse(klasse);
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -2367,14 +2381,7 @@ async function lagreKlasser() {
 }
 
 function fyllKlasseVelger() {
-  const sel = el('laerer-klasse-sel');
-  if (!sel) return;
-  const klasser = S.konfig.klasser || [];
-  sel.innerHTML = klasser.map(k =>
-    `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`
-  ).join('');
-  const bar = el('laerer-klasse-bar');
-  if (bar) bar.classList.toggle('skjult', klasser.length < 2);
+  oppdaterKlasseBadge();
 }
 
 function byttLaererKlasse(klasse) {
