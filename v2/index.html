@@ -1362,13 +1362,35 @@ function oppdaterHeader(si) {
 function oppdaterKlasseBadge() {
   const sel = el('hdr-klasse');
   if (!S.klasse) { sel.classList.add('skjult'); return; }
-  const erLaerer = !!(S.bruker);
-  const klasser = erLaerer ? (S.konfig.klasser || [S.klasse]) : [S.klasse];
-  sel.innerHTML = klasser.map(k =>
-    `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`
-  ).join('');
-  sel.disabled = !erLaerer || klasser.length < 2;
-  sel.classList.toggle('interaktiv', erLaerer && klasser.length > 1);
+
+  const alleKlasser = S.konfig.klasser || [S.klasse];
+
+  if (!S.bruker || alleKlasser.length < 2) {
+    sel.innerHTML = `<option value="${S.klasse}">${S.klasse}</option>`;
+    sel.disabled = true;
+    sel.classList.remove('interaktiv');
+    sel.classList.remove('skjult');
+    return;
+  }
+
+  const mineStr = S.bruker.klasser || '';
+  const mine = mineStr === 'Alle'
+    ? alleKlasser
+    : mineStr.split(',').map(k => k.trim()).filter(k => alleKlasser.includes(k));
+  const andre = alleKlasser.filter(k => !mine.includes(k));
+
+  const opt = k => `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`;
+
+  if (mine.length && andre.length) {
+    sel.innerHTML =
+      `<optgroup label="Mine klasser">${mine.map(opt).join('')}</optgroup>` +
+      `<optgroup label="Vikar">${andre.map(opt).join('')}</optgroup>`;
+  } else {
+    sel.innerHTML = alleKlasser.map(opt).join('');
+  }
+
+  sel.disabled = false;
+  sel.classList.add('interaktiv');
   sel.classList.remove('skjult');
 }
 
