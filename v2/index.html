@@ -965,7 +965,9 @@ header .spacer { flex: 1; }
     <input type="hidden" id="bruker-orig-navn">
     <div class="felt"><label>Navn</label><input id="bruker-navn" type="text"></div>
     <div class="felt"><label>Passord <span style="font-weight:400;color:var(--grå)">(la stå tomt for å beholde)</span></label><input id="bruker-passord" type="password"></div>
-    <div class="felt"><label>Klasser <span style="font-weight:400;color:var(--grå)">(kommaseparert eller «Alle»)</span></label><input id="bruker-klasser" type="text" placeholder="1E,2E eller Alle"></div>
+    <div class="felt"><label>Klasser</label>
+      <div id="bruker-klasser-cbx" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:4px"></div>
+    </div>
     <div class="felt"><label>Rolle</label>
       <select id="bruker-rolle">
         <option value="laerer">Lærer</option>
@@ -974,7 +976,7 @@ header .spacer { flex: 1; }
       </select>
     </div>
     <div class="felt"><label>Fag</label>
-      <div id="bruker-fag-cbx" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px"></div>
+      <div id="bruker-fag-cbx" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:4px"></div>
     </div>
     <p id="bruker-feil" class="feil-tekst skjult"></p>
     <div class="modal-bunn">
@@ -2670,15 +2672,52 @@ async function lastBrukere() {
   });
 }
 
+function cbxLabel(value, tekst, checked) {
+  return `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:.92rem;padding:2px 0">
+    <input type="checkbox" value="${value}" ${checked ? 'checked' : ''} style="width:17px;height:17px;flex-shrink:0">
+    <span>${tekst}</span>
+  </label>`;
+}
+
+function fyllBrukerKlasserCbx(valgte) {
+  const klasser  = S.konfig.klasser || [];
+  const erAlle   = !valgte || valgte === 'Alle';
+  const aktive   = erAlle ? [] : valgte.split(',').map(s => s.trim());
+  const boks     = el('bruker-klasser-cbx');
+  // «Alle»-rad øverst – alltid 2 kolonner bredde
+  let html = `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:.92rem;padding:2px 0;grid-column:1/-1">
+    <input type="checkbox" id="bruker-klasse-alle" value="Alle" ${erAlle ? 'checked' : ''} style="width:17px;height:17px;flex-shrink:0" onchange="toggleAlleKlasser(this)">
+    <span><strong>Alle klasser</strong></span>
+  </label>`;
+  html += klasser.map(k => cbxLabel('klasse_' + k, k, !erAlle && aktive.includes(k))).join('');
+  boks.innerHTML = html;
+  // grå ut individuelle bokser hvis Alle er valgt
+  oppdaterKlasserCbxState();
+}
+
+function toggleAlleKlasser(cb) {
+  oppdaterKlasserCbxState();
+}
+
+function oppdaterKlasserCbxState() {
+  const alleValgt = el('bruker-klasse-alle')?.checked;
+  el('bruker-klasser-cbx').querySelectorAll('input[value^="klasse_"]').forEach(cb => {
+    cb.disabled = alleValgt;
+    cb.parentElement.style.opacity = alleValgt ? '.45' : '1';
+  });
+}
+
+function lesKlasserFraCbx() {
+  if (el('bruker-klasse-alle')?.checked) return 'Alle';
+  const valgte = [...el('bruker-klasser-cbx').querySelectorAll('input[value^="klasse_"]:checked')]
+    .map(cb => cb.value.replace('klasse_', ''));
+  return valgte.join(',') || 'Alle';
+}
+
 function fyllBrukerFagCbx(valgte) {
   const fag    = alleFagISystem();
   const aktive = valgte && valgte !== 'Alle' ? valgte.split(',').map(s => s.trim()) : [];
-  el('bruker-fag-cbx').innerHTML = fag.map(f =>
-    `<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
-      <input type="checkbox" value="${f}" ${aktive.includes(f) ? 'checked' : ''}>
-      ${f}
-    </label>`
-  ).join('');
+  el('bruker-fag-cbx').innerHTML = fag.map(f => cbxLabel(f, f, aktive.includes(f))).join('');
 }
 
 function klargjorNyBruker() {
@@ -2686,8 +2725,8 @@ function klargjorNyBruker() {
   el('bruker-orig-navn').value  = '';
   el('bruker-navn').value       = '';
   el('bruker-passord').value    = '';
-  el('bruker-klasser').value    = '';
   el('bruker-rolle').value      = 'laerer';
+  fyllBrukerKlasserCbx('');
   fyllBrukerFagCbx('');
   visModal('modal-ny-bruker');
 }
@@ -2697,8 +2736,8 @@ function redigerBruker(b) {
   el('bruker-orig-navn').value  = b.navn;
   el('bruker-navn').value       = b.navn;
   el('bruker-passord').value    = '';
-  el('bruker-klasser').value    = b.klasser || 'Alle';
   el('bruker-rolle').value      = b.rolle || (b.erAdmin ? 'skoleadmin' : 'laerer');
+  fyllBrukerKlasserCbx(b.klasser || 'Alle');
   fyllBrukerFagCbx(b.fag || '');
   visModal('modal-ny-bruker');
 }
@@ -2715,7 +2754,7 @@ async function lagreBruker() {
       navn,
       origNavn: origNavn || navn,
       passord:  el('bruker-passord').value || null,
-      klasser:  el('bruker-klasser').value.trim(),
+      klasser:  lesKlasserFraCbx(),
       erAdmin:  rolle === 'skoleadmin',
       rolle,
       fag:      valgte.length ? valgte.join(',') : 'Alle'
