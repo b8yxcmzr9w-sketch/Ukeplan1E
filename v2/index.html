@@ -986,6 +986,20 @@ header .spacer { flex: 1; }
   </div>
 </div>
 
+<!-- Omdøp fag -->
+<div id="modal-omop-fag" class="modal-bg skjult">
+  <div class="modal" style="max-width:360px">
+    <h3>Omdøp fag</h3>
+    <p id="omop-fag-info" style="font-size:.88rem;color:var(--grå);margin-bottom:12px"></p>
+    <div class="felt"><label>Nytt navn</label><input id="omop-fag-nytt" type="text"></div>
+    <p id="omop-fag-feil" class="feil-tekst skjult"></p>
+    <div class="modal-bunn">
+      <button class="btn btn-s" onclick="lukkModal('modal-omop-fag')">Avbryt</button>
+      <button class="btn btn-p" onclick="lagreOmdopFag()">Lagre</button>
+    </div>
+  </div>
+</div>
+
 <!-- iCal URL -->
 <div id="modal-ical" class="modal-bg skjult">
   <div class="modal" style="max-width:480px">
@@ -2353,6 +2367,7 @@ function dagCheckboxer(valgte) {
 
 function visKonfigListe(id, items, medDag, fagData) {
   el(id).innerHTML = '';
+  const erFagListe = id === 'konfig-fag-liste';
   items.forEach(item => {
     const fagObj = medDag ? fagData.find(f => f.navn === item) : null;
     const dag    = fagObj ? fagObj.dag : '';
@@ -2360,6 +2375,7 @@ function visKonfigListe(id, items, medDag, fagData) {
     div.className = 'konfig-rad';
     div.innerHTML = `<input type="text" value="${item}">
       ${medDag ? dagCheckboxer(dag) : ''}
+      ${erFagListe ? `<button class="btn btn-s btn-sm" title="Omdøp" onclick="visOmdopFag('${item.replace(/'/g,"\\'")}')">✏️</button>` : ''}
       <button class="btn btn-f btn-sm" onclick="aktiverNarmesteLagreKnapp(this);this.parentNode.remove()">✕</button>`;
     el(id).appendChild(div);
   });
@@ -2784,6 +2800,33 @@ async function lagreBruker() {
   });
   if (res.ok) { lukkModal('modal-ny-bruker'); lastBrukere(); }
   else visInlineError('bruker-feil', res.error);
+}
+
+// ── Omdøp fag ─────────────────────────────────────────────────────────────────
+function visOmdopFag(gammelt) {
+  el('omop-fag-info').textContent = `Omdøper «${gammelt}» overalt (Konfig, lærere, plan-ark).`;
+  el('omop-fag-nytt').value = gammelt;
+  el('omop-fag-nytt').dataset.gammelt = gammelt;
+  el('omop-fag-feil').classList.add('skjult');
+  visModal('modal-omop-fag');
+  setTimeout(() => { el('omop-fag-nytt').focus(); el('omop-fag-nytt').select(); }, 80);
+}
+
+async function lagreOmdopFag() {
+  const gammelt = el('omop-fag-nytt').dataset.gammelt;
+  const nytt    = el('omop-fag-nytt').value.trim();
+  if (!nytt) { visInlineError('omop-fag-feil', 'Navn kan ikke være tomt'); return; }
+  if (nytt === gammelt) { lukkModal('modal-omop-fag'); return; }
+  visMelding('Omdøper…');
+  const res = await api('renameFag', { token: S.bruker.token, gammelt, nytt });
+  if (res.ok) {
+    lukkModal('modal-omop-fag');
+    visMelding(`«${gammelt}» → «${nytt}» oppdatert`);
+    const d = await api('getData');
+    if (d.ok) { S.konfig = d; lastInnstillinger(); }
+  } else {
+    visInlineError('omop-fag-feil', res.error);
+  }
 }
 
 async function slettBruker(navn) {

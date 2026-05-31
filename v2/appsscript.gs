@@ -60,7 +60,8 @@ function doPost(e) {
     slettAlt:           handleSlettAlt,
     saveKlasseKonfig:   handleSaveKlasseKonfig,
     seedTestData:       handleSeedTestData,
-    migrateToV2:        handleMigrateToV2
+    migrateToV2:        handleMigrateToV2,
+    renameFag:          handleRenameFag
   };
   const fn = handlers[d.action];
   if (!fn) return jsonResponse({ ok: false, error: 'Ukjent action: ' + d.action });
@@ -692,6 +693,51 @@ function godkjennTillatelser() {
 
 // ── Testdata (kjør én gang fra editor for å populere ark med eksempeldata) ───
 // OBS: Sletter og erstatter innholdet i Konfig, Brukere og Plan!
+
+function handleRenameFag(d) {
+  const bruker = getUserByToken(d.token);
+  if (!bruker || bruker.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  const gammelt = (d.gammelt || '').trim();
+  const nytt    = (d.nytt    || '').trim();
+  if (!gammelt || !nytt || gammelt === nytt) return jsonResponse({ ok: false, error: 'Ugyldige navn' });
+
+  const ss = SpreadsheetApp.openById(SS_ID);
+
+  // Konfig: oppdater alle rader der nokkel === gammelt og type starter med 'fag'
+  const konfig = ss.getSheetByName('Konfig');
+  const kRader = konfig.getLastRow() > 1
+    ? konfig.getRange(2, 1, konfig.getLastRow() - 1, 3).getValues()
+    : [];
+  kRader.forEach((r, i) => {
+    const type = String(r[0] || '');
+    if ((type === 'fag' || type.startsWith('fag_')) && String(r[1]) === gammelt) {
+      konfig.getRange(i + 2, 2).setValue(nytt);
+    }
+  });
+
+  // Brukere: oppdater fag-kolonnen (col 7) – kommaseparert liste
+  const brukere = ss.getSheetByName('Brukere');
+  const bRader  = brukere.getLastRow() > 1
+    ? brukere.getRange(2, 7, brukere.getLastRow() - 1, 1).getValues()
+    : [];
+  bRader.forEach((r, i) => {
+    const fagStr = String(r[0] || '');
+    const oppdatert = fagStr.split(',').map(f => f.trim() === gammelt ? nytt : f.trim()).join(',');
+    if (oppdatert !== fagStr) brukere.getRange(i + 2, 7).setValue(oppdatert);
+  });
+
+  // Plan: oppdater fag-kolonnen (col 6 = index 5)
+  const plan   = ss.getSheetByName('Plan');
+  const pRader = plan.getLastRow() > 1
+    ? plan.getRange(2, 6, plan.getLastRow() - 1, 1).getValues()
+    : [];
+  pRader.forEach((r, i) => {
+    if (String(r[0]) === gammelt) plan.getRange(i + 2, 6).setValue(nytt);
+  });
+
+  SpreadsheetApp.flush();
+  return jsonResponse({ ok: true });
+}
 
 function handleMigrateToV2(d) {
   const bruker = getUserByToken(d.token);
