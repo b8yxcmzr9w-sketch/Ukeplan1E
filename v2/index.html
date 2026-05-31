@@ -787,6 +787,9 @@ header .spacer { flex: 1; }
           <button class="btn btn-s btn-sm" onclick="lastNedBackup()">⬇️ Last ned backup (JSON)</button>
           <button class="btn btn-f btn-sm" onclick="bekreftSlettPlan()">🗑️ Slett alle økter</button>
           <button class="btn btn-f btn-sm" onclick="bekreftSlettSkolerute()">🗑️ Slett skolerute</button>
+          <hr style="border:none;border-top:1px solid var(--kant);margin:4px 0">
+          <p style="font-size:.8rem;color:var(--grå)">Kun for testmiljø – fyller inn eksempeldata (1D, 1R, lærere, uke 23).</p>
+          <button class="btn btn-s btn-sm" onclick="kjorSeedTestData()">🌱 Legg inn testdata</button>
         </div>
       </div>
     </div>
@@ -2844,6 +2847,18 @@ async function bekreftSlettSkolerute() {
   const res = await api('slettAlt', { token: S.bruker.token, slettSkolerute: true });
   if (res.ok) visMelding('Skolerute slettet');
   else visMelding(res.error, 'feil');
+}
+
+async function kjorSeedTestData() {
+  if (!confirm('Dette sletter og erstatter alt i Konfig, Brukere og Plan med testdata.\nFortsette?')) return;
+  visMelding('Legger inn testdata…');
+  const res = await api('seedTestData', { token: S.bruker.token });
+  if (res.ok) {
+    visMelding('✅ ' + res.melding);
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    visMelding(res.error || 'Feil ved seeding', 'feil');
+  }
 }
 
 // ── iCal ──────────────────────────────────────────────────────────────────────

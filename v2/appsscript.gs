@@ -58,7 +58,8 @@ function doPost(e) {
     genererSitater: handleGenererSitater,
     getBackup:          handleGetBackup,
     slettAlt:           handleSlettAlt,
-    saveKlasseKonfig:   handleSaveKlasseKonfig
+    saveKlasseKonfig:   handleSaveKlasseKonfig,
+    seedTestData:       handleSeedTestData
   };
   const fn = handlers[d.action];
   if (!fn) return jsonResponse({ ok: false, error: 'Ukjent action: ' + d.action });
@@ -690,6 +691,17 @@ function godkjennTillatelser() {
 
 // ── Testdata (kjør én gang fra editor for å populere ark med eksempeldata) ───
 // OBS: Sletter og erstatter innholdet i Konfig, Brukere og Plan!
+
+function handleSeedTestData(d) {
+  const bruker = getUserByToken(d.token);
+  if (!bruker || bruker.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  try {
+    seedTestData();
+    return jsonResponse({ ok: true, melding: 'Testdata lagt inn – laster siden på nytt…' });
+  } catch(e) {
+    return jsonResponse({ ok: false, error: e.message });
+  }
+}
 
 function seedTestData() {
   const ss = SpreadsheetApp.openById(SS_ID);
