@@ -915,7 +915,7 @@ header .spacer { flex: 1; }
     <p id="okt-feil" class="feil-tekst skjult"></p>
     <div class="modal-bunn">
       <button class="btn btn-s" onclick="lukkModal('modal-ny-okt')">Avbryt</button>
-      <button class="btn btn-p" onclick="lagreOkt()">Lagre</button>
+      <button class="btn btn-p" onclick="lagreOkt(this)">Lagre</button>
     </div>
   </div>
 </div>
@@ -981,21 +981,7 @@ header .spacer { flex: 1; }
     <p id="bruker-feil" class="feil-tekst skjult"></p>
     <div class="modal-bunn">
       <button class="btn btn-s" onclick="lukkModal('modal-ny-bruker')">Avbryt</button>
-      <button class="btn btn-p" onclick="lagreBruker()">Lagre</button>
-    </div>
-  </div>
-</div>
-
-<!-- Omdøp fag -->
-<div id="modal-omop-fag" class="modal-bg skjult">
-  <div class="modal" style="max-width:360px">
-    <h3>Omdøp fag</h3>
-    <p id="omop-fag-info" style="font-size:.88rem;color:var(--grå);margin-bottom:12px"></p>
-    <div class="felt"><label>Nytt navn</label><input id="omop-fag-nytt" type="text"></div>
-    <p id="omop-fag-feil" class="feil-tekst skjult"></p>
-    <div class="modal-bunn">
-      <button class="btn btn-s" onclick="lukkModal('modal-omop-fag')">Avbryt</button>
-      <button class="btn btn-p" onclick="lagreOmdopFag()">Lagre</button>
+      <button class="btn btn-p" onclick="lagreBruker(this)">Lagre</button>
     </div>
   </div>
 </div>
@@ -1054,7 +1040,7 @@ header .spacer { flex: 1; }
     <p id="profil-feil" class="feil-tekst skjult"></p>
     <div class="modal-bunn">
       <button class="btn btn-s" onclick="lukkModal('modal-min-profil')">Avbryt</button>
-      <button class="btn btn-p" onclick="lagreMinProfil()">Lagre</button>
+      <button class="btn btn-p" onclick="lagreMinProfil(this)">Lagre</button>
     </div>
   </div>
 </div>
@@ -2039,9 +2025,10 @@ function fyllGruppeForFag(sel, fag) {
   else if (fag === 'YFF') S.konfig.grupperYFF.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
 }
 
-async function lagreOkt() {
+async function lagreOkt(btn) {
   const aktivitet = el('okt-aktivitet').value.trim();
   if (!aktivitet) { visInlineError('okt-feil', 'Aktivitet er påkrevd'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
   const id     = el('okt-id').value;
   const uke    = parseInt(el('okt-uke').value);
   const dag    = el('okt-dag').value;
@@ -2076,7 +2063,10 @@ async function lagreOkt() {
     else cacheSlett(parseInt(el('okt-uke').value), S.ar, lagretKlasse);
     if (S.listeModus) lastListedata();
     else lastUkedata();
-  } else visInlineError('okt-feil', res.error);
+  } else {
+    if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; }
+    visInlineError('okt-feil', res.error);
+  }
 }
 
 async function slettOkt(id, klasse) {
@@ -2367,15 +2357,13 @@ function dagCheckboxer(valgte) {
 
 function visKonfigListe(id, items, medDag, fagData) {
   el(id).innerHTML = '';
-  const erFagListe = id === 'konfig-fag-liste';
   items.forEach(item => {
     const fagObj = medDag ? fagData.find(f => f.navn === item) : null;
     const dag    = fagObj ? fagObj.dag : '';
     const div = document.createElement('div');
     div.className = 'konfig-rad';
-    div.innerHTML = `<input type="text" value="${item}">
+    div.innerHTML = `<input type="text" value="${item}" data-original="${item}">
       ${medDag ? dagCheckboxer(dag) : ''}
-      ${erFagListe ? `<button class="btn btn-s btn-sm" title="Omdøp" onclick="visOmdopFag('${item.replace(/'/g,"\\'")}')">✏️</button>` : ''}
       <button class="btn btn-f btn-sm" onclick="aktiverNarmesteLagreKnapp(this);this.parentNode.remove()">✕</button>`;
     el(id).appendChild(div);
   });
@@ -2413,7 +2401,19 @@ function leggTilEnkelFag() {
   el('konfig-fag-liste').appendChild(div);
   aktiverNarmesteLagreKnapp(el('konfig-fag-liste'));
 }
-async function lagreFag() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-fag'); }
+async function lagreFag() {
+  // Detekter omdøpte fag via data-original og kaskader rename
+  const renames = [];
+  el('konfig-fag-liste').querySelectorAll('input[type=text][data-original]').forEach(inp => {
+    const orig = inp.dataset.original;
+    const nytt = inp.value.trim();
+    if (orig && nytt && orig !== nytt) renames.push({ gammelt: orig, nytt });
+  });
+  for (const r of renames) {
+    await api('renameFag', { token: S.bruker.token, gammelt: r.gammelt, nytt: r.nytt });
+  }
+  await lagreKonfigRader(samleKonfig(), 'btn-lagre-fag');
+}
 async function lagreYFF() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-yff'); }
 async function lagreKlasser() {
   await lagreKonfigRader(samleKonfig(), 'btn-lagre-klasser');
@@ -2535,6 +2535,9 @@ function samleKonfig() {
 }
 
 async function lagreKonfigRader(rader, lagreBtnId) {
+  const btn = lagreBtnId ? el(lagreBtnId) : null;
+  const orig = btn?.textContent || 'Lagre';
+  if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
   const res = await api('saveKonfig', { token: S.bruker.token, isAdmin: true, rader });
   if (res.ok) {
     const ny = await api('getData');
@@ -2543,9 +2546,12 @@ async function lagreKonfigRader(rader, lagreBtnId) {
       S.klasse = S.klasse || (ny.klasser && ny.klasser[0]) || '';
       oppdaterHeader(ny.skoleinfo);
     }
-    if (lagreBtnId) { const b = el(lagreBtnId); if (b) b.disabled = true; }
+    if (btn) { btn.disabled = true; btn.textContent = orig; }
     visMelding('Lagret!');
-  } else visMelding(res.error, 'feil');
+  } else {
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+    visMelding(res.error, 'feil');
+  }
 }
 
 // ── Admin – Skolerute ─────────────────────────────────────────────────────────
@@ -2780,10 +2786,11 @@ function redigerBruker(b) {
   visModal('modal-ny-bruker');
 }
 
-async function lagreBruker() {
+async function lagreBruker(btn) {
   const navn     = el('bruker-navn').value.trim();
   const origNavn = el('bruker-orig-navn').value.trim();
   if (!navn) { visInlineError('bruker-feil', 'Navn er påkrevd'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
   const rolle  = el('bruker-rolle').value;
   const valgte = [...el('bruker-fag-cbx').querySelectorAll('input[type=checkbox]:checked')].map(c => c.value);
   const res = await api('saveBruker', {
@@ -2799,33 +2806,9 @@ async function lagreBruker() {
     }
   });
   if (res.ok) { lukkModal('modal-ny-bruker'); lastBrukere(); }
-  else visInlineError('bruker-feil', res.error);
-}
-
-// ── Omdøp fag ─────────────────────────────────────────────────────────────────
-function visOmdopFag(gammelt) {
-  el('omop-fag-info').textContent = `Omdøper «${gammelt}» overalt (Konfig, lærere, plan-ark).`;
-  el('omop-fag-nytt').value = gammelt;
-  el('omop-fag-nytt').dataset.gammelt = gammelt;
-  el('omop-fag-feil').classList.add('skjult');
-  visModal('modal-omop-fag');
-  setTimeout(() => { el('omop-fag-nytt').focus(); el('omop-fag-nytt').select(); }, 80);
-}
-
-async function lagreOmdopFag() {
-  const gammelt = el('omop-fag-nytt').dataset.gammelt;
-  const nytt    = el('omop-fag-nytt').value.trim();
-  if (!nytt) { visInlineError('omop-fag-feil', 'Navn kan ikke være tomt'); return; }
-  if (nytt === gammelt) { lukkModal('modal-omop-fag'); return; }
-  visMelding('Omdøper…');
-  const res = await api('renameFag', { token: S.bruker.token, gammelt, nytt });
-  if (res.ok) {
-    lukkModal('modal-omop-fag');
-    visMelding(`«${gammelt}» → «${nytt}» oppdatert`);
-    const d = await api('getData');
-    if (d.ok) { S.konfig = d; lastInnstillinger(); }
-  } else {
-    visInlineError('omop-fag-feil', res.error);
+  else {
+    if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; }
+    visInlineError('bruker-feil', res.error);
   }
 }
 
@@ -2880,13 +2863,17 @@ function oppdaterProfilYff() {
   }
 }
 
-async function lagreMinProfil() {
+async function lagreMinProfil(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
   const klasser   = el('profil-klasser').value.trim() || 'Alle';
   const valgte    = [...el('profil-fag-cbx').querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
   const fag       = valgte.length ? valgte.join(',') : 'Alle';
   const yffGruppe = el('profil-yff-felt').classList.contains('skjult') ? '' : el('profil-yff-gruppe').value;
   const res = await api('saveMinProfil', { token: S.bruker.token, klasser, fag, yffGruppe });
-  if (!res.ok) { visInlineError('profil-feil', res.error); return; }
+  if (!res.ok) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; }
+    visInlineError('profil-feil', res.error); return;
+  }
   S.bruker.klasser   = klasser;
   S.bruker.fag       = fag;
   S.bruker.yffGruppe = yffGruppe;
