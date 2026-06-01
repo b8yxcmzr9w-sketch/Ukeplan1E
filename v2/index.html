@@ -325,6 +325,23 @@ header .spacer { flex: 1; }
 }
 .liste-uke-hode:hover td { background: var(--grønn-svak) !important; }
 
+/* Kontekstmeny */
+#liste-km {
+  display: none; position: fixed; background: white;
+  border: 1px solid var(--kant); border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.18); z-index: 300;
+  min-width: 160px; overflow: hidden;
+}
+.km-knapp {
+  display: block; width: 100%; padding: 11px 16px;
+  background: none; border: none; text-align: left;
+  font-size: .9rem; cursor: pointer; color: var(--tekst); line-height: 1;
+}
+.km-knapp:hover { background: var(--grå-lys); }
+.km-knapp.km-slett { color: var(--rød); }
+.km-knapp.km-slett:hover { background: #fde8e8; }
+.km-skille { margin: 0; border: none; border-top: 1px solid var(--kant); }
+
 /* ── Print-hode (skjult normalt, synlig ved utskrift) ──────────────────────── */
 .print-hode { display: none; }
 
@@ -631,11 +648,10 @@ header .spacer { flex: 1; }
 
       <!-- Liste-navigasjon (listemodus) -->
       <div id="laerer-liste-nav" class="uke-nav skjult">
-        <button class="btn btn-s btn-sm" onclick="listNavigasjon(-6)">← Forrige</button>
-        <span class="uke-label" id="liste-uke-label">Uke –</span>
-        <button class="btn btn-s btn-sm" onclick="listNavigasjon(6)">Neste →</button>
-        <button class="btn btn-s btn-sm" onclick="gaTilNaaListe()">Nå</button>
+        <span class="uke-label" id="liste-uke-label">–</span>
+        <button class="btn btn-s btn-sm" onclick="hoppTilNaaListe()">Nå</button>
         <div class="spacer" style="flex:1"></div>
+        <button class="btn btn-p btn-sm" onclick="klargjorNyOkt()">+ Ny økt</button>
         <button class="btn btn-s btn-sm" onclick="byttListeModus(false)" title="Vis som ukeplan">📅 Ukeplan</button>
       </div>
 
@@ -667,7 +683,7 @@ header .spacer { flex: 1; }
         <table class="liste-tabell">
           <thead><tr>
             <th>Uke</th><th>Dag</th><th>Fag</th><th>Gruppe</th>
-            <th>Tid</th><th>Oppmøtested</th><th>Lærer</th><th>Aktivitet</th><th>Info</th><th></th>
+            <th>Tid</th><th>Oppmøtested</th><th>Lærer</th><th>Aktivitet</th><th></th>
           </tr></thead>
           <tbody id="liste-tbody"></tbody>
         </table>
@@ -2078,7 +2094,8 @@ async function slettOkt(id, klasse) {
   if (res.ok) {
     if (!klasse || klasse === 'Alle') cacheReset();
     else cacheSlett(S.uke, S.ar, klasse);
-    lastUkedata();
+    if (S.listeModus) lastListedata();
+    else lastUkedata();
   }
 }
 
@@ -3038,28 +3055,24 @@ function byttListeModus(tilListe) {
   el('laerer-liste-innhold').classList.toggle('skjult', !tilListe);
 
   if (tilListe) {
-    S.listeFraUke = startUke();
     lastListedata();
+    setTimeout(settStickyTopp, 0);
   }
 }
 
 async function lastListedata() {
-  const tilUke = Math.min(53, S.listeFraUke + 5);
-  el('liste-uke-label').textContent = `Uke ${S.listeFraUke}–${tilUke}`;
-  const res = await apiGet({ fraUke: S.listeFraUke, tilUke, ar: S.ar, klasse: S.klasse });
+  el('liste-uke-label').textContent = `${S.ar}`;
+  const res = await apiGet({ fraUke: 1, tilUke: 35, ar: S.ar, klasse: S.klasse });
   if (res.ok) { S.listedata = res.rows || []; S.listeFerie = res.ferie || []; }
   fyllListeFilter();
   oppdaterListeVisning();
+  setTimeout(hoppTilNaaListe, 80);
 }
 
-function gaTilNaaListe() {
-  S.listeFraUke = startUke();
-  lastListedata();
-}
-
-function listNavigasjon(delta) {
-  S.listeFraUke = Math.max(1, S.listeFraUke + delta);
-  lastListedata();
+function hoppTilNaaListe() {
+  const naaUke = startUke();
+  const hode = document.querySelector(`.liste-uke-hode[data-uke="${naaUke}"]`);
+  if (hode) hode.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function fyllListeFilter() {
@@ -3082,13 +3095,12 @@ function oppdaterListeVisning() {
   const filtrertFag    = el('liste-filter-fag').value;
   const filtrertLaerer = el('liste-filter-laerer').value;
   const dagOrden = { Mandag:0, Tirsdag:1, Onsdag:2, Torsdag:3, Fredag:4 };
-  const tilUke = Math.min(53, S.listeFraUke + 5);
+  const COLS = 9;
 
   const tbody = el('liste-tbody');
   tbody.innerHTML = '';
 
-  for (let uke = S.listeFraUke; uke <= tilUke; uke++) {
-    // Finn ferieperioder som overlapper denne uken
+  for (let uke = 1; uke <= 35; uke++) {
     const jan4 = new Date(S.ar, 0, 4);
     const man = new Date(jan4);
     man.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (uke - 1) * 7);
@@ -3107,21 +3119,19 @@ function oppdaterListeVisning() {
 
     if (!ukeFerie.length && !ukeRader.length) continue;
 
-    // Uke-header
     const ukeHode = document.createElement('tr');
     ukeHode.className = 'liste-uke-hode';
-    ukeHode.innerHTML = `<td colspan="10">Uke ${uke}</td>`;
+    ukeHode.dataset.uke = uke;
+    ukeHode.innerHTML = `<td colspan="${COLS}">Uke ${uke}</td>`;
     tbody.appendChild(ukeHode);
 
-    // Ferie-rad(er)
     if (ukeFerie.length) {
       const ferieRad = document.createElement('tr');
       ferieRad.className = 'liste-ferie-rad';
-      ferieRad.innerHTML = `<td colspan="10">${ukeFerie.map(f => `${ferieSymbol(f.type)} ${f.navn}`).join(' · ')}</td>`;
+      ferieRad.innerHTML = `<td colspan="${COLS}">${ukeFerie.map(f => `${ferieSymbol(f.type)} ${f.navn}`).join(' · ')}</td>`;
       tbody.appendChild(ferieRad);
     }
 
-    // Økt-rader sortert etter dag, deretter fag
     const sorterte = [...ukeRader].sort((a, b) => {
       const da = dagOrden[a.dag] ?? 9; const db = dagOrden[b.dag] ?? 9;
       if (da !== db) return da - db;
@@ -3130,7 +3140,7 @@ function oppdaterListeVisning() {
     sorterte.forEach(r => {
       const tr = document.createElement('tr');
       const gruppen = r.gruppe && r.gruppe !== 'Alle' ? `<span class="gruppe-badge">${r.gruppe}</span>` : '';
-      const infoIkon = r.info ? `<span title="${r.info.replace(/"/g,'&quot;')}">ℹ️</span>` : '';
+      const infoIkon = r.info ? `<span style="opacity:.6;font-size:.9rem" title="${r.info.replace(/"/g,'&quot;')}">ℹ</span>` : '';
       const dato = ukeDagTilDato(r.uke, r.dag, S.ar);
       const datoStr = dato ? String(dato.getDate()).padStart(2,'0') + '.' + String(dato.getMonth()+1).padStart(2,'0') : '';
       tr.innerHTML = `
@@ -3141,18 +3151,57 @@ function oppdaterListeVisning() {
         <td style="white-space:nowrap">${r.tid || ''}</td>
         <td>${r.oppmotested || ''}</td>
         <td>${r.laerer || ''}</td>
-        <td>${r.aktivitet || ''}</td>
-        <td>${infoIkon}</td>
-        <td><button class="btn btn-s btn-sm" onclick='kopierOkt(${JSON.stringify(r)})' title="Kopier økt">📋</button></td>`;
+        <td>${r.aktivitet || ''} ${infoIkon}</td>
+        <td><button class="btn btn-s btn-sm" onclick="event.stopPropagation()" title="Valg (høyreklikk)">⋮</button></td>`;
+      tr.querySelector('button').addEventListener('click', e => {
+        e.stopPropagation();
+        visKontekstMeny(e, r);
+      });
+      tr.addEventListener('contextmenu', e => visKontekstMeny(e, r));
       tbody.appendChild(tr);
     });
   }
 
   if (!tbody.children.length) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="10" style="text-align:center;color:var(--grå);padding:30px">Ingen registrerte aktiviteter i denne perioden.</td>';
+    tr.innerHTML = `<td colspan="${COLS}" style="text-align:center;color:var(--grå);padding:30px">Ingen registrerte aktiviteter i denne perioden.</td>`;
     tbody.appendChild(tr);
   }
+}
+
+// ── Listevisning: kontekstmeny ────────────────────────────────────────────────
+let _kmRad = null;
+
+function visKontekstMeny(e, r) {
+  e.preventDefault();
+  _kmRad = r;
+  el('km-info-knapp').style.display = r.info ? '' : 'none';
+  const meny = el('liste-km');
+  meny.style.display = 'block';
+  const x = Math.min(e.clientX, window.innerWidth - 175);
+  const y = Math.min(e.clientY, window.innerHeight - meny.offsetHeight - 8);
+  meny.style.left = x + 'px';
+  meny.style.top  = y + 'px';
+}
+
+function lukkKontekstMeny() { el('liste-km').style.display = 'none'; }
+
+function kmRediger() { lukkKontekstMeny(); redigerOkt(_kmRad); }
+function kmKopier()  { lukkKontekstMeny(); kopierOkt(_kmRad); }
+function kmInfo()    {
+  lukkKontekstMeny();
+  const info = _kmRad?.info;
+  if (!info) return;
+  const popup = document.createElement('div');
+  popup.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);max-width:360px;width:90%;background:white;border:1px solid var(--kant);border-radius:12px;padding:14px 18px;box-shadow:0 4px 20px rgba(0,0,0,.18);z-index:400;font-size:.9rem;line-height:1.5';
+  popup.innerHTML = `<strong>Info</strong><br>${info}<br><button class="btn btn-s btn-sm" style="margin-top:10px" onclick="this.parentNode.remove()">Lukk</button>`;
+  document.body.appendChild(popup);
+  setTimeout(() => popup.remove(), 8000);
+}
+function kmSlett() {
+  lukkKontekstMeny();
+  if (!_kmRad) return;
+  slettOkt(_kmRad.id, _kmRad.klasse);
 }
 
 function kopierOkt(r) {
@@ -3256,10 +3305,21 @@ function el(id) { return document.getElementById(id); }
 document.addEventListener('click', e => {
   if (!e.target.closest('#btn-bruker-meny') && !e.target.closest('#bruker-meny'))
     lukkBrukerMeny();
+  if (!e.target.closest('#liste-km'))
+    lukkKontekstMeny();
 });
 
 init();
 </script>
+<!-- Høyreklikk-meny for listevisning -->
+<div id="liste-km">
+  <button class="km-knapp" onclick="kmRediger()">✏️ Rediger</button>
+  <button class="km-knapp" onclick="kmKopier()">📋 Kopier</button>
+  <button class="km-knapp" id="km-info-knapp" onclick="kmInfo()">ℹ️ Vis info</button>
+  <hr class="km-skille">
+  <button class="km-knapp km-slett" onclick="kmSlett()">🗑️ Slett</button>
+</div>
+
 <footer></footer>
 <script src="uno-footer.js"></script>
 </body>
