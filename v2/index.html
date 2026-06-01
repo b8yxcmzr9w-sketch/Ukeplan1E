@@ -796,6 +796,9 @@ header .spacer { flex: 1; }
           <hr style="border:none;border-top:1px solid var(--kant);margin:4px 0">
           <p style="font-size:.8rem;color:var(--grå)">Kun for testmiljø – fyller inn eksempeldata (1D, 1R, lærere, uke 23).</p>
           <button class="btn btn-s btn-sm" onclick="kjorSeedTestData()">🌱 Legg inn testdata</button>
+          <hr style="border:none;border-top:1px solid var(--kant);margin:4px 0">
+          <p style="font-size:.8rem;color:var(--grå)">Legger inn planøkter for 1D, 1R og 1E for ukene 14–25 (april–juni 2026). Eksisterende data beholdes.</p>
+          <button class="btn btn-s btn-sm" onclick="kjorSeedSemesterData()">📅 Legg til semesterdata (april–juni)</button>
         </div>
       </div>
     </div>
@@ -2965,6 +2968,18 @@ async function kjorSeedTestData() {
   if (!confirm('Legger til testdata for 1D og 1R (lærere + uke 23-økter).\nEksisterende data beholdes.\nFortsette?')) return;
   visMelding('Legger inn testdata…');
   const res = await api('seedTestData', { token: S.bruker.token });
+  if (res.ok) {
+    visMelding('✅ ' + res.melding);
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    visMelding(res.error || 'Feil ved seeding', 'feil');
+  }
+}
+
+async function kjorSeedSemesterData() {
+  if (!confirm('Legger til planøkter for 1D, 1R og 1E (uke 14–25, april–juni 2026).\nEksisterende data beholdes.\nFortsette?')) return;
+  visMelding('Legger inn semesterdata…');
+  const res = await api('seedSemesterData', { token: S.bruker.token });
   if (res.ok) {
     visMelding('✅ ' + res.melding);
     setTimeout(() => location.reload(), 1500);

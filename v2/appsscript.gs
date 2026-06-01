@@ -60,6 +60,7 @@ function doPost(e) {
     slettAlt:           handleSlettAlt,
     saveKlasseKonfig:   handleSaveKlasseKonfig,
     seedTestData:       handleSeedTestData,
+    seedSemesterData:   handleSeedSemesterData,
     migrateToV2:        handleMigrateToV2,
     renameFag:          handleRenameFag
   };
@@ -1022,6 +1023,181 @@ function seedTestData() {
   Logger.log('✅ Testdata lagt inn: ' + konfigData.length + ' konfig-rader, ' +
              brukerData.length + ' brukere, ' + planData.length + ' plan-rader.');
   Logger.log('Passord: Admin → admin123 | alle lærere → test123');
+}
+
+function handleSeedSemesterData(d) {
+  const bruker = getUserByToken(d.token);
+  if (!bruker || bruker.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  try {
+    const antall = seedSemesterData();
+    return jsonResponse({ ok: true, melding: antall + ' nye planrader lagt inn for april–juni 2026' });
+  } catch(e) {
+    return jsonResponse({ ok: false, error: e.message });
+  }
+}
+
+function seedSemesterData() {
+  const ss = SpreadsheetApp.openById(SS_ID);
+  const ts = Utilities.formatDate(new Date(), 'Europe/Oslo', 'yyyy-MM-dd HH:mm');
+
+  // Norske fridager 2026
+  const fridager = {
+    '2026-04-02': true, // Skjærtorsdag
+    '2026-04-03': true, // Langfredag
+    '2026-04-06': true, // 2. påskedag
+    '2026-05-01': true, // Arbeidernes dag
+    '2026-05-14': true, // Kristi himmelfartsdag
+    '2026-05-25': true, // 2. pinsedag
+  };
+
+  function mondayOfWeek(ar, uke) {
+    var jan4 = new Date(ar, 0, 4);
+    var dow = jan4.getDay() || 7;
+    return new Date(jan4.getTime() - (dow - 1) * 86400000 + (uke - 1) * 7 * 86400000);
+  }
+
+  function dateStr(d) {
+    return Utilities.formatDate(d, 'Europe/Oslo', 'yyyy-MM-dd');
+  }
+
+  function erFridag(ar, uke, dagNr) {
+    var mon = mondayOfWeek(ar, uke);
+    var dag = new Date(mon.getTime() + (dagNr - 1) * 86400000);
+    return fridager[dateStr(dag)] === true;
+  }
+
+  // Aktivitetslister per emne (roterer uke for uke)
+  var ACT = {
+    Produksjon_fjos: [
+      'Stell og fôring av storfe', 'Melking – morgenrunde', 'Kalvestell og observasjon',
+      'Rydding og renhold av fjøs', 'Fôrplanlegging', 'Dyrehelse – tegn på sykdom',
+      'Innhøsting og ensilering', 'Gjødselkjøring', 'Vedlikehold av utstyr',
+      'Journalføring – driftsregistrering', 'Grovfôranalyse', 'Besøk fra veterinær'
+    ],
+    Produksjon_verksted: [
+      'Intro til maskinpark', 'Traktorvedlikehold – ettersyn', 'Jordarbeiding med traktor',
+      'Planlegging av vekstskifte', 'Såing og planting', 'Plantevernmidler – sikker bruk',
+      'Høsting med redskaper', 'Maskinreparasjon – grunnleggende', 'HMS i verksted',
+      'Kalkulasjon og økonomi', 'Innmarks-dreneringsplan', 'Besøk på nærliggende gård'
+    ],
+    YFF_Hund: [
+      'Lydighetsøvelser – grunnkommandoer', 'Sosialisering – hunder og mennesker',
+      'Sporarbeid – intro', 'Agility – grunnkurs', 'Hundestell og grooming',
+      'Ernæring og fôring', 'Helsekontroll – parasitter og vaksinasjon',
+      'Avlsforståelse – raser og egenskaper', 'Juridiske rammer – hundeloven',
+      'Rappelleringsøvelser', 'Marksøk – intro', 'Ekskursjon – hundeutstilling'
+    ],
+    Engelsk: [
+      'Muntlig presentasjon', 'Lesing og tekstforståelse', 'Skriftlig innlevering',
+      'Grammatikk – verb og tider', 'Ordforråd – fagord naturbruk', 'Lytte og svare – podkast',
+      'Prosjektarbeid – naturbruk globalt', 'Film og analyse', 'Diskusjon og debatt',
+      'Engelskspråklig faglitteratur', 'Gruppearbeid – rollespill', 'Prøve – lesforståelse'
+    ],
+    Matte: [
+      'Algebra – ligninger', 'Geometri – areal og volum', 'Statistikk og sannsynlighet',
+      'Prosentregning', 'Funksjoner og grafer', 'Økonomimatematikk',
+      'Målestokk og kart', 'Prøve – algebra', 'Trigonometri – intro',
+      'Brøk og desimaltall', 'Rekneoppgåver frå naturbruk', 'Prøve – geometri'
+    ],
+    Naturfag: [
+      'Plantelære – fotosyntese', 'Jordkjemi og pH-verdier', 'Pollinering og insekter',
+      'Klimaendringer og landbruk', 'Genmodifisering – etikk', 'Dyrenes fysiologi',
+      'Vannkvalitet og natur', 'Plantesjukdommer', 'Bioteknologi i landbruket',
+      'Sporingseksperiment', 'Næringskjeder og økosystem', 'Prøve – plantelære'
+    ],
+    Gym: [
+      'Friidrett – løping', 'Friidrett – kast og hopp', 'Volleyball',
+      'Fotball', 'Svømming', 'Dans og rytmikk',
+      'Orientering', 'Klatring – intro', 'Basketball',
+      'Friluftsliv – turgåing', 'Styrketrening – grunnleggende', 'Avslutning og evaluering'
+    ],
+    Aktivitet: [
+      'Friluftsdag – kyststi', 'Kajakkpadling – intro', 'Klatring – buldring',
+      'Sykkeltur i naturen', 'Fiske og friluftsmat', 'Natur-orientering',
+      'Snøskotur', 'Friluftsliv – overnatting ute', 'Bål og matlaging ute',
+      'Natursti – planteidentifikasjon', 'Teambuilding-øvelser', 'Friluftsliv – evaluering'
+    ]
+  };
+
+  // Schema: dag 1=Mandag … 5=Fredag
+  var DAGNAVN = ['', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
+
+  var schema = {
+    '1D': [
+      {dag:1, fag:'Produksjon', gr:'',     laerer:'Anne Cathrine', sted:'Fjøs',        ak:'Produksjon_fjos',    tid:'08:00'},
+      {dag:1, fag:'Gym',        gr:'',     laerer:'Kristoffer',    sted:'Idrettshall', ak:'Gym',                tid:''},
+      {dag:2, fag:'Engelsk',    gr:'',     laerer:'Kevin',         sted:'Klasserom',   ak:'Engelsk',            tid:''},
+      {dag:2, fag:'Matte',      gr:'',     laerer:'Willy',         sted:'Klasserom',   ak:'Matte',              tid:''},
+      {dag:3, fag:'YFF',        gr:'Hund', laerer:'Anne Cathrine', sted:'Hundegård',   ak:'YFF_Hund',           tid:''},
+      {dag:3, fag:'Naturfag',   gr:'',     laerer:'Willy',         sted:'Klasserom',   ak:'Naturfag',           tid:''},
+      {dag:4, fag:'Produksjon', gr:'',     laerer:'Anne Cathrine', sted:'Fjøs',        ak:'Produksjon_fjos',    tid:'08:00'},
+      {dag:5, fag:'Engelsk',    gr:'',     laerer:'Kevin',         sted:'Klasserom',   ak:'Engelsk',            tid:''},
+      {dag:5, fag:'Matte',      gr:'',     laerer:'Willy',         sted:'Klasserom',   ak:'Matte',              tid:''},
+    ],
+    '1R': [
+      {dag:1, fag:'Produksjon', gr:'',     laerer:'Olav',          sted:'Verksted',    ak:'Produksjon_verksted',tid:''},
+      {dag:1, fag:'Matte',      gr:'',     laerer:'Willy',         sted:'Klasserom',   ak:'Matte',              tid:''},
+      {dag:2, fag:'Engelsk',    gr:'',     laerer:'Kevin',         sted:'Klasserom',   ak:'Engelsk',            tid:''},
+      {dag:2, fag:'Gym',        gr:'',     laerer:'Kristoffer',    sted:'Idrettshall', ak:'Gym',                tid:''},
+      {dag:3, fag:'Aktivitet',  gr:'',     laerer:'Kristoffer',    sted:'Møtested',    ak:'Aktivitet',          tid:'09:00'},
+      {dag:4, fag:'Engelsk',    gr:'',     laerer:'Martin',        sted:'Klasserom',   ak:'Engelsk',            tid:''},
+      {dag:5, fag:'Produksjon', gr:'',     laerer:'Olav',          sted:'Verksted',    ak:'Produksjon_verksted',tid:''},
+      {dag:5, fag:'Matte',      gr:'',     laerer:'Willy',         sted:'Klasserom',   ak:'Matte',              tid:''},
+    ],
+    '1E': [
+      {dag:1, fag:'Produksjon', gr:'',     laerer:'Anne Cathrine', sted:'Fjøs',        ak:'Produksjon_fjos',    tid:'08:00'},
+      {dag:1, fag:'Gym',        gr:'',     laerer:'Kristoffer',    sted:'Idrettshall', ak:'Gym',                tid:''},
+      {dag:2, fag:'Engelsk',    gr:'',     laerer:'Kevin',         sted:'Klasserom',   ak:'Engelsk',            tid:''},
+      {dag:2, fag:'Matte',      gr:'',     laerer:'Willy',         sted:'Klasserom',   ak:'Matte',              tid:''},
+      {dag:3, fag:'YFF',        gr:'Hund', laerer:'Anne Cathrine', sted:'Hundegård',   ak:'YFF_Hund',           tid:''},
+      {dag:3, fag:'Naturfag',   gr:'',     laerer:'Willy',         sted:'Klasserom',   ak:'Naturfag',           tid:''},
+      {dag:4, fag:'Produksjon', gr:'',     laerer:'Anne Cathrine', sted:'Fjøs',        ak:'Produksjon_fjos',    tid:'08:00'},
+      {dag:5, fag:'Naturfag',   gr:'',     laerer:'Willy',         sted:'Klasserom',   ak:'Naturfag',           tid:''},
+      {dag:5, fag:'Engelsk',    gr:'',     laerer:'Kevin',         sted:'Klasserom',   ak:'Engelsk',            tid:''},
+    ],
+  };
+
+  // Sørg for at fag_1E finnes i Konfig
+  var konfig = ss.getSheetByName('Konfig');
+  var eksKonfig = konfig.getLastRow() > 1
+    ? konfig.getRange(2, 1, konfig.getLastRow() - 1, 3).getValues() : [];
+  var harKonfig = function(type, nokkel) {
+    return eksKonfig.some(function(r) { return String(r[0]) === type && String(r[1]) === nokkel; });
+  };
+  var fag1E = [
+    ['fag_1E', 'Produksjon', 'Mandag'], ['fag_1E', 'YFF', 'Onsdag'],
+    ['fag_1E', 'Engelsk', 'Tirsdag'],  ['fag_1E', 'Matte', 'Tirsdag'],
+    ['fag_1E', 'Naturfag', 'Onsdag'],  ['fag_1E', 'Gym', 'Mandag'],
+  ];
+  fag1E.forEach(function(r) { if (!harKonfig(r[0], r[1])) konfig.appendRow(r); });
+
+  // Legg inn planrader uke 14–25
+  var plan = ss.getSheetByName('Plan');
+  var counter = {};
+  var n = 0;
+  var nid = function() { return 'sem_' + Date.now() + '_' + (++n); };
+  var AR = 2026;
+  var UKER = [14,15,16,17,18,19,20,21,22,23,24,25];
+  var rader = [];
+
+  UKER.forEach(function(uke) {
+    Object.keys(schema).forEach(function(klasse) {
+      schema[klasse].forEach(function(s) {
+        if (erFridag(AR, uke, s.dag)) return;
+        var ak = s.ak;
+        counter[ak] = (counter[ak] || 0);
+        var aktivitet = ACT[ak][counter[ak] % ACT[ak].length];
+        counter[ak]++;
+        // [ID, År, Uke, Dag, Klasse, Fag, Gruppe, Lærer, Aktivitet, Oppmøtested, Info, Tid, SistEndret, LagretAv]
+        rader.push([nid(), AR, uke, DAGNAVN[s.dag], klasse, s.fag, s.gr, s.laerer, aktivitet, s.sted, '', s.tid, ts, 'SeedSemester']);
+      });
+    });
+  });
+
+  rader.forEach(function(r) { plan.appendRow(r); });
+  SpreadsheetApp.flush();
+  Logger.log('✅ SeedSemester: ' + rader.length + ' rader lagt inn');
+  return rader.length;
 }
 
 function listModels() {
