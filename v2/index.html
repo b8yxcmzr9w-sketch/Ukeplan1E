@@ -2962,7 +2962,7 @@ async function kjorMigrateToV2() {
 }
 
 async function kjorSeedTestData() {
-  if (!confirm('Dette sletter og erstatter alt i Konfig, Brukere og Plan med testdata.\nFortsette?')) return;
+  if (!confirm('Legger til testdata for 1D og 1R (lærere + uke 23-økter).\nEksisterende data beholdes.\nFortsette?')) return;
   visMelding('Legger inn testdata…');
   const res = await api('seedTestData', { token: S.bruker.token });
   if (res.ok) {

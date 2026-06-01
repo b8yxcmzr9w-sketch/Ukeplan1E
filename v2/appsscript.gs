@@ -856,10 +856,83 @@ function handleSeedTestData(d) {
 
 function seedTestData() {
   const ss = SpreadsheetApp.openById(SS_ID);
+  const ts = Utilities.formatDate(new Date(), 'Europe/Oslo', 'yyyy-MM-dd HH:mm');
+  const logg = [];
 
-  // ── Konfig ────────────────────────────────────────────────────────────────
+  // ── Konfig: legg til kun det som mangler ─────────────────────────────────
   const konfig = ss.getSheetByName('Konfig');
-  if (konfig.getLastRow() > 1) konfig.deleteRows(2, konfig.getLastRow() - 1);
+  const eksKonfig = konfig.getLastRow() > 1
+    ? konfig.getRange(2, 1, konfig.getLastRow() - 1, 3).getValues() : [];
+  const harKonfig = (type, nokkel) =>
+    eksKonfig.some(r => String(r[0]) === type && String(r[1]) === nokkel);
+
+  const konfigData = [
+    ['klasse', '1D', ''], ['klasse', '1R', ''],
+    ['fag', 'Produksjon', ''], ['fag', 'YFF', ''], ['fag', 'Engelsk', ''],
+    ['fag', 'Matte', ''], ['fag', 'Naturfag', ''], ['fag', 'Gym', ''], ['fag', 'Aktivitet', ''],
+    ['gruppe_yff', 'Hund', ''], ['gruppe_yff', 'Storfe', ''], ['gruppe_yff', 'Gris', ''],
+    ['fag_1D', 'Produksjon', 'Mandag'], ['fag_1D', 'YFF', 'Onsdag'],
+    ['fag_1D', 'Engelsk', 'Tirsdag'], ['fag_1D', 'Matte', 'Tirsdag'],
+    ['fag_1D', 'Naturfag', 'Onsdag'], ['fag_1D', 'Gym', 'Mandag'],
+    ['fag_1R', 'Produksjon', 'Mandag'], ['fag_1R', 'Engelsk', 'Tirsdag'],
+    ['fag_1R', 'Matte', 'Mandag'], ['fag_1R', 'Gym', 'Tirsdag'], ['fag_1R', 'Aktivitet', 'Onsdag'],
+  ];
+  let nyeKonfig = 0;
+  konfigData.forEach(r => {
+    if (!harKonfig(r[0], r[1])) { konfig.appendRow(r); nyeKonfig++; }
+  });
+  logg.push('Konfig: ' + nyeKonfig + ' nye rader');
+
+  // ── Brukere: legg til kun brukere som ikke finnes ─────────────────────────
+  const brukere = ss.getSheetByName('Brukere');
+  const eksNavn = brukere.getLastRow() > 1
+    ? brukere.getRange(2, 1, brukere.getLastRow() - 1, 1).getValues().map(r => String(r[0])) : [];
+  const pass = hashPassword('test123');
+  const brukerData = [
+    ['Anne Cathrine', pass, false, '1D',    false, 'laerer', 'Produksjon,YFF', 'Hund'],
+    ['Kevin',         pass, false, '1D,1R', false, 'laerer', 'Engelsk',        ''],
+    ['Willy',         pass, false, '1D,1R', false, 'laerer', 'Matte,Naturfag', ''],
+    ['Kristoffer',    pass, false, '1D,1R', false, 'laerer', 'Gym,Aktivitet',  ''],
+    ['Martin',        pass, false, '1R',    false, 'laerer', 'Engelsk',        ''],
+    ['Olav',          pass, false, '1R',    false, 'laerer', 'Produksjon',     ''],
+  ];
+  let nyeBrukere = 0;
+  brukerData.forEach(r => {
+    if (!eksNavn.includes(r[0])) { brukere.appendRow(r); nyeBrukere++; }
+  });
+  logg.push('Brukere: ' + nyeBrukere + ' nye');
+
+  // ── Plan: legg til eksempeløkter for 1D og 1R (uke 23) ───────────────────
+  const plan = ss.getSheetByName('Plan');
+  let n = 0;
+  const nid = () => 'seed_' + Date.now() + '_' + (++n);
+  const ar = 2026, uke = 23;
+  const planData = [
+    [nid(), ar, uke, 'Mandag',  '1D', 'Produksjon', '',     'Anne Cathrine', 'Stell og fôring av storfe',    'Fjøs',           '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Mandag',  '1D', 'Gym',        '',     'Kristoffer',    'Friidrett – løping',           'Idrettshall',    '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Tirsdag', '1D', 'Engelsk',    '',     'Kevin',         'Muntlig presentasjon',         'Klasserom',      '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Tirsdag', '1D', 'Matte',      '',     'Willy',         'Algebra – ligninger',          'Klasserom',      '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Onsdag',  '1D', 'YFF',        'Hund', 'Anne Cathrine', 'Lydighetsøvelser',             'Hundegård',      'Ta med godbit',    '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Onsdag',  '1D', 'Naturfag',   '',     'Willy',         'Plantelære – fotosyntese',     'Klasserom',      '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Torsdag', '1D', 'Produksjon', '',     'Anne Cathrine', 'Melking og stell',             'Fjøs',           '',                 '08:00',ts, 'Seed'],
+    [nid(), ar, uke, 'Fredag',  '1D', 'Matte',      '',     'Willy',         'Geometri – areal og volum',   'Klasserom',      '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Fredag',  '1D', 'Engelsk',    '',     'Kevin',         'Skriftlig innlevering',        'Klasserom',      'Leveres digitalt', '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Mandag',  '1R', 'Produksjon', '',     'Olav',          'Intro til maskinpark',         'Verksted',       '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Mandag',  '1R', 'Matte',      '',     'Willy',         'Statistikk',                   'Klasserom',      '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Tirsdag', '1R', 'Engelsk',    '',     'Kevin',         'Lesing og tekstforståelse',    'Klasserom',      '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Tirsdag', '1R', 'Gym',        '',     'Kristoffer',    'Friidrett – kast og hopp',     'Idrettshall',    '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Onsdag',  '1R', 'Aktivitet',  '',     'Kristoffer',    'Friluftsdag – kyststi',        'Møt ved bussen', 'Ta med niste',     '09:00',ts, 'Seed'],
+    [nid(), ar, uke, 'Torsdag', '1R', 'Engelsk',    '',     'Martin',        'Grammatikk og setningsbygging','Klasserom',      '',                 '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Fredag',  '1R', 'Produksjon', '',     'Olav',          'Traktorvedlikehold',           'Verksted',       'Arbeidsklær',      '',     ts, 'Seed'],
+    [nid(), ar, uke, 'Fredag',  '1R', 'Matte',      '',     'Willy',         'Prøve – statistikk',           'Klasserom',      'Hjelpemidler: kalkulator', '', ts, 'Seed'],
+  ];
+  planData.forEach(r => plan.appendRow(r));
+  logg.push('Plan: ' + planData.length + ' nye økter for 1D og 1R (uke 23)');
+
+  SpreadsheetApp.flush();
+  Logger.log('✅ ' + logg.join(' | '));
+  Logger.log('Passord for alle testlærere: test123');
+}
 
   const konfigData = [
     // Skoleinfo
