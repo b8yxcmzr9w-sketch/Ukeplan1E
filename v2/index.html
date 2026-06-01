@@ -916,15 +916,50 @@ header .spacer { flex: 1; }
     <h3 id="okt-tittel">Ny økt</h3>
     <input type="hidden" id="okt-id">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+      <!-- Klasse: enkelt (rediger/kopier) -->
       <div class="felt" id="okt-klasse-felt" style="grid-column:span 2"><label>Klasse</label><select id="okt-klasse"></select></div>
+      <!-- Klasse: multi (ny) -->
+      <div id="okt-klasse-multi" class="skjult" style="grid-column:span 2;margin-bottom:2px">
+        <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:6px">Klasse(r)</label>
+        <div id="okt-klasse-cbx" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+      </div>
+
       <div class="felt"><label>Fag</label><select id="okt-fag" onchange="oppdaterOktGruppe()"></select></div>
       <div class="felt"><label>Gruppe / Parti</label><select id="okt-gruppe"></select></div>
-      <div class="felt"><label>Dag</label>
+
+      <!-- Dag: enkelt (rediger/kopier) -->
+      <div class="felt" id="okt-dag-felt">
+        <label>Dag</label>
         <select id="okt-dag">
-          <option>Mandag</option><option>Tirsdag</option><option>Onsdag</option><option>Torsdag</option><option>Fredag</option>
+          <option>Mandag</option><option>Tirsdag</option><option>Onsdag</option>
+          <option>Torsdag</option><option>Fredag</option>
         </select>
       </div>
-      <div class="felt"><label>Uke</label><input id="okt-uke" type="number" min="1" max="53"></div>
+      <!-- Dag: multi (ny) -->
+      <div id="okt-dag-multi" class="skjult">
+        <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:6px">Dag(er)</label>
+        <div id="okt-dag-cbx" style="display:flex;flex-wrap:wrap;gap:12px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Mandag"> Man</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Tirsdag"> Tir</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Onsdag"> Ons</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Torsdag"> Tor</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Fredag"> Fre</label>
+        </div>
+      </div>
+
+      <!-- Uke: enkelt (rediger/kopier) -->
+      <div class="felt" id="okt-uke-felt"><label>Uke</label><input id="okt-uke" type="number" min="1" max="53"></div>
+      <!-- Uke range: multi (ny) -->
+      <div id="okt-uke-multi" class="skjult">
+        <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:6px">Uke(r)</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input id="okt-fra-uke" type="number" min="1" max="53" style="width:60px" placeholder="Fra">
+          <span style="color:var(--grå)">–</span>
+          <input id="okt-til-uke" type="number" min="1" max="53" style="width:60px" placeholder="Til">
+        </div>
+      </div>
+
       <div class="felt" style="grid-column:span 2"><label>Tid (valgfritt)</label><input id="okt-tid" type="time" style="max-width:200px"></div>
     </div>
     <div class="felt"><label>Lærer</label><input id="okt-laerer" type="text"></div>
@@ -1986,55 +2021,89 @@ async function byttPassord() {
 }
 
 // ── Økt CRUD ──────────────────────────────────────────────────────────────────
-function klargjorNyOkt() {
-  el('okt-tittel').textContent = 'Ny økt';
-  el('okt-id').value = '';
-  el('okt-uke').value = S.uke;
-  el('okt-tid').value = '';
-  el('okt-laerer').value = '';
-  el('okt-aktivitet').value = '';
-  el('okt-oppmotested').value = '';
-  el('okt-info').value = '';
+let _oktBulkModus = false;
 
-  const klasseSel = el('okt-klasse');
-  const klasser = S.konfig.klasser && S.konfig.klasser.length ? S.konfig.klasser : (S.klasse ? [S.klasse] : []);
-  klasseSel.innerHTML =
-    `<option value="Alle">– Alle klasser –</option>` +
-    klasser.map(k => `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`).join('');
-
+function _initOktModal() {
+  el('okt-id').value = ''; el('okt-tid').value = '';
+  el('okt-aktivitet').value = ''; el('okt-oppmotested').value = '';
+  el('okt-info').value = ''; el('okt-laerer').value = '';
+  el('okt-feil').classList.add('skjult');
   const fagSel = el('okt-fag');
   fagSel.innerHTML = '';
   fagForKlasse(S.klasse).forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
+}
+
+function _settEnkeltFelt() {
+  _oktBulkModus = false;
+  el('okt-klasse-multi').classList.add('skjult'); el('okt-klasse-felt').classList.remove('skjult');
+  el('okt-dag-multi').classList.add('skjult');    el('okt-dag-felt').classList.remove('skjult');
+  el('okt-uke-multi').classList.add('skjult');    el('okt-uke-felt').classList.remove('skjult');
+  const klasser = S.konfig.klasser?.length ? S.konfig.klasser : (S.klasse ? [S.klasse] : []);
+  el('okt-klasse').innerHTML =
+    `<option value="Alle">– Alle klasser –</option>` +
+    klasser.map(k => `<option value="${k}"${k === S.klasse ? ' selected' : ''}>${k}</option>`).join('');
+  el('okt-uke').value = S.uke;
+}
+
+function _settBulkFelt() {
+  _oktBulkModus = true;
+  el('okt-klasse-felt').classList.add('skjult'); el('okt-klasse-multi').classList.remove('skjult');
+  el('okt-dag-felt').classList.add('skjult');    el('okt-dag-multi').classList.remove('skjult');
+  el('okt-uke-felt').classList.add('skjult');    el('okt-uke-multi').classList.remove('skjult');
+  const klasser = S.konfig.klasser || [];
+  const mineStr = S.bruker?.klasser || '';
+  const mine = mineStr === 'Alle' ? klasser : mineStr.split(',').map(k => k.trim()).filter(Boolean);
+  el('okt-klasse-cbx').innerHTML = klasser.map(k =>
+    `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.92rem">
+      <input type="checkbox" value="${k}" ${mine.includes(k) || k === S.klasse ? 'checked' : ''}> ${k}
+    </label>`).join('');
+  el('okt-fra-uke').value = S.uke;
+  el('okt-til-uke').value = S.uke;
+}
+
+function klargjorNyOkt() {
+  _initOktModal();
+  el('okt-tittel').textContent = 'Ny økt';
+  el('okt-laerer').value = S.bruker?.navn || '';
+  _settBulkFelt();
   oppdaterOktGruppe();
   visModal('modal-ny-okt');
 }
 
 function redigerOkt(r) {
-  klargjorNyOkt();
+  _initOktModal();
   el('okt-tittel').textContent = 'Rediger økt';
-  el('okt-id').value           = r.id;
-  el('okt-klasse').value       = r.klasse;
-  el('okt-fag').value          = r.fag;
+  _settEnkeltFelt();
+  el('okt-id').value          = r.id;
+  el('okt-klasse').value      = r.klasse;
+  el('okt-fag').value         = r.fag;
   oppdaterOktGruppe();
-  el('okt-gruppe').value       = r.gruppe;
-  el('okt-dag').value          = r.dag;
-  el('okt-uke').value          = r.uke;
-  el('okt-laerer').value       = r.laerer || '';
-  el('okt-aktivitet').value    = r.aktivitet;
-  el('okt-oppmotested').value  = r.oppmotested || '';
-  el('okt-info').value         = r.info || '';
-  el('okt-tid').value          = r.tid || '';
+  el('okt-gruppe').value      = r.gruppe;
+  el('okt-dag').value         = r.dag;
+  el('okt-uke').value         = r.uke;
+  el('okt-laerer').value      = r.laerer || '';
+  el('okt-aktivitet').value   = r.aktivitet;
+  el('okt-oppmotested').value = r.oppmotested || '';
+  el('okt-info').value        = r.info || '';
+  el('okt-tid').value         = r.tid || '';
+  visModal('modal-ny-okt');
 }
 
 function oppdaterOktGruppe() {
   const fag = el('okt-fag').value;
   fyllGruppeForFag(el('okt-gruppe'), fag);
-  if (fag === 'YFF') el('okt-klasse').value = 'Alle';
+  if (!_oktBulkModus && fag === 'YFF') el('okt-klasse').value = 'Alle';
   const klassFag = fagForKlasse(S.klasse).find(f => f.navn === fag);
-  const dag = klassFag?.dag || S.konfig.fag.find(f => f.navn === fag)?.dag || '';
+  const dag = klassFag?.dag || S.konfig.fag?.find(f => f.navn === fag)?.dag || '';
   if (dag) {
     const dager = dag.split(',').map(d => d.trim()).filter(Boolean);
-    if (dager.length && !dager.includes(el('okt-dag').value)) el('okt-dag').value = dager[0];
+    if (_oktBulkModus) {
+      el('okt-dag-cbx').querySelectorAll('input[type=checkbox]').forEach(cbx => {
+        cbx.checked = dager.includes(cbx.value);
+      });
+    } else {
+      if (dager.length && !dager.includes(el('okt-dag').value)) el('okt-dag').value = dager[0];
+    }
   }
 }
 
@@ -2047,44 +2116,79 @@ function fyllGruppeForFag(sel, fag) {
 async function lagreOkt(btn) {
   const aktivitet = el('okt-aktivitet').value.trim();
   if (!aktivitet) { visInlineError('okt-feil', 'Aktivitet er påkrevd'); return; }
-  if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
-  const id     = el('okt-id').value;
-  const uke    = parseInt(el('okt-uke').value);
-  const dag    = el('okt-dag').value;
-  const klasse = el('okt-klasse').value;
-  const fag    = el('okt-fag').value;
-  const gruppe = el('okt-gruppe').value;
 
-  // Duplikatsjekk
-  const duplikat = S.ukedata.find(r =>
-    String(r.id) !== String(id) &&
-    r.uke == uke && r.dag === dag && r.klasse === klasse &&
-    r.fag === fag && r.gruppe === gruppe
-  );
-  if (duplikat && !confirm(`Det finnes allerede en ${fag}-økt (${dag} uke ${uke}, ${klasse}).\nLagre likevel?`)) return;
-
-  const res = await api('save', {
-    token: S.bruker.token,
-    id:    id || null,
-    ar:    S.ar,
-    uke, dag, klasse, fag, gruppe,
+  const felles = {
     laerer:      el('okt-laerer').value.trim(),
     aktivitet,
     oppmotested: el('okt-oppmotested').value.trim(),
     info:        el('okt-info').value.trim(),
     tid:         el('okt-tid').value,
     lagretAv:    S.bruker?.navn || ''
-  });
-  if (res.ok) {
-    lukkModal('modal-ny-okt');
-    const lagretKlasse = el('okt-klasse').value || S.klasse;
-    if (lagretKlasse === 'Alle') cacheReset();
-    else cacheSlett(parseInt(el('okt-uke').value), S.ar, lagretKlasse);
-    if (S.listeModus) lastListedata();
-    else lastUkedata();
+  };
+
+  if (_oktBulkModus) {
+    // ── Bulk: én API-kall, én Sheets-skriving ──────────────────────────────
+    const klasser = [...el('okt-klasse-cbx').querySelectorAll('input:checked')].map(i => i.value);
+    const dager   = [...el('okt-dag-cbx').querySelectorAll('input:checked')].map(i => i.value);
+    const fraUke  = parseInt(el('okt-fra-uke').value);
+    const tilUke  = parseInt(el('okt-til-uke').value);
+    if (!klasser.length) { visInlineError('okt-feil', 'Velg minst én klasse'); return; }
+    if (!dager.length)   { visInlineError('okt-feil', 'Velg minst én dag'); return; }
+    if (!fraUke || !tilUke || fraUke > tilUke) { visInlineError('okt-feil', 'Ugyldig ukeområde'); return; }
+
+    const fag    = el('okt-fag').value;
+    const gruppe = el('okt-gruppe').value;
+    const sessions = [];
+    for (const klasse of klasser)
+      for (const dag of dager)
+        for (let u = fraUke; u <= tilUke; u++)
+          sessions.push({ uke: u, dag, klasse, fag, gruppe });
+
+    const antall = sessions.length;
+    if (antall > 1 && !confirm(`Legger inn ${antall} økt${antall !== 1 ? 'er' : ''}.\nFortsette?`)) return;
+    if (btn) { btn.disabled = true; btn.textContent = `Lagrer ${antall}…`; }
+
+    const res = await api('bulkSave', { token: S.bruker.token, ar: S.ar, sessions, felles });
+    if (res.ok) {
+      lukkModal('modal-ny-okt');
+      cacheReset();
+      if (S.listeModus) lastListedata(); else lastUkedata();
+      visMelding(`${res.antall} økt${res.antall !== 1 ? 'er' : ''} lagt inn`);
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; }
+      visInlineError('okt-feil', res.error);
+    }
+
   } else {
-    if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; }
-    visInlineError('okt-feil', res.error);
+    // ── Enkelt: rediger eller lagre én økt ────────────────────────────────
+    if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
+    const id     = el('okt-id').value;
+    const uke    = parseInt(el('okt-uke').value);
+    const dag    = el('okt-dag').value;
+    const klasse = el('okt-klasse').value;
+    const fag    = el('okt-fag').value;
+    const gruppe = el('okt-gruppe').value;
+    const duplikat = S.ukedata.find(r =>
+      String(r.id) !== String(id) &&
+      r.uke == uke && r.dag === dag && r.klasse === klasse &&
+      r.fag === fag && r.gruppe === gruppe
+    );
+    if (duplikat && !confirm(`Det finnes allerede en ${fag}-økt (${dag} uke ${uke}, ${klasse}).\nLagre likevel?`)) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; } return;
+    }
+    const res = await api('save', {
+      token: S.bruker.token, id: id || null, ar: S.ar,
+      uke, dag, klasse, fag, gruppe, ...felles
+    });
+    if (res.ok) {
+      lukkModal('modal-ny-okt');
+      if (klasse === 'Alle') cacheReset();
+      else cacheSlett(uke, S.ar, klasse);
+      if (S.listeModus) lastListedata(); else lastUkedata();
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; }
+      visInlineError('okt-feil', res.error);
+    }
   }
 }
 
@@ -3205,20 +3309,22 @@ function kmSlett() {
 }
 
 function kopierOkt(r) {
-  klargjorNyOkt();
+  _initOktModal();
   el('okt-tittel').textContent = 'Kopier økt';
-  el('okt-id').value           = '';   // ny økt – ikke overskriv original
-  el('okt-klasse').value       = r.klasse || S.klasse;
-  el('okt-fag').value          = r.fag;
+  _settEnkeltFelt();
+  el('okt-id').value          = '';
+  el('okt-klasse').value      = r.klasse || S.klasse;
+  el('okt-fag').value         = r.fag;
   oppdaterOktGruppe();
-  el('okt-gruppe').value       = r.gruppe;
-  el('okt-dag').value          = r.dag;
-  el('okt-uke').value          = r.uke;
-  el('okt-laerer').value       = r.laerer || '';
-  el('okt-aktivitet').value    = r.aktivitet || '';
-  el('okt-oppmotested').value  = r.oppmotested || '';
-  el('okt-info').value         = r.info || '';
-  el('okt-tid').value          = r.tid || '';
+  el('okt-gruppe').value      = r.gruppe;
+  el('okt-dag').value         = r.dag;
+  el('okt-uke').value         = r.uke;
+  el('okt-laerer').value      = r.laerer || '';
+  el('okt-aktivitet').value   = r.aktivitet || '';
+  el('okt-oppmotested').value = r.oppmotested || '';
+  el('okt-info').value        = r.info || '';
+  el('okt-tid').value         = r.tid || '';
+  visModal('modal-ny-okt');
 }
 
 // ── Del lenke / QR ────────────────────────────────────────────────────────────

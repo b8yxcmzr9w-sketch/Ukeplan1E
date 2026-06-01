@@ -44,6 +44,7 @@ function doPost(e) {
     login:          handleLogin,
     saveMinProfil:  handleSaveMinProfil,
     save:           handleSave,
+    bulkSave:       handleBulkSave,
     delete:         handleDelete,
     parse:          handleParse,
     parseSkolerute: handleParseSkolerute,
@@ -117,6 +118,38 @@ function handleSave(d) {
       d.laerer, d.aktivitet, d.oppmotested, d.info, d.tid || '', now, d.lagretAv || '']);
     SpreadsheetApp.flush();
     return jsonResponse({ ok: true, id });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleBulkSave(d) {
+  if (!verifyToken(d.token)) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sheet = getSheet('Plan');
+    SpreadsheetApp.flush();
+    const now = Utilities.formatDate(new Date(), 'Europe/Oslo', 'yyyy-MM-dd HH:mm');
+    const f = d.felles || {};
+    const ar = d.ar || new Date().getFullYear();
+    var base = String(Date.now());
+
+    const rows = (d.sessions || []).map(function(s, i) {
+      return [
+        base + '_' + i,
+        ar, s.uke, s.dag, s.klasse, s.fag, s.gruppe || '',
+        f.laerer || '', f.aktivitet || '', f.oppmotested || '',
+        f.info || '', f.tid || '', now, f.lagretAv || ''
+      ];
+    });
+
+    if (!rows.length) return jsonResponse({ ok: true, antall: 0 });
+
+    const startRow = sheet.getLastRow() + 1;
+    sheet.getRange(startRow, 1, rows.length, 14).setValues(rows);
+    SpreadsheetApp.flush();
+    return jsonResponse({ ok: true, antall: rows.length });
   } finally {
     lock.releaseLock();
   }
