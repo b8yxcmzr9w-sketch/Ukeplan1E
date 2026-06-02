@@ -1689,8 +1689,8 @@ async function lastUkedata() {
       skjulOverlay();
     }
   }
-  if (S.visning === 'elev') oppdaterElevVisning();
-  else oppdaterLaererVisning();
+  if (S.visning === 'elev') { fyllElevFilter(); oppdaterElevVisning(); }
+  else { fyllGruppeFilter('laerer-filter-gruppe'); oppdaterLaererVisning(); }
 
   // Bufferinitialisering ved første last, deretter glidende vindu
   if (!S.bufferFra) {
@@ -1914,9 +1914,7 @@ function oppdaterPrintHode() {
 }
 
 function oppdaterLaererVisning() {
-  fyllGruppeFilter('laerer-filter-gruppe');
   const gruppe = el('laerer-filter-gruppe').value;
-  // Lærer bruker én samlet gruppe-filter — vis som NPT-filter for enkelhets skyld
   visUkeMedFilter(el('laerer-uke-innhold'), S.ukedata, S.ferie, gruppe, gruppe, true);
   requestAnimationFrame(settStickyTopp);
 }
