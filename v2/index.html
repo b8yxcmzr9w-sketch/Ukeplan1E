@@ -929,38 +929,39 @@ header .spacer { flex: 1; }
       <div class="felt"><label>Gruppe / Parti</label><select id="okt-gruppe"></select></div>
 
       <!-- Dag: enkelt (rediger/kopier) -->
-      <div class="felt" id="okt-dag-felt">
+      <div class="felt" id="okt-dag-felt" style="grid-column:span 2">
         <label>Dag</label>
-        <select id="okt-dag">
+        <select id="okt-dag" style="max-width:200px">
           <option>Mandag</option><option>Tirsdag</option><option>Onsdag</option>
           <option>Torsdag</option><option>Fredag</option>
         </select>
       </div>
       <!-- Dag: multi (ny) -->
-      <div id="okt-dag-multi" class="skjult">
+      <div id="okt-dag-multi" class="skjult" style="grid-column:span 2">
         <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:6px">Dag(er)</label>
-        <div id="okt-dag-cbx" style="display:flex;flex-wrap:wrap;gap:12px">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Mandag"> Man</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Tirsdag"> Tir</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Onsdag"> Ons</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Torsdag"> Tor</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="Fredag"> Fre</label>
+        <div id="okt-dag-cbx" style="display:flex;flex-wrap:nowrap;gap:14px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap"><input type="checkbox" value="Mandag"> Man</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap"><input type="checkbox" value="Tirsdag"> Tir</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap"><input type="checkbox" value="Onsdag"> Ons</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap"><input type="checkbox" value="Torsdag"> Tor</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap"><input type="checkbox" value="Fredag"> Fre</label>
         </div>
       </div>
 
       <!-- Uke: enkelt (rediger/kopier) -->
-      <div class="felt" id="okt-uke-felt"><label>Uke</label><input id="okt-uke" type="number" min="1" max="53"></div>
+      <div class="felt" id="okt-uke-felt"><label>Uke</label><input id="okt-uke" type="number" min="1" max="53" style="max-width:80px"></div>
       <!-- Uke range: multi (ny) -->
       <div id="okt-uke-multi" class="skjult">
         <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:6px">Uke(r)</label>
         <div style="display:flex;align-items:center;gap:8px">
-          <input id="okt-fra-uke" type="number" min="1" max="53" style="width:60px" placeholder="Fra" oninput="synkTilUke(this.value)">
+          <input id="okt-fra-uke" type="number" min="1" max="53" style="width:58px" placeholder="Fra" oninput="synkTilUke(this.value)">
           <span style="color:var(--grå)">–</span>
-          <input id="okt-til-uke" type="number" min="1" max="53" style="width:60px" placeholder="Til">
+          <input id="okt-til-uke" type="number" min="1" max="53" style="width:58px" placeholder="Til">
         </div>
       </div>
 
-      <div class="felt" style="grid-column:span 2"><label>Tid (valgfritt)</label><input id="okt-tid" type="time" style="max-width:200px"></div>
+      <!-- Tid: høyre kolonne, samme rad som Uke -->
+      <div class="felt"><label>Tid (valgfritt)</label><input id="okt-tid" type="time"></div>
     </div>
     <div class="felt"><label>Lærer</label><select id="okt-laerer"></select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -2055,10 +2056,7 @@ async function _initOktModal() {
 }
 
 function synkTilUke(val) {
-  const tilUke = el('okt-til-uke');
-  const fra = parseInt(val) || 0;
-  const til = parseInt(tilUke.value) || 0;
-  if (!til || fra > til) tilUke.value = val;
+  el('okt-til-uke').value = val;
 }
 
 function _settEnkeltFelt() {
@@ -2639,7 +2637,7 @@ async function lagreKlasseKonfig() {
   if (!klasse) return;
   const rader = [];
   el('klasse-fag-liste').querySelectorAll('input[type=checkbox][value]').forEach(cbx => {
-    if (!cbx.checked) return;
+    if (!cbx.checked || cbx.closest('.klasse-fag-dager')) return;
     const dager = [...cbx.closest('label').parentElement.querySelector('.klasse-fag-dager').querySelectorAll('input[type=checkbox]:checked')]
       .map(c => c.value).join(',');
     rader.push({ type: `fag_${klasse}`, nokkel: cbx.value, verdi: dager });
