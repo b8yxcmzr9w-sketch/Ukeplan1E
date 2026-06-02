@@ -306,6 +306,9 @@ header .spacer { flex: 1; }
 
 /* ── Liste-visning ─────────────────────────────────────────────────────────── */
 .liste-tabell { width: 100%; border-collapse: collapse; font-size: .85rem; }
+@media (max-width: 640px) {
+  .liste-tabell .col-gruppe, .liste-tabell .col-tid { display: none; }
+}
 .liste-tabell th {
   background: var(--grønn); color: white; padding: 9px 8px;
   text-align: left; font-weight: 600; white-space: nowrap;
@@ -679,15 +682,13 @@ header .spacer { flex: 1; }
 
     <!-- Listeinnhold -->
     <div id="laerer-liste-innhold" class="skjult">
-      <div style="overflow-x:auto">
-        <table class="liste-tabell">
-          <thead><tr>
-            <th>Uke</th><th>Dag</th><th>Fag</th><th>Gruppe</th>
-            <th>Tid</th><th>Oppmøtested</th><th>Lærer</th><th>Aktivitet</th><th></th>
-          </tr></thead>
-          <tbody id="liste-tbody"></tbody>
-        </table>
-      </div>
+      <table class="liste-tabell">
+        <thead><tr>
+          <th>Uke</th><th>Dag</th><th>Fag</th><th class="col-gruppe">Gruppe</th>
+          <th class="col-tid">Tid</th><th>Oppmøtested</th><th>Lærer</th><th>Aktivitet</th><th></th>
+        </tr></thead>
+        <tbody id="liste-tbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -3160,7 +3161,7 @@ function byttListeModus(tilListe) {
 
   if (tilListe) {
     lastListedata();
-    setTimeout(settStickyTopp, 0);
+    requestAnimationFrame(settStickyTopp);
   }
 }
 
@@ -3170,6 +3171,7 @@ async function lastListedata() {
   if (res.ok) { S.listedata = res.rows || []; S.listeFerie = res.ferie || []; }
   fyllListeFilter();
   oppdaterListeVisning();
+  requestAnimationFrame(settStickyTopp);
   setTimeout(hoppTilNaaListe, 80);
 }
 
@@ -3251,8 +3253,8 @@ function oppdaterListeVisning() {
         <td>${r.uke}</td>
         <td>${r.dag}${datoStr ? `<br><span style="font-size:.78rem;color:var(--grå)">${datoStr}</span>` : ''}</td>
         <td><span class="fag-badge">${r.fag}</span></td>
-        <td>${gruppen}</td>
-        <td style="white-space:nowrap">${r.tid || ''}</td>
+        <td class="col-gruppe">${gruppen}</td>
+        <td class="col-tid" style="white-space:nowrap">${r.tid || ''}</td>
         <td>${r.oppmotested || ''}</td>
         <td>${r.laerer || ''}</td>
         <td>${r.aktivitet || ''} ${infoIkon}</td>
