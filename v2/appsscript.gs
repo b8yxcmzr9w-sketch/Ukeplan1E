@@ -65,6 +65,7 @@ function doPost(e) {
     seedSemesterData:   handleSeedSemesterData,
     migrateToV2:        handleMigrateToV2,
     renameFag:          handleRenameFag,
+    trashFag:           handleTrashFag,
     getTrash:           handleGetTrash,
     restoreTrash:       handleRestoreTrash,
     moveToTrash:        handleMoveToTrash
@@ -1301,6 +1302,26 @@ function handleMoveToTrash(d) {
     ]);
   });
   return jsonResponse({ ok: true });
+}
+
+function handleTrashFag(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  const fag = (d.fag || '').trim();
+  if (!fag) return jsonResponse({ ok: false, error: 'Fagnavn mangler' });
+  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const plan = ss.getSheetByName('Plan');
+  if (!plan || plan.getLastRow() < 2) return jsonResponse({ ok: true, antall: 0 });
+  const vals = plan.getDataRange().getValues();
+  let antall = 0;
+  for (let i = vals.length - 1; i >= 1; i--) {
+    if (String(vals[i][5]) === fag) {
+      try { flyttTilSoppeldunk(ss, vals[i], caller.navn); } catch(e) { Logger.log('trashFag feil: ' + e); }
+      plan.deleteRow(i + 1);
+      antall++;
+    }
+  }
+  return jsonResponse({ ok: true, antall });
 }
 
 function listModels() {

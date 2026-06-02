@@ -1068,6 +1068,27 @@ header .spacer { flex: 1; }
   </div>
 </div>
 
+<div id="modal-slett-fag" class="modal-bg skjult">
+  <div class="modal" style="max-width:420px">
+    <h3>Slett fag: <span id="slett-fag-navn" style="color:var(--grønn)"></span></h3>
+    <p style="font-size:.85rem;color:var(--grå);margin-bottom:16px">Faget kan ha registrerte sesjoner. Velg hva som skal skje med dem:</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="border:1px solid var(--kant);border-radius:var(--radius);padding:14px">
+        <strong style="font-size:.95rem">↔ Migrer til annet fag</strong>
+        <p style="font-size:.82rem;color:var(--grå);margin:4px 0 10px">Alle sesjoner med dette faget flyttes til et annet fag.</p>
+        <select id="slett-fag-migrer-til" style="width:100%;padding:6px 8px;border:1px solid var(--kant);border-radius:var(--radius);font-size:.87rem;margin-bottom:8px"></select>
+        <button class="btn btn-p btn-sm" style="width:100%" onclick="utforSlettFagMigrer()">Migrer og slett fag</button>
+      </div>
+      <div style="border:1px solid #fca5a5;border-radius:var(--radius);padding:14px;background:#fff5f5">
+        <strong style="font-size:.95rem">🗑 Slett og legg i søppla</strong>
+        <p style="font-size:.82rem;color:var(--grå);margin:4px 0 10px">Alle sesjoner med dette faget flyttes til søppeldunken (21 dager).</p>
+        <button class="btn btn-sm" style="width:100%;background:#fee2e2;color:#dc3545;border:1px solid #fca5a5;padding:7px;border-radius:var(--radius);cursor:pointer" onclick="utforSlettFagSoppel()">Slett og legg i søppla</button>
+      </div>
+    </div>
+    <div class="modal-bunn"><button class="btn btn-s" onclick="lukkModal('modal-slett-fag')">Avbryt</button></div>
+  </div>
+</div>
+
 <!-- Ny / rediger bruker -->
 <div id="modal-ny-bruker" class="modal-bg skjult">
   <div class="modal">
@@ -2832,9 +2853,12 @@ function visKonfigListe(id, items, medDag, fagData, låste = []) {
         ${medDag ? dagCheckboxer(dag) : ''}
         <span title="Systemfag – kan ikke slettes eller omdøpes" style="padding:0 8px;color:var(--grå);font-size:1rem;line-height:1;align-self:center">🔒</span>`;
     } else {
+      const slettOnclick = id === 'konfig-fag-liste'
+        ? `bekreftSlettFag('${item.replace(/'/g,"\\'")}',this)`
+        : `aktiverNarmesteLagreKnapp(this);this.parentNode.remove()`;
       div.innerHTML = `<input type="text" value="${item}" data-original="${item}">
         ${medDag ? dagCheckboxer(dag) : ''}
-        <button class="btn btn-f btn-sm" onclick="aktiverNarmesteLagreKnapp(this);this.parentNode.remove()">✕</button>`;
+        <button class="btn btn-f btn-sm" onclick="${slettOnclick}">✕</button>`;
     }
     el(id).appendChild(div);
   });
@@ -2886,6 +2910,41 @@ async function lagreFag() {
   await lagreKonfigRader(samleKonfig(), 'btn-lagre-fag');
 }
 async function lagreYFF() { await lagreKonfigRader(samleKonfig(), 'btn-lagre-yff'); }
+
+let _slettFagRad = null;
+
+function bekreftSlettFag(fagNavn, btn) {
+  _slettFagRad = btn.closest('.konfig-rad');
+  el('slett-fag-navn').textContent = fagNavn;
+  const andre = (S.konfig.fag || []).map(f => f.navn).filter(n => n !== fagNavn);
+  el('slett-fag-migrer-til').innerHTML = andre.map(n => `<option value="${n}">${n}</option>`).join('');
+  visModal('modal-slett-fag');
+}
+
+async function utforSlettFagMigrer() {
+  const fagNavn = el('slett-fag-navn').textContent;
+  const tilFag  = el('slett-fag-migrer-til').value;
+  if (!tilFag) return;
+  const res = await api('renameFag', { token: S.bruker.token, gammelt: fagNavn, nytt: tilFag });
+  if (!res.ok) { visMelding(res.error, 'feil'); return; }
+  lukkModal('modal-slett-fag');
+  if (_slettFagRad) { aktiverNarmesteLagreKnapp(_slettFagRad); _slettFagRad.remove(); _slettFagRad = null; }
+  await lagreKonfigRader(samleKonfig(), 'btn-lagre-fag');
+  cacheReset(); lastUkedata();
+  visMelding(`Alle «${fagNavn}»-sesjoner er migrert til «${tilFag}»`);
+}
+
+async function utforSlettFagSoppel() {
+  const fagNavn = el('slett-fag-navn').textContent;
+  if (!confirm(`Flytte alle «${fagNavn}»-sesjoner til søppeldunken?`)) return;
+  const res = await api('trashFag', { token: S.bruker.token, fag: fagNavn });
+  if (!res.ok) { visMelding(res.error, 'feil'); return; }
+  lukkModal('modal-slett-fag');
+  if (_slettFagRad) { aktiverNarmesteLagreKnapp(_slettFagRad); _slettFagRad.remove(); _slettFagRad = null; }
+  await lagreKonfigRader(samleKonfig(), 'btn-lagre-fag');
+  cacheReset(); lastUkedata();
+  visMelding(`${res.antall || 0} sesjon(er) lagt i søppeldunken`);
+}
 async function lagreKlasser() {
   await lagreKonfigRader(samleKonfig(), 'btn-lagre-klasser');
   fyllKlasseVelger();
