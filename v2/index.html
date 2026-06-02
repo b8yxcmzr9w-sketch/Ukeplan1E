@@ -2458,7 +2458,10 @@ async function tolkPlan(ev) {
   const klasse = el('parse-klasse').value || S.klasse;
   const gruppe = fag === 'YFF' ? el('parse-gruppe').value : '';
   const btn = ev.target;
-  btn.textContent = 'Tolker...'; btn.disabled = true;
+  btn.disabled = true;
+  visLagreOverlay(1);
+  el('lagre-progress').textContent = 'AI tolker planen…';
+  el('lagre-bar').style.display = 'none';
 
   const [parseRes, brukereRes, srRes] = await Promise.all([
     api('parse',        { token: S.bruker.token, isAdmin: S.bruker.erAdmin, tekst, fag, klasse, gruppe }),
@@ -2466,7 +2469,9 @@ async function tolkPlan(ev) {
     api('getSkolerute', { token: S.bruker.token, isAdmin: true })
   ]);
 
-  btn.textContent = 'Tolk med AI'; btn.disabled = false;
+  skjulLagreOverlay();
+  el('lagre-bar').style.display = '';
+  btn.disabled = false;
   if (!parseRes.ok) { visMelding(parseRes.error, 'feil'); return; }
 
   const skoleruteRader = srRes.ok    ? srRes.rader   : [];
