@@ -696,8 +696,7 @@ header .spacer { flex: 1; }
   <div id="admin-fane-klasse" class="skjult">
     <div class="kort">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-        <h3 style="margin:0">Klasseinnstillinger</h3>
-        <select id="klasse-admin-sel" style="font-weight:600" onchange="lastKlasseFane(this.value)"></select>
+        <h3 style="margin:0">Klasseinnstillinger <span id="klasse-admin-navn" style="font-size:.85em;font-weight:400;color:var(--grå);margin-left:4px"></span></h3>
       </div>
       <div class="kort" style="margin-bottom:0">
         <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
@@ -955,7 +954,7 @@ header .spacer { flex: 1; }
       <div id="okt-uke-multi" class="skjult">
         <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:6px">Uke(r)</label>
         <div style="display:flex;align-items:center;gap:8px">
-          <input id="okt-fra-uke" type="number" min="1" max="53" style="width:60px" placeholder="Fra">
+          <input id="okt-fra-uke" type="number" min="1" max="53" style="width:60px" placeholder="Fra" oninput="synkTilUke(this.value)">
           <span style="color:var(--grå)">–</span>
           <input id="okt-til-uke" type="number" min="1" max="53" style="width:60px" placeholder="Til">
         </div>
@@ -963,9 +962,11 @@ header .spacer { flex: 1; }
 
       <div class="felt" style="grid-column:span 2"><label>Tid (valgfritt)</label><input id="okt-tid" type="time" style="max-width:200px"></div>
     </div>
-    <div class="felt"><label>Lærer</label><input id="okt-laerer" type="text"></div>
-    <div class="felt"><label>Aktivitet *</label><input id="okt-aktivitet" type="text"></div>
-    <div class="felt"><label>Oppmøtested</label><input id="okt-oppmotested" type="text"></div>
+    <div class="felt"><label>Lærer</label><select id="okt-laerer"></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="felt"><label>Aktivitet *</label><input id="okt-aktivitet" type="text"></div>
+      <div class="felt"><label>Oppmøtested</label><input id="okt-oppmotested" type="text"></div>
+    </div>
     <div class="felt"><label>Info (klesråd, utstyr osv.)</label><textarea id="okt-info"></textarea></div>
     <p id="okt-feil" class="feil-tekst skjult"></p>
     <div class="modal-bunn">
@@ -2023,15 +2024,41 @@ async function byttPassord() {
 
 // ── Økt CRUD ──────────────────────────────────────────────────────────────────
 let _oktBulkModus = false;
+let _brukereNavn = null;
 
-function _initOktModal() {
+async function _hentBrukereNavn() {
+  if (_brukereNavn !== null) return;
+  const res = await api('getBrukere', { token: S.bruker.token, isAdmin: true });
+  _brukereNavn = res.ok ? res.brukere.map(b => b.navn) : [];
+}
+
+function _fyllLaererSel(valgt) {
+  const sel = el('okt-laerer');
+  const names = _brukereNavn || [];
+  sel.innerHTML = '<option value="">– velg –</option>' +
+    names.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (valgt && !names.includes(valgt))
+    sel.innerHTML += `<option value="${valgt}">${valgt}</option>`;
+  if (valgt) sel.value = valgt;
+}
+
+async function _initOktModal() {
+  await _hentBrukereNavn();
   el('okt-id').value = ''; el('okt-tid').value = '';
   el('okt-aktivitet').value = ''; el('okt-oppmotested').value = '';
-  el('okt-info').value = ''; el('okt-laerer').value = '';
+  el('okt-info').value = '';
+  _fyllLaererSel('');
   el('okt-feil').classList.add('skjult');
   const fagSel = el('okt-fag');
   fagSel.innerHTML = '';
   fagForKlasse(S.klasse).forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
+}
+
+function synkTilUke(val) {
+  const tilUke = el('okt-til-uke');
+  const fra = parseInt(val) || 0;
+  const til = parseInt(tilUke.value) || 0;
+  if (!til || fra > til) tilUke.value = val;
 }
 
 function _settEnkeltFelt() {
@@ -2062,17 +2089,17 @@ function _settBulkFelt() {
   el('okt-til-uke').value = S.uke;
 }
 
-function klargjorNyOkt() {
-  _initOktModal();
+async function klargjorNyOkt() {
+  await _initOktModal();
   el('okt-tittel').textContent = 'Ny økt';
-  el('okt-laerer').value = S.bruker?.navn || '';
+  _fyllLaererSel(S.bruker?.navn || '');
   _settBulkFelt();
   oppdaterOktGruppe();
   visModal('modal-ny-okt');
 }
 
-function redigerOkt(r) {
-  _initOktModal();
+async function redigerOkt(r) {
+  await _initOktModal();
   el('okt-tittel').textContent = 'Rediger økt';
   _settEnkeltFelt();
   el('okt-id').value          = r.id;
@@ -2082,7 +2109,7 @@ function redigerOkt(r) {
   el('okt-gruppe').value      = r.gruppe;
   el('okt-dag').value         = r.dag;
   el('okt-uke').value         = r.uke;
-  el('okt-laerer').value      = r.laerer || '';
+  _fyllLaererSel(r.laerer || '');
   el('okt-aktivitet').value   = r.aktivitet;
   el('okt-oppmotested').value = r.oppmotested || '';
   el('okt-info').value        = r.info || '';
@@ -2429,10 +2456,7 @@ function byttFane(fane, knapp) {
   if (fane === 'konfig')    lastKonfig();
   if (fane === 'skolerute') lastSkolerute();
   if (fane === 'brukere')   lastBrukere();
-  if (fane === 'klasse') {
-    fyllKlasseAdminSel();
-    lastKlasseFane(el('klasse-admin-sel').value);
-  }
+  if (fane === 'klasse') fyllKlasseAdminSel();
 }
 
 function toggleKonfigKort(hode) {
@@ -2555,22 +2579,16 @@ function byttLaererKlasse(klasse) {
   cacheReset();
   oppdaterKlasseBadge();
   fyllGruppeFilter('laerer-filter-gruppe');
+  if (!el('admin-fane-klasse').classList.contains('skjult')) fyllKlasseAdminSel();
   if (S.listeModus) lastListedata();
   else lastUkedata();
 }
 
 // ── Klasse-fane ───────────────────────────────────────────────────────────────
 function fyllKlasseAdminSel() {
-  const sel = el('klasse-admin-sel');
-  if (!sel) return;
-  const rolle = S.bruker?.rolle || 'laerer';
-  let klasser = S.konfig.klasser || [];
-  if (rolle !== 'skoleadmin' && S.bruker?.klasser && S.bruker.klasser !== 'Alle') {
-    const mine = S.bruker.klasser.split(',').map(k => k.trim());
-    klasser = klasser.filter(k => mine.includes(k));
-  }
-  sel.innerHTML = klasser.map(k => `<option value="${k}">${k}</option>`).join('');
-  if (!sel.value && klasser.length) sel.value = klasser[0];
+  const navn = el('klasse-admin-navn');
+  if (navn) navn.textContent = S.klasse || '';
+  lastKlasseFane(S.klasse);
 }
 
 function lastKlasseFane(klasse) {
@@ -2617,7 +2635,7 @@ function oppdaterKlasseFagRad(cbx) {
 }
 
 async function lagreKlasseKonfig() {
-  const klasse = el('klasse-admin-sel').value;
+  const klasse = S.klasse;
   if (!klasse) return;
   const rader = [];
   el('klasse-fag-liste').querySelectorAll('input[type=checkbox][value]').forEach(cbx => {
@@ -3310,8 +3328,8 @@ function kmSlett() {
   slettOkt(_kmRad.id, _kmRad.klasse);
 }
 
-function kopierOkt(r) {
-  _initOktModal();
+async function kopierOkt(r) {
+  await _initOktModal();
   el('okt-tittel').textContent = 'Kopier økt';
   _settEnkeltFelt();
   el('okt-id').value          = '';
@@ -3321,7 +3339,7 @@ function kopierOkt(r) {
   el('okt-gruppe').value      = r.gruppe;
   el('okt-dag').value         = r.dag;
   el('okt-uke').value         = r.uke;
-  el('okt-laerer').value      = r.laerer || '';
+  _fyllLaererSel(r.laerer || '');
   el('okt-aktivitet').value   = r.aktivitet || '';
   el('okt-oppmotested').value = r.oppmotested || '';
   el('okt-info').value        = r.info || '';
