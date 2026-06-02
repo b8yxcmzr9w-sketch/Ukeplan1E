@@ -990,7 +990,10 @@ header .spacer { flex: 1; }
       </div>
     </div>
     <div class="felt"><textarea id="parse-tekst" rows="9" placeholder="Lim inn tekst fra Word her..."></textarea></div>
-    <button class="btn btn-p" onclick="tolkPlan(event)">Tolk med AI</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="tolkPlan(event)">Tolk med AI</button>
+      <button class="btn btn-s" onclick="kopierAiPrompt()" title="Kopier AI-prompten til utklippstavlen, slik at du kan bruke den i ChatGPT, Claude eller andre AI-verktøy">📋 Kopier AI-prompt</button>
+    </div>
     <div id="parse-resultat" class="skjult" style="margin-top:20px">
       <h4 style="margin-bottom:4px">Velg rader som skal lagres</h4>
       <p style="font-size:.83rem;color:var(--grå);margin-bottom:8px">Klikk i en celle for å redigere. Fjern haken for å utelate en rad.</p>
@@ -2344,6 +2347,55 @@ function matcherLærer(parsedNavn, registrerteNavn) {
     if (pInitial && rInitial) return pInitial === rInitial;
     return true;
   });
+}
+
+function byggAiPrompt() {
+  const tekst  = el('parse-tekst').value.trim();
+  if (!tekst) { visMelding('Lim inn tekst først', 'feil'); return null; }
+  const fag    = el('parse-fag').value;
+  const klasse = el('parse-klasse').value || S.klasse;
+  const gruppe = fag === 'YFF' ? el('parse-gruppe').value : '';
+  const klassFag   = fagForKlasse(klasse).find(f => f.navn === fag);
+  const defaultDag = klassFag?.dag || S.konfig.fag?.find(f => f.navn === fag)?.dag || '';
+  const dagHint = defaultDag
+    ? `Faget har faste dager: ${defaultDag}. Bruk den som passer best med konteksten.`
+    : 'Utled fra teksten.';
+  return `Du tolker ukeplaner fra norske naturbruksskoler.
+Faget er "${fag}", klassen er "${klasse}"${gruppe ? `, gruppen er "${gruppe}"` : ''}.
+
+Les teksten og returner et JSON-array. Én rad per økt med disse feltene:
+- uke (tall, påkrevd)
+- dag (norsk ukedag. ${dagHint} Aldri tom)
+- gruppe ("P1"–"P6" for NPT, gruppenavn for YFF, eller "Alle". Bruk "${gruppe || 'Alle'}" hvis bare én gruppe)
+- laerer (fornavn. Bruk "?" hvis ikke nevnt)
+- aktivitet (hva de skal gjøre, kort og konkret. Påkrevd)
+- oppmotested (oppmøtested, tom streng hvis ikke nevnt)
+- info (klesråd, utstyr, forbehold – tom streng hvis ikke nevnt)
+- tid (klokkeslett som "08:00", tom streng hvis ikke nevnt)
+
+Regler:
+- Ferieuke ("HØSTFERIE" osv.): én rad med aktivitet = ferienavn, dag = "Alle", gruppe = "Alle", resten tomt
+- Tomme rader uten aktivitet: utelat
+- Returner KUN gyldig JSON-array, ingen annen tekst
+
+Tekst:
+${tekst}`;
+}
+
+async function kopierAiPrompt() {
+  const prompt = byggAiPrompt();
+  if (!prompt) return;
+  try {
+    await navigator.clipboard.writeText(prompt);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = prompt;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  visMelding('AI-prompt kopiert – lim inn i ChatGPT, Claude e.l.!');
 }
 
 async function tolkPlan(ev) {
