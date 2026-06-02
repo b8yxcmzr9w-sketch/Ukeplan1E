@@ -3496,14 +3496,19 @@ function skrivUtDelKort() {
   img{display:block;margin:0 auto 20px;border-radius:10px}
   .url{font-size:.85rem;color:#444;word-break:break-all;max-width:360px;margin:0 auto 10px;background:#f8f9fa;padding:9px 14px;border-radius:6px;font-family:monospace}
   p{color:#6c757d;font-size:.85rem;margin:8px 0 0}
-  @media print{body{padding:24px 16px}}
+  .btn-lukk{margin-top:28px;display:inline-block;padding:10px 24px;background:#2d6a4f;color:#fff;border:none;border-radius:6px;font-size:1rem;cursor:pointer}
+  @media print{body{padding:24px 16px}.btn-lukk{display:none}}
 </style></head><body>
 <h1>${skoleNavn}</h1>
 <h2>Ukeplan – ${klasse}</h2>
 <img src="${qrUrl}" width="280" height="280" alt="QR-kode">
 <div class="url">${url}</div>
 <p>Skann QR-koden eller skriv inn adressen i nettleseren.</p>
-<script>window.onload=function(){window.print()};<\/script>
+<button class="btn-lukk" onclick="window.close()">← Lukk</button>
+<script>
+  window.onload=function(){window.print();};
+  window.onafterprint=function(){window.close();};
+<\/script>
 </body></html>`);
   win.document.close();
 }
