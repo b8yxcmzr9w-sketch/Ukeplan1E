@@ -1843,7 +1843,8 @@ function visElevUke() {
   grid.className = 'uke-grid';
 
   DAGER.forEach(dag => {
-    const dagRader = rader.filter(r => r.dag === dag);
+    const dagRader = rader.filter(r => r.dag === dag)
+      .sort((a, b) => (a.fag||'').localeCompare(b.fag||'','nb') || (a.tid||'').localeCompare(b.tid||'') || (a.gruppe||'').localeCompare(b.gruppe||'','nb'));
     const dato     = ukeDagTilDato(S.uke, dag, S.ar);
     const ferieIDag = ferierForDato(dato, ferie);
 
@@ -1950,7 +1951,8 @@ function visUkeMedFilter(container, data, ferie, nptParti, yffGruppe, kanRediger
 function byggLaererDagKol(dag, rader, ferie, kanRedigere) {
   const dato      = ukeDagTilDato(S.uke, dag, S.ar);
   const ferieIDag = ferierForDato(dato, ferie);
-  const dagRader  = rader.filter(r => r.dag === dag);
+  const dagRader  = rader.filter(r => r.dag === dag)
+    .sort((a, b) => (a.fag||'').localeCompare(b.fag||'','nb') || (a.tid||'').localeCompare(b.tid||'') || (a.gruppe||'').localeCompare(b.gruppe||'','nb'));
 
   const kol = document.createElement('div');
   kol.className = 'laerer-dag-kol';
