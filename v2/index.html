@@ -229,6 +229,8 @@ header .spacer { flex: 1; }
 }
 .konfig-rad select { flex: 0 0 160px; }
 #klasse-npt-liste .konfig-rad > input { flex: 0 0 auto; width: 12ch; min-width: 0; }
+.parse-inp-feil { outline: 2px solid #dc3545 !important; background: #fff5f5 !important; border-radius: 2px; }
+.parse-dup-rad { background: #fffbea !important; }
 .dag-cbx-gruppe { display: flex; gap: 2px; flex-shrink: 0; }
 .dag-cbx-gruppe label {
   display: flex; align-items: center; gap: 3px; padding: 5px 7px;
@@ -1031,6 +1033,18 @@ header .spacer { flex: 1; }
   </div>
 </div>
 
+<!-- Søppeldunk -->
+<div id="modal-soppeldunk" class="modal-bg skjult">
+  <div class="modal modal-xl">
+    <h3>🗑 Søppeldunk</h3>
+    <p style="font-size:.85rem;color:var(--grå);margin-bottom:12px">Slettede økter beholdes i 21 dager. Lærer ser egne, kontaktlærer ser klassen, admin ser alt.</p>
+    <div id="soppel-liste" style="overflow-y:auto;max-height:60vh"></div>
+    <div class="modal-bunn">
+      <button class="btn btn-s" onclick="lukkModal('modal-soppeldunk')">Lukk</button>
+    </div>
+  </div>
+</div>
+
 <!-- Ny / rediger bruker -->
 <div id="modal-ny-bruker" class="modal-bg skjult">
   <div class="modal">
@@ -1138,6 +1152,7 @@ header .spacer { flex: 1; }
   <button class="bruker-meny-btn" id="btn-bytt-visning" onclick="byttVisning()"></button>
   <button class="bruker-meny-btn" onclick="visMinProfil();lukkBrukerMeny()">👤 Min profil</button>
   <button class="bruker-meny-btn" onclick="visModal('modal-passord');lukkBrukerMeny()">🔑 Bytt passord</button>
+  <button class="bruker-meny-btn" onclick="visSoppeldunk();lukkBrukerMeny()">🗑 Søppeldunk</button>
   <button class="bruker-meny-btn rød" onclick="loggUt()">↩ Logg ut</button>
 </div>
 
@@ -2455,9 +2470,11 @@ function visParseResultat(rader, fag, klasse, skoleruteRader = []) {
   });
   pOppdaterVelgAlle();
   el('parse-resultat').classList.remove('skjult');
+  markerDuplikater();
 }
 
 function parseRad(r, fag, klasse, feil, skoleruteRader = []) {
+  const dagNavn = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Alle'];
   const dato   = ukeDagTilDato(r.uke, r.dag, S.ar);
   const iFerie = dato ? erIFerie(dato, skoleruteRader) : false;
   const tr = document.createElement('tr');
@@ -2466,18 +2483,78 @@ function parseRad(r, fag, klasse, feil, skoleruteRader = []) {
   tr.dataset.fag    = fag;
   tr.dataset.klasse = klasse;
   if (iFerie) tr.title = 'Denne dagen er registrert i skoleruta – automatisk avkrysset av';
+  const ukeOk  = r.uke && !isNaN(parseInt(r.uke)) && parseInt(r.uke) >= 1 && parseInt(r.uke) <= 53;
+  const dagOk  = r.dag && dagNavn.includes(r.dag);
+  const aktOk  = !!r.aktivitet;
   tr.innerHTML = `
     <td style="text-align:center"><input type="checkbox" class="p-cbx" ${iFerie ? '' : 'checked'}></td>
-    <td><input value="${r.uke    || ''}" style="width:48px"></td>
-    <td><input value="${r.dag    || ''}"></td>
+    <td><input value="${r.uke    || ''}" style="width:48px" class="${ukeOk ? '' : 'parse-inp-feil'}" title="${ukeOk ? '' : 'Mangler gyldig ukenummer'}"></td>
+    <td><input value="${r.dag    || ''}" class="${dagOk ? '' : 'parse-inp-feil'}" title="${dagOk ? '' : 'Ugyldig ukedag'}"></td>
     <td><input value="${r.gruppe || 'Alle'}"></td>
     <td><input value="${(!r.laerer || r.laerer === '?') ? (S.bruker?.navn || '') : r.laerer}" list="laerer-datalist"></td>
-    <td><input value="${r.aktivitet   || ''}"></td>
+    <td><input value="${r.aktivitet   || ''}" class="${aktOk ? '' : 'parse-inp-feil'}" title="${aktOk ? '' : 'Aktivitet er påkrevd'}"></td>
     <td><input value="${r.oppmotested || ''}"></td>
     <td><input value="${r.info  || ''}"></td>
     <td><input value="${r.tid   || ''}" style="width:60px"></td>
-    <td><button class="btn btn-f btn-sm" onclick="this.closest('tr').remove();pOppdaterVelgAlle()">✕</button></td>`;
+    <td><button class="btn btn-f btn-sm" onclick="fjernParseRad(this)" title="Fjern rad (lagres i søppeldunk)">✕</button></td>`;
   return tr;
+}
+
+function markerDuplikater() {
+  const tbody = el('parse-tbody');
+  const rader = [...tbody.querySelectorAll('tr')];
+  const map = new Map();
+  rader.forEach(tr => {
+    const inp = tr.querySelectorAll('input:not([type=checkbox])');
+    const key = `${inp[0]?.value}|${inp[1]?.value}|${tr.dataset.klasse}|${tr.dataset.fag}|${inp[2]?.value}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(tr);
+  });
+  map.forEach(gruppe => {
+    if (gruppe.length < 2) return;
+    gruppe.forEach((tr, idx) => {
+      tr.classList.add('parse-dup-rad');
+      const lastTd = tr.querySelector('td:last-child');
+      const badge = document.createElement('span');
+      badge.style.cssText = 'font-size:.72rem;color:#92400e;background:#fef3c7;padding:1px 5px;border-radius:3px;margin-right:4px;vertical-align:middle';
+      badge.textContent = `⚠ dup ${idx + 1}/${gruppe.length}`;
+      badge.className = 'dup-badge';
+      lastTd.insertBefore(badge, lastTd.firstChild);
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-s btn-sm dup-behold';
+      btn.textContent = 'Behold';
+      btn.title = 'Behold denne – fjern de andre duplikatene';
+      btn.onclick = () => {
+        gruppe.forEach((r, i) => {
+          if (i === idx) return;
+          r.querySelector('.p-cbx').checked = false;
+          r.style.opacity = '.35';
+        });
+        gruppe.forEach(r => {
+          r.classList.remove('parse-dup-rad');
+          r.querySelectorAll('.dup-badge,.dup-behold').forEach(e => e.remove());
+        });
+        pOppdaterVelgAlle();
+      };
+      lastTd.insertBefore(btn, badge.nextSibling);
+    });
+  });
+}
+
+async function fjernParseRad(btn) {
+  const tr = btn.closest('tr');
+  const inp = tr.querySelectorAll('input:not([type=checkbox])');
+  const aktivitet = inp[4]?.value?.trim();
+  if (aktivitet && S.bruker) {
+    api('moveToTrash', { token: S.bruker.token, rader: [{
+      ar: S.ar, uke: parseInt(inp[0].value) || '', dag: inp[1].value,
+      klasse: tr.dataset.klasse, fag: tr.dataset.fag, gruppe: inp[2].value,
+      laerer: inp[3].value, aktivitet,
+      oppmotested: inp[5]?.value || '', info: inp[6]?.value || '', tid: inp[7]?.value || ''
+    }]});
+  }
+  tr.remove();
+  pOppdaterVelgAlle();
 }
 
 function visParseLaererForslag(ukjente) {
@@ -2596,6 +2673,20 @@ async function lagreParsetPlan() {
   if (!rader.length) { visMelding('Ingen rader valgt', 'info'); return; }
   const ugyldige = rader.filter(r => !r.aktivitet || !r.uke);
   if (ugyldige.length) { visMelding(`${ugyldige.length} rad(er) mangler aktivitet eller ukenummer.`, 'feil'); return; }
+  // Send deselected rows with content to trash
+  const fravalgte = [];
+  el('parse-tbody').querySelectorAll('tr').forEach(tr => {
+    if (tr.querySelector('.p-cbx')?.checked) return;
+    const inp = tr.querySelectorAll('input:not([type=checkbox])');
+    const aktivitet = inp[4]?.value?.trim();
+    if (aktivitet) fravalgte.push({
+      ar: S.ar, uke: parseInt(inp[0].value)||'', dag: inp[1].value,
+      klasse: tr.dataset.klasse, fag: tr.dataset.fag, gruppe: inp[2].value,
+      laerer: inp[3].value, aktivitet,
+      oppmotested: inp[5]?.value||'', info: inp[6]?.value||'', tid: inp[7]?.value||''
+    });
+  });
+  if (fravalgte.length) api('moveToTrash', { token: S.bruker.token, rader: fravalgte });
   visLagreOverlay(rader.length);
   let feil = 0;
   for (let i = 0; i < rader.length; i++) {
@@ -3319,6 +3410,51 @@ async function kjorSeedSemesterData() {
   } else {
     visMelding(res.error || 'Feil ved seeding', 'feil');
   }
+}
+
+// ── Søppeldunk ────────────────────────────────────────────────────────────────
+async function visSoppeldunk() {
+  el('soppel-liste').innerHTML = '<p style="color:var(--grå);padding:20px;text-align:center">Laster…</p>';
+  visModal('modal-soppeldunk');
+  const res = await api('getTrash', { token: S.bruker.token });
+  if (!res.ok) { el('soppel-liste').innerHTML = `<p class="feil-tekst" style="padding:12px">${res.error}</p>`; return; }
+  if (!res.rader.length) {
+    el('soppel-liste').innerHTML = '<p style="color:var(--grå);padding:20px;text-align:center">Søppeldunken er tom 🎉</p>';
+    return;
+  }
+  el('soppel-liste').innerHTML = res.rader.map(r => `
+    <div class="kort" style="margin-bottom:8px;padding:10px 14px" data-soppel-id="${r.id}" data-rad='${JSON.stringify(r).replace(/'/g,"&#39;")}'>
+      <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <div style="font-weight:600">${r.aktivitet || '–'}</div>
+          <div style="font-size:.82rem;color:var(--grå);margin-top:2px">
+            Uke ${r.uke}, ${r.dag} · ${r.klasse} · ${r.fag}${r.gruppe && r.gruppe !== 'Alle' ? ' · '+r.gruppe : ''}${r.laerer ? ' · '+r.laerer : ''}
+          </div>
+          <div style="font-size:.76rem;color:var(--grå);margin-top:2px">Slettet ${r.slettetDato} av ${r.slettetAv}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+          <button class="btn btn-p btn-sm" onclick="gjenopprettSoppel('${r.id}',this)">↩ Legg tilbake</button>
+          <button class="btn btn-s btn-sm" onclick="redigerFraSoppel(this)">✏️ Rediger</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function gjenopprettSoppel(id, btn) {
+  btn.disabled = true; btn.textContent = 'Legger tilbake…';
+  const res = await api('restoreTrash', { token: S.bruker.token, id });
+  if (!res.ok) { visMelding(res.error, 'feil'); btn.disabled = false; btn.textContent = '↩ Legg tilbake'; return; }
+  btn.closest('[data-soppel-id]').remove();
+  cacheReset(); lastUkedata();
+  visMelding('Økt gjenopprettet');
+  if (!el('soppel-liste').querySelector('[data-soppel-id]'))
+    el('soppel-liste').innerHTML = '<p style="color:var(--grå);padding:20px;text-align:center">Søppeldunken er tom 🎉</p>';
+}
+
+async function redigerFraSoppel(btn) {
+  const r = JSON.parse(btn.closest('[data-soppel-id]').dataset.rad);
+  lukkModal('modal-soppeldunk');
+  await redigerOkt({ ...r });
 }
 
 // ── iCal ──────────────────────────────────────────────────────────────────────

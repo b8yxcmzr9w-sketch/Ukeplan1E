@@ -64,7 +64,10 @@ function doPost(e) {
     seedTestData:       handleSeedTestData,
     seedSemesterData:   handleSeedSemesterData,
     migrateToV2:        handleMigrateToV2,
-    renameFag:          handleRenameFag
+    renameFag:          handleRenameFag,
+    getTrash:           handleGetTrash,
+    restoreTrash:       handleRestoreTrash,
+    moveToTrash:        handleMoveToTrash
   };
   const fn = handlers[d.action];
   if (!fn) return jsonResponse({ ok: false, error: 'Ukjent action: ' + d.action });
@@ -176,6 +179,7 @@ function handleDelete(d) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = getSheet('Plan');
     SpreadsheetApp.flush();
     const vals = sheet.getDataRange().getValues();
@@ -183,6 +187,7 @@ function handleDelete(d) {
       if (String(vals[i][0]) === String(d.id)) {
         if (!kanRedigereRow(caller, vals[i]))
           return jsonResponse({ ok: false, error: 'Ikke tilgang til å slette denne økten' });
+        flyttTilSoppeldunk(SpreadsheetApp.getActiveSpreadsheet(), vals[i], caller.navn);
         sheet.deleteRow(i + 1);
         SpreadsheetApp.flush();
         return jsonResponse({ ok: true });
@@ -1187,6 +1192,106 @@ function seedSemesterData() {
   SpreadsheetApp.flush();
   Logger.log('✅ SeedSemester: ' + rader.length + ' rader lagt inn');
   return rader.length;
+}
+
+// ── Søppeldunk ────────────────────────────────────────────────────────────────
+
+function getSoppeldunkSheet(ss) {
+  let sheet = ss.getSheetByName('Søppeldunk');
+  if (!sheet) {
+    sheet = ss.insertSheet('Søppeldunk');
+    sheet.appendRow(['ID','År','Uke','Dag','Klasse','Fag','Gruppe','Lærer',
+                     'Aktivitet','Oppmøtested','Info','Tid','SlettetAv','SlettetDato']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function ryddSoppeldunk(ss) {
+  const sheet = ss.getSheetByName('Søppeldunk');
+  if (!sheet) return;
+  const cutoff = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][0] && new Date(data[i][13]) < cutoff) sheet.deleteRow(i + 1);
+  }
+}
+
+function flyttTilSoppeldunk(ss, planRad, slettetAv) {
+  const dato = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  getSoppeldunkSheet(ss).appendRow([
+    planRad[0], planRad[1], planRad[2], planRad[3], planRad[4],
+    planRad[5], planRad[6], planRad[7], planRad[8], planRad[9],
+    planRad[10], planRad[11], slettetAv, dato
+  ]);
+}
+
+function handleGetTrash(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ryddSoppeldunk(ss);
+  const sheet = ss.getSheetByName('Søppeldunk');
+  if (!sheet) return jsonResponse({ ok: true, rader: [] });
+  let rader = sheet.getDataRange().getValues().slice(1)
+    .filter(r => r[0])
+    .map(r => ({
+      id: String(r[0]), ar: r[1], uke: r[2], dag: String(r[3]),
+      klasse: String(r[4]), fag: String(r[5]), gruppe: String(r[6]),
+      laerer: String(r[7]), aktivitet: String(r[8]),
+      oppmotested: String(r[9]), info: String(r[10]), tid: String(r[11]),
+      slettetAv: String(r[12]), slettetDato: String(r[13])
+    }));
+  if (caller.rolle === 'laerer') {
+    rader = rader.filter(r => r.slettetAv === caller.navn || r.laerer === caller.navn);
+  } else if (caller.rolle === 'kontaktlaerer') {
+    const mine = caller.klasser === 'Alle' ? null : caller.klasser.split(',').map(k => k.trim());
+    if (mine) rader = rader.filter(r => mine.includes(r.klasse));
+  }
+  return jsonResponse({ ok: true, rader: rader.reverse() });
+}
+
+function handleRestoreTrash(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const trash = ss.getSheetByName('Søppeldunk');
+  if (!trash) return jsonResponse({ ok: false, error: 'Ingen søppeldunk' });
+  const plan  = getSheet('Plan');
+  const tData = trash.getDataRange().getValues();
+  const tIdx  = tData.findIndex((r, i) => i > 0 && String(r[0]) === String(d.id));
+  if (tIdx < 0) return jsonResponse({ ok: false, error: 'Fant ikke økt i søppeldunk' });
+  const row = tData[tIdx];
+  const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+  const pData = plan.getDataRange().getValues();
+  const pIdx  = pData.findIndex((r, i) => i > 0 && String(r[0]) === String(row[0]));
+  const planRad = [row[0],row[1],row[2],row[3],row[4],row[5],row[6],row[7],row[8],row[9],row[10],row[11],now,caller.navn];
+  if (pIdx > 0) {
+    plan.getRange(pIdx + 1, 1, 1, 14).setValues([planRad]);
+  } else {
+    plan.appendRow(planRad);
+  }
+  trash.deleteRow(tIdx + 1);
+  return jsonResponse({ ok: true });
+}
+
+function handleMoveToTrash(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const dato = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const trash = getSoppeldunkSheet(ss);
+  const rader = Array.isArray(d.rader) ? d.rader : [d.rad].filter(Boolean);
+  rader.forEach(r => {
+    trash.appendRow([
+      r.id || Utilities.getUuid(),
+      r.ar||'', r.uke||'', r.dag||'', r.klasse||'',
+      r.fag||'', r.gruppe||'', r.laerer||'',
+      r.aktivitet||'', r.oppmotested||'', r.info||'', r.tid||'',
+      d.slettetAv || caller.navn, dato
+    ]);
+  });
+  return jsonResponse({ ok: true });
 }
 
 function listModels() {
