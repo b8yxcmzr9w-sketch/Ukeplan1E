@@ -65,7 +65,9 @@ function doPost(e) {
     seedSemesterData:   handleSeedSemesterData,
     migrateToV2:        handleMigrateToV2,
     renameFag:          handleRenameFag,
+    renameGruppe:       handleRenameGruppe,
     trashFag:           handleTrashFag,
+    trashGruppe:        handleTrashGruppe,
     getTrash:           handleGetTrash,
     restoreTrash:       handleRestoreTrash,
     moveToTrash:        handleMoveToTrash
@@ -1317,6 +1319,53 @@ function handleTrashFag(d) {
   for (let i = vals.length - 1; i >= 1; i--) {
     if (String(vals[i][5]) === fag) {
       try { flyttTilSoppeldunk(ss, vals[i], caller.navn); } catch(e) { Logger.log('trashFag feil: ' + e); }
+      plan.deleteRow(i + 1);
+      antall++;
+    }
+  }
+  return jsonResponse({ ok: true, antall });
+}
+
+function handleRenameGruppe(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  const fag    = (d.fag    || '').trim();
+  const gammelt = (d.gammelt || '').trim();
+  const nytt   = (d.nytt   || '').trim();
+  if (!fag || !gammelt || !nytt || gammelt === nytt) return jsonResponse({ ok: false, error: 'Ugyldige verdier' });
+  const klasse = d.klasse || null;
+  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const plan = ss.getSheetByName('Plan');
+  if (!plan || plan.getLastRow() < 2) return jsonResponse({ ok: true, antall: 0 });
+  const vals = plan.getDataRange().getValues();
+  let antall = 0;
+  // Plan cols: ID(0) År(1) Uke(2) Dag(3) Klasse(4) Fag(5) Gruppe(6)
+  for (let i = 1; i < vals.length; i++) {
+    if (String(vals[i][5]) === fag && String(vals[i][6]) === gammelt &&
+        (!klasse || String(vals[i][4]) === klasse)) {
+      plan.getRange(i + 1, 7).setValue(nytt);
+      antall++;
+    }
+  }
+  return jsonResponse({ ok: true, antall });
+}
+
+function handleTrashGruppe(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller || caller.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
+  const fag    = (d.fag    || '').trim();
+  const gruppe = (d.gruppe || '').trim();
+  if (!fag || !gruppe) return jsonResponse({ ok: false, error: 'Fag og gruppe er påkrevd' });
+  const klasse = d.klasse || null;
+  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const plan = ss.getSheetByName('Plan');
+  if (!plan || plan.getLastRow() < 2) return jsonResponse({ ok: true, antall: 0 });
+  const vals = plan.getDataRange().getValues();
+  let antall = 0;
+  for (let i = vals.length - 1; i >= 1; i--) {
+    if (String(vals[i][5]) === fag && String(vals[i][6]) === gruppe &&
+        (!klasse || String(vals[i][4]) === klasse)) {
+      try { flyttTilSoppeldunk(ss, vals[i], caller.navn); } catch(e) { Logger.log('trashGruppe feil: ' + e); }
       plan.deleteRow(i + 1);
       antall++;
     }
