@@ -2132,20 +2132,43 @@ async function redigerOkt(r) {
   visModal('modal-ny-okt');
 }
 
+function markerStandardDager(standardDager) {
+  const alle = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag'];
+  const kort = { Mandag:'Man', Tirsdag:'Tir', Onsdag:'Ons', Torsdag:'Tor', Fredag:'Fre' };
+  // Enkelt-modus: bygg select-options på nytt med ★ for standarddager
+  const sel = el('okt-dag');
+  const valgt = sel.value;
+  sel.innerHTML = alle.map(d =>
+    `<option value="${d}">${standardDager.includes(d) ? '★ ' : ''}${d}</option>`
+  ).join('');
+  if (valgt) sel.value = valgt;
+  // Bulk-modus: farge og * på avkrysningsboks-label
+  el('okt-dag-cbx').querySelectorAll('label').forEach(lbl => {
+    const cbx = lbl.querySelector('input[type=checkbox]');
+    if (!cbx) return;
+    const erStd = standardDager.includes(cbx.value);
+    lbl.style.fontWeight = erStd ? '700' : '';
+    lbl.style.color = erStd ? 'var(--grønn)' : '';
+    const txt = [...lbl.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+    if (txt) txt.textContent = ' ' + kort[cbx.value] + (erStd ? '*' : '');
+  });
+}
+
 function oppdaterOktGruppe() {
   const fag = el('okt-fag').value;
   fyllGruppeForFag(el('okt-gruppe'), fag);
   if (!_oktBulkModus && fag === 'YFF') el('okt-klasse').value = 'Alle';
   const klassFag = fagForKlasse(S.klasse).find(f => f.navn === fag);
   const dag = klassFag?.dag || S.konfig.fag?.find(f => f.navn === fag)?.dag || '';
-  if (dag) {
-    const dager = dag.split(',').map(d => d.trim()).filter(Boolean);
+  const dager = dag ? dag.split(',').map(d => d.trim()).filter(Boolean) : [];
+  markerStandardDager(dager);
+  if (dager.length) {
     if (_oktBulkModus) {
       el('okt-dag-cbx').querySelectorAll('input[type=checkbox]').forEach(cbx => {
         cbx.checked = dager.includes(cbx.value);
       });
     } else {
-      if (dager.length && !dager.includes(el('okt-dag').value)) el('okt-dag').value = dager[0];
+      if (!dager.includes(el('okt-dag').value)) el('okt-dag').value = dager[0];
     }
   }
 }
