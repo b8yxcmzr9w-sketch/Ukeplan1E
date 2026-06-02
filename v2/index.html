@@ -228,6 +228,7 @@ header .spacer { flex: 1; }
   border-radius: var(--radius); font-size: .9rem; min-width: 100px;
 }
 .konfig-rad select { flex: 0 0 160px; }
+#klasse-npt-liste .konfig-rad > input { flex: 0 0 auto; width: 12ch; min-width: 0; }
 .dag-cbx-gruppe { display: flex; gap: 2px; flex-shrink: 0; }
 .dag-cbx-gruppe label {
   display: flex; align-items: center; gap: 3px; padding: 5px 7px;
@@ -710,13 +711,13 @@ header .spacer { flex: 1; }
       </div>
       <div class="kort" style="margin-top:14px;margin-bottom:0">
         <div class="konfig-kort-hode" onclick="toggleKonfigKort(this)">
-          <h3>NPT-partier</h3><span class="konfig-pil">▼</span>
+          <h3>Produksjon - NPT</h3><span class="konfig-pil">▼</span>
         </div>
         <div class="konfig-kort-innhold">
           <div id="klasse-npt-liste"></div>
           <div style="display:flex;gap:8px;margin-top:10px">
             <button class="btn btn-s btn-sm" onclick="leggTilEnkel('klasse-npt-liste','Partinavn (f.eks. P3)')">+ Parti</button>
-            <button id="btn-lagre-klasse-npt" class="btn btn-p btn-sm" style="margin-left:auto" onclick="lagreKlasseKonfig()" disabled>Lagre</button>
+            <button id="btn-lagre-klasse-npt" class="btn btn-p btn-sm" onclick="lagreKlasseKonfig()" disabled>Lagre</button>
           </div>
         </div>
       </div>
