@@ -2263,8 +2263,9 @@ function oppdaterOktGruppe() {
 }
 
 function fyllGruppeForFag(sel, fag) {
+  const klasse = el('okt-klasse')?.value || S.klasse;
   sel.innerHTML = '<option value="Alle">Alle</option>';
-  if (fag === 'NPT') nptForKlasse(S.klasse).forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
+  if (fag === 'NPT') nptForKlasse(klasse).forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
   else if (fag === 'YFF') S.konfig.grupperYFF.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
 }
 
@@ -2302,21 +2303,22 @@ async function lagreOkt(btn) {
     const antall = sessions.length;
     if (antall > 1 && !confirm(`Legger inn ${antall} økt${antall !== 1 ? 'er' : ''}.\nFortsette?`)) return;
     if (btn) { btn.disabled = true; btn.textContent = `Lagrer ${antall}…`; }
-
-    const res = await api('bulkSave', { token: S.bruker.token, ar: S.ar, sessions, felles });
-    if (res.ok) {
-      lukkModal('modal-ny-okt');
-      cacheReset();
-      if (S.listeModus) lastListedata(); else lastUkedata();
-      visMelding(`${res.antall} økt${res.antall !== 1 ? 'er' : ''} lagt inn`);
-    } else {
+    try {
+      const res = await api('bulkSave', { token: S.bruker.token, ar: S.ar, sessions, felles });
+      if (res.ok) {
+        lukkModal('modal-ny-okt');
+        cacheReset();
+        if (S.listeModus) lastListedata(); else lastUkedata();
+        visMelding(`${res.antall} økt${res.antall !== 1 ? 'er' : ''} lagt inn`);
+      } else {
+        visInlineError('okt-feil', res.error);
+      }
+    } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; }
-      visInlineError('okt-feil', res.error);
     }
 
   } else {
     // ── Enkelt: rediger eller lagre én økt ────────────────────────────────
-    if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
     const id     = el('okt-id').value;
     const uke    = parseInt(el('okt-uke').value);
     const dag    = el('okt-dag').value;
@@ -2328,21 +2330,23 @@ async function lagreOkt(btn) {
       r.uke == uke && r.dag === dag && r.klasse === klasse &&
       r.fag === fag && r.gruppe === gruppe
     );
-    if (duplikat && !confirm(`Det finnes allerede en ${fag}-økt (${dag} uke ${uke}, ${klasse}).\nLagre likevel?`)) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; } return;
-    }
-    const res = await api('save', {
-      token: S.bruker.token, id: id || null, ar: S.ar,
-      uke, dag, klasse, fag, gruppe, ...felles
-    });
-    if (res.ok) {
-      lukkModal('modal-ny-okt');
-      if (klasse === 'Alle') cacheReset();
-      else cacheSlett(uke, S.ar, klasse);
-      if (S.listeModus) lastListedata(); else lastUkedata();
-    } else {
+    if (duplikat && !confirm(`Det finnes allerede en ${fag}-økt (${dag} uke ${uke}, ${klasse}).\nLagre likevel?`)) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
+    try {
+      const res = await api('save', {
+        token: S.bruker.token, id: id || null, ar: S.ar,
+        uke, dag, klasse, fag, gruppe, ...felles
+      });
+      if (res.ok) {
+        lukkModal('modal-ny-okt');
+        if (klasse === 'Alle') cacheReset();
+        else cacheSlett(uke, S.ar, klasse);
+        if (S.listeModus) lastListedata(); else lastUkedata();
+      } else {
+        visInlineError('okt-feil', res.error);
+      }
+    } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Lagre'; }
-      visInlineError('okt-feil', res.error);
     }
   }
 }
