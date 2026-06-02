@@ -687,6 +687,7 @@ header .spacer { flex: 1; }
         <button class="btn btn-s btn-sm" onclick="listeFjernVelgAlle()" style="flex-shrink:0">✕ Fjern</button>
         <select id="bulk-felt-sel" onchange="oppdaterBulkInput()" style="padding:5px 8px;border:1px solid var(--kant);border-radius:var(--radius);font-size:.87rem;flex-shrink:0">
           <option value="">Velg felt…</option>
+          <option value="fag">Fag</option>
           <option value="aktivitet">Aktivitet</option>
           <option value="oppmotested">Oppmøtested</option>
           <option value="laerer">Lærer</option>
@@ -694,6 +695,7 @@ header .spacer { flex: 1; }
           <option value="tid">Tid</option>
         </select>
         <input id="bulk-verdi-inp" type="text" placeholder="Ny verdi" style="padding:5px 8px;border:1px solid var(--kant);border-radius:var(--radius);font-size:.87rem;flex:1;min-width:100px">
+        <select id="bulk-verdi-sel" style="display:none;padding:5px 8px;border:1px solid var(--kant);border-radius:var(--radius);font-size:.87rem;flex:1;min-width:100px"></select>
         <button class="btn btn-p btn-sm" onclick="lagreBulkEndring()" style="flex-shrink:0">Bruk på valgte</button>
         <button class="btn btn-sm" onclick="bulkSlettValgte()" style="flex-shrink:0;background:#fee2e2;color:#dc3545;border:1px solid #fca5a5;padding:5px 10px;border-radius:var(--radius);cursor:pointer;font-size:.85rem">🗑 Slett valgte</button>
       </div>
@@ -3749,14 +3751,26 @@ function oppdaterBulkBar() {
 function oppdaterBulkInput() {
   const felt = el('bulk-felt-sel').value;
   const inp  = el('bulk-verdi-inp');
-  inp.type   = felt === 'tid' ? 'time' : 'text';
-  inp.value  = '';
-  inp.focus();
+  const sel  = el('bulk-verdi-sel');
+  if (felt === 'fag') {
+    inp.style.display = 'none';
+    sel.style.display = '';
+    sel.innerHTML = (S.konfig.fag || []).map(f => `<option value="${f.navn}">${f.navn}</option>`).join('');
+    sel.focus();
+  } else {
+    inp.style.display = '';
+    sel.style.display = 'none';
+    inp.type  = felt === 'tid' ? 'time' : 'text';
+    inp.value = '';
+    inp.focus();
+  }
 }
 
 async function lagreBulkEndring() {
   const felt  = el('bulk-felt-sel').value;
-  const verdi = el('bulk-verdi-inp').value.trim();
+  const verdi = felt === 'fag'
+    ? el('bulk-verdi-sel').value
+    : el('bulk-verdi-inp').value.trim();
   if (!felt) { visMelding('Velg felt som skal endres', 'info'); return; }
   const valgte = [...el('liste-tbody').querySelectorAll('.liste-cbx:checked')];
   if (!valgte.length) return;
