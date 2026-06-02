@@ -2798,7 +2798,7 @@ function lastKonfig() {
   });
 
   // Sorter og vis lister
-  visKonfigListe('konfig-fag-liste', [...k.fag].sort((a,b) => a.navn.localeCompare(b.navn,'nb')).map(f => f.navn), false, []);
+  visKonfigListe('konfig-fag-liste', [...k.fag].sort((a,b) => a.navn.localeCompare(b.navn,'nb')).map(f => f.navn), false, [], ['NPT','YFF']);
   visKonfigListe('konfig-yff-liste', [...k.grupperYFF].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   visKonfigListe('konfig-klasse-liste', [...(k.klasser || [])].sort((a,b) => a.localeCompare(b, 'nb')), false, []);
   fyllKlasseLenkerGrid();
@@ -2818,16 +2818,24 @@ function dagCheckboxer(valgte) {
   ).join('')}</div>`;
 }
 
-function visKonfigListe(id, items, medDag, fagData) {
+function visKonfigListe(id, items, medDag, fagData, låste = []) {
   el(id).innerHTML = '';
   items.forEach(item => {
+    const erLåst = låste.includes(item);
     const fagObj = medDag ? fagData.find(f => f.navn === item) : null;
     const dag    = fagObj ? fagObj.dag : '';
     const div = document.createElement('div');
     div.className = 'konfig-rad';
-    div.innerHTML = `<input type="text" value="${item}" data-original="${item}">
-      ${medDag ? dagCheckboxer(dag) : ''}
-      <button class="btn btn-f btn-sm" onclick="aktiverNarmesteLagreKnapp(this);this.parentNode.remove()">✕</button>`;
+    if (erLåst) {
+      div.innerHTML = `<input type="text" value="${item}" data-original="${item}" readonly
+        style="background:var(--grå-svak);color:var(--grå);cursor:default;flex:1">
+        ${medDag ? dagCheckboxer(dag) : ''}
+        <span title="Systemfag – kan ikke slettes eller omdøpes" style="padding:0 8px;color:var(--grå);font-size:1rem;line-height:1;align-self:center">🔒</span>`;
+    } else {
+      div.innerHTML = `<input type="text" value="${item}" data-original="${item}">
+        ${medDag ? dagCheckboxer(dag) : ''}
+        <button class="btn btn-f btn-sm" onclick="aktiverNarmesteLagreKnapp(this);this.parentNode.remove()">✕</button>`;
+    }
     el(id).appendChild(div);
   });
 }
