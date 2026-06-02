@@ -644,7 +644,6 @@ header .spacer { flex: 1; }
         <button class="btn btn-s btn-sm" onclick="gaTilNaaUke()">Nå</button>
         <div class="spacer" style="flex:1"></div>
         <button class="btn btn-p btn-sm" onclick="klargjorNyOkt()">+ Ny økt</button>
-        <button class="btn btn-s btn-sm skjult" id="btn-lim-inn" onclick="klargjorParse()">📋 Lim inn plan</button>
         <button class="btn btn-s btn-sm" onclick="byttListeModus(true)" title="Vis som liste">📋 Liste</button>
         <button class="btn btn-s btn-sm" onclick="visDelLenke()" title="Del elevlenke">🔗</button>
       </div>
@@ -655,6 +654,7 @@ header .spacer { flex: 1; }
         <button class="btn btn-s btn-sm" onclick="hoppTilNaaListe()">Nå</button>
         <div class="spacer" style="flex:1"></div>
         <button class="btn btn-p btn-sm" onclick="klargjorNyOkt()">+ Ny økt</button>
+        <button class="btn btn-s btn-sm" id="btn-lim-inn" onclick="klargjorParse()">📋 Lim inn plan</button>
         <button class="btn btn-s btn-sm" onclick="byttListeModus(false)" title="Vis som ukeplan">📅 Ukeplan</button>
       </div>
 
@@ -1366,20 +1366,14 @@ function visLaerer() {
   S.visning = 'laerer';
 
   if (S.bruker) {
-    el('btn-lim-inn').classList.remove('skjult');
     const rolle = S.bruker.rolle || 'laerer';
-    if (rolle === 'skoleadmin' || rolle === 'kontaktlaerer') {
-      el('admin-fane-bar').classList.remove('skjult');
-    }
-    // skjul skoleadmin-faner for kontaktlærer
+    el('admin-fane-bar').classList.remove('skjult'); // alle roller ser Brukere-fanen
     document.querySelectorAll('.fane-skoleadmin').forEach(btn => {
       btn.style.display = rolle === 'skoleadmin' ? '' : 'none';
     });
-    // klasse-fane: synlig for kontaktlærer og skoleadmin
     document.querySelectorAll('.fane-klasse').forEach(btn => {
       btn.style.display = (rolle === 'skoleadmin' || rolle === 'kontaktlaerer') ? '' : 'none';
     });
-    // ny-bruker-knapp kun for skoleadmin
     const btnNy = el('btn-ny-bruker');
     if (btnNy) btnNy.style.display = rolle === 'skoleadmin' ? '' : 'none';
   }
@@ -1930,7 +1924,19 @@ function skalVises(r, nptParti, yffGruppe) {
   return true;
 }
 
-function lagOktKort(r, kanRedigere) {
+function kanRedigereOkt(r) {
+  if (!S.bruker) return false;
+  const rolle = S.bruker.rolle || 'laerer';
+  if (rolle === 'skoleadmin') return true;
+  if (rolle === 'kontaktlaerer') {
+    const mine = S.bruker.klasser === 'Alle' ? null : S.bruker.klasser.split(',').map(k => k.trim());
+    return !mine || mine.includes(r.klasse) || r.klasse === 'Alle';
+  }
+  return r.laerer === S.bruker.navn;
+}
+
+function lagOktKort(r, erLaererVisning) {
+  const kanRedigere = erLaererVisning ? kanRedigereOkt(r) : false;
   const div = document.createElement('div');
   div.className = 'okt-kort';
   const gruppen = r.gruppe && r.gruppe !== 'Alle' ? `<span class="gruppe-badge">${r.gruppe}</span>` : '';
@@ -2239,6 +2245,8 @@ function klargjorParse() {
   const fagSel = el('parse-fag');
   fagSel.innerHTML = '';
   fagForKlasse(S.klasse).forEach(f => fagSel.innerHTML += `<option value="${f.navn}">${f.navn}</option>`);
+  const aktivtFag = el('liste-filter-fag')?.value;
+  if (aktivtFag) fagSel.value = aktivtFag;
   oppdaterParseGruppe();
 
   const parsKlasseSel = el('parse-klasse');
@@ -2361,7 +2369,7 @@ function parseRad(r, fag, klasse, feil, skoleruteRader = []) {
     <td><input value="${r.uke    || ''}" style="width:48px"></td>
     <td><input value="${r.dag    || ''}"></td>
     <td><input value="${r.gruppe || 'Alle'}"></td>
-    <td><input value="${r.laerer || ''}" list="laerer-datalist"></td>
+    <td><input value="${(!r.laerer || r.laerer === '?') ? (S.bruker?.navn || '') : r.laerer}" list="laerer-datalist"></td>
     <td><input value="${r.aktivitet   || ''}"></td>
     <td><input value="${r.oppmotested || ''}"></td>
     <td><input value="${r.info  || ''}"></td>
@@ -2842,12 +2850,26 @@ async function lastSkolerute() {
 async function lastBrukere() {
   const res = await api('getBrukere', { token: S.bruker.token, isAdmin: true });
   if (!res.ok) return;
-  const rolle      = S.bruker.rolle || 'laerer';
-  const kanRedigere = rolle === 'skoleadmin';
-  const rolleLabel  = { skoleadmin: 'Skoleadmin', kontaktlaerer: 'Kontaktlærer', laerer: 'Lærer' };
+  const rolle          = S.bruker.rolle || 'laerer';
+  const kanRedigere    = rolle === 'skoleadmin';
+  const kanResetPassord = rolle === 'kontaktlaerer';
+  const rolleLabel     = { skoleadmin: 'Skoleadmin', kontaktlaerer: 'Kontaktlærer', laerer: 'Lærer' };
+
+  let brukere = res.brukere;
+  if (rolle !== 'skoleadmin') {
+    brukere = brukere.filter(b => {
+      const bKlasser = b.klasser === 'Alle' ? [] : (b.klasser || '').split(',').map(k => k.trim());
+      return bKlasser.includes(S.klasse);
+    });
+  }
+
   const liste = el('bruker-liste');
   liste.innerHTML = '';
-  res.brukere.forEach(b => {
+  if (!brukere.length) {
+    liste.innerHTML = '<p style="color:var(--grå);font-size:.9rem">Ingen brukere registrert for denne klassen.</p>';
+    return;
+  }
+  brukere.forEach(b => {
     const bRolle = b.rolle || (b.erAdmin ? 'skoleadmin' : 'laerer');
     const div = document.createElement('div');
     div.className = 'bruker-rad';
@@ -2856,10 +2878,18 @@ async function lastBrukere() {
         <div class="navn">${b.navn} <span class="admin-badge">${rolleLabel[bRolle] || bRolle}</span></div>
         <div class="detalj">Klasser: ${b.klasser || 'Alle'} · Fag: ${b.fag || 'Alle'}</div>
       </div>
+      ${kanResetPassord ? `<button class="btn btn-s btn-sm" onclick="nullstillPassord('${b.navn}')">Nullstill passord</button>` : ''}
       ${kanRedigere ? `<button class="btn btn-s btn-sm" onclick='redigerBruker(${JSON.stringify(b)})'>Rediger</button>
       <button class="btn btn-f btn-sm" onclick="slettBruker('${b.navn}')">Slett</button>` : ''}`;
     liste.appendChild(div);
   });
+}
+
+async function nullstillPassord(navn) {
+  if (!confirm(`Nullstille passord for ${navn}?\nNytt passord blir brukernavnet. Brukeren må bytte passord ved neste innlogging.`)) return;
+  const res = await api('resetBrukerPassord', { token: S.bruker.token, brukerNavn: navn });
+  if (res.ok) visMelding(`Passord nullstilt for ${navn}`);
+  else visMelding(res.error, 'feil');
 }
 
 function cbxLabel(value, tekst, checked) {
@@ -3320,6 +3350,10 @@ function visKontekstMeny(e, r) {
   e.preventDefault();
   _kmRad = r;
   el('km-info-knapp').style.display = r.info ? '' : 'none';
+  const kanRed = kanRedigereOkt(r);
+  el('km-rediger-knapp').style.display = kanRed ? '' : 'none';
+  el('km-slett-knapp').style.display   = kanRed ? '' : 'none';
+  el('km-slett-skille').style.display  = kanRed ? '' : 'none';
   const meny = el('liste-km');
   meny.style.display = 'block';
   const x = Math.min(e.clientX, window.innerWidth - 175);
@@ -3459,11 +3493,11 @@ init();
 </script>
 <!-- Høyreklikk-meny for listevisning -->
 <div id="liste-km">
-  <button class="km-knapp" onclick="kmRediger()">✏️ Rediger</button>
+  <button class="km-knapp" id="km-rediger-knapp" onclick="kmRediger()">✏️ Rediger</button>
   <button class="km-knapp" onclick="kmKopier()">📋 Kopier</button>
   <button class="km-knapp" id="km-info-knapp" onclick="kmInfo()">ℹ️ Vis info</button>
-  <hr class="km-skille">
-  <button class="km-knapp km-slett" onclick="kmSlett()">🗑️ Slett</button>
+  <hr class="km-skille" id="km-slett-skille">
+  <button class="km-knapp km-slett" id="km-slett-knapp" onclick="kmSlett()">🗑️ Slett</button>
 </div>
 
 <footer></footer>

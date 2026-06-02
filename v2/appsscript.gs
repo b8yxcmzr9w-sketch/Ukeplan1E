@@ -55,7 +55,8 @@ function doPost(e) {
     getBrukere:     handleGetBrukere,
     saveBruker:     handleSaveBruker,
     deleteBruker:   handleDeleteBruker,
-    changePassord:  handleChangePassord,
+    changePassord:        handleChangePassord,
+    resetBrukerPassord:   handleResetBrukerPassord,
     genererSitater: handleGenererSitater,
     getBackup:          handleGetBackup,
     slettAlt:           handleSlettAlt,
@@ -92,8 +93,20 @@ function handleLogin(d) {
   });
 }
 
+function kanRedigereRow(caller, row) {
+  if (!caller) return false;
+  if (caller.rolle === 'skoleadmin') return true;
+  if (caller.rolle === 'kontaktlaerer') {
+    const klasse = String(row[4]);
+    const mine = caller.klasser === 'Alle' ? null : caller.klasser.split(',').map(k => k.trim());
+    return !mine || mine.includes(klasse) || klasse === 'Alle';
+  }
+  return String(row[7]) === caller.navn; // laerer: only own sessions
+}
+
 function handleSave(d) {
-  if (!verifyToken(d.token)) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const caller = getUserByToken(d.token);
+  if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -104,6 +117,8 @@ function handleSave(d) {
       const vals = sheet.getDataRange().getValues();
       for (let i = 1; i < vals.length; i++) {
         if (String(vals[i][0]) === String(d.id)) {
+          if (!kanRedigereRow(caller, vals[i]))
+            return jsonResponse({ ok: false, error: 'Ikke tilgang til å redigere denne økten' });
           sheet.getRange(i + 1, 1, 1, 14).setValues([[
             d.id, d.ar, d.uke, d.dag, d.klasse, d.fag, d.gruppe,
             d.laerer, d.aktivitet, d.oppmotested, d.info, d.tid || '', now, d.lagretAv || ''
@@ -156,7 +171,8 @@ function handleBulkSave(d) {
 }
 
 function handleDelete(d) {
-  if (!verifyToken(d.token)) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const caller = getUserByToken(d.token);
+  if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -165,6 +181,8 @@ function handleDelete(d) {
     const vals = sheet.getDataRange().getValues();
     for (let i = 1; i < vals.length; i++) {
       if (String(vals[i][0]) === String(d.id)) {
+        if (!kanRedigereRow(caller, vals[i]))
+          return jsonResponse({ ok: false, error: 'Ikke tilgang til å slette denne økten' });
         sheet.deleteRow(i + 1);
         SpreadsheetApp.flush();
         return jsonResponse({ ok: true });
@@ -464,6 +482,34 @@ function handleChangePassord(d) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function handleResetBrukerPassord(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller || (caller.rolle !== 'skoleadmin' && caller.rolle !== 'kontaktlaerer'))
+    return jsonResponse({ ok: false, error: 'Kun kontaktlærer eller skoleadmin' });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = getSheet('Brukere');
+    SpreadsheetApp.flush();
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === d.brukerNavn) {
+        if (caller.rolle === 'kontaktlaerer') {
+          const bKlasser = rows[i][3] === 'Alle' ? [] : String(rows[i][3] || '').split(',').map(k => k.trim());
+          const mine = caller.klasser === 'Alle' ? null : caller.klasser.split(',').map(k => k.trim());
+          if (mine && !bKlasser.some(k => mine.includes(k)))
+            return jsonResponse({ ok: false, error: 'Ikke tilgang til denne brukeren' });
+        }
+        sheet.getRange(i + 1, 2).setValue(hashPassword(d.brukerNavn));
+        sheet.getRange(i + 1, 5).setValue(true);
+        SpreadsheetApp.flush();
+        return jsonResponse({ ok: true });
+      }
+    }
+    return jsonResponse({ ok: false, error: 'Bruker ikke funnet' });
+  } finally { lock.releaseLock(); }
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
