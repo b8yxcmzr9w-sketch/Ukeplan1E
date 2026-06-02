@@ -1241,7 +1241,15 @@ async function apiGet(params = {}) {
   lastStart();
   try {
     const resp = await fetch(SCRIPT_URL + '?' + new URLSearchParams(params));
-    return resp.json();
+    const tekst = await resp.text();
+    try {
+      return JSON.parse(tekst);
+    } catch {
+      console.error('apiGet ikke-JSON svar:', tekst.slice(0, 300));
+      return { ok: false, error: 'Serverfeil fra backend' };
+    }
+  } catch (e) {
+    return { ok: false, error: e.message };
   } finally {
     lastSlutt();
   }
@@ -1653,23 +1661,29 @@ async function oppdaterSitater() {
 
 async function lastUkedata() {
   const klasse = S.klasse;
+  const uke = S.uke, ar = S.ar;
   if (!klasse) {
     const innholdId = S.visning === 'elev' ? 'uke-innhold' : 'laerer-uke-innhold';
     el(innholdId).innerHTML = '<p class="tom-uke">Klassenavn er ikke satt i Innstillinger.</p>';
     return;
   }
-  const key = _cacheKey(S.uke, S.ar, klasse);
+  const key = _cacheKey(uke, ar, klasse);
   if (ukeCache.has(key)) {
     const c = ukeCache.get(key);
+    if (klasse !== S.klasse || uke !== S.uke || ar !== S.ar) return;
     S.ukedata = c.rows; S.ferie = c.ferie;
   } else {
     visOverlay();
     try {
-      const res = await apiGet({ uke: S.uke, ar: S.ar, klasse });
+      const res = await apiGet({ uke, ar, klasse });
+      if (klasse !== S.klasse || uke !== S.uke || ar !== S.ar) return;
       if (res.ok) {
         S.ukedata = res.rows || [];
         S.ferie = (res.ferie || []).map(normFerie1);
         ukeCache.set(key, { rows: S.ukedata, ferie: S.ferie });
+      } else {
+        S.ukedata = [];
+        S.ferie = [];
       }
     } finally {
       skjulOverlay();
