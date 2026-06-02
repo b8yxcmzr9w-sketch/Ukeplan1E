@@ -182,7 +182,7 @@ function handleDelete(d) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = SpreadsheetApp.openById(SS_ID);
     const sheet = getSheet('Plan');
     SpreadsheetApp.flush();
     const vals = sheet.getDataRange().getValues();
@@ -1241,7 +1241,7 @@ function flyttTilSoppeldunk(ss, planRad, slettetAv) {
 function handleGetTrash(d) {
   const caller = getUserByToken(d.token);
   if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(SS_ID);
   ryddSoppeldunk(ss);
   const sheet = ss.getSheetByName('Søppeldunk');
   if (!sheet) return jsonResponse({ ok: true, rader: [] });
@@ -1266,7 +1266,7 @@ function handleGetTrash(d) {
 function handleRestoreTrash(d) {
   const caller = getUserByToken(d.token);
   if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const ss    = SpreadsheetApp.openById(SS_ID);
   const trash = ss.getSheetByName('Søppeldunk');
   if (!trash) return jsonResponse({ ok: false, error: 'Ingen søppeldunk' });
   const plan  = getSheet('Plan');
@@ -1290,7 +1290,7 @@ function handleRestoreTrash(d) {
 function handleMoveToTrash(d) {
   const caller = getUserByToken(d.token);
   if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
-  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const ss   = SpreadsheetApp.openById(SS_ID);
   const dato = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   const trash = getSoppeldunkSheet(ss);
   const rader = Array.isArray(d.rader) ? d.rader : [d.rad].filter(Boolean);
@@ -1311,7 +1311,7 @@ function handleTrashFag(d) {
   if (!caller || caller.rolle !== 'skoleadmin') return jsonResponse({ ok: false, error: 'Kun skoleadmin' });
   const fag = (d.fag || '').trim();
   if (!fag) return jsonResponse({ ok: false, error: 'Fagnavn mangler' });
-  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const ss   = SpreadsheetApp.openById(SS_ID);
   const plan = ss.getSheetByName('Plan');
   if (!plan || plan.getLastRow() < 2) return jsonResponse({ ok: true, antall: 0 });
   const vals = plan.getDataRange().getValues();
@@ -1334,7 +1334,7 @@ function handleRenameGruppe(d) {
   const nytt   = (d.nytt   || '').trim();
   if (!fag || !gammelt || !nytt || gammelt === nytt) return jsonResponse({ ok: false, error: 'Ugyldige verdier' });
   const klasse = d.klasse || null;
-  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const ss   = SpreadsheetApp.openById(SS_ID);
   const plan = ss.getSheetByName('Plan');
   if (!plan || plan.getLastRow() < 2) return jsonResponse({ ok: true, antall: 0 });
   const vals = plan.getDataRange().getValues();
@@ -1357,7 +1357,7 @@ function handleTrashGruppe(d) {
   const gruppe = (d.gruppe || '').trim();
   if (!fag || !gruppe) return jsonResponse({ ok: false, error: 'Fag og gruppe er påkrevd' });
   const klasse = d.klasse || null;
-  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const ss   = SpreadsheetApp.openById(SS_ID);
   const plan = ss.getSheetByName('Plan');
   if (!plan || plan.getLastRow() < 2) return jsonResponse({ ok: true, antall: 0 });
   const vals = plan.getDataRange().getValues();
