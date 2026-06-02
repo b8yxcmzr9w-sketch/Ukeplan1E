@@ -678,6 +678,23 @@ header .spacer { flex: 1; }
         </select>
       </div>
 
+      <!-- Bulk-redigering (listemodus) -->
+      <div id="liste-bulk-bar" class="skjult" style="background:var(--grønn-svak);border:1px solid var(--grønn-lys);border-radius:var(--radius);padding:8px 10px;margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span id="bulk-antall" style="font-weight:700;font-size:.9rem;color:var(--grønn);white-space:nowrap;flex-shrink:0"></span>
+        <button class="btn btn-s btn-sm" onclick="listeFjernVelgAlle()" style="flex-shrink:0">✕ Fjern</button>
+        <select id="bulk-felt-sel" onchange="oppdaterBulkInput()" style="padding:5px 8px;border:1px solid var(--kant);border-radius:var(--radius);font-size:.87rem;flex-shrink:0">
+          <option value="">Velg felt…</option>
+          <option value="aktivitet">Aktivitet</option>
+          <option value="oppmotested">Oppmøtested</option>
+          <option value="laerer">Lærer</option>
+          <option value="info">Info</option>
+          <option value="tid">Tid</option>
+        </select>
+        <input id="bulk-verdi-inp" type="text" placeholder="Ny verdi" style="padding:5px 8px;border:1px solid var(--kant);border-radius:var(--radius);font-size:.87rem;flex:1;min-width:100px">
+        <button class="btn btn-p btn-sm" onclick="lagreBulkEndring()" style="flex-shrink:0">Bruk på valgte</button>
+        <button class="btn btn-sm" onclick="bulkSlettValgte()" style="flex-shrink:0;background:#fee2e2;color:#dc3545;border:1px solid #fca5a5;padding:5px 10px;border-radius:var(--radius);cursor:pointer;font-size:.85rem">🗑 Slett valgte</button>
+      </div>
+
     </div><!-- /laerer-sticky-zone -->
 
     <!-- Ukesinnhold -->
@@ -687,6 +704,7 @@ header .spacer { flex: 1; }
     <div id="laerer-liste-innhold" class="skjult">
       <table class="liste-tabell">
         <thead><tr>
+          <th style="width:32px"><input type="checkbox" id="liste-velg-alle" onchange="listeVelgAlle(this)" title="Velg alle"></th>
           <th>Uke</th><th>Dag</th><th>Fag</th><th class="col-gruppe">Gruppe</th>
           <th class="col-tid">Tid</th><th>Oppmøtested</th><th>Lærer</th><th>Aktivitet</th><th></th>
         </tr></thead>
@@ -3571,10 +3589,11 @@ function oppdaterListeVisning() {
   const filtrertFag    = el('liste-filter-fag').value;
   const filtrertLaerer = el('liste-filter-laerer').value;
   const dagOrden = { Mandag:0, Tirsdag:1, Onsdag:2, Torsdag:3, Fredag:4 };
-  const COLS = 9;
+  const COLS = 10;
 
   const tbody = el('liste-tbody');
   tbody.innerHTML = '';
+  oppdaterBulkBar();
 
   const skoleAr = S.listeSkoleAr || skoleArFraUkeAr(S.uke, S.ar);
   const ukePar = [];
@@ -3621,11 +3640,14 @@ function oppdaterListeVisning() {
     });
     sorterte.forEach(r => {
       const tr = document.createElement('tr');
+      const kanEdit = kanRedigereOkt(r);
       const gruppen = r.gruppe && r.gruppe !== 'Alle' ? `<span class="gruppe-badge">${r.gruppe}</span>` : '';
       const infoIkon = r.info ? `<span style="opacity:.6;font-size:.9rem" title="${r.info.replace(/"/g,'&quot;')}">ℹ</span>` : '';
       const dato = ukeDagTilDato(r.uke, r.dag, parseInt(r.ar) || ar);
       const datoStr = dato ? String(dato.getDate()).padStart(2,'0') + '.' + String(dato.getMonth()+1).padStart(2,'0') : '';
+      tr.dataset.rad = JSON.stringify(r);
       tr.innerHTML = `
+        <td style="text-align:center">${kanEdit ? `<input type="checkbox" class="liste-cbx" onchange="oppdaterBulkBar()">` : ''}</td>
         <td>${r.uke}</td>
         <td>${r.dag}${datoStr ? `<br><span style="font-size:.78rem;color:var(--grå)">${datoStr}</span>` : ''}</td>
         <td><span class="fag-badge">${r.fag}</span></td>
@@ -3649,6 +3671,72 @@ function oppdaterListeVisning() {
     tr.innerHTML = `<td colspan="${COLS}" style="text-align:center;color:var(--grå);padding:30px">Ingen registrerte aktiviteter i denne perioden.</td>`;
     tbody.appendChild(tr);
   }
+}
+
+// ── Listevisning: bulk-redigering ────────────────────────────────────────────
+function listeVelgAlle(cb) {
+  el('liste-tbody').querySelectorAll('.liste-cbx').forEach(c => { c.checked = cb.checked; });
+  oppdaterBulkBar();
+}
+
+function listeFjernVelgAlle() {
+  el('liste-tbody').querySelectorAll('.liste-cbx').forEach(c => { c.checked = false; });
+  const alle = el('liste-velg-alle');
+  if (alle) alle.checked = false;
+  oppdaterBulkBar();
+}
+
+function oppdaterBulkBar() {
+  const antall = el('liste-tbody').querySelectorAll('.liste-cbx:checked').length;
+  const bar = el('liste-bulk-bar');
+  if (!bar) return;
+  bar.classList.toggle('skjult', antall === 0);
+  if (antall) el('bulk-antall').textContent = `${antall} valgt`;
+}
+
+function oppdaterBulkInput() {
+  const felt = el('bulk-felt-sel').value;
+  const inp  = el('bulk-verdi-inp');
+  inp.type   = felt === 'tid' ? 'time' : 'text';
+  inp.value  = '';
+  inp.focus();
+}
+
+async function lagreBulkEndring() {
+  const felt  = el('bulk-felt-sel').value;
+  const verdi = el('bulk-verdi-inp').value.trim();
+  if (!felt) { visMelding('Velg felt som skal endres', 'info'); return; }
+  const valgte = [...el('liste-tbody').querySelectorAll('.liste-cbx:checked')];
+  if (!valgte.length) return;
+  const rader = valgte.map(cbx => JSON.parse(cbx.closest('tr').dataset.rad));
+  visLagreOverlay(rader.length);
+  let feil = 0;
+  for (let i = 0; i < rader.length; i++) {
+    const r = { ...rader[i], [felt]: verdi };
+    const res = await api('save', { token: S.bruker.token, lagretAv: S.bruker?.navn || '', ...r });
+    if (!res.ok) feil++;
+    oppdaterLagreOverlay(i + 1, rader.length);
+  }
+  skjulLagreOverlay();
+  if (feil) visMelding(`${feil} rader feilet`, 'feil');
+  else { visMelding(`${rader.length} økt(er) oppdatert`); listeFjernVelgAlle(); cacheReset(); lastListedata(); }
+}
+
+async function bulkSlettValgte() {
+  const valgte = [...el('liste-tbody').querySelectorAll('.liste-cbx:checked')];
+  if (!valgte.length) return;
+  if (!confirm(`Slette ${valgte.length} valgt(e) økt(er)? De havner i søppeldunken.`)) return;
+  const rader = valgte.map(cbx => JSON.parse(cbx.closest('tr').dataset.rad));
+  visLagreOverlay(rader.length);
+  let feil = 0;
+  for (let i = 0; i < rader.length; i++) {
+    const res = await api('delete', { token: S.bruker.token, id: rader[i].id });
+    if (!res.ok) feil++;
+    oppdaterLagreOverlay(i + 1, rader.length);
+  }
+  skjulLagreOverlay();
+  if (feil) visMelding(`${feil} slettinger feilet`, 'feil');
+  else { visMelding(`${rader.length} økt(er) slettet`); listeFjernVelgAlle(); cacheReset(); lastListedata(); }
 }
 
 // ── Listevisning: kontekstmeny ────────────────────────────────────────────────
