@@ -1133,8 +1133,9 @@ const S = {
   ukedata:      [],
   ferie:        [],
   listeModus:   false,  // false = ukesvisning, true = listevisning
-  listedata:    [],     // alle rows for 6-uker-vinduet
-  listeFerie:   [],     // alle ferieperioder for vinduet
+  listedata:    [],     // alle rows for hele skoleåret
+  listeFerie:   [],     // alle ferieperioder for skoleåret
+  listeSkoleAr: null,   // startår for skoleåret i listevisning (høst-halvårets år)
   listeFraUke:  0,      // første uke i listen
   bufferFra:    null,   // {uke, ar} – start av cachet buffer
   bufferTil:    null,   // {uke, ar} – slutt av cachet buffer
@@ -1293,6 +1294,10 @@ function startUkeAr() {
 }
 
 function startUke() { return startUkeAr().uke; }
+
+function skoleArFraUkeAr(uke, ar) {
+  return uke >= 33 ? ar : ar - 1;
+}
 
 function bytteUke(delta) {
   const ny = nesteUkeAr(S.uke, S.ar, delta);
@@ -3182,9 +3187,20 @@ function byttListeModus(tilListe) {
 }
 
 async function lastListedata() {
-  el('liste-uke-label').textContent = `${S.ar}`;
-  const res = await apiGet({ fraUke: 1, tilUke: 35, ar: S.ar, klasse: S.klasse });
-  if (res.ok) { S.listedata = res.rows || []; S.listeFerie = res.ferie || []; }
+  const skoleAr = skoleArFraUkeAr(S.uke, S.ar);
+  S.listeSkoleAr = skoleAr;
+  el('liste-uke-label').textContent = `${skoleAr}/${String(skoleAr + 1).slice(-2)}`;
+  const [hst, vaa] = await Promise.all([
+    apiGet({ fraUke: 33, tilUke: 52, ar: skoleAr,     klasse: S.klasse }),
+    apiGet({ fraUke: 1,  tilUke: 25, ar: skoleAr + 1, klasse: S.klasse })
+  ]);
+  S.listedata = [...(hst.ok ? hst.rows || [] : []), ...(vaa.ok ? vaa.rows || [] : [])];
+  const allFerie = [...(hst.ok ? hst.ferie || [] : []), ...(vaa.ok ? vaa.ferie || [] : [])];
+  S.listeFerie = Object.values(allFerie.reduce((m, f) => {
+    const k = (f.fraDato||'') + '/' + (f.tilDato||'') + '/' + (f.navn||'');
+    if (!m[k]) m[k] = f;
+    return m;
+  }, {}));
   fyllListeFilter();
   oppdaterListeVisning();
   requestAnimationFrame(settStickyTopp);
@@ -3192,8 +3208,8 @@ async function lastListedata() {
 }
 
 function hoppTilNaaListe() {
-  const naaUke = startUke();
-  const hode = document.querySelector(`.liste-uke-hode[data-uke="${naaUke}"]`);
+  const { uke, ar } = startUkeAr();
+  const hode = document.querySelector(`.liste-uke-hode[data-uke="${uke}"][data-ar="${ar}"]`);
   if (hode) hode.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -3222,8 +3238,13 @@ function oppdaterListeVisning() {
   const tbody = el('liste-tbody');
   tbody.innerHTML = '';
 
-  for (let uke = 1; uke <= 35; uke++) {
-    const jan4 = new Date(S.ar, 0, 4);
+  const skoleAr = S.listeSkoleAr || skoleArFraUkeAr(S.uke, S.ar);
+  const ukePar = [];
+  for (let u = 33; u <= maxUkerIAr(skoleAr); u++) ukePar.push({ ar: skoleAr, uke: u });
+  for (let u = 1;  u <= 25; u++)                  ukePar.push({ ar: skoleAr + 1, uke: u });
+
+  for (const { ar, uke } of ukePar) {
+    const jan4 = new Date(ar, 0, 4);
     const man = new Date(jan4);
     man.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (uke - 1) * 7);
     const son = new Date(man); son.setDate(man.getDate() + 6);
@@ -3235,7 +3256,7 @@ function oppdaterListeVisning() {
     });
 
     const ukeRader = S.listedata
-      .filter(r => parseInt(r.uke) === uke)
+      .filter(r => parseInt(r.uke) === uke && parseInt(r.ar) === ar)
       .filter(r => !filtrertFag    || r.fag    === filtrertFag)
       .filter(r => !filtrertLaerer || r.laerer === filtrertLaerer);
 
@@ -3244,6 +3265,7 @@ function oppdaterListeVisning() {
     const ukeHode = document.createElement('tr');
     ukeHode.className = 'liste-uke-hode';
     ukeHode.dataset.uke = uke;
+    ukeHode.dataset.ar = ar;
     ukeHode.innerHTML = `<td colspan="${COLS}">Uke ${uke}</td>`;
     tbody.appendChild(ukeHode);
 
@@ -3263,7 +3285,7 @@ function oppdaterListeVisning() {
       const tr = document.createElement('tr');
       const gruppen = r.gruppe && r.gruppe !== 'Alle' ? `<span class="gruppe-badge">${r.gruppe}</span>` : '';
       const infoIkon = r.info ? `<span style="opacity:.6;font-size:.9rem" title="${r.info.replace(/"/g,'&quot;')}">ℹ</span>` : '';
-      const dato = ukeDagTilDato(r.uke, r.dag, S.ar);
+      const dato = ukeDagTilDato(r.uke, r.dag, parseInt(r.ar) || ar);
       const datoStr = dato ? String(dato.getDate()).padStart(2,'0') + '.' + String(dato.getMonth()+1).padStart(2,'0') : '';
       tr.innerHTML = `
         <td>${r.uke}</td>
