@@ -1088,11 +1088,11 @@ header .spacer { flex: 1; }
     </div>
     <div class="felt">
       <label>Klasser</label>
-      <div id="profil-klasse-cbx" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;margin-top:6px"></div>
+      <div id="profil-klasse-cbx" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 12px;margin-top:6px"></div>
     </div>
     <div class="felt">
       <label>Fag</label>
-      <div id="profil-fag-cbx" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-top:6px"></div>
+      <div id="profil-fag-cbx" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 12px;margin-top:6px"></div>
     </div>
     <div id="profil-yff-felt" class="felt skjult"><label>YFF gruppe</label>
       <select id="profil-yff-gruppe">
@@ -3019,17 +3019,16 @@ function visMinProfil() {
   const alleKlasser = S.konfig.klasser || [];
   const valgtKlasser = b.klasser === 'Alle' ? alleKlasser : (b.klasser || '').split(',').map(k => k.trim()).filter(Boolean);
   el('profil-klasse-cbx').innerHTML = alleKlasser.map(k =>
-    `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;min-width:0;overflow:hidden">
-      <input type="checkbox" value="${k}" ${valgtKlasser.includes(k) ? 'checked' : ''} style="flex-shrink:0"> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k}</span>
-    </label>`
+    cbxLabel(k, k, valgtKlasser.includes(k))
   ).join('');
 
   // Fag – avkrysningsbokser
   const valgteFag = (b.fag && b.fag !== 'Alle') ? b.fag.split(',').map(s => s.trim()) : [];
   const fag = alleFagISystem();
   el('profil-fag-cbx').innerHTML = fag.map(f =>
-    `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;min-width:0;overflow:hidden">
-      <input type="checkbox" value="${f}" ${valgteFag.includes(f) ? 'checked' : ''} onchange="oppdaterProfilYff()" style="flex-shrink:0"> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f}</span>
+    `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:.92rem;padding:2px 0">
+      <input type="checkbox" value="${f}" ${valgteFag.includes(f) ? 'checked' : ''} onchange="oppdaterProfilYff()" style="width:17px;height:17px;flex-shrink:0">
+      <span>${f}</span>
     </label>`
   ).join('');
 
