@@ -3435,7 +3435,13 @@ async function visSoppeldunk() {
   el('soppel-liste').innerHTML = '<p style="color:var(--grå);padding:20px;text-align:center">Laster…</p>';
   visModal('modal-soppeldunk');
   const res = await api('getTrash', { token: S.bruker.token });
-  if (!res.ok) { el('soppel-liste').innerHTML = `<p class="feil-tekst" style="padding:12px">${res.error}</p>`; return; }
+  if (!res.ok) {
+    const tekst = res.error?.includes('Ukjent action')
+      ? 'Søppeldunk krever oppdatert backend. Kopier appsscript.gs til Google Apps Script og deploy på nytt.'
+      : (res.error || 'Ukjent feil');
+    el('soppel-liste').innerHTML = `<p class="feil-tekst" style="padding:12px">${tekst}</p>`;
+    return;
+  }
   if (!res.rader.length) {
     el('soppel-liste').innerHTML = '<p style="color:var(--grå);padding:20px;text-align:center">Søppeldunken er tom 🎉</p>';
     return;
