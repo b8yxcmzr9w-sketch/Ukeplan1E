@@ -2611,8 +2611,8 @@ function lastKlasseFane(klasse) {
 }
 
 function oppdaterKlasseFagRad(cbx) {
-  const dagerDiv = cbx.closest('div').nextElementSibling;
-  dagerDiv.style.display = cbx.checked ? '' : 'none';
+  const row = cbx.closest('label').parentElement;
+  row.querySelector('.klasse-fag-dager').style.display = cbx.checked ? '' : 'none';
   const b = el('btn-lagre-klasse-fag'); if (b) b.disabled = false;
 }
 
@@ -2622,7 +2622,7 @@ async function lagreKlasseKonfig() {
   const rader = [];
   el('klasse-fag-liste').querySelectorAll('input[type=checkbox][value]').forEach(cbx => {
     if (!cbx.checked) return;
-    const dager = [...cbx.closest('div').nextElementSibling.querySelectorAll('input[type=checkbox]:checked')]
+    const dager = [...cbx.closest('label').parentElement.querySelector('.klasse-fag-dager').querySelectorAll('input[type=checkbox]:checked')]
       .map(c => c.value).join(',');
     rader.push({ type: `fag_${klasse}`, nokkel: cbx.value, verdi: dager });
   });
