@@ -1019,6 +1019,18 @@ header .spacer { flex: 1; }
   </div>
 </div>
 
+<!-- Lagre-overlay -->
+<div id="lagre-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:360px;width:88%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <div id="lagre-dyr" style="font-size:3.5rem;margin-bottom:8px">🐄</div>
+    <p id="lagre-progress" style="font-weight:700;font-size:1.05rem;margin-bottom:10px;color:var(--grønn)"></p>
+    <div style="background:#e9ecef;border-radius:99px;height:10px;margin-bottom:18px;overflow:hidden">
+      <div id="lagre-bar" style="background:var(--grønn);height:100%;border-radius:99px;width:0%;transition:width .4s ease"></div>
+    </div>
+    <p id="lagre-fakta" style="font-size:.88rem;color:#555;font-style:italic;min-height:52px;line-height:1.5"></p>
+  </div>
+</div>
+
 <!-- Ny / rediger bruker -->
 <div id="modal-ny-bruker" class="modal-bg skjult">
   <div class="modal">
@@ -2516,6 +2528,52 @@ function leggTilParseRad() {
   pOppdaterVelgAlle();
 }
 
+const _LAGRE_FAKTA = [
+  ['🐄', 'En ku har fire mager og bruker opptil 8 timer daglig på å tygge drøv.'],
+  ['🐖', 'Griser er smartere enn hunder og kan lære navn på bare én uke.'],
+  ['🐔', 'En høne legger opp til 300 egg i året – nesten ett for hver dag.'],
+  ['🐝', 'Bikubens bier flyr samlet like langt som fra jorda til månen for å lage ett glass honning.'],
+  ['🌱', 'Det tar hundrevis av år for meitemark å bygge opp 2,5 cm ny matjord.'],
+  ['🐑', 'En voksen sau gir nok ull til tre–fire gensere i året.'],
+  ['🌳', 'Et voksent tre tar opp rundt 22 kg CO₂ hvert år.'],
+  ['🐴', 'Hester kan sove stående takket være et naturlig låsesystem i bena.'],
+  ['🦆', 'Ender fryser ikke på is fordi de har varmevekslere i beina.'],
+  ['🍎', 'Det finnes over 7 500 kjente eplesorter i verden.'],
+  ['🐐', 'Geiter har rektangulære pupiller – det gir dem nesten 340° synsfelt.'],
+  ['🌾', 'Én aks hvete har i snitt 50 korn – nok til litt over én skive brød.'],
+  ['🐇', 'Kanintenner vokser hele livet – over 12 cm i året.'],
+  ['🐛', 'En meitemark kan regenerere tapt kroppsdel hvis hodet er intakt.'],
+  ['🍄', 'Det største levende organismen på jorda er faktisk en sopp i Oregon – over 9 km².'],
+];
+let _lagreTimer = null;
+let _lagreFaktaIdx = 0;
+
+function visLagreOverlay(antall) {
+  _lagreFaktaIdx = Math.floor(Math.random() * _LAGRE_FAKTA.length);
+  const [dyr, fakta] = _LAGRE_FAKTA[_lagreFaktaIdx];
+  el('lagre-dyr').textContent  = dyr;
+  el('lagre-fakta').textContent = fakta;
+  el('lagre-progress').textContent = `Lagrer 0 av ${antall}...`;
+  el('lagre-bar').style.width  = '0%';
+  el('lagre-overlay').style.display = 'flex';
+  _lagreTimer = setInterval(() => {
+    _lagreFaktaIdx = (_lagreFaktaIdx + 1) % _LAGRE_FAKTA.length;
+    const [d, f] = _LAGRE_FAKTA[_lagreFaktaIdx];
+    el('lagre-dyr').textContent   = d;
+    el('lagre-fakta').textContent = f;
+  }, 3000);
+}
+
+function oppdaterLagreOverlay(ferdig, totalt) {
+  el('lagre-progress').textContent = `Lagrer ${ferdig} av ${totalt}...`;
+  el('lagre-bar').style.width = Math.round((ferdig / totalt) * 100) + '%';
+}
+
+function skjulLagreOverlay() {
+  clearInterval(_lagreTimer);
+  el('lagre-overlay').style.display = 'none';
+}
+
 async function lagreParsetPlan() {
   const rader = [];
   el('parse-tbody').querySelectorAll('tr').forEach(tr => {
@@ -2538,11 +2596,14 @@ async function lagreParsetPlan() {
   if (!rader.length) { visMelding('Ingen rader valgt', 'info'); return; }
   const ugyldige = rader.filter(r => !r.aktivitet || !r.uke);
   if (ugyldige.length) { visMelding(`${ugyldige.length} rad(er) mangler aktivitet eller ukenummer.`, 'feil'); return; }
+  visLagreOverlay(rader.length);
   let feil = 0;
-  for (const r of rader) {
-    const res = await api('save', { token: S.bruker.token, lagretAv: S.bruker?.navn || '', ...r });
+  for (let i = 0; i < rader.length; i++) {
+    const res = await api('save', { token: S.bruker.token, lagretAv: S.bruker?.navn || '', ...rader[i] });
     if (!res.ok) feil++;
+    oppdaterLagreOverlay(i + 1, rader.length);
   }
+  skjulLagreOverlay();
   if (feil) visMelding(`${feil} rader feilet. Prøv igjen.`, 'feil');
   else { lukkModal('modal-parse'); cacheReset(); lastUkedata(); visMelding(`${rader.length} økt(er) lagret`); }
 }
