@@ -1081,13 +1081,18 @@ header .spacer { flex: 1; }
 <div id="modal-min-profil" class="modal-bg skjult">
   <div class="modal" style="max-width:420px">
     <h3>Min profil</h3>
-    <div class="felt"><label>Navn</label><input id="profil-navn" type="text" disabled style="background:var(--grå-lys);color:var(--grå)"></div>
-    <div class="felt"><label>Rolle</label><input id="profil-rolle" type="text" disabled style="background:var(--grå-lys);color:var(--grå)"></div>
-    <div class="felt"><label>Klasser <span style="font-weight:400;color:var(--grå)">(kommaseparert eller «Alle»)</span></label>
-      <input id="profil-klasser" type="text" placeholder="1E,2E eller Alle">
+    <input type="hidden" id="profil-navn">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding:10px 14px;background:var(--grå-lys);border-radius:var(--radius)">
+      <span id="profil-navn-vis" style="font-weight:600;font-size:1rem;flex:1"></span>
+      <span id="profil-rolle-badge" class="admin-badge" style="font-size:.82rem"></span>
     </div>
-    <div class="felt"><label>Fag</label>
-      <div id="profil-fag-cbx" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px"></div>
+    <div class="felt">
+      <label>Klasser</label>
+      <div id="profil-klasse-cbx" style="display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:6px"></div>
+    </div>
+    <div class="felt">
+      <label>Fag</label>
+      <div id="profil-fag-cbx" style="display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:6px"></div>
     </div>
     <div id="profil-yff-felt" class="felt skjult"><label>YFF gruppe</label>
       <select id="profil-yff-gruppe">
@@ -3004,19 +3009,27 @@ function alleFagISystem() {
 
 function visMinProfil() {
   const b = S.bruker;
-  el('profil-navn').value    = b.navn;
-  el('profil-rolle').value   = { skoleadmin: 'Skoleadmin', kontaktlaerer: 'Kontaktlærer', laerer: 'Lærer' }[b.rolle] || b.rolle;
-  el('profil-klasser').value = b.klasser || 'Alle';
+  const rolleLabel = { skoleadmin: 'Skoleadmin', kontaktlaerer: 'Kontaktlærer', laerer: 'Lærer' };
+  el('profil-navn').value        = b.navn;
+  el('profil-navn-vis').textContent = b.navn;
+  el('profil-rolle-badge').textContent = rolleLabel[b.rolle] || b.rolle || 'Lærer';
   el('profil-feil').classList.add('skjult');
 
-  // Fyll fagavkrysningsbokser
-  const valgte = (b.fag && b.fag !== 'Alle') ? b.fag.split(',').map(s => s.trim()) : [];
-  const fag    = alleFagISystem();
-  const cbxDiv = el('profil-fag-cbx');
-  cbxDiv.innerHTML = fag.map(f =>
-    `<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
-      <input type="checkbox" value="${f}" ${valgte.includes(f) ? 'checked' : ''} onchange="oppdaterProfilYff()">
-      ${f}
+  // Klasser – avkrysningsbokser fra konfig
+  const alleKlasser = S.konfig.klasser || [];
+  const valgtKlasser = b.klasser === 'Alle' ? alleKlasser : (b.klasser || '').split(',').map(k => k.trim()).filter(Boolean);
+  el('profil-klasse-cbx').innerHTML = alleKlasser.map(k =>
+    `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
+      <input type="checkbox" value="${k}" ${valgtKlasser.includes(k) ? 'checked' : ''}> ${k}
+    </label>`
+  ).join('');
+
+  // Fag – avkrysningsbokser
+  const valgteFag = (b.fag && b.fag !== 'Alle') ? b.fag.split(',').map(s => s.trim()) : [];
+  const fag = alleFagISystem();
+  el('profil-fag-cbx').innerHTML = fag.map(f =>
+    `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
+      <input type="checkbox" value="${f}" ${valgteFag.includes(f) ? 'checked' : ''} onchange="oppdaterProfilYff()"> ${f}
     </label>`
   ).join('');
 
@@ -3041,7 +3054,9 @@ function oppdaterProfilYff() {
 
 async function lagreMinProfil(btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'Lagrer…'; }
-  const klasser   = el('profil-klasser').value.trim() || 'Alle';
+  const valgtKlasser = [...el('profil-klasse-cbx').querySelectorAll('input:checked')].map(i => i.value);
+  const alleKlasser  = S.konfig.klasser || [];
+  const klasser = valgtKlasser.length === alleKlasser.length && alleKlasser.length > 0 ? 'Alle' : (valgtKlasser.join(',') || '');
   const valgte    = [...el('profil-fag-cbx').querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
   const fag       = valgte.length ? valgte.join(',') : 'Alle';
   const yffGruppe = el('profil-yff-felt').classList.contains('skjult') ? '' : el('profil-yff-gruppe').value;
