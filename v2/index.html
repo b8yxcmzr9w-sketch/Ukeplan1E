@@ -663,8 +663,11 @@ header .spacer { flex: 1; }
 
       <!-- Gruppe-filter (ukesmodus) -->
       <div id="laerer-uke-filter" class="filter-bar">
-        <select id="laerer-filter-gruppe" onchange="oppdaterLaererVisning()">
-          <option value="">Alle grupper</option>
+        <select id="laerer-filter-npt" onchange="oppdaterLaererVisning()">
+          <option value="">Alle NPT-partier</option>
+        </select>
+        <select id="laerer-filter-yff" onchange="oppdaterLaererVisning()">
+          <option value="">Alle YFF-grupper</option>
         </select>
       </div>
 
@@ -1469,7 +1472,7 @@ function visLaerer() {
 
   // Auto-sett gruppefilter fra brukerprofil
   if (S.bruker?.yffGruppe) {
-    el('laerer-filter-gruppe').value = S.bruker.yffGruppe;
+    el('laerer-filter-yff').value = S.bruker.yffGruppe;
   }
 
   // Alltid start i ukesmodus
@@ -1690,7 +1693,7 @@ async function lastUkedata() {
     }
   }
   if (S.visning === 'elev') { fyllElevFilter(); oppdaterElevVisning(); }
-  else { fyllGruppeFilter('laerer-filter-gruppe'); oppdaterLaererVisning(); }
+  else { fyllLaererFilter(); oppdaterLaererVisning(); }
 
   // Bufferinitialisering ved første last, deretter glidende vindu
   if (!S.bufferFra) {
@@ -1914,8 +1917,9 @@ function oppdaterPrintHode() {
 }
 
 function oppdaterLaererVisning() {
-  const gruppe = el('laerer-filter-gruppe').value;
-  visUkeMedFilter(el('laerer-uke-innhold'), S.ukedata, S.ferie, gruppe, gruppe, true);
+  const nptParti  = el('laerer-filter-npt').value;
+  const yffGruppe = el('laerer-filter-yff').value;
+  visUkeMedFilter(el('laerer-uke-innhold'), S.ukedata, S.ferie, nptParti, yffGruppe, true);
   requestAnimationFrame(settStickyTopp);
 }
 
@@ -2060,13 +2064,19 @@ function lagOktKort(r, erLaererVisning) {
 }
 
 // ── Gruppe-filter ─────────────────────────────────────────────────────────────
-function fyllGruppeFilter(selectId) {
-  const sel = el(selectId);
-  const val = sel.value;
-  sel.innerHTML = '<option value="">Alle grupper</option>';
-  nptForKlasse(S.klasse).forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
-  S.konfig.grupperYFF.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
-  sel.value = val;
+function fyllLaererFilter() {
+  const nptSel = el('laerer-filter-npt');
+  const yffSel = el('laerer-filter-yff');
+  const nptVal = nptSel.value, yffVal = yffSel.value;
+  nptSel.innerHTML = '<option value="">Alle NPT-partier</option>';
+  nptForKlasse(S.klasse).forEach(g => nptSel.innerHTML += `<option value="${g}">${g}</option>`);
+  yffSel.innerHTML = '<option value="">Alle YFF-grupper</option>';
+  S.konfig.grupperYFF.forEach(g => yffSel.innerHTML += `<option value="${g}">${g}</option>`);
+  nptSel.value = nptVal;
+  yffSel.value = yffVal;
+  // Skjul dropdown om ingen alternativer finnes
+  nptSel.style.display = nptForKlasse(S.klasse).length ? '' : 'none';
+  yffSel.style.display = S.konfig.grupperYFF.length ? '' : 'none';
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -2876,7 +2886,7 @@ function byttLaererKlasse(klasse) {
   S.klasse = klasse;
   cacheReset();
   oppdaterKlasseBadge();
-  fyllGruppeFilter('laerer-filter-gruppe');
+  fyllLaererFilter();
   if (!el('admin-fane-klasse').classList.contains('skjult')) fyllKlasseAdminSel();
   if (S.listeModus) lastListedata();
   else lastUkedata();
@@ -2952,7 +2962,7 @@ async function lagreKlasseKonfig() {
     if (ny.ok) {
       S.konfig = ny;
       oppdaterHeader(ny.skoleinfo);
-      fyllGruppeFilter('laerer-filter-gruppe');
+      fyllLaererFilter();
       fyllElevFilter();
     }
     ['btn-lagre-klasse-fag','btn-lagre-klasse-npt'].forEach(id => {
