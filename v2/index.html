@@ -2951,7 +2951,12 @@ async function lagreKlasseKonfig() {
   if (res.ok) {
     // oppdater lokal state
     const ny = await api('getData');
-    if (ny.ok) { S.konfig = ny; oppdaterHeader(ny.skoleinfo); }
+    if (ny.ok) {
+      S.konfig = ny;
+      oppdaterHeader(ny.skoleinfo);
+      fyllGruppeFilter('laerer-filter-gruppe');
+      fyllElevFilter();
+    }
     ['btn-lagre-klasse-fag','btn-lagre-klasse-npt'].forEach(id => {
       const b = el(id); if (b) b.disabled = true;
     });

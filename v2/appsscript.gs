@@ -260,9 +260,18 @@ function handleSaveKonfig(d) {
   try {
     const sheet = getSheet('Konfig');
     SpreadsheetApp.flush();
+    // Preserve class-specific rows (fag_* and npt_*) — these are managed by saveKlasseKonfig
+    const existing = sheet.getLastRow() > 1
+      ? sheet.getDataRange().getValues().slice(1)
+      : [];
+    const behold = existing.filter(r => {
+      const t = String(r[0] || '');
+      return t.startsWith('fag_') || t.startsWith('npt_');
+    });
     const last = sheet.getLastRow();
     if (last > 1) sheet.getRange(2, 1, last - 1, 3).clearContent();
-    d.rader.forEach(r => sheet.appendRow([r.type, r.nokkel, r.verdi || '']));
+    [...d.rader, ...behold.map(r => ({ type: r[0], nokkel: r[1], verdi: r[2] || '' }))]
+      .forEach(r => sheet.appendRow([r.type, r.nokkel, r.verdi || '']));
     SpreadsheetApp.flush();
     return jsonResponse({ ok: true });
   } finally {
