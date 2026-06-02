@@ -1224,7 +1224,15 @@ async function api(action, data = {}) {
   try {
     const body = new URLSearchParams({ data: JSON.stringify({ action, ...data }) });
     const resp = await fetch(SCRIPT_URL, { method: 'POST', body });
-    return resp.json();
+    const tekst = await resp.text();
+    try {
+      return JSON.parse(tekst);
+    } catch {
+      console.error('API ikke-JSON svar:', tekst.slice(0, 300));
+      return { ok: false, error: 'Serverfeil fra backend – sjekk Google Apps Script-loggen' };
+    }
+  } catch (e) {
+    return { ok: false, error: e.message };
   } finally {
     lastSlutt();
   }

@@ -187,7 +187,7 @@ function handleDelete(d) {
       if (String(vals[i][0]) === String(d.id)) {
         if (!kanRedigereRow(caller, vals[i]))
           return jsonResponse({ ok: false, error: 'Ikke tilgang til å slette denne økten' });
-        flyttTilSoppeldunk(SpreadsheetApp.getActiveSpreadsheet(), vals[i], caller.navn);
+        try { flyttTilSoppeldunk(ss, vals[i], caller.navn); } catch(e) { Logger.log('Trash error: ' + e); }
         sheet.deleteRow(i + 1);
         SpreadsheetApp.flush();
         return jsonResponse({ ok: true });
