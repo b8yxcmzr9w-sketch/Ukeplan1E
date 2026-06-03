@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="no" data-theme="standard">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ukeplan</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Lastelinje ───────────────────────────────────────────────── -->
+<div id="lastelinje"></div>
+
+<!-- ── Lagre-overlay ────────────────────────────────────────────── -->
+<div id="lagre-overlay" class="lagre-overlay skjult" role="dialog" aria-modal="true" aria-label="Lagrer...">
+  <div class="overlay-boks">
+    <div class="spinner" id="overlay-spinner"></div>
+    <div class="overlay-ok skjult" id="overlay-ok">✅</div>
+    <div class="overlay-tekst" id="overlay-tekst">Sender tanker til skyene…</div>
+    <button class="btn btn-p skjult" id="overlay-retry">Prøv igjen</button>
+  </div>
+</div>
+
+<!-- ── Header ───────────────────────────────────────────────────── -->
+<header id="app-header">
+  <img id="hdr-logo" src="" alt="Logo" class="skjult">
+  <div>
+    <div class="skole-navn" id="hdr-skolenavn">Ukeplan</div>
+    <div class="skole-klasse skjult" id="hdr-klasse"></div>
+  </div>
+  <span class="spacer"></span>
+  <span id="hdr-username" style="font-size:.84rem;opacity:.8"></span>
+  <button class="hdr-btn skjult" id="hdr-admin-toggle">Admin-modus</button>
+  <button class="hdr-btn skjult" id="hdr-laerer-btn" onclick="location.hash='#/laerer'">Min plan</button>
+  <button class="hdr-btn skjult" id="hdr-admin-btn" onclick="location.hash='#/admin'">Admin</button>
+  <button class="hdr-btn skjult" id="hdr-logout-btn">Logg ut</button>
+  <button class="hdr-btn" id="hdr-login-btn" onclick="location.hash='#/login'">Logg inn</button>
+</header>
+
+<!-- ── Utskrift-hode (synlig bare ved print) ────────────────────── -->
+<div class="utskrift-hode" id="utskrift-hode"></div>
+
+<!-- ── Hoved-innhold ────────────────────────────────────────────── -->
+<main id="app-main">
+  <!-- Fylles av router/views i app.js -->
+  <div class="tom-uke" style="padding-top:60px">Laster…</div>
+</main>
+
+<!-- ── Modal-container ──────────────────────────────────────────── -->
+<div id="modal-container"></div>
+
+<!-- ── Supabase CDN ──────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<!-- ── App ──────────────────────────────────────────────────────── -->
+<script src="app.js"></script>
+
+</body>
+</html>
