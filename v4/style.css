@@ -368,7 +368,8 @@ tr:hover td { background: var(--primær-svak); }
   @page { size: A4 landscape; margin: 12mm 10mm; }
   header, .nav-bar, .filter-bar, .bulk-bar,
   .hdr-btn, .btn, .okt-handlinger, .okt-checkbox,
-  .modal-bg, .lagre-overlay, #lastelinje { display: none !important; }
+  .modal-bg, .lagre-overlay, #lastelinje,
+  footer, .uno-footer { display: none !important; }
 
   body { background: white; color: black; }
   .uke-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 0; }

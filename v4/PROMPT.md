@@ -161,12 +161,23 @@ Gemini API-nøkkel lagres som Supabase secret (`GEMINI_API_KEY`).
 
 ---
 
+## Footer
+
+Alle sider skal ha en diskret footer med:
+- Uno-logo (lenke til `https://uno.ganddal.net`) med lav opasitet, slik som i v2
+- © årstall basert på `document.lastModified` (årstallet dokumentet sist ble redigert/deployet)
+- Implementeres via `uno-footer.js` som legges inn rett før `</body>` på alle HTML-sider
+- Skal **ikke** vises ved utskrift (`@media print`)
+
+---
+
 ## Filstruktur
 
 ```
 /
 ├── index.html          – Appskall, navigasjon, routing
 ├── app.js              – All applogikk, Supabase-klient, views
+├── uno-footer.js       – Footer med Uno-logo og © årstall sist redigert
 ├── style.css           – Styling inkl. fargetemaer, @media print og mobile
 ├── supabase/
 │   ├── migrations/     – SQL-migrasjoner i rekkefølge
