@@ -3896,35 +3896,29 @@ async function lagreBulkEndring() {
   if (!felt) { visMelding('Velg felt som skal endres', 'info'); return; }
   const valgte = [...el('liste-tbody').querySelectorAll('.liste-cbx:checked')];
   if (!valgte.length) return;
-  const rader = valgte.map(cbx => JSON.parse(cbx.closest('tr').dataset.rad));
+  const rader = valgte.map(cbx => {
+    const r = JSON.parse(cbx.closest('tr').dataset.rad);
+    return { ...r, [felt]: verdi, lagretAv: S.bruker?.navn || '' };
+  });
   visLagreOverlay(rader.length);
-  let feil = 0;
-  for (let i = 0; i < rader.length; i++) {
-    const r = { ...rader[i], [felt]: verdi };
-    const res = await api('save', { token: S.bruker.token, lagretAv: S.bruker?.navn || '', ...r });
-    if (!res.ok) feil++;
-    oppdaterLagreOverlay(i + 1, rader.length);
-  }
+  const res = await api('bulkUpdate', { token: S.bruker.token, rader });
   skjulLagreOverlay();
-  if (feil) visMelding(`${feil} rader feilet`, 'feil');
-  else { visMelding(`${rader.length} økt(er) oppdatert`); listeFjernVelgAlle(); cacheReset(); lastListedata(); }
+  if (!res.ok) { visMelding(res.error || 'Feil ved lagring', 'feil'); return; }
+  visMelding(`${res.oppdatert} økt(er) oppdatert`);
+  listeFjernVelgAlle(); cacheReset(); lastListedata();
 }
 
 async function bulkSlettValgte() {
   const valgte = [...el('liste-tbody').querySelectorAll('.liste-cbx:checked')];
   if (!valgte.length) return;
   if (!confirm(`Slette ${valgte.length} valgt(e) økt(er)? De havner i søppeldunken.`)) return;
-  const rader = valgte.map(cbx => JSON.parse(cbx.closest('tr').dataset.rad));
-  visLagreOverlay(rader.length);
-  let feil = 0;
-  for (let i = 0; i < rader.length; i++) {
-    const res = await api('delete', { token: S.bruker.token, id: rader[i].id });
-    if (!res.ok) feil++;
-    oppdaterLagreOverlay(i + 1, rader.length);
-  }
+  const ids = valgte.map(cbx => JSON.parse(cbx.closest('tr').dataset.rad).id);
+  visLagreOverlay(ids.length);
+  const res = await api('bulkDelete', { token: S.bruker.token, ids });
   skjulLagreOverlay();
-  if (feil) visMelding(`${feil} slettinger feilet`, 'feil');
-  else { visMelding(`${rader.length} økt(er) slettet`); listeFjernVelgAlle(); cacheReset(); lastListedata(); }
+  if (!res.ok) { visMelding(res.error || 'Feil ved sletting', 'feil'); return; }
+  visMelding(`${res.antall} økt(er) slettet`);
+  listeFjernVelgAlle(); cacheReset(); lastListedata();
 }
 
 // ── Listevisning: kontekstmeny ────────────────────────────────────────────────

@@ -70,7 +70,9 @@ function doPost(e) {
     trashGruppe:        handleTrashGruppe,
     getTrash:           handleGetTrash,
     restoreTrash:       handleRestoreTrash,
-    moveToTrash:        handleMoveToTrash
+    moveToTrash:        handleMoveToTrash,
+    bulkUpdate:         handleBulkUpdate,
+    bulkDelete:         handleBulkDelete
   };
   const fn = handlers[d.action];
   if (!fn) return jsonResponse({ ok: false, error: 'Ukjent action: ' + d.action });
@@ -1304,6 +1306,66 @@ function handleMoveToTrash(d) {
     ]);
   });
   return jsonResponse({ ok: true });
+}
+
+function handleBulkUpdate(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const rader = Array.isArray(d.rader) ? d.rader : [];
+  if (!rader.length) return jsonResponse({ ok: true, oppdatert: 0 });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sheet = getSheet('Plan');
+    SpreadsheetApp.flush();
+    const now = new Date().toISOString();
+    const vals = sheet.getDataRange().getValues();
+    const idxMap = {};
+    for (let i = 1; i < vals.length; i++) idxMap[String(vals[i][0])] = i;
+    let oppdatert = 0;
+    rader.forEach(r => {
+      const i = idxMap[String(r.id)];
+      if (i === undefined) return;
+      if (!kanRedigereRow(caller, vals[i])) return;
+      sheet.getRange(i + 1, 1, 1, 14).setValues([[
+        r.id, r.ar, r.uke, r.dag, r.klasse, r.fag, r.gruppe || '',
+        r.laerer || '', r.aktivitet || '', r.oppmotested || '',
+        r.info || '', r.tid || '', now, r.lagretAv || ''
+      ]]);
+      oppdatert++;
+    });
+    SpreadsheetApp.flush();
+    return jsonResponse({ ok: true, oppdatert });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleBulkDelete(d) {
+  const caller = getUserByToken(d.token);
+  if (!caller) return jsonResponse({ ok: false, error: 'Ikke autorisert' });
+  const ids = Array.isArray(d.ids) ? d.ids.map(String) : [];
+  if (!ids.length) return jsonResponse({ ok: true, antall: 0 });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SS_ID);
+    const sheet = ss.getSheetByName('Plan');
+    SpreadsheetApp.flush();
+    const vals = sheet.getDataRange().getValues();
+    let antall = 0;
+    for (let i = vals.length - 1; i >= 1; i--) {
+      if (!ids.includes(String(vals[i][0]))) continue;
+      if (!kanRedigereRow(caller, vals[i])) continue;
+      try { flyttTilSoppeldunk(ss, vals[i], caller.navn); } catch(e) { Logger.log('bulkDelete trash: ' + e); }
+      sheet.deleteRow(i + 1);
+      antall++;
+    }
+    SpreadsheetApp.flush();
+    return jsonResponse({ ok: true, antall });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function handleTrashFag(d) {
