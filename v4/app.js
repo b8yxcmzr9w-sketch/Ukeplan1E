@@ -2360,9 +2360,10 @@ async function renderSkolerute(container) {
     for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet']) {
       typeSel.appendChild(el('option', { value: t }, t))
     }
-    form.appendChild(titleIn); form.appendChild(fraIn); form.appendChild(tilIn)
-    form.appendChild(typeSel)
-    form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, '+ Legg til'))
+    const feltRad = el('div', { class: 'skolerute-felt-rad' })
+    feltRad.appendChild(titleIn); feltRad.appendChild(fraIn); feltRad.appendChild(tilIn); feltRad.appendChild(typeSel)
+    form.appendChild(feltRad)
+    form.appendChild(el('button', { type: 'submit', class: 'btn btn-p skolerute-legg-til' }, '+ Legg til'))
     wrap.appendChild(form)
 
     // AI import – hidden by default, tip shown when calendar is empty

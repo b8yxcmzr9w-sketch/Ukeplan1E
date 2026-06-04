@@ -408,15 +408,18 @@ tr:hover td { background: var(--primær-svak); }
 .uke-hint { font-size: .8rem; color: var(--tekst-svak); }
 
 /* ── Skolerute kompakt skjema ────────────────────────────────────── */
-.skolerute-form {
-  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;
-  margin: 14px 0 18px;
+.skolerute-form { margin: 14px 0 18px; }
+.skolerute-felt-rad {
+  display: grid;
+  grid-template-columns: 1fr 140px 140px 130px;
+  gap: 6px; align-items: center; margin-bottom: 8px;
 }
-.skolerute-form .felt.input,
-.skolerute-form .felt.select { margin: 0; }
-.skolerute-form input[name=title] { width: 160px; }
-.skolerute-form input[type=date] { width: 140px; }
-.skolerute-form select { width: 150px; }
+.skolerute-felt-rad .felt.input,
+.skolerute-felt-rad .felt.select { margin: 0; width: 100%; background: var(--bg-kort); color: var(--tekst); }
+.skolerute-legg-til { font-size: .92rem; }
+
+/* Select med klasse direkte på elementet (ikke som barn av .felt) */
+select.felt, select.select { background: var(--bg-kort); color: var(--tekst); }
 
 /* ── Admin-tabell (skolerute) ────────────────────────────────────── */
 .admin-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
