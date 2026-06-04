@@ -39,6 +39,7 @@ Alternativt: Supabase Dashboard → Edge Functions → Secrets → Add new secre
 supabase functions deploy ical               --project-ref DIN_PROJECT_REF
 supabase functions deploy ai-parse-sessions  --project-ref DIN_PROJECT_REF
 supabase functions deploy ai-parse-skolerute --project-ref DIN_PROJECT_REF
+supabase functions deploy generate-facts     --project-ref DIN_PROJECT_REF
 supabase functions deploy cleanup            --project-ref DIN_PROJECT_REF
 ```
 

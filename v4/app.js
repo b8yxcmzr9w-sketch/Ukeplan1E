@@ -1706,8 +1706,8 @@ async function renderAdminPanel() {
   clearEl(main)
   APP.currentView = 'admin'
 
-  const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Fakta']
-  const tabSlugs = ['skoleinfo', 'fag', 'klasser', 'brukere', 'skolerute', 'fakta']
+  const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Funfacts']
+  const tabSlugs = ['skoleinfo', 'fag', 'klasser', 'brukere', 'skolerute', 'funfacts']
 
   const hashTab = location.hash.split('/')[2]
   const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
@@ -2307,8 +2307,9 @@ async function visSlettBrukerModal(user, onSave) {
 async function renderSkolerute(container) {
   async function refresh() {
     clearEl(container)
+    const wrap = el('div', { class: 'skjema-smal' })
     const { data: events } = await sb.from('school_calendar').select('*').order('start_date')
-    container.appendChild(el('h3', {}, 'Skolerute'))
+    wrap.appendChild(el('h3', {}, 'Skolerute'))
 
     const table = el('table', { class: 'admin-table' })
     const thead = el('thead')
@@ -2333,7 +2334,7 @@ async function renderSkolerute(container) {
       tbody.appendChild(tr)
     }
     table.appendChild(tbody)
-    container.appendChild(table)
+    wrap.appendChild(table)
 
     // Compact inline add form
     const form = el('form', { class: 'skolerute-form', onsubmit: async (ev) => {
@@ -2362,7 +2363,7 @@ async function renderSkolerute(container) {
     form.appendChild(titleIn); form.appendChild(fraIn); form.appendChild(tilIn)
     form.appendChild(typeSel)
     form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, '+ Legg til'))
-    container.appendChild(form)
+    wrap.appendChild(form)
 
     // AI import – hidden by default, tip shown when calendar is empty
     const aiWrap = el('div', { class: 'ai-import-seksjon' })
@@ -2400,7 +2401,8 @@ async function renderSkolerute(container) {
     }}, 'Analyser med AI'))
     aiWrap.appendChild(aiToggleBtn)
     aiWrap.appendChild(aiInnhold)
-    container.appendChild(aiWrap)
+    wrap.appendChild(aiWrap)
+    container.appendChild(wrap)
   }
   await refresh()
 }
@@ -2411,12 +2413,16 @@ async function renderFaktaTab(container) {
     const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
     APP.facts = facts || []
 
-    container.appendChild(el('h3', {}, 'Skolefakta (vises i lagre-overlay)'))
+    const wrap = el('div', { class: 'skjema-smal' })
+    wrap.appendChild(el('h3', {}, 'Funfacts'))
+    wrap.appendChild(el('p', { class: 'tekst-svak', style: 'margin-bottom:12px;font-size:.9rem' },
+      'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe.'))
+
     for (const f of facts || []) {
       const row = el('div', { class: 'admin-rad' })
-      row.appendChild(el('span', { class: 'tekst' }, truncate(f.fact_text, 80)))
+      row.appendChild(el('span', { class: 'tekst', style: 'flex:1' }, truncate(f.fact_text, 100)))
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
-        const ny = prompt('Rediger fakta:', f.fact_text)
+        const ny = prompt('Rediger funfact:', f.fact_text)
         if (!ny) return
         medLagreOverlay(() => sb.from('school_facts').update({ fact_text: ny }).eq('id', f.id)).then(refresh)
       }}, '✏️'))
@@ -2424,20 +2430,47 @@ async function renderFaktaTab(container) {
         await medLagreOverlay(() => sb.from('school_facts').delete().eq('id', f.id))
         refresh()
       }}, '🗑️'))
-      container.appendChild(row)
+      wrap.appendChild(row)
     }
 
-    const addInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Nytt fakta…' })
-    container.appendChild(el('div', { class: 'admin-rad' },
-      addInput,
-      el('button', { class: 'btn btn-p', onclick: async () => {
-        if (!addInput.value.trim()) return
-        await medLagreOverlay(() => sb.from('school_facts').insert({
-          school_id: APP.school.id, fact_text: addInput.value.trim()
-        }))
+    const addRow = el('div', { class: 'admin-rad', style: 'margin-top:8px' })
+    const addInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Ny funfact…', style: 'flex:1' })
+    addRow.appendChild(addInput)
+    addRow.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+      if (!addInput.value.trim()) return
+      await medLagreOverlay(() => sb.from('school_facts').insert({
+        school_id: APP.school.id, fact_text: addInput.value.trim()
+      }))
+      refresh()
+    }}, '+ Legg til'))
+    wrap.appendChild(addRow)
+
+    // AI-generering
+    const aiBtn = el('button', { class: 'btn btn-s', style: 'margin-top:16px', onclick: async () => {
+      if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
+      aiBtn.disabled = true; aiBtn.textContent = 'Genererer…'
+      try {
+        const { data, error } = await sb.functions.invoke('generate-facts', {
+          body: { school_id: APP.school.id }
+        })
+        if (error) throw error
+        const ny = data.facts || []
+        if (!ny.length) { showToast('Ingen fakta generert', 'info'); return }
+        await medLagreOverlay(async () => {
+          for (const txt of ny) {
+            await sb.from('school_facts').insert({ school_id: APP.school.id, fact_text: txt })
+          }
+        })
+        showToast(`${ny.length} funfacts lagt til!`, 'ok')
         refresh()
-      }}, '+ Legg til')
-    ))
+      } catch (err) {
+        showToast(err.message, 'error')
+      } finally {
+        aiBtn.disabled = false; aiBtn.textContent = '✨ Generer med AI'
+      }
+    }}, '✨ Generer med AI')
+    wrap.appendChild(aiBtn)
+    container.appendChild(wrap)
   }
   await refresh()
 }
