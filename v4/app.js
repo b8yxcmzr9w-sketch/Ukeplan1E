@@ -1735,7 +1735,7 @@ async function renderSkoleInfoTab(container) {
   const themeGroup = el('div', { class: 'theme-group' })
   for (const t of themes) {
     const radio = el('input', { type: 'radio', name: 'color_theme', value: t.value, id: `theme-${t.value}` })
-    if (school.color_theme === t.value) radio.setAttribute('checked', 'true')
+    if (school.color_theme === t.value) radio.checked = true
     radio.addEventListener('change', () => {
       // Live preview
       document.documentElement.dataset.theme = t.value
