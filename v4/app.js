@@ -271,6 +271,9 @@ function oppdaterHeader() {
       ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
       : APP.school.logo_url
     logo.classList.remove('skjult')
+    // Oppdater favicon til skolelogo
+    const favicon = document.getElementById('favicon')
+    if (favicon) favicon.href = logo.src
   }
 
   // Tema
@@ -670,18 +673,18 @@ async function renderLaererView() {
   const isKontakt = APP.profile.role === 'kontaktlaerer' || APP.isAdminActive
 
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
+  const tabSlugs = ['klasse', 'alle', 'sok', 'klasse-admin']
   if (isKontakt) tabs.push('Klasse-admin')
 
-  let activeTab = 0
+  const hashTab = location.hash.split('/')[2]
+  const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
 
   const tabBar = el('div', { class: 'fane-bar' })
   const tabContent = el('div', { class: 'fane-innhold' })
 
   function setTab(idx) {
-    activeTab = idx
-    tabBar.querySelectorAll('.fane').forEach((b, i) => {
-      b.classList.toggle('aktiv', i === idx)
-    })
+    history.replaceState(null, '', `#/laerer/${tabSlugs[idx]}`)
+    tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
     switch (idx) {
       case 0: renderMinKlasseTab(tabContent); break
@@ -700,7 +703,7 @@ async function renderLaererView() {
   wrap.appendChild(tabBar)
   wrap.appendChild(tabContent)
   main.appendChild(wrap)
-  setTab(0)
+  setTab(initTab)
 }
 
 async function renderMinKlasseTab(container) {
@@ -1648,13 +1651,16 @@ async function renderAdminPanel() {
   APP.currentView = 'admin'
 
   const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Fakta']
-  let activeTab = 0
+  const tabSlugs = ['skoleinfo', 'fag', 'klasser', 'brukere', 'skolerute', 'fakta']
+
+  const hashTab = location.hash.split('/')[2]
+  const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
 
   const tabBar = el('div', { class: 'fane-bar' })
   const tabContent = el('div', { class: 'fane-innhold' })
 
   function setTab(idx) {
-    activeTab = idx
+    history.replaceState(null, '', `#/admin/${tabSlugs[idx]}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
     switch (idx) {
@@ -1676,7 +1682,7 @@ async function renderAdminPanel() {
   adminWrap.appendChild(tabBar)
   adminWrap.appendChild(tabContent)
   main.appendChild(adminWrap)
-  setTab(0)
+  setTab(initTab)
 }
 
 async function renderSkoleInfoTab(container) {

@@ -394,6 +394,7 @@ tr:hover td { background: var(--primær-svak); }
   padding: 10px 0; border-bottom: 1px solid var(--kant); flex-wrap: wrap;
 }
 .admin-rad:last-child { border-bottom: none; }
+.color-swatch { display: inline-block; width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
 .admin-rad .tekst-svak { font-size: .82rem; color: var(--tekst-svak); }
 .admin-rad .spacer { flex: 1; }
 
