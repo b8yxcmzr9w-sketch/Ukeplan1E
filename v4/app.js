@@ -181,7 +181,7 @@ async function sjekkVentendeOverforinger() {
 }
 
 function renderLoginForm() {
-  const main = document.getElementById('main')
+  const main = document.getElementById('app-main')
   clearEl(main)
 
   const form = el('form', { class: 'login-form', onsubmit: async (e) => {
@@ -240,7 +240,8 @@ function renderPassordModal() {
 // ─────────────────────────────────────────
 
 function oppdaterHeader() {
-  const header = document.getElementById('header')
+  const header = document.getElementById('app-header')
+  if (!header) return
   clearEl(header)
 
   const title = el('a', { href: '#/', class: 'header__title' },
@@ -284,7 +285,7 @@ function navigate(hash) {
 
 async function router() {
   const hash = window.location.hash || '#/'
-  const main = document.getElementById('main')
+  const main = document.getElementById('app-main')
 
   // Cleanup realtime
   if (APP.realtimeChannel) {
@@ -366,7 +367,7 @@ function showConflictWarning() {
 // ─────────────────────────────────────────
 
 async function renderElevView(klasseNavn) {
-  const main = document.getElementById('main')
+  const main = document.getElementById('app-main')
   clearEl(main)
   APP.currentView = 'elev'
 
@@ -619,7 +620,7 @@ function visICalModal(klasse) {
 // ─────────────────────────────────────────
 
 async function renderLaererView() {
-  const main = document.getElementById('main')
+  const main = document.getElementById('app-main')
   clearEl(main)
   APP.currentView = 'laerer'
 
@@ -1597,7 +1598,7 @@ async function lastOppSikkerhetskopi(file, klasse) {
 // ─────────────────────────────────────────
 
 async function renderAdminPanel() {
-  const main = document.getElementById('main')
+  const main = document.getElementById('app-main')
   clearEl(main)
   APP.currentView = 'admin'
 
@@ -2186,7 +2187,7 @@ async function init() {
     APP.school = schools[0]
     document.documentElement.dataset.theme = APP.school.color_theme || 'default'
     if (APP.school.logo_url) {
-      const logo = document.getElementById('header-logo')
+      const logo = document.getElementById('hdr-logo')
       if (logo) logo.src = APP.school.logo_url
     }
   }
