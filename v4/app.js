@@ -1690,10 +1690,15 @@ async function renderSkoleInfoTab(container) {
     const logoUrl = fd.get('logo_url')
     if (logoUrl) updates.logo_url = logoUrl
     await medLagreOverlay(async () => {
-      const { error } = await sb.from('schools').update(updates).eq('id', school.id)
+      const { error } = await sb.from('schools').update(updates).eq('id', APP.school.id)
       if (error) throw error
-      Object.assign(APP.school, updates)
-      document.documentElement.dataset.theme = updates.color_theme
+      // Re-hent fra DB for å bekrefte at lagringen gikk igjennom
+      const { data: fersk } = await sb.from('schools').select('*').eq('id', APP.school.id).single()
+      if (fersk) {
+        APP.school = fersk
+        document.getElementById('hdr-skolenavn').textContent = fersk.name
+        document.documentElement.dataset.theme = fersk.color_theme || 'standard'
+      }
       oppdaterHeader()
     })
   }})
