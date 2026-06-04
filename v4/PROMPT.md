@@ -159,8 +159,8 @@ Definer tre komplette CSS-temaer med CSS custom properties (variabler). Tema las
 - `mork` – mørk palett egnet for lavlysbruk
 
 **Favicon:**
-- Standard favicon: Uno-logoen (`https://uno.ganddal.net/img/unohundlogo.png`)
-- Når skolen har lastet opp logo: favicon oppdateres automatisk til skolelogoen
+- Standard favicon: Uno-ikonet (`https://uno.ganddal.net/favicon.ico`) – kun hunden, uten tekst
+- Når skolen har lastet opp logo: favicon oppdateres automatisk til skolelogoen i samme sesjon
 
 ---
 
