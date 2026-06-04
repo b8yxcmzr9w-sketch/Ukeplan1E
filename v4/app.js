@@ -2346,7 +2346,7 @@ async function renderSkolerute(container) {
       refresh()
     }})
     form.appendChild(lagFormRad('Tittel',
-      el('input', { name: 'title', type: 'text', class: 'felt input', required: 'true' })))
+      el('input', { name: 'title', type: 'text', class: 'felt input', required: 'true', maxlength: 30 })))
 
     // Fra og Til på samme linje (uke-rad / uke-grp mønster fra Skoleinfo)
     const fraIn = el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })

@@ -408,7 +408,7 @@ tr:hover td { background: var(--primær-svak); }
 .uke-hint { font-size: .8rem; color: var(--tekst-svak); }
 
 /* Select med klasse direkte på elementet (ikke som barn av .felt) */
-select.felt, select.select { background: var(--bg-kort); color: var(--tekst); }
+select.felt, select.select { background: var(--bg-kort); color: var(--tekst); font-size: .92rem; font-family: inherit; padding: 8px 11px; border: 1px solid var(--kant); border-radius: var(--radius); width: 100%; }
 
 /* Seksjonstittel i admin-faner */
 .seksjon-tittel { font-size: 1rem; font-weight: 700; margin: 18px 0 6px; border-top: 1px solid var(--kant); padding-top: 14px; }
