@@ -240,39 +240,56 @@ function renderPassordModal() {
 // ─────────────────────────────────────────
 
 function oppdaterHeader() {
-  const header = document.getElementById('app-header')
-  if (!header) return
-  clearEl(header)
-
-  const title = el('a', { href: '#/', class: 'header__title' },
-    APP.school ? APP.school.name : 'Ukeplan')
-  header.appendChild(title)
-
-  const nav = el('nav', { class: 'header__nav' })
-
-  if (APP.user && APP.profile) {
-    nav.appendChild(el('span', { class: 'header__user' }, APP.profile.name))
-
-    if (APP.profile.role === 'laerer' || APP.profile.role === 'kontaktlaerer') {
-      nav.appendChild(el('a', { href: '#/laerer', class: 'btn btn--ghost' }, 'Min side'))
-    }
-
-    if (APP.profile.role === 'admin' || APP.profile.role === 'kontaktlaerer') {
-      const adminLabel = APP.isAdminActive ? 'Deaktiver admin-modus' : 'Aktiver admin-modus'
-      nav.appendChild(el('button', { class: 'btn btn--ghost', onclick: toggleAdminModus }, adminLabel))
-    }
-
-    if (APP.isAdminActive) {
-      nav.appendChild(el('a', { href: '#/admin', class: 'btn btn--ghost' }, 'Admin'))
-    }
-
-    nav.appendChild(el('button', { class: 'btn btn--ghost', onclick: renderPassordModal }, 'Bytt passord'))
-    nav.appendChild(el('button', { class: 'btn btn--ghost', onclick: logout }, 'Logg ut'))
-  } else {
-    nav.appendChild(el('a', { href: '#/login', class: 'btn btn--ghost' }, 'Logg inn'))
+  // Skolenavn + logo
+  const skolenavn = document.getElementById('hdr-skolenavn')
+  const logo = document.getElementById('hdr-logo')
+  if (skolenavn) skolenavn.textContent = APP.school ? APP.school.name : 'Ukeplan'
+  if (logo && APP.school && (APP.school.logo_url || APP.school.logo_file_path)) {
+    logo.src = APP.school.logo_file_path
+      ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
+      : APP.school.logo_url
+    logo.classList.remove('skjult')
   }
 
-  header.appendChild(nav)
+  // Tema
+  if (APP.school && APP.school.color_theme) {
+    document.documentElement.dataset.theme = APP.school.color_theme
+  }
+
+  // Knapper
+  const loginBtn   = document.getElementById('hdr-login-btn')
+  const logoutBtn  = document.getElementById('hdr-logout-btn')
+  const laererBtn  = document.getElementById('hdr-laerer-btn')
+  const adminBtn   = document.getElementById('hdr-admin-btn')
+  const adminToggle= document.getElementById('hdr-admin-toggle')
+  const username   = document.getElementById('hdr-username')
+
+  if (APP.user && APP.profile) {
+    if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
+    if (loginBtn)    loginBtn.classList.add('skjult')
+    if (logoutBtn)   logoutBtn.classList.remove('skjult')
+
+    const rolle = APP.profile.role
+    if (laererBtn)  laererBtn.classList.toggle('skjult', rolle === 'admin' && APP.isAdminActive)
+    if (adminBtn)   adminBtn.classList.toggle('skjult', !APP.isAdminActive)
+
+    if (adminToggle && (rolle === 'admin' || rolle === 'kontaktlaerer')) {
+      adminToggle.classList.remove('skjult')
+      adminToggle.textContent = APP.isAdminActive ? 'Gå ut av admin-modus' : 'Aktiver admin-modus'
+      adminToggle.classList.toggle('admin-aktiv', APP.isAdminActive)
+      adminToggle.onclick = toggleAdminModus
+    }
+  } else {
+    if (username)    username.classList.add('skjult')
+    if (loginBtn)    loginBtn.classList.remove('skjult')
+    if (logoutBtn)   logoutBtn.classList.add('skjult')
+    if (laererBtn)   laererBtn.classList.add('skjult')
+    if (adminBtn)    adminBtn.classList.add('skjult')
+    if (adminToggle) adminToggle.classList.add('skjult')
+  }
+
+  // Logout-knapp
+  if (logoutBtn) logoutBtn.onclick = logout
 }
 
 // ─────────────────────────────────────────
