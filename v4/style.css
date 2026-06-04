@@ -400,6 +400,32 @@ tr:hover td { background: var(--primær-svak); }
 .admin-rad .tekst-svak { font-size: .82rem; color: var(--tekst-svak); }
 .admin-rad .spacer { flex: 1; }
 
+/* ── Skoleinfo uke-rad ───────────────────────────────────────────── */
+.uke-rad { display: flex; gap: 24px; flex-wrap: wrap; }
+.uke-grp { display: flex; flex-direction: column; gap: 4px; }
+.uke-grp label { font-size: .85rem; font-weight: 600; color: var(--tekst-svak); }
+.uke-hint { font-size: .8rem; color: var(--tekst-svak); }
+
+/* ── Skolerute kompakt skjema ────────────────────────────────────── */
+.skolerute-form {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;
+  margin: 14px 0 18px;
+}
+.skolerute-form .felt.input,
+.skolerute-form .felt.select { margin: 0; }
+.skolerute-form input[name=title] { min-width: 180px; flex: 1; }
+.skolerute-form input[type=date] { width: 150px; }
+.skolerute-form select { width: 160px; }
+
+/* ── AI-import seksjon ───────────────────────────────────────────── */
+.ai-import-seksjon { margin-top: 8px; }
+.ai-tip {
+  background: var(--bg-kort); border: 1px solid var(--kant);
+  border-radius: var(--radius); padding: 10px 14px;
+  font-size: .9rem; color: var(--tekst-svak); margin-bottom: 10px;
+}
+.ai-tekstfelt { width: 100%; max-width: 640px; margin: 8px 0; }
+
 /* ── Login-skjerm ────────────────────────────────────────────────── */
 .login-wrap {
   display: flex; align-items: center; justify-content: center;
