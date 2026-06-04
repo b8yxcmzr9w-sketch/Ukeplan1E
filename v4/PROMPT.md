@@ -90,7 +90,14 @@ Alt som lærer, pluss:
 
 ### Admin (innlogget, `is_admin_active=true`)
 
-**Rollebytte:** Knapp i header: «Gå ut av admin-modus» / «Aktiver admin-modus» – ingen ny innlogging nødvendig. Utenfor admin-modus: vanlig lærer/kontaktlærer-tilgang.
+**Rollebytte:** Knapp alltid synlig i header for admin-brukere. Tekst tilpasses kontekst:
+- I lærerpanelet: «Aktiver admin-modus»
+- I admin-panelet: «← Til lærerpanel» eller «← Til kontaktlærerpanel» avhengig av brukerens rolle
+- Ingen ny innlogging nødvendig
+
+**Oppstart etter innlogging for admin:**
+- Hvis skolen ikke er satt opp (ingen klasser ELLER ingen fag): åpne admin-panelet direkte
+- Ellers: åpne lærer-/kontaktlærerpanelet (admin-modus deaktivert)
 
 **Skoleinfo:**
 - Navn på skolen
@@ -112,11 +119,12 @@ Alt som lærer, pluss:
 - Slå sammen to klasser: velg hvilke fag som tas med. Vis konfliktoversikt (overlappende sessions). Admin løser konflikter manuelt. Bruk søppel-funksjon for det som ikke tas med.
 
 **Brukere:**
-- Legg til ny bruker: e-post, navn, rolle (Lærer / Kontaktlærer / Admin), tilknyttede klasser. Brukeren opprettes automatisk via Edge Function `create-user` og mottar en invitasjons-e-post.
-- Rediger bruker: endre navn (advarsel: «Navn endres i alle oppføringer»), rolle, klasser
+- Legg til ny bruker: e-post, navn, rolle (radioknapper: Lærer / Kontaktlærer) + sjekkboks «Administrator». Brukeren opprettes automatisk via Edge Function `create-user` og mottar en invitasjons-e-post.
+- Rediger bruker: endre navn (advarsel: «Navn endres i alle oppføringer»), rolle (radioknapper), admin-status (sjekkboks), klasser
 - Slett bruker: kun fremtidige sessions (fra og med i dag) tildeles annen lærer eller slettes. Historiske sessions beholdes med opprinnelig navn.
-- Definer inntil 2 kontaktlærere per klasse
-- Definer inntil 2 admins per skole
+- Maks 3 kontaktlærere per klasse – håndheves ved lagring
+- Maks 2 administratorer per skole – håndheves ved lagring
+- En administrator må alltid også ha rollen Lærer eller Kontaktlærer
 
 **Skolerute:**
 - Legg inn manuelt (tabellform: tittel, startdato, sluttdato, type)

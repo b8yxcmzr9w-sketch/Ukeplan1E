@@ -32,7 +32,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Krever admin-tilgang' }), { status: 403, headers: corsHeaders })
     }
 
-    const { email, full_name, role, class_ids } = await req.json()
+    const { email, full_name, role, is_admin, class_ids } = await req.json()
     if (!email || !full_name || !role) {
       return new Response(JSON.stringify({ error: 'Mangler påkrevde felt' }), { status: 400, headers: corsHeaders })
     }
@@ -47,7 +47,7 @@ serve(async (req) => {
       school_id: callerProfile.school_id,
       full_name,
       role,
-      is_admin_active: role === 'admin',
+      is_admin_active: is_admin === true,
     })
     if (dbError) throw dbError
 
