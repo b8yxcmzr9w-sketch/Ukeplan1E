@@ -92,6 +92,29 @@ function showToast(msg, type = 'info') {
   setTimeout(() => toast.remove(), 3500)
 }
 
+// Deaktiverer lagreKnapp til brukeren endrer noe i skjemaet
+function overvakSkjema(form, lagreKnapp) {
+  lagreKnapp.disabled = true
+  lagreKnapp.classList.add('btn-passiv')
+
+  function snapshot() {
+    return Array.from(form.querySelectorAll('input,select,textarea'))
+      .map(e => (e.type === 'checkbox' ? e.checked : e.value))
+      .join('§')
+  }
+
+  const initial = snapshot()
+
+  function sjekk() {
+    const endret = snapshot() !== initial
+    lagreKnapp.disabled = !endret
+    lagreKnapp.classList.toggle('btn-passiv', !endret)
+  }
+
+  form.addEventListener('input', sjekk)
+  form.addEventListener('change', sjekk)
+}
+
 // ─────────────────────────────────────────
 // SAVE OVERLAY
 // ─────────────────────────────────────────
@@ -1028,7 +1051,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input' })))
   form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' })))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   box.appendChild(form)
@@ -1115,7 +1138,7 @@ async function visRedigerOktModal(session, onSave) {
   const infoTA = el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')
   form.appendChild(lagFormRad('Info', infoTA))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   box.appendChild(form)
@@ -1722,7 +1745,7 @@ async function renderSkoleInfoTab(container) {
   themeRow.appendChild(themeGroup)
   form.appendChild(themeRow)
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre skoleinfo'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre skoleinfo'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   container.appendChild(form)
 }
 
@@ -1772,7 +1795,7 @@ async function visRedigerFagModal(subj, onSave) {
         const { error } = await sb.from('subjects').update(data).eq('id', subj.id)
         if (error) throw error
       } else {
-        const { error } = await sb.from('subjects').insert(data)
+        const { error } = await sb.from('subjects').insert({ ...data, school_id: APP.school.id })
         if (error) throw error
       }
     })
@@ -1780,21 +1803,70 @@ async function visRedigerFagModal(subj, onSave) {
     if (onSave) onSave()
   }})
 
-  form.appendChild(lagFormRad('Navn', el('input', { name: 'name', type: 'text', class: 'felt input', value: subj?.name || '', required: 'true' })))
-  form.appendChild(lagFormRad('Kortkode', el('input', { name: 'short_code', type: 'text', class: 'felt input', value: subj?.short_code || '' })))
-  form.appendChild(lagFormRad('Farge', el('input', { name: 'color_hex', type: 'color', class: 'felt input', value: subj?.color_hex || '#4a90d9' })))
+  // Navn
+  const navnInput = el('input', { name: 'name', type: 'text', class: 'felt input', value: subj?.name || '', required: 'true',
+    oninput: (e) => {
+      // Auto-generer kortkode fra de 3 første store bokstavene dersom feltet er tomt
+      if (!kortInput.dataset.manuelt) {
+        kortInput.value = e.target.value.replace(/[^a-zA-ZæøåÆØÅ]/g, '').slice(0, 3).toUpperCase()
+      }
+    }
+  })
+  form.appendChild(lagFormRad('Navn', navnInput))
 
+  // Kortkode – autogenerert, kan overstyres
+  const kortInfo = el('span', { style: 'font-size:.78rem;color:var(--tekst-svak);margin-left:6px' },
+    'Brukes som etikett på økt-kortene. Genereres automatisk.')
+  const kortInput = el('input', { name: 'short_code', type: 'text', class: 'felt input',
+    value: subj?.short_code || '', maxlength: '6', style: 'text-transform:uppercase;width:80px',
+    oninput: () => { kortInput.dataset.manuelt = '1' }
+  })
+  if (subj?.short_code) kortInput.dataset.manuelt = '1'
+  const kortRad = el('div', { class: 'felt' })
+  kortRad.appendChild(el('label', {}, 'Kortkode'))
+  const kortWrap = el('div', { style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap' })
+  kortWrap.appendChild(kortInput)
+  kortWrap.appendChild(kortInfo)
+  kortRad.appendChild(kortWrap)
+  form.appendChild(kortRad)
+
+  // Farge med forhåndsvisning
+  const fargeInit = subj?.color_hex || '#4a90d9'
+  const fargeInput = el('input', { name: 'color_hex', type: 'color', value: fargeInit, style: 'width:44px;height:36px;padding:2px;border-radius:6px;border:1px solid var(--kant);cursor:pointer' })
+  const fargeEtikett = el('span', { class: 'fag-badge', style: `background:${fargeInit};color:#fff` }, subj?.name || 'Eksempel')
+  fargeInput.addEventListener('input', () => {
+    fargeEtikett.style.background = fargeInput.value
+  })
+  navnInput.addEventListener('input', () => { fargeEtikett.textContent = navnInput.value || 'Eksempel' })
+  const fargeRad = el('div', { class: 'felt' })
+  fargeRad.appendChild(el('label', {}, 'Farge'))
+  const fargeWrap = el('div', { style: 'display:flex;align-items:center;gap:12px' })
+  fargeWrap.appendChild(fargeInput)
+  fargeWrap.appendChild(fargeEtikett)
+  fargeRad.appendChild(fargeWrap)
+  form.appendChild(fargeRad)
+
+  // Inndeling
   const dtSel = el('select', { name: 'division_type', class: 'felt select' })
   dtSel.appendChild(el('option', { value: 'ingen' }, 'Ingen inndeling'))
-  dtSel.appendChild(el('option', { value: 'parti' }, 'Parti'))
-  dtSel.appendChild(el('option', { value: 'gruppe' }, 'Gruppe'))
+  dtSel.appendChild(el('option', { value: 'parti' }, 'Parti (innenfor klassen)'))
+  dtSel.appendChild(el('option', { value: 'gruppe' }, 'Gruppe (på tvers av klasser)'))
   if (subj?.has_parti) dtSel.value = 'parti'
   else if (subj?.has_gruppe) dtSel.value = 'gruppe'
   form.appendChild(lagFormRad('Inndeling', dtSel))
 
-  form.appendChild(lagFormRad('Maks inndelinger', el('input', { name: 'max_divisions', type: 'number', class: 'felt input', value: subj?.max_divisions || 8, min: 1, max: 8 })))
+  // Maks inndelinger – kun synlig når inndeling er valgt
+  const maksInput = el('input', { name: 'max_divisions', type: 'number', class: 'felt input', value: subj?.max_divisions || 8, min: 1, max: 8, style: 'width:70px' })
+  const maksRad = el('div', { class: 'felt' })
+  maksRad.appendChild(el('label', {}, 'Maks antall inndelinger'))
+  maksRad.appendChild(maksInput)
+  maksRad.style.display = (dtSel.value === 'ingen') ? 'none' : 'block'
+  dtSel.addEventListener('change', () => {
+    maksRad.style.display = (dtSel.value === 'ingen') ? 'none' : 'block'
+  })
+  form.appendChild(maksRad)
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)
@@ -1938,7 +2010,7 @@ async function visNyBrukerModal(klasser, onSave) {
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)
@@ -1994,7 +2066,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)
