@@ -11,8 +11,6 @@ Bygg en nettbasert ukeplantjeneste for én videregående skole. Elevene kan se u
 - **Kalenderabonnement:** Supabase Edge Function genererer iCal-feed
 - **Ingen andre tjenester**
 
-Spør om noe er uklart før du begynner å bygge.
-
 ---
 
 ## Databaseskjema (PostgreSQL / Supabase)
@@ -22,7 +20,7 @@ Lag migrasjoner for alle tabeller. Bruk UUID som primærnøkkel overalt. Alle sl
 ```
 schools          – id, name, logo_url, logo_file_path, school_year_start_week, school_year_end_week, color_theme(enum: standard|lys|mork), created_at
 classes          – id, school_id, name, sort_order, deleted_at
-subjects         – id, school_id, name, short_code, color_hex, has_parti, has_gruppe, max_divisions(default 8), deleted_at
+subjects         – id, school_id, name, short_code, color_hex, has_parti, has_gruppe, max_divisions(default 8, max 20), deleted_at
 subject_divisions– id, subject_id, division_type(enum: parti|gruppe), name, sort_order, deleted_at
 users            – id (auth.uid), school_id, full_name, role(enum: laerer|kontaktlaerer|admin), is_admin_active(bool), deleted_at
 user_classes     – user_id, class_id (hvilke klasser læreren er tilknyttet)
@@ -39,6 +37,7 @@ school_facts     – id, school_id, fact_text (morsomme/interessante fakta om sk
 - Kontaktlærer: som lærer + INSERT/UPDATE/DELETE alle sessions i egne klasser
 - Admin (når `is_admin_active=true`): full tilgang til alt for sin skole
 - Ingen kryssdata mellom skoler
+- RLS-policyer skal bruke inline EXISTS-subspørringer (ikke security definer-funksjoner) for å sikre korrekt evaluering
 
 ---
 
@@ -85,7 +84,7 @@ Bruk Supabase Realtime for å lytte på endringer i `sessions`-tabellen for akti
 Alt som lærer, pluss:
 - Kan redigere alle økter for egne klasser uavhengig av hvem som opprettet dem
 - **Flerdagshendelser:** Opprett/rediger/slett hendelser for egen klasse eller andre klasser. Advar ved overlapping med eksisterende enkeltøkter.
-- **Klassestruktur:** Definer for hver klasse hvilke dager hvert fag fortrinnsvis undervises (standard dager). Definer antall partier/grupper per fag og navngi dem (inntil 8).
+- **Klassestruktur:** Definer for hver klasse hvilke dager hvert fag fortrinnsvis undervises (standard dager). Definer antall partier/grupper per fag og navngi dem (inntil 20).
 - **Backup:** Last ned komplett backup av klassen som JSON (alle sessions, multi_day_events, school_calendar-rader for klassen, klassestruktur). Last opp backup → vis liste over økter i backup-filen → la kontaktlærer velge hvilke økter som skal importeres → duplikatkontroll → importer valgte.
 - Kan ha inntil 2 kontaktlærere per klasse
 
@@ -95,14 +94,15 @@ Alt som lærer, pluss:
 
 **Skoleinfo:**
 - Navn på skolen
-- Logo: last opp bildefil (lagres i Supabase Storage) ELLER skriv inn URL
+- Logo: last opp bildefil (lagres i Supabase Storage) ELLER skriv inn URL. Logo brukes også som favicon.
 - Definer skoleårets start- og sluttuke (ISO-ukenummer)
 - **Fargepalett:** Velg mellom tre forhåndsdefinerte temaer – Standard (nåværende grønn), Lys (lys palett med kontrasterende farger) og Mørk (mørk palett). Valget lagres i `schools.color_theme` og lastes automatisk for alle besøkende på skolen.
 - **Skolefakta for overlay:** Legg inn morsomme eller interessante fakta/sitater om skolen som vises tilfeldig i lagre-overlay.
 
 **Fag:**
-- Legg til/rediger fagnavn og forkortelse
-- Definer: har dette faget parti eller gruppe (ikke begge)? Maks 8 inndelinger.
+- Legg til/rediger fagnavn og forkortelse. Kortkode genereres automatisk fra fagnavn (kan overstyres).
+- Velg farge fra forhåndsdefinert palett med 12 farger. Neste ledige farge velges automatisk.
+- Definer: har dette faget parti eller gruppe (ikke begge)? Maks 20 inndelinger (støtter tverrfaglige uker).
 - Endre fagnavn: vis advarsel «Dette endrer alle eksisterende økter med dette faget». Endre i alle sessions ved bekreftelse.
 - Slett fag: bruk soft-delete
 
@@ -112,9 +112,9 @@ Alt som lærer, pluss:
 - Slå sammen to klasser: velg hvilke fag som tas med. Vis konfliktoversikt (overlappende sessions). Admin løser konflikter manuelt. Bruk søppel-funksjon for det som ikke tas med.
 
 **Brukere:**
-- Legg til ny lærer: navn, e-post (Supabase Auth), rolle, tilknyttede klasser
-- Rediger lærer: endre navn (advarsel: «Navn endres i alle oppføringer»), rolle, klasser
-- Slett lærer: kun fremtidige sessions (fra og med i dag) tildeles annen lærer eller slettes. Historiske sessions beholdes med opprinnelig navn.
+- Legg til ny bruker: e-post, navn, rolle (Lærer / Kontaktlærer / Admin), tilknyttede klasser. Brukeren opprettes automatisk via Edge Function `create-user` og mottar en invitasjons-e-post.
+- Rediger bruker: endre navn (advarsel: «Navn endres i alle oppføringer»), rolle, klasser
+- Slett bruker: kun fremtidige sessions (fra og med i dag) tildeles annen lærer eller slettes. Historiske sessions beholdes med opprinnelig navn.
 - Definer inntil 2 kontaktlærere per klasse
 - Definer inntil 2 admins per skole
 
@@ -126,6 +126,9 @@ Alt som lærer, pluss:
 
 ## UX-krav
 
+**Lagre-knapper:**
+Alle lagre-knapper er passive (deaktivert) inntil brukeren har gjort en endring i skjemaet. Bruker `overvakSkjema(form, lagreKnapp)` som tar snapshot av alle felt ved oppstart og aktiverer knappen ved avvik.
+
 **Lagre-overlay:**
 Alle lagre-operasjoner bruker et morsomt overlay-mønster:
 1. Klikk «Lagre» → overlay vises med spinner og én av følgende (tilfeldig):
@@ -135,8 +138,15 @@ Alle lagre-operasjoner bruker et morsomt overlay-mønster:
 3. Ved feil: rød feilmelding med mulighet for retry
 Overlay hindrer dobbeltklikk og utilsiktede hendelser.
 
+**Modaler:**
+Alle modaler (vinduer) er sentrert midt på skjermen med mørk bakgrunn. Bakdrop-element bruker klassen `modal-bg`, innholdsboks bruker `modal`.
+
 **Felt i skjema:**
 Alle forhåndsdefinerte verdier (fag, klasse, dag, uke, parti/gruppe, lærer) velges fra nedtrekkslister. Ingen fritekst for strukturerte felt.
+
+**Layout:**
+- Innhold på alle sider er innrykket med fleksible marger: `padding: 28px clamp(20px, 5vw, 80px) 60px`
+- Skjemaer (f.eks. Skoleinfo) begrenses til maks 560px bredde på bred skjerm
 
 **Responsivt design:**
 - **Laptop:** 5-kolonners ukevisning, minst 3 synlige økter per dag (dagkolonnen har fast minimumshøyde og scroller ved overflow)
@@ -148,6 +158,10 @@ Definer tre komplette CSS-temaer med CSS custom properties (variabler). Tema las
 - `lys` – lys, luftig palett med en annen primærfarge (f.eks. blå eller teal)
 - `mork` – mørk palett egnet for lavlysbruk
 
+**Favicon:**
+- Standard favicon: Uno-logoen (`https://uno.ganddal.net/img/unohundlogo.png`)
+- Når skolen har lastet opp logo: favicon oppdateres automatisk til skolelogoen
+
 ---
 
 ## Edge Functions (Supabase)
@@ -156,6 +170,7 @@ Definer tre komplette CSS-temaer med CSS custom properties (variabler). Tema las
 2. **`/ai-parse-sessions`** – Mottar tekst + klasse/kontekst. Sender til Gemini Flash med strukturert system-prompt. Returnerer array av parsede økt-objekter.
 3. **`/ai-parse-skolerute`** – Mottar tekst. Sender til Gemini Flash. Returnerer array av kalender-hendelser.
 4. **`/cleanup`** – Kjøres periodisk (pg_cron eller scheduled function): sletter soft-deleted records eldre enn 30 dager permanent.
+5. **`/create-user`** – Oppretter ny auth-bruker via Supabase Admin API (service_role) og sender invitasjons-e-post. Krever aktiv admin-sesjon. Oppretter også rad i `users`-tabellen og kobler til klasser.
 
 Gemini API-nøkkel lagres som Supabase secret (`GEMINI_API_KEY`).
 
@@ -181,7 +196,7 @@ Alle sider skal ha en diskret footer med:
 ├── style.css           – Styling inkl. fargetemaer, @media print og mobile
 ├── supabase/
 │   ├── migrations/     – SQL-migrasjoner i rekkefølge
-│   └── functions/      – Edge Functions (ical, ai-parse-sessions, ai-parse-skolerute, cleanup)
+│   └── functions/      – Edge Functions (ical, ai-parse-sessions, ai-parse-skolerute, cleanup, create-user)
 └── README.md           – Oppsettsinstruksjoner
 ```
 
@@ -193,11 +208,12 @@ Inkluder steg-for-steg:
 1. Opprett Supabase-prosjekt
 2. Kjør migrasjoner
 3. Sett secrets (`GEMINI_API_KEY`)
-4. Deploy Edge Functions
+4. Deploy Edge Functions: `supabase functions deploy --project-ref <ref>` (kjøres fra `v4/`-mappen)
 5. Oppdater Supabase URL + anon key i `app.js`
 6. Push til GitHub, aktiver GitHub Pages på `main`-branch
-7. Opprett første admin-bruker via Supabase Auth-konsoll
+7. Opprett første admin-bruker via Supabase Auth-konsoll + INSERT i `users`-tabellen
 8. Logg inn og fullfør oppsett i admin-panelet
+9. Legg til GitHub Secrets `SUPABASE_URL` og `SUPABASE_ANON_KEY` for keep-alive workflow
 
 ---
 
@@ -205,6 +221,7 @@ Inkluder steg-for-steg:
 
 - **Sikkerhet:** RLS på alle tabeller. Ingen sensitiv data, men beskytt mot manipulering. Elever skal aldri kunne skrive til databasen. Lærere kun egne records.
 - **Driftssikkerhet:** Bruk Supabase innebygde backup. Edge Functions er stateless og idempotente.
+- **Supabase pause-problem:** GitHub Actions keep-alive workflow pinger Supabase REST API hver 5. dag for å hindre at prosjektet pauses i ferier.
 - **Samtidige redigeringer:** Optimistic locking + Realtime-varsler.
 - **Soft-delete overalt:** 30-dagers søppelbøtte for sessions, klasser, fag, brukere.
 - **Ingen fritekst i strukturerte felt.**

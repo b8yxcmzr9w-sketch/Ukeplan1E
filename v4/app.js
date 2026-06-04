@@ -271,6 +271,9 @@ function oppdaterHeader() {
       ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
       : APP.school.logo_url
     logo.classList.remove('skjult')
+    // Oppdater favicon til skolelogo
+    const favicon = document.getElementById('favicon')
+    if (favicon) favicon.href = logo.src
   }
 
   // Tema
