@@ -2311,33 +2311,25 @@ async function renderSkolerute(container) {
     const { data: events } = await sb.from('school_calendar').select('*').order('start_date')
     wrap.appendChild(el('h3', {}, 'Skolerute'))
 
-    const table = el('table', { class: 'admin-table' })
-    const thead = el('thead')
-    thead.appendChild(el('tr', {},
-      el('th', {}, 'Tittel'), el('th', {}, 'Fra'), el('th', {}, 'Til'), el('th', {}, 'Type'), el('th', {})
-    ))
-    table.appendChild(thead)
-    const tbody = el('tbody')
+    // Events list – same admin-rad pattern as rest of admin panel
     for (const e of events || []) {
-      const tr = el('tr', {},
-        el('td', {}, e.title),
-        el('td', {}, formatDatoNO(e.start_date)),
-        el('td', {}, formatDatoNO(e.end_date)),
-        el('td', {}, e.type || ''),
-        el('td', {},
-          el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
-            await medLagreOverlay(() => sb.from('school_calendar').delete().eq('id', e.id))
-            refresh()
-          }}, '🗑️')
-        )
-      )
-      tbody.appendChild(tr)
+      const row = el('div', { class: 'admin-rad' })
+      const info = el('div', { style: 'flex:1; min-width:0' })
+      info.appendChild(el('span', { class: 'tekst', style: 'font-weight:600; margin-right:8px' }, e.title))
+      info.appendChild(el('span', { class: 'tekst-svak', style: 'font-size:.85rem; white-space:nowrap' },
+        `${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)}`))
+      row.appendChild(info)
+      row.appendChild(el('span', { class: 'div-badge' }, e.type || ''))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+        await medLagreOverlay(() => sb.from('school_calendar').delete().eq('id', e.id))
+        refresh()
+      }}, '🗑️'))
+      wrap.appendChild(row)
     }
-    table.appendChild(tbody)
-    wrap.appendChild(table)
 
-    // Compact inline add form
-    const form = el('form', { class: 'skolerute-form', onsubmit: async (ev) => {
+    // Add form – labeled like Skoleinfo, mobile-friendly
+    wrap.appendChild(el('h4', { class: 'seksjon-tittel' }, 'Legg til'))
+    const form = el('form', { class: 'skjema', onsubmit: async (ev) => {
       ev.preventDefault()
       const fd = new FormData(form)
       await medLagreOverlay(async () => {
@@ -2353,17 +2345,25 @@ async function renderSkolerute(container) {
       form.reset()
       refresh()
     }})
-    const titleIn = el('input', { name: 'title', type: 'text', class: 'felt input', placeholder: 'Tittel', required: 'true' })
-    const fraIn   = el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })
-    const tilIn   = el('input', { name: 'end_date', type: 'date', class: 'felt input', required: 'true' })
+    form.appendChild(lagFormRad('Tittel',
+      el('input', { name: 'title', type: 'text', class: 'felt input', required: 'true' })))
+
+    // Fra og Til på samme linje (uke-rad / uke-grp mønster fra Skoleinfo)
+    const fraIn = el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })
+    const tilIn = el('input', { name: 'end_date',   type: 'date', class: 'felt input', required: 'true' })
+    const datoRad = el('div', { class: 'uke-rad' })
+    const fraGrp = el('div', { class: 'uke-grp dato-grp' })
+    fraGrp.appendChild(el('label', {}, 'Fra')); fraGrp.appendChild(fraIn)
+    const tilGrp = el('div', { class: 'uke-grp dato-grp' })
+    tilGrp.appendChild(el('label', {}, 'Til')); tilGrp.appendChild(tilIn)
+    datoRad.appendChild(fraGrp); datoRad.appendChild(tilGrp)
+    form.appendChild(lagFormRad('Dato', datoRad))
+
     const typeSel = el('select', { name: 'type', class: 'felt select' })
-    for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet']) {
+    for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
       typeSel.appendChild(el('option', { value: t }, t))
-    }
-    const feltRad = el('div', { class: 'skolerute-felt-rad' })
-    feltRad.appendChild(titleIn); feltRad.appendChild(fraIn); feltRad.appendChild(tilIn); feltRad.appendChild(typeSel)
-    form.appendChild(feltRad)
-    form.appendChild(el('button', { type: 'submit', class: 'btn btn-p skolerute-legg-til' }, '+ Legg til'))
+    form.appendChild(lagFormRad('Type', typeSel))
+    form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, '+ Legg til'))
     wrap.appendChild(form)
 
     // AI import – hidden by default, tip shown when calendar is empty
