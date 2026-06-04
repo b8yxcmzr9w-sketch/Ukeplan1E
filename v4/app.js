@@ -1690,15 +1690,13 @@ async function renderSkoleInfoTab(container) {
     const logoUrl = fd.get('logo_url')
     if (logoUrl) updates.logo_url = logoUrl
     await medLagreOverlay(async () => {
-      const { error } = await sb.from('schools').update(updates).eq('id', APP.school.id)
+      const { data: oppdatert, error } = await sb
+        .from('schools').update(updates).eq('id', APP.school.id).select().single()
       if (error) throw error
-      // Re-hent fra DB for å bekrefte at lagringen gikk igjennom
-      const { data: fersk } = await sb.from('schools').select('*').eq('id', APP.school.id).single()
-      if (fersk) {
-        APP.school = fersk
-        document.getElementById('hdr-skolenavn').textContent = fersk.name
-        document.documentElement.dataset.theme = fersk.color_theme || 'standard'
-      }
+      if (!oppdatert) throw new Error('Ingen rader ble oppdatert – sjekk admin-tilgang i databasen')
+      APP.school = oppdatert
+      document.getElementById('hdr-skolenavn').textContent = oppdatert.name
+      document.documentElement.dataset.theme = oppdatert.color_theme || 'standard'
       oppdaterHeader()
     })
   }})
