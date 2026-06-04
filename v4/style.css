@@ -407,19 +407,14 @@ tr:hover td { background: var(--primær-svak); }
 .uke-grp label { font-size: .85rem; font-weight: 600; color: var(--tekst-svak); }
 .uke-hint { font-size: .8rem; color: var(--tekst-svak); }
 
-/* ── Skolerute kompakt skjema ────────────────────────────────────── */
-.skolerute-form { margin: 14px 0 18px; }
-.skolerute-felt-rad {
-  display: grid;
-  grid-template-columns: 1fr 140px 140px 130px;
-  gap: 6px; align-items: center; margin-bottom: 8px;
-}
-.skolerute-felt-rad .felt.input,
-.skolerute-felt-rad .felt.select { margin: 0; width: 100%; background: var(--bg-kort); color: var(--tekst); }
-.skolerute-legg-til { font-size: .92rem; }
-
 /* Select med klasse direkte på elementet (ikke som barn av .felt) */
 select.felt, select.select { background: var(--bg-kort); color: var(--tekst); }
+
+/* Seksjonstittel i admin-faner */
+.seksjon-tittel { font-size: 1rem; font-weight: 700; margin: 18px 0 6px; border-top: 1px solid var(--kant); padding-top: 14px; }
+
+/* Dato-gruppe (Fra/Til) – gjenbruker uke-grp men med full dato-bredde */
+.dato-grp input { width: 100%; }
 
 /* ── Admin-tabell (skolerute) ────────────────────────────────────── */
 .admin-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
