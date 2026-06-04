@@ -124,7 +124,7 @@ async function medLagreOverlay(asyncFn) {
   } catch (err) {
     clearEl(box)
     box.appendChild(el('p', { class: 'save-overlay__error' }, `Feil: ${err.message}`))
-    const retryBtn = el('button', { class: 'btn btn--secondary', onclick: () => overlay.remove() }, 'Lukk')
+    const retryBtn = el('button', { class: 'btn btn-s', onclick: () => overlay.remove() }, 'Lukk')
     box.appendChild(retryBtn)
     throw err
   }
@@ -184,7 +184,7 @@ function renderLoginForm() {
   const main = document.getElementById('app-main')
   clearEl(main)
 
-  const form = el('form', { class: 'login-form', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const email = form.querySelector('[name=email]').value
     const password = form.querySelector('[name=password]').value
@@ -208,19 +208,19 @@ function renderLoginForm() {
   form.appendChild(el('input', { name: 'email', type: 'email', required: 'true', placeholder: 'din@epost.no' }))
   form.appendChild(el('label', {}, 'Passord'))
   form.appendChild(el('input', { name: 'password', type: 'password', required: 'true' }))
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn--primary' }, 'Logg inn'))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Logg inn'))
   main.appendChild(form)
 }
 
 function renderPassordModal() {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Bytt passord'))
-  const nytt = el('input', { type: 'password', placeholder: 'Nytt passord', class: 'input' })
-  const bekreft = el('input', { type: 'password', placeholder: 'Bekreft passord', class: 'input' })
+  const nytt = el('input', { type: 'password', placeholder: 'Nytt passord', class: 'felt input' })
+  const bekreft = el('input', { type: 'password', placeholder: 'Bekreft passord', class: 'felt input' })
   box.appendChild(nytt)
   box.appendChild(bekreft)
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     if (nytt.value !== bekreft.value) { showToast('Passordene er ikke like', 'error'); return }
     try {
       await medLagreOverlay(() => byttPassord(nytt.value))
@@ -229,7 +229,7 @@ function renderPassordModal() {
       showToast(err.message, 'error')
     }
   }}, 'Lagre'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
@@ -370,11 +370,11 @@ async function lagreOkt(id, data, expectedVersion) {
 
 function showConflictWarning() {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Konflikt!'))
   box.appendChild(el('p', {}, 'Noen andre har endret denne økten. Last siden på nytt for å se siste versjon.'))
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: () => { modal.remove(); window.location.reload() } }, 'Last på nytt'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: () => { modal.remove(); window.location.reload() } }, 'Last på nytt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   modal.appendChild(box)
   document.body.appendChild(modal)
 }
@@ -400,7 +400,7 @@ async function renderElevView(klasseNavn) {
 
   // Class selector
   const klasseHeader = el('div', { class: 'elev-header' })
-  const selector = el('select', { class: 'select', onchange: (e) => {
+  const selector = el('select', { class: 'felt select', onchange: (e) => {
     const val = e.target.value
     navigate(val ? `#/klasse/${encodeURIComponent(val)}` : '#/')
   }})
@@ -460,8 +460,8 @@ async function renderElevView(klasseNavn) {
       .gte('end_date', wStart)
 
     // Week navigation
-    const navRow = el('div', { class: 'week-nav' })
-    const prevBtn = el('button', { class: 'btn btn--ghost', onclick: () => {
+    const navRow = el('div', { class: 'nav-bar' })
+    const prevBtn = el('button', { class: 'btn btn-s', onclick: () => {
       if (weekNr > schoolStart) { currentWeek = weekNr - 1; renderUke(currentWeek) }
     }}, '← Forrige uke')
     if (weekNr <= schoolStart) prevBtn.setAttribute('disabled', 'true')
@@ -474,7 +474,7 @@ async function renderElevView(klasseNavn) {
       }
     })
 
-    const nextBtn = el('button', { class: 'btn btn--ghost', onclick: () => {
+    const nextBtn = el('button', { class: 'btn btn-s', onclick: () => {
       if (weekNr < schoolEnd) { currentWeek = weekNr + 1; renderUke(currentWeek) }
     }}, 'Neste uke →')
     if (weekNr >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
@@ -484,8 +484,8 @@ async function renderElevView(klasseNavn) {
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
 
-    const printBtn = el('button', { class: 'btn btn--ghost', onclick: () => window.print() }, '🖨️ Skriv ut')
-    const icalBtn = el('button', { class: 'btn btn--ghost', onclick: () => visICalModal(klasse) }, '📅 iCal-abonnement')
+    const printBtn = el('button', { class: 'btn btn-s', onclick: () => window.print() }, '🖨️ Skriv ut')
+    const icalBtn = el('button', { class: 'btn btn-s', onclick: () => visICalModal(klasse) }, '📅 iCal-abonnement')
     navRow.appendChild(printBtn)
     navRow.appendChild(icalBtn)
     wc.appendChild(navRow)
@@ -516,7 +516,7 @@ async function renderElevView(klasseNavn) {
     if (divisions && divisions.length > 0) {
       const filterBar = el('div', { class: 'filter-bar' })
       filterBar.appendChild(el('label', {}, 'Filtrer: '))
-      const filterSel = el('select', { class: 'select', onchange: (e) => {
+      const filterSel = el('select', { class: 'felt select', onchange: (e) => {
         aktivFilter = e.target.value || null
         renderUke(weekNr)
       }})
@@ -531,9 +531,9 @@ async function renderElevView(klasseNavn) {
     }
 
     // Week grid
-    const grid = el('div', { class: 'week-grid' })
+    const grid = el('div', { class: 'uke-grid' })
     for (let dag = 1; dag <= 5; dag++) {
-      const dayCol = el('div', { class: 'day-col' })
+      const dayCol = el('div', { class: 'dag-kol' })
       const dateForDay = isoWeekToDate(new Date().getFullYear(), weekNr, dag)
       const dayHeader = el('div', { class: 'day-col__header' },
         `${dagNavn(dag)} ${formatDatoNO(dateForDay.toISOString().slice(0, 10))}`)
@@ -578,25 +578,25 @@ async function renderElevView(klasseNavn) {
 
 function renderSessionCard(s, showActions, actions = {}) {
   const color = s.subjects?.color_hex || '#4a90d9'
-  const card = el('div', { class: 'session-card', style: `border-left: 4px solid ${color}` })
+  const card = el('div', { class: 'okt-kort', style: `border-left: 4px solid ${color}` })
 
   const subjectName = s.subjects?.name || 'Ukjent fag'
-  card.appendChild(el('div', { class: 'session-card__subject' }, subjectName))
+  card.appendChild(el('div', { class: 'fag-badge' }, subjectName))
 
-  if (s.activity) card.appendChild(el('div', { class: 'session-card__activity' }, truncate(s.activity)))
+  if (s.activity) card.appendChild(el('div', { class: 'aktivitet' }, truncate(s.activity)))
   if (s.meeting_point) card.appendChild(el('div', { class: 'session-card__meeting' }, `📍 ${s.meeting_point}`))
   if (s.info) card.appendChild(el('div', { class: 'session-card__info' }, truncate(s.info)))
   if (s.users) card.appendChild(el('div', { class: 'session-card__teacher' }, s.users.name))
   if (s.subject_divisions) {
-    card.appendChild(el('div', { class: 'session-card__division' }, s.subject_divisions.name))
+    card.appendChild(el('div', { class: 'div-badge' }, s.subject_divisions.name))
   }
 
   if (showActions) {
-    const actionRow = el('div', { class: 'session-card__actions' })
-    if (actions.edit) actionRow.appendChild(el('button', { class: 'btn btn--icon', onclick: actions.edit }, '✏️'))
-    if (actions.copy) actionRow.appendChild(el('button', { class: 'btn btn--icon', onclick: actions.copy }, '📋'))
-    if (actions.del) actionRow.appendChild(el('button', { class: 'btn btn--icon btn--danger', onclick: actions.del }, '🗑️'))
-    if (actions.transfer) actionRow.appendChild(el('button', { class: 'btn btn--icon', onclick: actions.transfer }, '↗️'))
+    const actionRow = el('div', { class: 'okt-handlinger' })
+    if (actions.edit) actionRow.appendChild(el('button', { class: 'btn btn-ikon', onclick: actions.edit }, '✏️'))
+    if (actions.copy) actionRow.appendChild(el('button', { class: 'btn btn-ikon', onclick: actions.copy }, '📋'))
+    if (actions.del) actionRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: actions.del }, '🗑️'))
+    if (actions.transfer) actionRow.appendChild(el('button', { class: 'btn btn-ikon', onclick: actions.transfer }, '↗️'))
     card.appendChild(actionRow)
   }
 
@@ -609,12 +609,12 @@ function visICalModal(klasse) {
     ? `${baseUrl}?class_id=${klasse.id}`
     : `${baseUrl}?teacher_id=${APP.profile?.id}`
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'iCal-abonnement'))
   box.appendChild(el('p', {}, 'Kopier lenken under og legg den til i Google Kalender, Apple Kalender eller Outlook:'))
-  const input = el('input', { class: 'input', value: url, readonly: 'true' })
+  const input = el('input', { class: 'felt input', value: url, readonly: 'true' })
   box.appendChild(input)
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: () => {
     navigator.clipboard.writeText(url)
     showToast('Kopiert!', 'success')
   }}, 'Kopier lenke'))
@@ -626,7 +626,7 @@ function visICalModal(klasse) {
       el('li', {}, 'Outlook: Legg til kalender → Fra internett')
     )
   ))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Lukk'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Lukk'))
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
@@ -648,13 +648,13 @@ async function renderLaererView() {
 
   let activeTab = 0
 
-  const tabBar = el('div', { class: 'tab-bar' })
-  const tabContent = el('div', { class: 'tab-content' })
+  const tabBar = el('div', { class: 'fane-bar' })
+  const tabContent = el('div', { class: 'fane-innhold' })
 
   function setTab(idx) {
     activeTab = idx
     tabBar.querySelectorAll('.tab-btn').forEach((b, i) => {
-      b.classList.toggle('tab-btn--active', i === idx)
+      b.classList.toggle('fane aktiv', i === idx)
     })
     clearEl(tabContent)
     switch (idx) {
@@ -666,7 +666,7 @@ async function renderLaererView() {
   }
 
   tabs.forEach((t, i) => {
-    const btn = el('button', { class: 'tab-btn', onclick: () => setTab(i) }, t)
+    const btn = el('button', { class: 'fane', onclick: () => setTab(i) }, t)
     tabBar.appendChild(btn)
   })
 
@@ -695,7 +695,7 @@ async function renderMinKlasseTab(container) {
   if (currentWeek > schoolEnd) currentWeek = schoolEnd
 
   const topRow = el('div', { class: 'laerer-top' })
-  const klasseSel = el('select', { class: 'select', onchange: (e) => {
+  const klasseSel = el('select', { class: 'felt select', onchange: (e) => {
     aktivKlasse = klasser.find(k => k.id === e.target.value)
     renderUke()
   }})
@@ -705,8 +705,8 @@ async function renderMinKlasseTab(container) {
   }
   topRow.appendChild(el('label', {}, 'Klasse: '))
   topRow.appendChild(klasseSel)
-  topRow.appendChild(el('button', { class: 'btn btn--primary', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
-  topRow.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
+  topRow.appendChild(el('button', { class: 'btn btn-p', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
+  topRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
   container.appendChild(topRow)
 
   const weekArea = el('div', { id: 'laerer-week-area' })
@@ -718,13 +718,13 @@ async function renderMinKlasseTab(container) {
     clearEl(weekArea)
     bulkSelected.clear()
 
-    const navRow = el('div', { class: 'week-nav' })
-    const prevBtn = el('button', { class: 'btn btn--ghost', onclick: () => {
+    const navRow = el('div', { class: 'nav-bar' })
+    const prevBtn = el('button', { class: 'btn btn-s', onclick: () => {
       if (currentWeek > schoolStart) { currentWeek--; renderUke() }
     }}, '← Forrige')
     if (currentWeek <= schoolStart) prevBtn.setAttribute('disabled', 'true')
 
-    const nextBtn = el('button', { class: 'btn btn--ghost', onclick: () => {
+    const nextBtn = el('button', { class: 'btn btn-s', onclick: () => {
       if (currentWeek < schoolEnd) { currentWeek++; renderUke() }
     }}, 'Neste →')
     if (currentWeek >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
@@ -741,8 +741,8 @@ async function renderMinKlasseTab(container) {
     navRow.appendChild(el('span', { class: 'week-label' }, `Uke ${currentWeek}`))
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
-    navRow.appendChild(el('button', { class: 'btn btn--ghost', onclick: () => window.print() }, '🖨️'))
-    navRow.appendChild(el('button', { class: 'btn btn--ghost', onclick: () => visICalModal(null) }, '📅'))
+    navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => window.print() }, '🖨️'))
+    navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visICalModal(null) }, '📅'))
     weekArea.appendChild(navRow)
 
     const { data: sessions } = await sb.from('sessions')
@@ -754,8 +754,8 @@ async function renderMinKlasseTab(container) {
     const bulkBar = el('div', { class: 'bulk-bar', style: 'display:none' })
     const bulkCount = el('span', {}, '0 valgt')
     bulkBar.appendChild(bulkCount)
-    bulkBar.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => visBulkEditModal([...bulkSelected], renderUke) }, 'Rediger valgte'))
-    bulkBar.appendChild(el('button', { class: 'btn btn--danger', onclick: async () => {
+    bulkBar.appendChild(el('button', { class: 'btn btn-s', onclick: () => visBulkEditModal([...bulkSelected], renderUke) }, 'Rediger valgte'))
+    bulkBar.appendChild(el('button', { class: 'btn btn-f', onclick: async () => {
       if (!confirm('Slette alle valgte?')) return
       await medLagreOverlay(async () => {
         for (const id of bulkSelected) {
@@ -771,9 +771,9 @@ async function renderMinKlasseTab(container) {
       bulkCount.textContent = `${bulkSelected.size} valgt`
     }
 
-    const grid = el('div', { class: 'week-grid' })
+    const grid = el('div', { class: 'uke-grid' })
     for (let dag = 1; dag <= 5; dag++) {
-      const dayCol = el('div', { class: 'day-col' })
+      const dayCol = el('div', { class: 'dag-kol' })
       dayCol.appendChild(el('div', { class: 'day-col__header' }, dagNavn(dag)))
 
       let daySessions = (sessions || []).filter(s => s.day_of_week === dag)
@@ -863,7 +863,7 @@ async function renderAlleOkterTab(container) {
 }
 
 async function renderSokTab(container) {
-  const searchInput = el('input', { type: 'search', class: 'input', placeholder: 'Søk i aktivitet, sted, info, fag, lærer…' })
+  const searchInput = el('input', { type: 'search', class: 'felt input', placeholder: 'Søk i aktivitet, sted, info, fag, lærer…' })
   const results = el('div', { class: 'search-results' })
 
   async function doSearch() {
@@ -905,14 +905,14 @@ async function renderSokTab(container) {
 
 async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Ny økt'))
 
   const { data: klasser } = await sb.from('classes').select('*')
   const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
   const { data: subjects } = await sb.from('subjects').select('*').order('name')
 
-  const form = el('form', { class: 'session-form', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const klassId = fd.get('class_id')
@@ -961,7 +961,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   }})
 
   // Class
-  const klasseSel = el('select', { name: 'class_id', class: 'select', required: 'true', onchange: async (e) => {
+  const klasseSel = el('select', { name: 'class_id', class: 'felt select', required: 'true', onchange: async (e) => {
     await oppdaterFagSel(e.target.value)
   }})
   for (const k of klasser || []) {
@@ -972,13 +972,13 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   form.appendChild(lagFormRad('Klasse', klasseSel))
 
   // Subject
-  const fagSel = el('select', { name: 'subject_id', class: 'select', required: 'true', onchange: async (e) => {
+  const fagSel = el('select', { name: 'subject_id', class: 'felt select', required: 'true', onchange: async (e) => {
     await oppdaterDivisionSel(e.target.value)
   }})
   form.appendChild(lagFormRad('Fag', fagSel))
 
   // Division
-  const divSel = el('select', { name: 'division_id', class: 'select' })
+  const divSel = el('select', { name: 'division_id', class: 'felt select' })
   divSel.appendChild(el('option', { value: '' }, '(ingen)'))
   form.appendChild(lagFormRad('Parti/gruppe', divSel))
 
@@ -1003,17 +1003,17 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   if (defaultKlasse) await oppdaterFagSel(defaultKlasse.id)
 
   // Week
-  const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'input',
+  const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'felt input',
     value: defaultWeek, min: 1, max: 53, required: 'true' })
   form.appendChild(lagFormRad('Uke', weekInput))
 
   // Day
-  const dagSel = el('select', { name: 'day_of_week', class: 'select' })
+  const dagSel = el('select', { name: 'day_of_week', class: 'felt select' })
   for (let i = 1; i <= 5; i++) dagSel.appendChild(el('option', { value: i }, dagNavn(i)))
   form.appendChild(lagFormRad('Dag', dagSel))
 
   // Teacher
-  const laererSel = el('select', { name: 'teacher_id', class: 'select' })
+  const laererSel = el('select', { name: 'teacher_id', class: 'felt select' })
   for (const t of teachers || []) {
     const opt = el('option', { value: t.id }, t.name)
     if (t.id === APP.profile.id) opt.setAttribute('selected', 'true')
@@ -1021,12 +1021,12 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   }
   form.appendChild(lagFormRad('Lærer', laererSel))
 
-  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'input' })))
-  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'input' })))
-  form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'textarea' })))
+  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input' })))
+  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input' })))
+  form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' })))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn--primary' }, 'Lagre'))
-  form.appendChild(el('button', { type: 'button', class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   box.appendChild(form)
   modal.appendChild(box)
@@ -1036,7 +1036,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
 
 async function visRedigerOktModal(session, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Rediger økt'))
 
   const { data: subjects } = await sb.from('subjects').select('*')
@@ -1045,7 +1045,7 @@ async function visRedigerOktModal(session, onSave) {
     .eq('subject_id', session.subject_id)
   const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
 
-  const form = el('form', { class: 'session-form', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const data = {
@@ -1066,7 +1066,7 @@ async function visRedigerOktModal(session, onSave) {
     if (onSave) onSave()
   }})
 
-  const fagSel = el('select', { name: 'subject_id', class: 'select' })
+  const fagSel = el('select', { name: 'subject_id', class: 'felt select' })
   for (const s of subjects || []) {
     const opt = el('option', { value: s.id }, s.name)
     if (s.id === session.subject_id) opt.setAttribute('selected', 'true')
@@ -1074,7 +1074,7 @@ async function visRedigerOktModal(session, onSave) {
   }
   form.appendChild(lagFormRad('Fag', fagSel))
 
-  const divSel = el('select', { name: 'division_id', class: 'select' })
+  const divSel = el('select', { name: 'division_id', class: 'felt select' })
   divSel.appendChild(el('option', { value: '' }, '(ingen)'))
   for (const d of divisions || []) {
     const opt = el('option', { value: d.id }, d.name)
@@ -1083,11 +1083,11 @@ async function visRedigerOktModal(session, onSave) {
   }
   form.appendChild(lagFormRad('Parti/gruppe', divSel))
 
-  const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'input',
+  const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'felt input',
     value: session.week_nr, min: 1, max: 53 })
   form.appendChild(lagFormRad('Uke', weekInput))
 
-  const dagSel = el('select', { name: 'day_of_week', class: 'select' })
+  const dagSel = el('select', { name: 'day_of_week', class: 'felt select' })
   for (let i = 1; i <= 5; i++) {
     const opt = el('option', { value: i }, dagNavn(i))
     if (i === session.day_of_week) opt.setAttribute('selected', 'true')
@@ -1095,7 +1095,7 @@ async function visRedigerOktModal(session, onSave) {
   }
   form.appendChild(lagFormRad('Dag', dagSel))
 
-  const laererSel = el('select', { name: 'teacher_id', class: 'select' })
+  const laererSel = el('select', { name: 'teacher_id', class: 'felt select' })
   for (const t of teachers || []) {
     const opt = el('option', { value: t.id }, t.name)
     if (t.id === session.teacher_id) opt.setAttribute('selected', 'true')
@@ -1103,17 +1103,17 @@ async function visRedigerOktModal(session, onSave) {
   }
   form.appendChild(lagFormRad('Lærer', laererSel))
 
-  const actInput = el('input', { name: 'activity', type: 'text', class: 'input', value: session.activity || '' })
+  const actInput = el('input', { name: 'activity', type: 'text', class: 'felt input', value: session.activity || '' })
   form.appendChild(lagFormRad('Aktivitet', actInput))
 
-  const mpInput = el('input', { name: 'meeting_point', type: 'text', class: 'input', value: session.meeting_point || '' })
+  const mpInput = el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '' })
   form.appendChild(lagFormRad('Møtested', mpInput))
 
-  const infoTA = el('textarea', { name: 'info', class: 'textarea' }, session.info || '')
+  const infoTA = el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')
   form.appendChild(lagFormRad('Info', infoTA))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn--primary' }, 'Lagre'))
-  form.appendChild(el('button', { type: 'button', class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   box.appendChild(form)
   modal.appendChild(box)
@@ -1123,12 +1123,12 @@ async function visRedigerOktModal(session, onSave) {
 
 async function visKopierOktModal(session, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Kopier økt'))
   box.appendChild(el('p', {}, 'Velg uke og dag for kopien:'))
 
-  const weekInput = el('input', { type: 'number', class: 'input', value: session.week_nr, min: 1, max: 53, placeholder: 'Uke' })
-  const dagSel = el('select', { class: 'select' })
+  const weekInput = el('input', { type: 'number', class: 'felt input', value: session.week_nr, min: 1, max: 53, placeholder: 'Uke' })
+  const dagSel = el('select', { class: 'felt select' })
   for (let i = 1; i <= 5; i++) {
     const opt = el('option', { value: i }, dagNavn(i))
     if (i === session.day_of_week) opt.setAttribute('selected', 'true')
@@ -1138,7 +1138,7 @@ async function visKopierOktModal(session, onSave) {
   box.appendChild(lagFormRad('Uke', weekInput))
   box.appendChild(lagFormRad('Dag', dagSel))
 
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     await medLagreOverlay(async () => {
       const { error } = await sb.from('sessions').insert({
         class_id: session.class_id,
@@ -1157,7 +1157,7 @@ async function visKopierOktModal(session, onSave) {
     modal.remove()
     if (onSave) onSave()
   }}, 'Kopier'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1175,7 +1175,7 @@ async function slettOkt(id, onSave) {
 
 async function visOverforModal(session, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Overfør økt'))
 
   const { data: teachers } = await sb.from('users')
@@ -1183,13 +1183,13 @@ async function visOverforModal(session, onSave) {
     .eq('school_id', APP.school.id)
     .neq('id', APP.profile.id)
 
-  const sel = el('select', { class: 'select' })
+  const sel = el('select', { class: 'felt select' })
   for (const t of teachers || []) {
     sel.appendChild(el('option', { value: t.id }, t.name))
   }
 
   box.appendChild(lagFormRad('Ny lærer', sel))
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     const targetId = sel.value
     await medLagreOverlay(async () => {
       await sb.from('sessions').update({ teacher_id: targetId }).eq('id', session.id)
@@ -1209,7 +1209,7 @@ async function visOverforModal(session, onSave) {
     modal.remove()
     if (onSave) onSave()
   }}, 'Overfør'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1218,20 +1218,20 @@ async function visOverforModal(session, onSave) {
 
 async function visBulkEditModal(ids, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, `Bulk-rediger ${ids.length} økt(er)`))
 
-  const weekInput = el('input', { type: 'number', class: 'input', placeholder: 'Ny uke (blank = uendret)', min: 1, max: 53 })
-  const dagSel = el('select', { class: 'select' })
+  const weekInput = el('input', { type: 'number', class: 'felt input', placeholder: 'Ny uke (blank = uendret)', min: 1, max: 53 })
+  const dagSel = el('select', { class: 'felt select' })
   dagSel.appendChild(el('option', { value: '' }, '(uendret)'))
   for (let i = 1; i <= 5; i++) dagSel.appendChild(el('option', { value: i }, dagNavn(i)))
-  const infoInput = el('textarea', { class: 'textarea', placeholder: 'Ny info (blank = uendret)' })
+  const infoInput = el('textarea', { class: 'felt textarea', placeholder: 'Ny info (blank = uendret)' })
 
   box.appendChild(lagFormRad('Uke', weekInput))
   box.appendChild(lagFormRad('Dag', dagSel))
   box.appendChild(lagFormRad('Info', infoInput))
 
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     const updates = {}
     if (weekInput.value) updates.week_nr = parseInt(weekInput.value)
     if (dagSel.value) updates.day_of_week = parseInt(dagSel.value)
@@ -1247,7 +1247,7 @@ async function visBulkEditModal(ids, onSave) {
     modal.remove()
     if (onSave) onSave()
   }}, 'Lagre'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1259,13 +1259,13 @@ async function visAIPasteModal(defaultKlasse, onSave) {
   const box = el('div', { class: 'modal__box modal__box--wide' })
   box.appendChild(el('h3', {}, 'Importer økter med AI'))
 
-  const textarea = el('textarea', { class: 'textarea textarea--large', placeholder: 'Lim inn tekst her…' })
+  const textarea = el('textarea', { class: 'felt textarea textarea-large', placeholder: 'Lim inn tekst her…' })
   box.appendChild(textarea)
 
   const preview = el('div', { class: 'ai-preview' })
   box.appendChild(preview)
 
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     if (!textarea.value.trim()) return
     clearEl(preview)
     preview.appendChild(el('p', {}, 'Analyserer…'))
@@ -1320,7 +1320,7 @@ async function visAIPasteModal(defaultKlasse, onSave) {
       table.appendChild(tbody)
       preview.appendChild(table)
 
-      preview.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+      preview.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
         const toImport = parsed.filter((_, i) => selected.has(i))
         await medLagreOverlay(async () => {
           for (const s of toImport) {
@@ -1347,7 +1347,7 @@ async function visAIPasteModal(defaultKlasse, onSave) {
     }
   }}, 'Analyser med AI'))
 
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
@@ -1370,7 +1370,7 @@ async function renderKlasseAdminTab(container) {
 
   let aktivKlasse = klasser[0]
 
-  const klasseSel = el('select', { class: 'select', onchange: (e) => {
+  const klasseSel = el('select', { class: 'felt select', onchange: (e) => {
     aktivKlasse = klasser.find(k => k.id === e.target.value)
     renderKlasseAdminInnhold()
   }})
@@ -1392,15 +1392,15 @@ async function renderKlasseAdminTab(container) {
     for (const e of mde || []) {
       const row = el('div', { class: 'mde-row' })
       row.appendChild(el('span', {}, `${e.title} (${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)})`))
-      row.appendChild(el('button', { class: 'btn btn--icon', onclick: () => visRedigerMDEModal(e, renderKlasseAdminInnhold) }, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn--icon btn--danger', onclick: async () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerMDEModal(e, renderKlasseAdminInnhold) }, '✏️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
         if (!confirm('Slette?')) return
         await medLagreOverlay(() => sb.from('multi_day_events').delete().eq('id', e.id))
         renderKlasseAdminInnhold()
       }}, '🗑️'))
       innhold.appendChild(row)
     }
-    innhold.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => visNyMDEModal(aktivKlasse.id, renderKlasseAdminInnhold) }, '+ Nytt arrangement'))
+    innhold.appendChild(el('button', { class: 'btn btn-s', onclick: () => visNyMDEModal(aktivKlasse.id, renderKlasseAdminInnhold) }, '+ Nytt arrangement'))
 
     // Subject config
     innhold.appendChild(el('h3', {}, 'Faginnstillinger'))
@@ -1434,13 +1434,13 @@ async function renderKlasseAdminTab(container) {
       const divList = el('div', { class: 'div-list' })
       for (const d of divs || []) {
         const divRow = el('div', { class: 'div-row' })
-        const nameInput = el('input', { type: 'text', class: 'input input--sm', value: d.name })
+        const nameInput = el('input', { type: 'text', class: 'felt input input-sm', value: d.name })
         divRow.appendChild(nameInput)
-        divRow.appendChild(el('button', { class: 'btn btn--icon', onclick: async () => {
+        divRow.appendChild(el('button', { class: 'btn btn-ikon', onclick: async () => {
           await medLagreOverlay(() => sb.from('subject_divisions').update({ name: nameInput.value }).eq('id', d.id))
           showToast('Lagret', 'success')
         }}, '💾'))
-        divRow.appendChild(el('button', { class: 'btn btn--icon btn--danger', onclick: async () => {
+        divRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
           if (!confirm('Slette?')) return
           await medLagreOverlay(() => sb.from('subject_divisions').delete().eq('id', d.id))
           renderKlasseAdminInnhold()
@@ -1448,7 +1448,7 @@ async function renderKlasseAdminTab(container) {
         divList.appendChild(divRow)
       }
       if ((divs || []).length < 8) {
-        divList.appendChild(el('button', { class: 'btn btn--sm', onclick: async () => {
+        divList.appendChild(el('button', { class: 'btn btn-sm', onclick: async () => {
           const type = prompt('Type (parti/gruppe):') || 'gruppe'
           const navn = prompt('Navn:')
           if (!navn) return
@@ -1464,11 +1464,11 @@ async function renderKlasseAdminTab(container) {
 
     // Backup
     innhold.appendChild(el('h3', {}, 'Sikkerhetskopiering'))
-    innhold.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => lastNedSikkerhetskopi(aktivKlasse) }, '⬇️ Last ned sikkerhetskopi'))
+    innhold.appendChild(el('button', { class: 'btn btn-s', onclick: () => lastNedSikkerhetskopi(aktivKlasse) }, '⬇️ Last ned sikkerhetskopi'))
     const uploadInput = el('input', { type: 'file', accept: '.json', onchange: (e) => {
       if (e.target.files[0]) lastOppSikkerhetskopi(e.target.files[0], aktivKlasse)
     }})
-    innhold.appendChild(el('label', { class: 'btn btn--secondary' }, '⬆️ Last opp sikkerhetskopi', uploadInput))
+    innhold.appendChild(el('label', { class: 'btn btn-s' }, '⬆️ Last opp sikkerhetskopi', uploadInput))
   }
 
   await renderKlasseAdminInnhold()
@@ -1476,20 +1476,20 @@ async function renderKlasseAdminTab(container) {
 
 async function visNyMDEModal(classId, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Nytt flerdagsarrangement'))
 
-  const titleInput = el('input', { type: 'text', class: 'input', placeholder: 'Tittel' })
-  const descInput = el('textarea', { class: 'textarea', placeholder: 'Beskrivelse' })
-  const startInput = el('input', { type: 'date', class: 'input' })
-  const endInput = el('input', { type: 'date', class: 'input' })
+  const titleInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Tittel' })
+  const descInput = el('textarea', { class: 'felt textarea', placeholder: 'Beskrivelse' })
+  const startInput = el('input', { type: 'date', class: 'felt input' })
+  const endInput = el('input', { type: 'date', class: 'felt input' })
 
   box.appendChild(lagFormRad('Tittel', titleInput))
   box.appendChild(lagFormRad('Beskrivelse', descInput))
   box.appendChild(lagFormRad('Fra', startInput))
   box.appendChild(lagFormRad('Til', endInput))
 
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     if (!titleInput.value || !startInput.value || !endInput.value) return
     // Overlap warning
     const { data: overlap } = await sb.from('sessions')
@@ -1513,7 +1513,7 @@ async function visNyMDEModal(classId, onSave) {
     modal.remove()
     if (onSave) onSave()
   }}, 'Lagre'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1522,20 +1522,20 @@ async function visNyMDEModal(classId, onSave) {
 
 async function visRedigerMDEModal(mde, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Rediger arrangement'))
 
-  const titleInput = el('input', { type: 'text', class: 'input', value: mde.title })
-  const descInput = el('textarea', { class: 'textarea' }, mde.description || '')
-  const startInput = el('input', { type: 'date', class: 'input', value: mde.start_date })
-  const endInput = el('input', { type: 'date', class: 'input', value: mde.end_date })
+  const titleInput = el('input', { type: 'text', class: 'felt input', value: mde.title })
+  const descInput = el('textarea', { class: 'felt textarea' }, mde.description || '')
+  const startInput = el('input', { type: 'date', class: 'felt input', value: mde.start_date })
+  const endInput = el('input', { type: 'date', class: 'felt input', value: mde.end_date })
 
   box.appendChild(lagFormRad('Tittel', titleInput))
   box.appendChild(lagFormRad('Beskrivelse', descInput))
   box.appendChild(lagFormRad('Fra', startInput))
   box.appendChild(lagFormRad('Til', endInput))
 
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     await medLagreOverlay(async () => {
       const { error } = await sb.from('multi_day_events').update({
         title: titleInput.value,
@@ -1548,7 +1548,7 @@ async function visRedigerMDEModal(mde, onSave) {
     modal.remove()
     if (onSave) onSave()
   }}, 'Lagre'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1576,7 +1576,7 @@ async function lastOppSikkerhetskopi(file, klasse) {
   if (!sessions.length) { showToast('Ingen økter i filen', 'info'); return }
 
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Importer sikkerhetskopi'))
   box.appendChild(el('p', {}, `Filen inneholder ${sessions.length} økt(er). Velg hvilke du vil importere:`))
 
@@ -1593,7 +1593,7 @@ async function lastOppSikkerhetskopi(file, klasse) {
   })
   box.appendChild(list)
 
-  box.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     const toImport = sessions.filter((_, i) => selected.has(i))
     await medLagreOverlay(async () => {
       for (const s of toImport) {
@@ -1604,7 +1604,7 @@ async function lastOppSikkerhetskopi(file, klasse) {
     modal.remove()
     showToast(`Importerte ${toImport.length} økt(er)`, 'success')
   }}, 'Importer valgte'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1622,12 +1622,12 @@ async function renderAdminPanel() {
   const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Fakta']
   let activeTab = 0
 
-  const tabBar = el('div', { class: 'tab-bar' })
-  const tabContent = el('div', { class: 'tab-content' })
+  const tabBar = el('div', { class: 'fane-bar' })
+  const tabContent = el('div', { class: 'fane-innhold' })
 
   function setTab(idx) {
     activeTab = idx
-    tabBar.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('tab-btn--active', i === idx))
+    tabBar.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('fane aktiv', i === idx))
     clearEl(tabContent)
     switch (idx) {
       case 0: renderSkoleInfoTab(tabContent); break
@@ -1640,7 +1640,7 @@ async function renderAdminPanel() {
   }
 
   tabs.forEach((t, i) => {
-    const btn = el('button', { class: 'tab-btn', onclick: () => setTab(i) }, t)
+    const btn = el('button', { class: 'fane', onclick: () => setTab(i) }, t)
     tabBar.appendChild(btn)
   })
 
@@ -1652,7 +1652,7 @@ async function renderAdminPanel() {
 async function renderSkoleInfoTab(container) {
   const school = APP.school
 
-  const form = el('form', { class: 'admin-form', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const updates = {
@@ -1672,16 +1672,16 @@ async function renderSkoleInfoTab(container) {
     })
   }})
 
-  form.appendChild(lagFormRad('Skolenavn', el('input', { name: 'name', type: 'text', class: 'input', value: school.name })))
+  form.appendChild(lagFormRad('Skolenavn', el('input', { name: 'name', type: 'text', class: 'felt input', value: school.name })))
   form.appendChild(lagFormRad('Skoleårsstart (uke)',
-    el('input', { name: 'start_week', type: 'number', class: 'input', value: school.school_year_start_week, min: 1, max: 53 })))
+    el('input', { name: 'start_week', type: 'number', class: 'felt input', value: school.school_year_start_week, min: 1, max: 53 })))
   form.appendChild(lagFormRad('Skoleårslutt (uke)',
-    el('input', { name: 'end_week', type: 'number', class: 'input', value: school.school_year_end_week, min: 1, max: 53 })))
+    el('input', { name: 'end_week', type: 'number', class: 'felt input', value: school.school_year_end_week, min: 1, max: 53 })))
 
   // Logo
-  const logoRow = el('div', { class: 'form-row' })
+  const logoRow = el('div', { class: 'felt' })
   logoRow.appendChild(el('label', {}, 'Logo'))
-  const logoUrlInput = el('input', { name: 'logo_url', type: 'url', class: 'input', value: school.logo_url || '', placeholder: 'https://...' })
+  const logoUrlInput = el('input', { name: 'logo_url', type: 'url', class: 'felt input', value: school.logo_url || '', placeholder: 'https://...' })
   const logoFileInput = el('input', { type: 'file', accept: 'image/*', onchange: async (ev) => {
     const file = ev.target.files[0]
     if (!file) return
@@ -1696,7 +1696,7 @@ async function renderSkoleInfoTab(container) {
   form.appendChild(logoRow)
 
   // Color theme
-  const themeRow = el('div', { class: 'form-row' })
+  const themeRow = el('div', { class: 'felt' })
   themeRow.appendChild(el('label', {}, 'Fargetema'))
   const themes = [
     { value: 'default', label: 'Standard (blå)', color: '#1a73e8' },
@@ -1719,7 +1719,7 @@ async function renderSkoleInfoTab(container) {
   themeRow.appendChild(themeGroup)
   form.appendChild(themeRow)
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn--primary' }, 'Lagre skoleinfo'))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre skoleinfo'))
   container.appendChild(form)
 }
 
@@ -1733,27 +1733,27 @@ async function renderFagTab(container) {
       const row = el('div', { class: 'admin-row' })
       const swatch = el('span', { class: 'color-swatch', style: `background:${s.color_hex || '#ccc'}` })
       row.appendChild(swatch)
-      row.appendChild(el('span', { class: 'admin-row__name' }, `${s.name} (${s.short_code})`))
-      row.appendChild(el('button', { class: 'btn btn--icon', onclick: () => visRedigerFagModal(s, refresh) }, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn--icon btn--danger', onclick: async () => {
+      row.appendChild(el('span', { class: 'tekst' }, `${s.name} (${s.short_code})`))
+      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerFagModal(s, refresh) }, '✏️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
         if (!confirm(`Slette faget "${s.name}"? Dette vil påvirke alle eksisterende økter.`)) return
         await medLagreOverlay(() => sb.from('subjects').update({ deleted: true }).eq('id', s.id))
         refresh()
       }}, '🗑️'))
       container.appendChild(row)
     }
-    container.appendChild(el('button', { class: 'btn btn--primary', onclick: () => visRedigerFagModal(null, refresh) }, '+ Nytt fag'))
+    container.appendChild(el('button', { class: 'btn btn-p', onclick: () => visRedigerFagModal(null, refresh) }, '+ Nytt fag'))
   }
   await refresh()
 }
 
 async function visRedigerFagModal(subj, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, subj ? 'Rediger fag' : 'Nytt fag'))
   if (subj) box.appendChild(el('p', { class: 'warning-text' }, '⚠️ Endring av navn påvirker alle eksisterende visninger.'))
 
-  const form = el('form', { class: 'session-form', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const data = {
@@ -1777,11 +1777,11 @@ async function visRedigerFagModal(subj, onSave) {
     if (onSave) onSave()
   }})
 
-  form.appendChild(lagFormRad('Navn', el('input', { name: 'name', type: 'text', class: 'input', value: subj?.name || '', required: 'true' })))
-  form.appendChild(lagFormRad('Kortkode', el('input', { name: 'short_code', type: 'text', class: 'input', value: subj?.short_code || '' })))
-  form.appendChild(lagFormRad('Farge', el('input', { name: 'color_hex', type: 'color', class: 'input', value: subj?.color_hex || '#4a90d9' })))
+  form.appendChild(lagFormRad('Navn', el('input', { name: 'name', type: 'text', class: 'felt input', value: subj?.name || '', required: 'true' })))
+  form.appendChild(lagFormRad('Kortkode', el('input', { name: 'short_code', type: 'text', class: 'felt input', value: subj?.short_code || '' })))
+  form.appendChild(lagFormRad('Farge', el('input', { name: 'color_hex', type: 'color', class: 'felt input', value: subj?.color_hex || '#4a90d9' })))
 
-  const dtSel = el('select', { name: 'division_type', class: 'select' })
+  const dtSel = el('select', { name: 'division_type', class: 'felt select' })
   dtSel.appendChild(el('option', { value: 'ingen' }, 'Ingen inndeling'))
   dtSel.appendChild(el('option', { value: 'parti' }, 'Parti'))
   dtSel.appendChild(el('option', { value: 'gruppe' }, 'Gruppe'))
@@ -1789,10 +1789,10 @@ async function visRedigerFagModal(subj, onSave) {
   else if (subj?.has_gruppe) dtSel.value = 'gruppe'
   form.appendChild(lagFormRad('Inndeling', dtSel))
 
-  form.appendChild(lagFormRad('Maks inndelinger', el('input', { name: 'max_divisions', type: 'number', class: 'input', value: subj?.max_divisions || 8, min: 1, max: 8 })))
+  form.appendChild(lagFormRad('Maks inndelinger', el('input', { name: 'max_divisions', type: 'number', class: 'felt input', value: subj?.max_divisions || 8, min: 1, max: 8 })))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn--primary' }, 'Lagre'))
-  form.appendChild(el('button', { type: 'button', class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1807,23 +1807,23 @@ async function renderKlasserTab(container) {
 
     for (const k of klasser || []) {
       const row = el('div', { class: 'admin-row' })
-      row.appendChild(el('span', { class: 'admin-row__name' }, k.name))
-      row.appendChild(el('button', { class: 'btn btn--icon', onclick: () => {
+      row.appendChild(el('span', { class: 'tekst' }, k.name))
+      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
         const nyttNavn = prompt('Nytt navn:', k.name)
         if (!nyttNavn) return
         medLagreOverlay(() => sb.from('classes').update({ name: nyttNavn }).eq('id', k.id)).then(refresh)
       }}, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn--icon btn--danger', onclick: async () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
         if (!confirm(`Slette klassen "${k.name}"? Dette er alvorlig og kan ikke angres!`)) return
         if (!confirm('Er du helt sikker? Alle tilknyttede data vil bli slettet.')) return
         await medLagreOverlay(() => sb.from('classes').update({ deleted: true }).eq('id', k.id))
         refresh()
       }}, '🗑️'))
-      row.appendChild(el('button', { class: 'btn btn--sm', onclick: () => visMergeKlasseModal(k, klasser, refresh) }, 'Slå sammen'))
+      row.appendChild(el('button', { class: 'btn btn-sm', onclick: () => visMergeKlasseModal(k, klasser, refresh) }, 'Slå sammen'))
       container.appendChild(row)
     }
 
-    container.appendChild(el('button', { class: 'btn btn--primary', onclick: async () => {
+    container.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
       const navn = prompt('Klassenavn:')
       if (!navn) return
       await medLagreOverlay(() => sb.from('classes').insert({ name: navn, school_id: APP.school.id }))
@@ -1835,17 +1835,17 @@ async function renderKlasserTab(container) {
 
 async function visMergeKlasseModal(klasse, alleKlasser, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, `Slå sammen klasse: ${klasse.name}`))
   box.appendChild(el('p', { class: 'warning-text' }, '⚠️ Dette er en destruktiv operasjon. Alt fra målklassen flyttes til denne.'))
 
-  const sel = el('select', { class: 'select' })
+  const sel = el('select', { class: 'felt select' })
   for (const k of alleKlasser.filter(k => k.id !== klasse.id)) {
     sel.appendChild(el('option', { value: k.id }, k.name))
   }
   box.appendChild(lagFormRad('Slå inn i', sel))
 
-  box.appendChild(el('button', { class: 'btn btn--danger', onclick: async () => {
+  box.appendChild(el('button', { class: 'btn btn-f', onclick: async () => {
     if (!confirm('Er du sikker? Dette kan ikke angres.')) return
     await medLagreOverlay(async () => {
       // Move all sessions from target class to this class
@@ -1856,7 +1856,7 @@ async function visMergeKlasseModal(klasse, alleKlasser, onSave) {
     modal.remove()
     if (onSave) onSave()
   }}, 'Slå sammen'))
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1874,14 +1874,14 @@ async function renderBrukereTab(container) {
     for (const u of users || []) {
       const klList = (u.teacher_classes || []).map(tc => tc.classes?.name).filter(Boolean).join(', ')
       const row = el('div', { class: 'admin-row' })
-      row.appendChild(el('span', { class: 'admin-row__name' }, `${u.name} (${u.email}) – ${u.role}`))
+      row.appendChild(el('span', { class: 'tekst' }, `${u.name} (${u.email}) – ${u.role}`))
       if (klList) row.appendChild(el('span', { class: 'admin-row__detail' }, klList))
-      row.appendChild(el('button', { class: 'btn btn--icon', onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn--icon btn--danger', onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
       container.appendChild(row)
     }
 
-    container.appendChild(el('button', { class: 'btn btn--primary', onclick: () => visNyBrukerModal(klasser, refresh) }, '+ Ny bruker'))
+    container.appendChild(el('button', { class: 'btn btn-p', onclick: () => visNyBrukerModal(klasser, refresh) }, '+ Ny bruker'))
 
     // Info box
     const info = el('div', { class: 'info-box' })
@@ -1894,11 +1894,11 @@ async function renderBrukereTab(container) {
 
 async function visNyBrukerModal(klasser, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Ny bruker'))
   box.appendChild(el('div', { class: 'info-box' }, 'Auth-bruker må opprettes manuelt i Supabase Dashboard først. Fyll inn auth user ID nedenfor.'))
 
-  const form = el('form', { class: 'session-form', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const klassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
@@ -1919,11 +1919,11 @@ async function visNyBrukerModal(klasser, onSave) {
     if (onSave) onSave()
   }})
 
-  form.appendChild(lagFormRad('Auth UUID', el('input', { name: 'auth_id', type: 'text', class: 'input', placeholder: 'UUID fra Supabase Auth', required: 'true' })))
-  form.appendChild(lagFormRad('Navn', el('input', { name: 'name', type: 'text', class: 'input', required: 'true' })))
-  form.appendChild(lagFormRad('E-post', el('input', { name: 'email', type: 'email', class: 'input', required: 'true' })))
+  form.appendChild(lagFormRad('Auth UUID', el('input', { name: 'auth_id', type: 'text', class: 'felt input', placeholder: 'UUID fra Supabase Auth', required: 'true' })))
+  form.appendChild(lagFormRad('Navn', el('input', { name: 'name', type: 'text', class: 'felt input', required: 'true' })))
+  form.appendChild(lagFormRad('E-post', el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true' })))
 
-  const roleSel = el('select', { name: 'role', class: 'select' })
+  const roleSel = el('select', { name: 'role', class: 'felt select' })
   for (const r of ['elev', 'laerer', 'kontaktlaerer', 'admin']) {
     roleSel.appendChild(el('option', { value: r }, r))
   }
@@ -1937,8 +1937,8 @@ async function visNyBrukerModal(klasser, onSave) {
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn--primary' }, 'Lagre'))
-  form.appendChild(el('button', { type: 'button', class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -1947,13 +1947,13 @@ async function visNyBrukerModal(klasser, onSave) {
 
 async function visRedigerBrukerModal(user, klasser, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Rediger bruker'))
 
   const { data: tilknyttede } = await sb.from('teacher_classes').select('class_id').eq('user_id', user.id)
   const tilknyttedeIds = new Set((tilknyttede || []).map(r => r.class_id))
 
-  const form = el('form', { class: 'session-form', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const newKlassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
@@ -1972,11 +1972,11 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
     if (onSave) onSave()
   }})
 
-  const nameInput = el('input', { name: 'name', type: 'text', class: 'input', value: user.name })
+  const nameInput = el('input', { name: 'name', type: 'text', class: 'felt input', value: user.name })
   const nameWarning = el('small', { class: 'warning-text' }, '⚠️ Navneendring påvirker visning overalt')
   form.appendChild(lagFormRad('Navn', nameInput, nameWarning))
 
-  const roleSel = el('select', { name: 'role', class: 'select' })
+  const roleSel = el('select', { name: 'role', class: 'felt select' })
   for (const r of ['elev', 'laerer', 'kontaktlaerer', 'admin']) {
     const opt = el('option', { value: r }, r)
     if (r === user.role) opt.setAttribute('selected', 'true')
@@ -1993,8 +1993,8 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn--primary' }, 'Lagre'))
-  form.appendChild(el('button', { type: 'button', class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -2003,7 +2003,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
 
 async function visSlettBrukerModal(user, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box' })
+  const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, `Slett bruker: ${user.name}`))
 
   const { data: future } = await sb.from('sessions')
@@ -2019,14 +2019,14 @@ async function visSlettBrukerModal(user, onSave) {
       .eq('school_id', APP.school.id)
       .neq('id', user.id)
 
-    const reassignSel = el('select', { class: 'select' })
+    const reassignSel = el('select', { class: 'felt select' })
     reassignSel.appendChild(el('option', { value: '' }, 'Slett øktene'))
     for (const o of others || []) {
       reassignSel.appendChild(el('option', { value: o.id }, `Overfør til ${o.name}`))
     }
     box.appendChild(lagFormRad('Fremtidige økter', reassignSel))
 
-    box.appendChild(el('button', { class: 'btn btn--danger', onclick: async () => {
+    box.appendChild(el('button', { class: 'btn btn-f', onclick: async () => {
       const targetId = reassignSel.value
       await medLagreOverlay(async () => {
         if (targetId) {
@@ -2043,14 +2043,14 @@ async function visSlettBrukerModal(user, onSave) {
     }}, 'Slett bruker'))
   } else {
     box.appendChild(el('p', {}, 'Brukeren har ingen fremtidige økter.'))
-    box.appendChild(el('button', { class: 'btn btn--danger', onclick: async () => {
+    box.appendChild(el('button', { class: 'btn btn-f', onclick: async () => {
       await medLagreOverlay(() => sb.from('users').update({ deleted: true }).eq('id', user.id))
       modal.remove()
       if (onSave) onSave()
     }}, 'Slett bruker'))
   }
 
-  box.appendChild(el('button', { class: 'btn btn--secondary', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
@@ -2076,7 +2076,7 @@ async function renderSkolerute(container) {
         el('td', {}, formatDatoNO(e.end_date)),
         el('td', {}, e.type || ''),
         el('td', {},
-          el('button', { class: 'btn btn--icon btn--danger', onclick: async () => {
+          el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
             await medLagreOverlay(() => sb.from('school_calendar').delete().eq('id', e.id))
             refresh()
           }}, '🗑️')
@@ -2089,7 +2089,7 @@ async function renderSkolerute(container) {
 
     // Add form
     container.appendChild(el('h4', {}, 'Legg til'))
-    const form = el('form', { class: 'session-form', onsubmit: async (ev) => {
+    const form = el('form', { class: 'skjema', onsubmit: async (ev) => {
       ev.preventDefault()
       const fd = new FormData(form)
       await medLagreOverlay(async () => {
@@ -2104,22 +2104,22 @@ async function renderSkolerute(container) {
       })
       refresh()
     }})
-    form.appendChild(lagFormRad('Tittel', el('input', { name: 'title', type: 'text', class: 'input', required: 'true' })))
-    form.appendChild(lagFormRad('Fra', el('input', { name: 'start_date', type: 'date', class: 'input', required: 'true' })))
-    form.appendChild(lagFormRad('Til', el('input', { name: 'end_date', type: 'date', class: 'input', required: 'true' })))
-    const typeSel = el('select', { name: 'type', class: 'select' })
+    form.appendChild(lagFormRad('Tittel', el('input', { name: 'title', type: 'text', class: 'felt input', required: 'true' })))
+    form.appendChild(lagFormRad('Fra', el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })))
+    form.appendChild(lagFormRad('Til', el('input', { name: 'end_date', type: 'date', class: 'felt input', required: 'true' })))
+    const typeSel = el('select', { name: 'type', class: 'felt select' })
     for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet']) {
       typeSel.appendChild(el('option', { value: t }, t))
     }
     form.appendChild(lagFormRad('Type', typeSel))
-    form.appendChild(el('button', { type: 'submit', class: 'btn btn--primary' }, 'Legg til'))
+    form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Legg til'))
     container.appendChild(form)
 
     // AI import
     container.appendChild(el('h4', {}, 'AI-import'))
-    const aiText = el('textarea', { class: 'textarea', placeholder: 'Lim inn skolerute som tekst…' })
+    const aiText = el('textarea', { class: 'felt textarea', placeholder: 'Lim inn skolerute som tekst…' })
     container.appendChild(aiText)
-    container.appendChild(el('button', { class: 'btn btn--secondary', onclick: async () => {
+    container.appendChild(el('button', { class: 'btn btn-s', onclick: async () => {
       if (!aiText.value.trim()) return
       try {
         const { data, error } = await sb.functions.invoke('ai-parse-skolerute', {
@@ -2152,23 +2152,23 @@ async function renderFaktaTab(container) {
     container.appendChild(el('h3', {}, 'Skolefakta (vises i lagre-overlay)'))
     for (const f of facts || []) {
       const row = el('div', { class: 'admin-row' })
-      row.appendChild(el('span', { class: 'admin-row__name' }, truncate(f.fact_text, 80)))
-      row.appendChild(el('button', { class: 'btn btn--icon', onclick: () => {
+      row.appendChild(el('span', { class: 'tekst' }, truncate(f.fact_text, 80)))
+      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
         const ny = prompt('Rediger fakta:', f.fact_text)
         if (!ny) return
         medLagreOverlay(() => sb.from('school_facts').update({ fact_text: ny }).eq('id', f.id)).then(refresh)
       }}, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn--icon btn--danger', onclick: async () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
         await medLagreOverlay(() => sb.from('school_facts').delete().eq('id', f.id))
         refresh()
       }}, '🗑️'))
       container.appendChild(row)
     }
 
-    const addInput = el('input', { type: 'text', class: 'input', placeholder: 'Nytt fakta…' })
+    const addInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Nytt fakta…' })
     container.appendChild(el('div', { class: 'admin-row' },
       addInput,
-      el('button', { class: 'btn btn--primary', onclick: async () => {
+      el('button', { class: 'btn btn-p', onclick: async () => {
         if (!addInput.value.trim()) return
         await medLagreOverlay(() => sb.from('school_facts').insert({
           school_id: APP.school.id, fact_text: addInput.value.trim()
@@ -2185,9 +2185,9 @@ async function renderFaktaTab(container) {
 // ─────────────────────────────────────────
 
 function lagFormRad(label, ...inputs) {
-  const row = el('div', { class: 'form-row' })
-  row.appendChild(el('label', { class: 'form-label' }, label))
-  const right = el('div', { class: 'form-field' })
+  const row = el('div', { class: 'felt' })
+  row.appendChild(el('label', { class: 'felt label' }, label))
+  const right = el('div', { class: 'felt' })
   for (const inp of inputs) right.appendChild(inp)
   row.appendChild(right)
   return row
