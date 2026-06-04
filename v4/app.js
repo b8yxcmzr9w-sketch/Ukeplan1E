@@ -2429,51 +2429,23 @@ async function renderFaktaTab(container) {
 
     const wrap = el('div', { class: 'skjema-smal' })
     wrap.appendChild(el('h3', {}, 'Funfacts'))
-    wrap.appendChild(el('p', { class: 'tekst-svak', style: 'margin-bottom:12px;font-size:.9rem' },
+    wrap.appendChild(el('p', { class: 'tekst-svak', style: 'margin:4px 0 14px; font-size:.9rem' },
       'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe.'))
 
-    for (const f of facts || []) {
-      const row = el('div', { class: 'admin-rad' })
-      row.appendChild(el('span', { class: 'tekst', style: 'flex:1' }, truncate(f.fact_text, 100)))
-      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
-        const ny = prompt('Rediger funfact:', f.fact_text)
-        if (!ny) return
-        medLagreOverlay(() => sb.from('school_facts').update({ fact_text: ny }).eq('id', f.id)).then(refresh)
-      }}, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
-        await medLagreOverlay(() => sb.from('school_facts').delete().eq('id', f.id))
-        refresh()
-      }}, '🗑️'))
-      wrap.appendChild(row)
-    }
-
-    const addRow = el('div', { class: 'admin-rad', style: 'margin-top:8px' })
-    const addInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Ny funfact…', maxlength: 150 })
-    addRow.appendChild(addInput)
-    addRow.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
-      if (!addInput.value.trim()) return
-      await medLagreOverlay(() => sb.from('school_facts').insert({
-        school_id: APP.school.id, fact_text: addInput.value.trim()
-      }))
-      refresh()
-    }}, '+ Legg til'))
-    wrap.appendChild(addRow)
-
-    // AI-generering
-    const aiBtn = el('button', { class: 'btn btn-s', style: 'margin-top:16px', onclick: async () => {
+    // Knapper øverst
+    const knappeRad = el('div', { style: 'display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap' })
+    knappeRad.appendChild(el('button', { class: 'btn btn-p', onclick: () => visFunfactModal(null, refresh) }, '+ Legg til'))
+    const aiBtn = el('button', { class: 'btn btn-s', onclick: async () => {
       if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
       aiBtn.disabled = true; aiBtn.textContent = 'Genererer…'
       try {
-        const { data, error } = await sb.functions.invoke('generate-facts', {
-          body: { school_id: APP.school.id }
-        })
+        const { data, error } = await sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } })
         if (error) throw error
         const ny = data.facts || []
         if (!ny.length) { showToast('Ingen fakta generert', 'info'); return }
         await medLagreOverlay(async () => {
-          for (const txt of ny) {
+          for (const txt of ny)
             await sb.from('school_facts').insert({ school_id: APP.school.id, fact_text: txt })
-          }
         })
         showToast(`${ny.length} funfacts lagt til!`, 'ok')
         refresh()
@@ -2483,10 +2455,74 @@ async function renderFaktaTab(container) {
         aiBtn.disabled = false; aiBtn.textContent = '✨ Generer med AI'
       }
     }}, '✨ Generer med AI')
-    wrap.appendChild(aiBtn)
+    knappeRad.appendChild(aiBtn)
+    wrap.appendChild(knappeRad)
+
+    // Tom-tilstand
+    if (!(facts && facts.length)) {
+      wrap.appendChild(el('p', { class: 'ai-tip' },
+        'Ingen funfacts ennå. Legg til manuelt eller generer med AI.'))
+    }
+
+    // Liste
+    for (const f of facts || []) {
+      const row = el('div', { class: 'admin-rad' })
+      row.appendChild(el('span', { style: 'flex:1; font-size:.92rem' }, f.fact_text))
+      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visFunfactModal(f, refresh) }, '✏️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+        if (!confirm('Slette denne funfacten?')) return
+        await medLagreOverlay(() => sb.from('school_facts').delete().eq('id', f.id))
+        refresh()
+      }}, '🗑️'))
+      wrap.appendChild(row)
+    }
     container.appendChild(wrap)
   }
   await refresh()
+}
+
+function visFunfactModal(fact, onSave) {
+  const modal = el('div', { class: 'modal-bg' })
+  const box   = el('div', { class: 'modal' })
+  box.appendChild(el('h3', {}, fact ? 'Rediger funfact' : 'Ny funfact'))
+
+  const textarea = el('textarea', {
+    class: 'felt textarea',
+    maxlength: 150,
+    rows: 3,
+    style: 'width:100%; resize:vertical',
+    placeholder: 'Skriv en kort, morsom setning…',
+  })
+  if (fact) textarea.value = fact.fact_text
+  box.appendChild(textarea)
+
+  const teller = el('div', { style: 'text-align:right; font-size:.8rem; opacity:.6; margin-bottom:12px' },
+    `${(fact?.fact_text || '').length}/150`)
+  textarea.addEventListener('input', () => { teller.textContent = `${textarea.value.length}/150` })
+  box.appendChild(teller)
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  bunn.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+    const tekst = textarea.value.trim()
+    if (!tekst) return
+    await medLagreOverlay(async () => {
+      if (fact) {
+        const { error } = await sb.from('school_facts').update({ fact_text: tekst }).eq('id', fact.id)
+        if (error) throw error
+      } else {
+        const { error } = await sb.from('school_facts').insert({ school_id: APP.school.id, fact_text: tekst })
+        if (error) throw error
+      }
+    })
+    modal.remove()
+    if (onSave) onSave()
+  }}, 'Lagre'))
+  box.appendChild(bunn)
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+  setTimeout(() => textarea.focus(), 50)
 }
 
 // ─────────────────────────────────────────
