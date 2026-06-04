@@ -413,9 +413,14 @@ tr:hover td { background: var(--primær-svak); }
 }
 .skolerute-form .felt.input,
 .skolerute-form .felt.select { margin: 0; }
-.skolerute-form input[name=title] { min-width: 180px; flex: 1; }
-.skolerute-form input[type=date] { width: 150px; }
-.skolerute-form select { width: 160px; }
+.skolerute-form input[name=title] { width: 160px; }
+.skolerute-form input[type=date] { width: 140px; }
+.skolerute-form select { width: 150px; }
+
+/* ── Admin-tabell (skolerute) ────────────────────────────────────── */
+.admin-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+.admin-table th, .admin-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--kant); font-size: .9rem; }
+.admin-table th { font-weight: 600; color: var(--tekst-svak); font-size: .82rem; }
 
 /* ── AI-import seksjon ───────────────────────────────────────────── */
 .ai-import-seksjon { margin-top: 8px; }
