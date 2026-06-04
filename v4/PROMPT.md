@@ -90,7 +90,7 @@ Alt som lærer, pluss:
 
 ### Admin (innlogget, `is_admin_active=true`)
 
-**Rollebytte:** Knapp alltid synlig i header for admin-brukere. Tekst tilpasses kontekst:
+**Rollebytte:** Én toggle-knapp alltid synlig i header for admin-brukere (ingen separat «Admin»-knapp). Tekst tilpasses kontekst:
 - I lærerpanelet: «Aktiver admin-modus»
 - I admin-panelet: «← Til lærerpanel» eller «← Til kontaktlærerpanel» avhengig av brukerens rolle
 - Ingen ny innlogging nødvendig
@@ -100,11 +100,10 @@ Alt som lærer, pluss:
 - Ellers: åpne lærer-/kontaktlærerpanelet (admin-modus deaktivert)
 
 **Skoleinfo:**
-- Navn på skolen
+- Navn på skolen (maks 30 tegn med live tegnteller)
 - Logo: last opp bildefil (lagres i Supabase Storage) ELLER skriv inn URL. Logo brukes også som favicon.
-- Definer skoleårets start- og sluttuke (ISO-ukenummer)
+- Skoleårets start- og sluttuke vises på samme linje med to kompakte tallfelt + datohint under hvert felt (viser mandatodato for valgt ukenummer)
 - **Fargepalett:** Velg mellom tre forhåndsdefinerte temaer – Standard (nåværende grønn), Lys (lys palett med kontrasterende farger) og Mørk (mørk palett). Valget lagres i `schools.color_theme` og lastes automatisk for alle besøkende på skolen.
-- **Skolefakta for overlay:** Legg inn morsomme eller interessante fakta/sitater om skolen som vises tilfeldig i lagre-overlay.
 
 **Fag:**
 - Legg til/rediger fagnavn og forkortelse. Kortkode genereres automatisk fra fagnavn (kan overstyres).
@@ -127,8 +126,15 @@ Alt som lærer, pluss:
 - En administrator må alltid også ha rollen Lærer eller Kontaktlærer
 
 **Skolerute:**
-- Legg inn manuelt (tabellform: tittel, startdato, sluttdato, type)
-- AI-import: lim inn tekst → Gemini Flash parser → forhåndsvis → lagre
+- Eksisterende hendelser vises som `admin-rad`-lister (tittel, datoperiode, type-badge, slett-knapp) – ingen tabell
+- Legg til-skjema bruker `lagFormRad` med label over hvert felt (likt Skoleinfo), Fra/Til på samme linje med `uke-rad`/`uke-grp`-mønsteret (mobilvennlig flex-wrap)
+- AI-import: knapp skjult som standard. Når ingen hendelser er lagt inn vises en oppfordring om å bruke AI. Lim inn tekst → Gemini Flash parser → forhåndsvis → lagre
+
+**Funfacts:**
+- Fane tidligere kalt «Fakta», nå «Funfacts»
+- Pausetekster som vises tilfeldig i lagre-overlaydet for å holde humøret oppe
+- Admin kan legge til/redigere/slette enkeltvis
+- Knapp «✨ Generer med AI» kaller Edge Function `generate-facts` som bruker Gemini til å generere ~40 lokaltilpassede funfacts om Jæren, Øksnevad, naturbruk, vikinger, husdyr m.m.
 
 ---
 
@@ -185,6 +191,7 @@ Definer tre komplette CSS-temaer med CSS custom properties (variabler). Tema las
 3. **`/ai-parse-skolerute`** – Mottar tekst. Sender til Gemini Flash. Returnerer array av kalender-hendelser.
 4. **`/cleanup`** – Kjøres periodisk (pg_cron eller scheduled function): sletter soft-deleted records eldre enn 30 dager permanent.
 5. **`/create-user`** – Oppretter ny auth-bruker via Supabase Admin API (service_role) og sender invitasjons-e-post. Krever aktiv admin-sesjon. Oppretter også rad i `users`-tabellen og kobler til klasser.
+6. **`/generate-facts`** – Genererer ~40 lokaltilpassede funfacts via Gemini Flash. Krever aktiv admin-sesjon. Returnerer array av faktatekster med lokal tilknytning til Jæren, Øksnevad, naturbruk, vikinger, husdyr m.m.
 
 Gemini API-nøkkel lagres som Supabase secret (`GEMINI_API_KEY`).
 
@@ -197,6 +204,7 @@ Alle sider skal ha en diskret footer med:
 - © årstall basert på `document.lastModified` (årstallet dokumentet sist ble redigert/deployet)
 - Implementeres via `uno-footer.js` som legges inn rett før `</body>` på alle HTML-sider
 - Skal **ikke** vises ved utskrift (`@media print`)
+- Footer er alltid synlig nederst i vinduet (sticky footer via `body { display:flex; flex-direction:column }` + `main { flex:1 }`)
 
 ---
 
@@ -204,13 +212,13 @@ Alle sider skal ha en diskret footer med:
 
 ```
 /
-├── index.html          – Appskall, navigasjon, routing
+├── index.html          – Appskall, navigasjon, routing (tittel: Ukeplan1E)
 ├── app.js              – All applogikk, Supabase-klient, views
 ├── uno-footer.js       – Footer med Uno-logo og © årstall sist redigert
 ├── style.css           – Styling inkl. fargetemaer, @media print og mobile
 ├── supabase/
 │   ├── migrations/     – SQL-migrasjoner i rekkefølge
-│   └── functions/      – Edge Functions (ical, ai-parse-sessions, ai-parse-skolerute, cleanup, create-user)
+│   └── functions/      – Edge Functions (ical, ai-parse-sessions, ai-parse-skolerute, cleanup, create-user, generate-facts)
 └── README.md           – Oppsettsinstruksjoner
 ```
 
