@@ -92,6 +92,29 @@ function showToast(msg, type = 'info') {
   setTimeout(() => toast.remove(), 3500)
 }
 
+// Deaktiverer lagreKnapp til brukeren endrer noe i skjemaet
+function overvakSkjema(form, lagreKnapp) {
+  lagreKnapp.disabled = true
+  lagreKnapp.classList.add('btn-passiv')
+
+  function snapshot() {
+    return Array.from(form.querySelectorAll('input,select,textarea'))
+      .map(e => (e.type === 'checkbox' ? e.checked : e.value))
+      .join('§')
+  }
+
+  const initial = snapshot()
+
+  function sjekk() {
+    const endret = snapshot() !== initial
+    lagreKnapp.disabled = !endret
+    lagreKnapp.classList.toggle('btn-passiv', !endret)
+  }
+
+  form.addEventListener('input', sjekk)
+  form.addEventListener('change', sjekk)
+}
+
 // ─────────────────────────────────────────
 // SAVE OVERLAY
 // ─────────────────────────────────────────
@@ -1028,7 +1051,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input' })))
   form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' })))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   box.appendChild(form)
@@ -1115,7 +1138,7 @@ async function visRedigerOktModal(session, onSave) {
   const infoTA = el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')
   form.appendChild(lagFormRad('Info', infoTA))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   box.appendChild(form)
@@ -1722,7 +1745,7 @@ async function renderSkoleInfoTab(container) {
   themeRow.appendChild(themeGroup)
   form.appendChild(themeRow)
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre skoleinfo'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre skoleinfo'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   container.appendChild(form)
 }
 
@@ -1794,7 +1817,7 @@ async function visRedigerFagModal(subj, onSave) {
 
   form.appendChild(lagFormRad('Maks inndelinger', el('input', { name: 'max_divisions', type: 'number', class: 'felt input', value: subj?.max_divisions || 8, min: 1, max: 8 })))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)
@@ -1938,7 +1961,7 @@ async function visNyBrukerModal(klasser, onSave) {
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)
@@ -1994,7 +2017,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   box.appendChild(form)
   modal.appendChild(box)

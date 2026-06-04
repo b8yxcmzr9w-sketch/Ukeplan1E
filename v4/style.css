@@ -222,7 +222,11 @@ header .spacer { flex: 1; }
 }
 .btn:hover { opacity: .85; }
 .btn:active { transform: scale(.98); }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn:disabled, .btn.btn-passiv {
+  opacity: .35; cursor: not-allowed;
+  filter: grayscale(30%);
+  pointer-events: none;
+}
 .btn-p  { background: var(--primær); color: #fff; }
 .btn-s  { background: var(--bg-kort); color: var(--tekst); border: 1px solid var(--kant); }
 .btn-f  { background: var(--fare); color: #fff; }
