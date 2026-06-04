@@ -1,8 +1,8 @@
 // Ukeplan v4 - Norwegian School Weekly Planner
 // Single-file vanilla JS app using Supabase JS v2
 
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'
-const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY'
+const SUPABASE_URL = 'https://zstjfatkeqbbekqgbsgb.supabase.co'
+const SUPABASE_ANON_KEY = 'sb_publishable_c-knXQEaZswHBZ4_TPgnWw_Tg6OA04J'
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
