@@ -338,7 +338,6 @@ function oppdaterHeader() {
   const loginBtn   = document.getElementById('hdr-login-btn')
   const logoutBtn  = document.getElementById('hdr-logout-btn')
   const laererBtn  = document.getElementById('hdr-laerer-btn')
-  const adminBtn   = document.getElementById('hdr-admin-btn')
   const adminToggle= document.getElementById('hdr-admin-toggle')
   const username   = document.getElementById('hdr-username')
 
@@ -349,7 +348,6 @@ function oppdaterHeader() {
 
     const rolle = APP.profile.role
     if (laererBtn)  laererBtn.classList.toggle('skjult', rolle === 'admin' && APP.isAdminActive)
-    if (adminBtn)   adminBtn.classList.toggle('skjult', !APP.isAdminActive)
 
     if (adminToggle && APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)) {
       adminToggle.classList.remove('skjult')
@@ -1769,11 +1767,36 @@ async function renderSkoleInfoTab(container) {
     })
   }})
 
-  form.appendChild(lagFormRad('Skolenavn', el('input', { name: 'name', type: 'text', class: 'felt input', value: school.name })))
-  form.appendChild(lagFormRad('Skoleårsstart (uke)',
-    el('input', { name: 'start_week', type: 'number', class: 'felt input', value: school.school_year_start_week, min: 1, max: 53 })))
-  form.appendChild(lagFormRad('Skoleårslutt (uke)',
-    el('input', { name: 'end_week', type: 'number', class: 'felt input', value: school.school_year_end_week, min: 1, max: 53 })))
+  // Skolenavn med tegnteller
+  const navnInput = el('input', { name: 'name', type: 'text', class: 'felt input', value: school.name, maxlength: 30, style: 'width:100%' })
+  const navnTeller = el('span', { class: 'tegnteller', style: 'float:right;font-size:.8rem;opacity:.6' }, `${(school.name||'').length}/30`)
+  navnInput.addEventListener('input', () => { navnTeller.textContent = `${navnInput.value.length}/30` })
+  const navnWrap = el('div')
+  navnWrap.appendChild(navnTeller)
+  navnWrap.appendChild(navnInput)
+  form.appendChild(lagFormRad('Skolenavn', navnWrap))
+
+  // Uker på samme linje
+  function ukeHint(uke) {
+    if (!uke) return ''
+    const year = new Date().getFullYear()
+    const d = new Date(year, 0, 1 + (uke - 1) * 7)
+    d.setDate(d.getDate() - (d.getDay() || 7) + 1)
+    return d.toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+  const startInput = el('input', { name: 'start_week', type: 'number', class: 'felt input', value: school.school_year_start_week, min: 1, max: 53, style: 'width:5rem' })
+  const sluttInput = el('input', { name: 'end_week', type: 'number', class: 'felt input', value: school.school_year_end_week, min: 1, max: 53, style: 'width:5rem' })
+  const startHint = el('small', { class: 'uke-hint' }, ukeHint(school.school_year_start_week))
+  const sluttHint = el('small', { class: 'uke-hint' }, ukeHint(school.school_year_end_week))
+  startInput.addEventListener('input', () => { startHint.textContent = ukeHint(parseInt(startInput.value)) })
+  sluttInput.addEventListener('input', () => { sluttHint.textContent = ukeHint(parseInt(sluttInput.value)) })
+  const ukeRad = el('div', { class: 'uke-rad' })
+  const startGrp = el('div', { class: 'uke-grp' })
+  startGrp.appendChild(el('label', {}, 'Fra uke')); startGrp.appendChild(startInput); startGrp.appendChild(startHint)
+  const sluttGrp = el('div', { class: 'uke-grp' })
+  sluttGrp.appendChild(el('label', {}, 'Til uke')); sluttGrp.appendChild(sluttInput); sluttGrp.appendChild(sluttHint)
+  ukeRad.appendChild(startGrp); ukeRad.appendChild(sluttGrp)
+  form.appendChild(lagFormRad('Skoleår', ukeRad))
 
   // Logo
   const logoRow = el('div', { class: 'felt' })
@@ -2312,9 +2335,8 @@ async function renderSkolerute(container) {
     table.appendChild(tbody)
     container.appendChild(table)
 
-    // Add form
-    container.appendChild(el('h4', {}, 'Legg til'))
-    const form = el('form', { class: 'skjema', onsubmit: async (ev) => {
+    // Compact inline add form
+    const form = el('form', { class: 'skolerute-form', onsubmit: async (ev) => {
       ev.preventDefault()
       const fd = new FormData(form)
       await medLagreOverlay(async () => {
@@ -2327,35 +2349,47 @@ async function renderSkolerute(container) {
         })
         if (error) throw error
       })
+      form.reset()
       refresh()
     }})
-    form.appendChild(lagFormRad('Tittel', el('input', { name: 'title', type: 'text', class: 'felt input', required: 'true' })))
-    form.appendChild(lagFormRad('Fra', el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })))
-    form.appendChild(lagFormRad('Til', el('input', { name: 'end_date', type: 'date', class: 'felt input', required: 'true' })))
+    const titleIn = el('input', { name: 'title', type: 'text', class: 'felt input', placeholder: 'Tittel', required: 'true' })
+    const fraIn   = el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })
+    const tilIn   = el('input', { name: 'end_date', type: 'date', class: 'felt input', required: 'true' })
     const typeSel = el('select', { name: 'type', class: 'felt select' })
     for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet']) {
       typeSel.appendChild(el('option', { value: t }, t))
     }
-    form.appendChild(lagFormRad('Type', typeSel))
-    form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Legg til'))
+    form.appendChild(titleIn); form.appendChild(fraIn); form.appendChild(tilIn)
+    form.appendChild(typeSel)
+    form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, '+ Legg til'))
     container.appendChild(form)
 
-    // AI import
-    container.appendChild(el('h4', {}, 'AI-import'))
-    const aiText = el('textarea', { class: 'felt textarea', placeholder: 'Lim inn skolerute som tekst…' })
-    container.appendChild(aiText)
-    container.appendChild(el('button', { class: 'btn btn-s', onclick: async () => {
+    // AI import – hidden by default, tip shown when calendar is empty
+    const aiWrap = el('div', { class: 'ai-import-seksjon' })
+    if (!(events && events.length)) {
+      const tip = el('p', { class: 'ai-tip' },
+        '💡 Ingen hendelser ennå. Har du skoleruten som tekst? Lim den inn og la AI legge det inn for deg.')
+      aiWrap.appendChild(tip)
+    }
+    const aiToggleBtn = el('button', { type: 'button', class: 'btn btn-s', onclick: () => {
+      aiInnhold.classList.toggle('skjult')
+      aiToggleBtn.textContent = aiInnhold.classList.contains('skjult') ? '📋 Importer med AI' : '▲ Skjul AI-import'
+    }}, '📋 Importer med AI')
+    const aiInnhold = el('div', { class: 'skjult' })
+    const aiText = el('textarea', { class: 'felt textarea ai-tekstfelt', placeholder: 'Lim inn skoleruten som tekst (f.eks. fra PDF eller e-post)…', rows: 8 })
+    aiInnhold.appendChild(aiText)
+    aiInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-p', onclick: async () => {
       if (!aiText.value.trim()) return
       try {
         const { data, error } = await sb.functions.invoke('ai-parse-skolerute', {
           body: { text: aiText.value, school_id: APP.school.id }
         })
         if (error) throw error
-        const events = data.events || []
-        if (!events.length) { showToast('Ingen hendelser funnet', 'info'); return }
-        if (!confirm(`Importere ${events.length} hendelse(r)?`)) return
+        const evs = data.events || []
+        if (!evs.length) { showToast('Ingen hendelser funnet', 'info'); return }
+        if (!confirm(`Importere ${evs.length} hendelse(r)?`)) return
         await medLagreOverlay(async () => {
-          for (const e of events) {
+          for (const e of evs) {
             await sb.from('school_calendar').insert({ ...e, school_id: APP.school.id })
           }
         })
@@ -2364,6 +2398,9 @@ async function renderSkolerute(container) {
         showToast(err.message, 'error')
       }
     }}, 'Analyser med AI'))
+    aiWrap.appendChild(aiToggleBtn)
+    aiWrap.appendChild(aiInnhold)
+    container.appendChild(aiWrap)
   }
   await refresh()
 }
