@@ -120,9 +120,9 @@ function overvakSkjema(form, lagreKnapp) {
 // ─────────────────────────────────────────
 
 async function medLagreOverlay(asyncFn) {
-  const overlay = el('div', { class: 'save-overlay' })
-  const box = el('div', { class: 'save-overlay__box' })
-  const spinner = el('div', { class: 'save-overlay__spinner' })
+  const overlay = el('div', { class: 'lagre-overlay' })
+  const box = el('div', { class: 'overlay-boks' })
+  const spinner = el('div', { class: 'spinner' })
 
   // Pick random text from facts or funny texts
   const texts = APP.facts.length
@@ -130,7 +130,7 @@ async function medLagreOverlay(asyncFn) {
     : FUNNY_TEXTS
   const msg = texts[Math.floor(Math.random() * texts.length)]
 
-  const msgEl = el('p', { class: 'save-overlay__msg' }, msg)
+  const msgEl = el('p', { class: 'overlay-tekst' }, msg)
   box.appendChild(spinner)
   box.appendChild(msgEl)
   overlay.appendChild(box)
@@ -139,14 +139,14 @@ async function medLagreOverlay(asyncFn) {
   try {
     const result = await asyncFn()
     clearEl(box)
-    box.appendChild(el('div', { class: 'save-overlay__check' }, '✓'))
+    box.appendChild(el('div', { class: 'overlay-ok' }, '✓'))
     box.appendChild(el('p', {}, 'Lagret!'))
     await new Promise(r => setTimeout(r, 1500))
     overlay.remove()
     return result
   } catch (err) {
     clearEl(box)
-    box.appendChild(el('p', { class: 'save-overlay__error' }, `Feil: ${err.message}`))
+    box.appendChild(el('p', { class: 'feil-tekst' }, `Feil: ${err.message}`))
     const retryBtn = el('button', { class: 'btn btn-s', onclick: () => overlay.remove() }, 'Lukk')
     box.appendChild(retryBtn)
     throw err
@@ -1690,10 +1690,15 @@ async function renderSkoleInfoTab(container) {
     const logoUrl = fd.get('logo_url')
     if (logoUrl) updates.logo_url = logoUrl
     await medLagreOverlay(async () => {
-      const { error } = await sb.from('schools').update(updates).eq('id', school.id)
+      const { error } = await sb.from('schools').update(updates).eq('id', APP.school.id)
       if (error) throw error
-      Object.assign(APP.school, updates)
-      document.documentElement.dataset.theme = updates.color_theme
+      // Re-hent fra DB for å bekrefte at lagringen gikk igjennom
+      const { data: fersk } = await sb.from('schools').select('*').eq('id', APP.school.id).single()
+      if (fersk) {
+        APP.school = fersk
+        document.getElementById('hdr-skolenavn').textContent = fersk.name
+        document.documentElement.dataset.theme = fersk.color_theme || 'standard'
+      }
       oppdaterHeader()
     })
   }})
