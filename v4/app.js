@@ -1678,7 +1678,7 @@ async function renderAdminPanel() {
 async function renderSkoleInfoTab(container) {
   const school = APP.school
 
-  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema skjema-smal', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const updates = {
