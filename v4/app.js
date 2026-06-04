@@ -2435,7 +2435,7 @@ async function renderFaktaTab(container) {
     }
 
     const addRow = el('div', { class: 'admin-rad', style: 'margin-top:8px' })
-    const addInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Ny funfact…', style: 'flex:1' })
+    const addInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Ny funfact…', maxlength: 150 })
     addRow.appendChild(addInput)
     addRow.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
       if (!addInput.value.trim()) return
