@@ -397,9 +397,13 @@ async function renderElevView(klasseNavn) {
     klasse = alleKlasser.find(k => k.name === klasseNavn)
   }
 
+  // Wrapper
+  const wrap = el('div', { class: 'container' })
+  main.appendChild(wrap)
+
   // Class selector
-  const klasseHeader = el('div', { class: 'elev-header' })
-  const selector = el('select', { class: 'felt select', onchange: (e) => {
+  const klasseHeader = el('div', { class: 'nav-bar' })
+  const selector = el('select', { onchange: (e) => {
     const val = e.target.value
     navigate(val ? `#/klasse/${encodeURIComponent(val)}` : '#/')
   }})
@@ -409,12 +413,12 @@ async function renderElevView(klasseNavn) {
     if (klasse && k.id === klasse.id) opt.setAttribute('selected', 'true')
     selector.appendChild(opt)
   }
-  klasseHeader.appendChild(el('label', {}, 'Klasse: '))
+  klasseHeader.appendChild(el('label', { style: 'font-weight:600;margin-right:8px' }, 'Klasse:'))
   klasseHeader.appendChild(selector)
-  main.appendChild(klasseHeader)
+  wrap.appendChild(klasseHeader)
 
   if (!klasse) {
-    main.appendChild(el('p', { class: 'empty-state' }, 'Velg en klasse for å se ukeplanen.'))
+    wrap.appendChild(el('p', { class: 'tom-uke' }, 'Velg en klasse for å se ukeplanen.'))
     return
   }
 
@@ -465,7 +469,7 @@ async function renderElevView(klasseNavn) {
     }}, '← Forrige uke')
     if (weekNr <= schoolStart) prevBtn.setAttribute('disabled', 'true')
 
-    const weekInput = el('input', { type: 'number', class: 'week-input', value: weekNr,
+    const weekInput = el('input', { type: 'number', class: 'uke-nr-input', value: weekNr,
       min: schoolStart, max: schoolEnd,
       onchange: (e) => {
         const v = parseInt(e.target.value)
@@ -479,7 +483,7 @@ async function renderElevView(klasseNavn) {
     if (weekNr >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
 
     navRow.appendChild(prevBtn)
-    navRow.appendChild(el('span', { class: 'week-label' }, `Uke ${weekNr}`))
+    navRow.appendChild(el('span', { class: 'uke-label' }, `Uke ${weekNr}`))
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
 
@@ -492,7 +496,7 @@ async function renderElevView(klasseNavn) {
     // Holiday banners
     if (calEvents) {
       for (const evt of calEvents) {
-        const banner = el('div', { class: `calendar-banner calendar-banner--${evt.type || 'ferie'}` },
+        const banner = el('div', { class: 'ferie-banner' },
           `${evt.title} (${formatDatoNO(evt.start_date)} – ${formatDatoNO(evt.end_date)})`)
         wc.appendChild(banner)
       }
@@ -501,7 +505,7 @@ async function renderElevView(klasseNavn) {
     // Multi-day event banners
     if (multiDayEvents) {
       for (const mde of multiDayEvents) {
-        const banner = el('div', { class: 'multi-day-banner' },
+        const banner = el('div', { class: 'fdag-banner' },
           `${mde.title}: ${truncate(mde.description || '', 80)} (${formatDatoNO(mde.start_date)} – ${formatDatoNO(mde.end_date)})`)
         wc.appendChild(banner)
       }
@@ -534,7 +538,7 @@ async function renderElevView(klasseNavn) {
     for (let dag = 1; dag <= 5; dag++) {
       const dayCol = el('div', { class: 'dag-kol' })
       const dateForDay = isoWeekToDate(new Date().getFullYear(), weekNr, dag)
-      const dayHeader = el('div', { class: 'day-col__header' },
+      const dayHeader = el('div', { class: 'dag-tittel' },
         `${dagNavn(dag)} ${formatDatoNO(dateForDay.toISOString().slice(0, 10))}`)
       dayCol.appendChild(dayHeader)
 
@@ -546,7 +550,7 @@ async function renderElevView(klasseNavn) {
       // Sort alphabetically by subject name
       daySessions.sort((a, b) => (a.subjects?.name || '').localeCompare(b.subjects?.name || '', 'nb'))
 
-      const sessionList = el('div', { class: 'session-list' })
+      const sessionList = el('div', { class: 'dag-okter' })
       for (const s of daySessions) {
         const card = renderSessionCard(s, false)
         sessionList.appendChild(card)
@@ -728,7 +732,7 @@ async function renderMinKlasseTab(container) {
     }}, 'Neste →')
     if (currentWeek >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
 
-    const weekInput = el('input', { type: 'number', class: 'week-input', value: currentWeek,
+    const weekInput = el('input', { type: 'number', class: 'uke-nr-input', value: currentWeek,
       min: schoolStart, max: schoolEnd,
       onchange: (e) => {
         const v = parseInt(e.target.value)
@@ -737,7 +741,7 @@ async function renderMinKlasseTab(container) {
     })
 
     navRow.appendChild(prevBtn)
-    navRow.appendChild(el('span', { class: 'week-label' }, `Uke ${currentWeek}`))
+    navRow.appendChild(el('span', { class: 'uke-label' }, `Uke ${currentWeek}`))
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
     navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => window.print() }, '🖨️'))
@@ -773,7 +777,7 @@ async function renderMinKlasseTab(container) {
     const grid = el('div', { class: 'uke-grid' })
     for (let dag = 1; dag <= 5; dag++) {
       const dayCol = el('div', { class: 'dag-kol' })
-      dayCol.appendChild(el('div', { class: 'day-col__header' }, dagNavn(dag)))
+      dayCol.appendChild(el('div', { class: 'dag-tittel' }, dagNavn(dag)))
 
       let daySessions = (sessions || []).filter(s => s.day_of_week === dag)
       daySessions.sort((a, b) => (a.subjects?.name || '').localeCompare(b.subjects?.name || '', 'nb'))
@@ -845,7 +849,7 @@ async function renderAlleOkterTab(container) {
 
   for (const week of Object.keys(byWeek).sort((a, b) => a - b)) {
     container.appendChild(el('h3', {}, `Uke ${week}`))
-    const list = el('div', { class: 'session-list-flat' })
+    const list = el('div', { class: 'dag-okter' })
     for (const s of byWeek[week]) {
       const card = renderSessionCard(s, true, {
         edit: () => visRedigerOktModal(s, () => renderAlleOkterTab(container)),
@@ -1729,7 +1733,7 @@ async function renderFagTab(container) {
 
     container.appendChild(el('h3', {}, 'Fag'))
     for (const s of subjects || []) {
-      const row = el('div', { class: 'admin-row' })
+      const row = el('div', { class: 'admin-rad' })
       const swatch = el('span', { class: 'color-swatch', style: `background:${s.color_hex || '#ccc'}` })
       row.appendChild(swatch)
       row.appendChild(el('span', { class: 'tekst' }, `${s.name} (${s.short_code})`))
@@ -1805,7 +1809,7 @@ async function renderKlasserTab(container) {
     container.appendChild(el('h3', {}, 'Klasser'))
 
     for (const k of klasser || []) {
-      const row = el('div', { class: 'admin-row' })
+      const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { class: 'tekst' }, k.name))
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
         const nyttNavn = prompt('Nytt navn:', k.name)
@@ -1872,9 +1876,9 @@ async function renderBrukereTab(container) {
 
     for (const u of users || []) {
       const klList = (u.user_classes || []).map(tc => tc.classes?.name).filter(Boolean).join(', ')
-      const row = el('div', { class: 'admin-row' })
+      const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} (${u.id}) – ${u.role}`))
-      if (klList) row.appendChild(el('span', { class: 'admin-row__detail' }, klList))
+      if (klList) row.appendChild(el('span', { class: 'tekst-svak' }, klList))
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
       container.appendChild(row)
@@ -2148,7 +2152,7 @@ async function renderFaktaTab(container) {
 
     container.appendChild(el('h3', {}, 'Skolefakta (vises i lagre-overlay)'))
     for (const f of facts || []) {
-      const row = el('div', { class: 'admin-row' })
+      const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { class: 'tekst' }, truncate(f.fact_text, 80)))
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
         const ny = prompt('Rediger fakta:', f.fact_text)
@@ -2163,7 +2167,7 @@ async function renderFaktaTab(container) {
     }
 
     const addInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Nytt fakta…' })
-    container.appendChild(el('div', { class: 'admin-row' },
+    container.appendChild(el('div', { class: 'admin-rad' },
       addInput,
       el('button', { class: 'btn btn-p', onclick: async () => {
         if (!addInput.value.trim()) return
