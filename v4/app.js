@@ -99,7 +99,7 @@ function overvakSkjema(form, lagreKnapp) {
 
   function snapshot() {
     return Array.from(form.querySelectorAll('input,select,textarea'))
-      .map(e => (e.type === 'checkbox' ? e.checked : e.value))
+      .map(e => (e.type === 'checkbox' || e.type === 'radio') ? `${e.value}:${e.checked}` : e.value)
       .join('§')
   }
 
