@@ -206,32 +206,72 @@ function renderLoginForm() {
   const main = document.getElementById('app-main')
   clearEl(main)
 
+  const wrap = el('div', { class: 'login-wrap' })
+  const kort = el('div', { class: 'login-kort' })
+
+  const feilMelding = el('p', { class: 'feil-tekst skjult' })
+
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
+    feilMelding.classList.add('skjult')
     const email = form.querySelector('[name=email]').value
     const password = form.querySelector('[name=password]').value
+    const btn = form.querySelector('button[type=submit]')
+    btn.disabled = true
     try {
-      await medLagreOverlay(() => login(email, password))
-      const session = (await sb.auth.getSession()).data.session
-      APP.user = session.user
-      APP.profile = await fetchProfile(session.user.id)
+      const { data, error } = await sb.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      APP.user = data.user
+      APP.profile = await fetchProfile(data.user.id)
       APP.isAdminActive = APP.profile.is_admin_active || false
       oppdaterHeader()
       await sjekkVentendeOverforinger()
+      showToast(`Velkommen, ${APP.profile.full_name}!`, 'info')
       if (APP.isAdminActive) navigate('#/admin')
       else navigate('#/laerer')
     } catch (err) {
-      showToast('Feil ved innlogging: ' + err.message, 'error')
+      feilMelding.textContent = 'Feil e-post eller passord'
+      feilMelding.classList.remove('skjult')
+      btn.disabled = false
     }
   }})
 
-  form.appendChild(el('h2', {}, 'Logg inn'))
-  form.appendChild(el('label', {}, 'E-post'))
-  form.appendChild(el('input', { name: 'email', type: 'email', required: 'true', placeholder: 'din@epost.no' }))
-  form.appendChild(el('label', {}, 'Passord'))
-  form.appendChild(el('input', { name: 'password', type: 'password', required: 'true' }))
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Logg inn'))
-  main.appendChild(form)
+  kort.appendChild(el('h2', {}, 'Logg inn'))
+  kort.appendChild(feilMelding)
+  form.appendChild(el('label', { class: 'felt-label' }, 'E-post'))
+  form.appendChild(el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true', placeholder: 'din@epost.no' }))
+  form.appendChild(el('label', { class: 'felt-label' }, 'Passord'))
+  form.appendChild(el('input', { name: 'password', type: 'password', class: 'felt input', required: 'true' }))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p', style: 'width:100%;margin-top:8px' }, 'Logg inn'))
+
+  // Glemt passord
+  const glemt = el('button', { type: 'button', class: 'btn-lenke', style: 'margin-top:12px;font-size:.85rem;color:var(--tekst-svak);background:none;border:none;cursor:pointer;display:block;width:100%;text-align:center' }, 'Glemt passord?')
+  glemt.addEventListener('click', async () => {
+    const email = form.querySelector('[name=email]').value
+    if (!email) {
+      feilMelding.textContent = 'Fyll inn e-postadressen din først'
+      feilMelding.classList.remove('skjult')
+      return
+    }
+    glemt.disabled = true
+    glemt.textContent = 'Sender…'
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    })
+    if (error) {
+      feilMelding.textContent = 'Kunne ikke sende e-post: ' + error.message
+      feilMelding.classList.remove('skjult')
+      glemt.disabled = false
+      glemt.textContent = 'Glemt passord?'
+    } else {
+      glemt.textContent = '✓ Sjekk e-posten din'
+    }
+  })
+  form.appendChild(glemt)
+
+  kort.appendChild(form)
+  wrap.appendChild(kort)
+  main.appendChild(wrap)
 }
 
 function renderPassordModal() {

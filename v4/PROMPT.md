@@ -126,6 +126,12 @@ Alt som lærer, pluss:
 
 ## UX-krav
 
+**Innlogging:**
+- Skjema sentrert midt på siden i et kort
+- Feil passord/e-post: rød feilmelding direkte i skjemaet (ikke toast)
+- Ved vellykket innlogging: kort toast «Velkommen, [navn]!»
+- «Glemt passord?»-lenke sender tilbakestillingslenke til e-post (fyll inn e-post først)
+
 **Lagre-knapper:**
 Alle lagre-knapper er passive (deaktivert) inntil brukeren har gjort en endring i skjemaet. Bruker `overvakSkjema(form, lagreKnapp)` som tar snapshot av alle felt ved oppstart og aktiverer knappen ved avvik.
 
