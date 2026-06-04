@@ -1952,7 +1952,7 @@ async function renderBrukereTab(container) {
     for (const u of users || []) {
       const klList = (u.user_classes || []).map(tc => tc.classes?.name).filter(Boolean).join(', ')
       const row = el('div', { class: 'admin-rad' })
-      row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} (${u.id}) – ${u.role}`))
+      row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} – ${u.role}`))
       if (klList) row.appendChild(el('span', { class: 'tekst-svak' }, klList))
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
@@ -1961,11 +1961,6 @@ async function renderBrukereTab(container) {
 
     container.appendChild(el('button', { class: 'btn btn-p', onclick: () => visNyBrukerModal(klasser, refresh) }, '+ Ny bruker'))
 
-    // Info box
-    const info = el('div', { class: 'info-box' })
-    info.appendChild(el('strong', {}, 'Merk: '))
-    info.appendChild(document.createTextNode('Oppretting av Auth-bruker må gjøres via Supabase Dashboard eller en Edge Function med service_role-nøkkel. Fyll inn brukerinfo her etter at Auth-brukeren er opprettet.'))
-    container.appendChild(info)
   }
   await refresh()
 }
