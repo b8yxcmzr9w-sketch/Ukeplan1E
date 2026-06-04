@@ -235,7 +235,7 @@ function renderLoginForm() {
 }
 
 function renderPassordModal() {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Bytt passord'))
   const nytt = el('input', { type: 'password', placeholder: 'Nytt passord', class: 'felt input' })
@@ -391,7 +391,7 @@ async function lagreOkt(id, data, expectedVersion) {
 }
 
 function showConflictWarning() {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Konflikt!'))
   box.appendChild(el('p', {}, 'Noen andre har endret denne økten. Last siden på nytt for å se siste versjon.'))
@@ -634,7 +634,7 @@ function visICalModal(klasse) {
   const url = klasse
     ? `${baseUrl}?class_id=${klasse.id}`
     : `${baseUrl}?teacher_id=${APP.profile?.id}`
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'iCal-abonnement'))
   box.appendChild(el('p', {}, 'Kopier lenken under og legg den til i Google Kalender, Apple Kalender eller Outlook:'))
@@ -930,7 +930,7 @@ async function renderSokTab(container) {
 // ─────────────────────────────────────────
 
 async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Ny økt'))
 
@@ -1061,7 +1061,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
 }
 
 async function visRedigerOktModal(session, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Rediger økt'))
 
@@ -1148,7 +1148,7 @@ async function visRedigerOktModal(session, onSave) {
 }
 
 async function visKopierOktModal(session, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Kopier økt'))
   box.appendChild(el('p', {}, 'Velg uke og dag for kopien:'))
@@ -1200,7 +1200,7 @@ async function slettOkt(id, onSave) {
 }
 
 async function visOverforModal(session, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Overfør økt'))
 
@@ -1243,7 +1243,7 @@ async function visOverforModal(session, onSave) {
 }
 
 async function visBulkEditModal(ids, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, `Bulk-rediger ${ids.length} økt(er)`))
 
@@ -1281,7 +1281,7 @@ async function visBulkEditModal(ids, onSave) {
 }
 
 async function visAIPasteModal(defaultKlasse, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal modal-xl' })
   box.appendChild(el('h3', {}, 'Importer økter med AI'))
 
@@ -1501,7 +1501,7 @@ async function renderKlasseAdminTab(container) {
 }
 
 async function visNyMDEModal(classId, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Nytt flerdagsarrangement'))
 
@@ -1547,7 +1547,7 @@ async function visNyMDEModal(classId, onSave) {
 }
 
 async function visRedigerMDEModal(mde, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Rediger arrangement'))
 
@@ -1601,7 +1601,7 @@ async function lastOppSikkerhetskopi(file, klasse) {
   const sessions = backup.sessions || []
   if (!sessions.length) { showToast('Ingen økter i filen', 'info'); return }
 
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Importer sikkerhetskopi'))
   box.appendChild(el('p', {}, `Filen inneholder ${sessions.length} økt(er). Velg hvilke du vil importere:`))
@@ -1690,15 +1690,13 @@ async function renderSkoleInfoTab(container) {
     const logoUrl = fd.get('logo_url')
     if (logoUrl) updates.logo_url = logoUrl
     await medLagreOverlay(async () => {
-      const { error } = await sb.from('schools').update(updates).eq('id', APP.school.id)
+      const { data: oppdatert, error } = await sb
+        .from('schools').update(updates).eq('id', APP.school.id).select().single()
       if (error) throw error
-      // Re-hent fra DB for å bekrefte at lagringen gikk igjennom
-      const { data: fersk } = await sb.from('schools').select('*').eq('id', APP.school.id).single()
-      if (fersk) {
-        APP.school = fersk
-        document.getElementById('hdr-skolenavn').textContent = fersk.name
-        document.documentElement.dataset.theme = fersk.color_theme || 'standard'
-      }
+      if (!oppdatert) throw new Error('Ingen rader ble oppdatert – sjekk admin-tilgang i databasen')
+      APP.school = oppdatert
+      document.getElementById('hdr-skolenavn').textContent = oppdatert.name
+      document.documentElement.dataset.theme = oppdatert.color_theme || 'standard'
       oppdaterHeader()
     })
   }})
@@ -1737,7 +1735,7 @@ async function renderSkoleInfoTab(container) {
   const themeGroup = el('div', { class: 'theme-group' })
   for (const t of themes) {
     const radio = el('input', { type: 'radio', name: 'color_theme', value: t.value, id: `theme-${t.value}` })
-    if (school.color_theme === t.value) radio.setAttribute('checked', 'true')
+    if (school.color_theme === t.value) radio.checked = true
     radio.addEventListener('change', () => {
       // Live preview
       document.documentElement.dataset.theme = t.value
@@ -1779,7 +1777,7 @@ async function renderFagTab(container) {
 }
 
 async function visRedigerFagModal(subj, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, subj ? 'Rediger fag' : 'Nytt fag'))
   if (subj) box.appendChild(el('p', { class: 'warning-text' }, '⚠️ Endring av navn påvirker alle eksisterende visninger.'))
@@ -1835,20 +1833,37 @@ async function visRedigerFagModal(subj, onSave) {
   kortRad.appendChild(kortWrap)
   form.appendChild(kortRad)
 
-  // Farge med forhåndsvisning
-  const fargeInit = subj?.color_hex || '#4a90d9'
-  const fargeInput = el('input', { name: 'color_hex', type: 'color', value: fargeInit, style: 'width:44px;height:36px;padding:2px;border-radius:6px;border:1px solid var(--kant);cursor:pointer' })
-  const fargeEtikett = el('span', { class: 'fag-badge', style: `background:${fargeInit};color:#fff` }, subj?.name || 'Eksempel')
-  fargeInput.addEventListener('input', () => {
-    fargeEtikett.style.background = fargeInput.value
-  })
+  // Farge – palett med 12 farger + forhåndsvisning
+  const FAG_FARGER = ['#e63946','#e07a5f','#f4a261','#f9c74f','#43aa8b','#2d6a4f','#4a90d9','#457b9d','#6a4c93','#b56576','#9b2226','#606c38']
+  const { data: eksisterendeFag } = await sb.from('subjects').select('color_hex').eq('school_id', APP.school.id).is('deleted_at', null)
+  const bruktefarger = new Set((eksisterendeFag || []).filter(f => f.id !== subj?.id).map(f => f.color_hex).filter(Boolean))
+  const autoFarge = FAG_FARGER.find(f => !bruktefarger.has(f)) || FAG_FARGER[0]
+  let valgtFarge = subj?.color_hex || autoFarge
+
+  const fargeEtikett = el('span', { class: 'fag-badge', style: `background:${valgtFarge};color:#fff` }, subj?.name || 'Eksempel')
   navnInput.addEventListener('input', () => { fargeEtikett.textContent = navnInput.value || 'Eksempel' })
+
+  const fargeHidden = el('input', { name: 'color_hex', type: 'hidden', value: valgtFarge })
+
+  const palettWrap = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;align-items:center' })
+  for (const farge of FAG_FARGER) {
+    const btn = el('button', { type: 'button', style: `width:28px;height:28px;border-radius:50%;background:${farge};border:3px solid ${farge===valgtFarge?'var(--tekst)':'transparent'};cursor:pointer;flex-shrink:0` })
+    btn.addEventListener('click', () => {
+      valgtFarge = farge
+      fargeHidden.value = farge
+      fargeEtikett.style.background = farge
+      palettWrap.querySelectorAll('button').forEach(b => b.style.border = '3px solid transparent')
+      btn.style.border = '3px solid var(--tekst)'
+      form.dispatchEvent(new Event('change'))
+    })
+    palettWrap.appendChild(btn)
+  }
+  palettWrap.appendChild(fargeEtikett)
+  form.appendChild(fargeHidden)
+
   const fargeRad = el('div', { class: 'felt' })
   fargeRad.appendChild(el('label', {}, 'Farge'))
-  const fargeWrap = el('div', { style: 'display:flex;align-items:center;gap:12px' })
-  fargeWrap.appendChild(fargeInput)
-  fargeWrap.appendChild(fargeEtikett)
-  fargeRad.appendChild(fargeWrap)
+  fargeRad.appendChild(palettWrap)
   form.appendChild(fargeRad)
 
   // Inndeling
@@ -1861,7 +1876,7 @@ async function visRedigerFagModal(subj, onSave) {
   form.appendChild(lagFormRad('Inndeling', dtSel))
 
   // Maks inndelinger – kun synlig når inndeling er valgt
-  const maksInput = el('input', { name: 'max_divisions', type: 'number', class: 'felt input', value: subj?.max_divisions || 8, min: 1, max: 8, style: 'width:70px' })
+  const maksInput = el('input', { name: 'max_divisions', type: 'number', class: 'felt input', value: subj?.max_divisions || 8, min: 1, max: 20, style: 'width:70px' })
   const maksRad = el('div', { class: 'felt' })
   maksRad.appendChild(el('label', {}, 'Maks antall inndelinger'))
   maksRad.appendChild(maksInput)
@@ -1914,7 +1929,7 @@ async function renderKlasserTab(container) {
 }
 
 async function visMergeKlasseModal(klasse, alleKlasser, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, `Slå sammen klasse: ${klasse.name}`))
   box.appendChild(el('p', { class: 'warning-text' }, '⚠️ Dette er en destruktiv operasjon. Alt fra målklassen flyttes til denne.'))
@@ -1954,7 +1969,7 @@ async function renderBrukereTab(container) {
     for (const u of users || []) {
       const klList = (u.user_classes || []).map(tc => tc.classes?.name).filter(Boolean).join(', ')
       const row = el('div', { class: 'admin-rad' })
-      row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} (${u.id}) – ${u.role}`))
+      row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} – ${u.role}`))
       if (klList) row.appendChild(el('span', { class: 'tekst-svak' }, klList))
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
@@ -1963,17 +1978,12 @@ async function renderBrukereTab(container) {
 
     container.appendChild(el('button', { class: 'btn btn-p', onclick: () => visNyBrukerModal(klasser, refresh) }, '+ Ny bruker'))
 
-    // Info box
-    const info = el('div', { class: 'info-box' })
-    info.appendChild(el('strong', {}, 'Merk: '))
-    info.appendChild(document.createTextNode('Oppretting av Auth-bruker må gjøres via Supabase Dashboard eller en Edge Function med service_role-nøkkel. Fyll inn brukerinfo her etter at Auth-brukeren er opprettet.'))
-    container.appendChild(info)
   }
   await refresh()
 }
 
 async function visNyBrukerModal(klasser, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Ny bruker'))
   box.appendChild(el('div', { class: 'info-box' }, 'Auth-bruker må opprettes manuelt i Supabase Dashboard først. Fyll inn auth user ID nedenfor.'))
@@ -2024,7 +2034,7 @@ async function visNyBrukerModal(klasser, onSave) {
 }
 
 async function visRedigerBrukerModal(user, klasser, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Rediger bruker'))
 
@@ -2080,7 +2090,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
 }
 
 async function visSlettBrukerModal(user, onSave) {
-  const modal = el('div', { class: 'modal' })
+  const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, `Slett bruker: ${user.full_name}`))
 
