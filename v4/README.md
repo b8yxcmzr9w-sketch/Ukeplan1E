@@ -55,7 +55,19 @@ const SUPABASE_ANON_KEY = 'din_anon_key_her'
    (eller flytt innholdet i `v4/` til rot)
 3. Nettsiden er tilgjengelig på `https://BRUKERNAVN.github.io/REPO/`
 
-### 8. Opprett første admin-bruker
+### 8. Konfigurer invitasjons-URL i Supabase
+Når admin inviterer nye brukere sendes en e-post med en lenke. Lenken må peke til riktig nettadresse.
+
+1. Gå til Supabase Dashboard → **Authentication → URL Configuration**
+2. Sett **Site URL** til nettadressen der appen kjører, f.eks.:
+   ```
+   https://ukeplan1e.ganddal.net/v4
+   ```
+3. Legg til samme adresse under **Redirect URLs**
+
+> Hvis adressen endres (nytt domene, ny mappe), må dette oppdateres her.
+
+### 9. Opprett første admin-bruker
 1. Supabase Dashboard → Authentication → Users → Add user
    - Fyll inn e-post og passord
 2. Kjør i SQL Editor:

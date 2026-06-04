@@ -395,6 +395,8 @@ tr:hover td { background: var(--primær-svak); }
 }
 .admin-rad:last-child { border-bottom: none; }
 .color-swatch { display: inline-block; width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
+.class-checkboxes { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.class-checkboxes input[type=checkbox] { margin-right: 4px; }
 .admin-rad .tekst-svak { font-size: .82rem; color: var(--tekst-svak); }
 .admin-rad .spacer { flex: 1; }
 

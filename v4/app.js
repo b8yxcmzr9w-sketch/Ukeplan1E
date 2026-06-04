@@ -2035,9 +2035,11 @@ async function visNyBrukerModal(klasser, onSave) {
 
   const klDiv = el('div', { class: 'class-checkboxes' })
   for (const k of klasser || []) {
-    const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id, id: `nk-${k.id}` })
-    klDiv.appendChild(cb)
-    klDiv.appendChild(el('label', { for: `nk-${k.id}` }, k.name))
+    const lbl = el('label', { style: 'display:flex;align-items:center;gap:4px;cursor:pointer' })
+    const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id })
+    lbl.appendChild(cb)
+    lbl.appendChild(document.createTextNode(k.name))
+    klDiv.appendChild(lbl)
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
@@ -2090,10 +2092,12 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
 
   const klDiv = el('div', { class: 'class-checkboxes' })
   for (const k of klasser || []) {
-    const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id, id: `rk-${k.id}` })
-    if (tilknyttedeIds.has(k.id)) cb.setAttribute('checked', 'true')
-    klDiv.appendChild(cb)
-    klDiv.appendChild(el('label', { for: `rk-${k.id}` }, k.name))
+    const lbl = el('label', { style: 'display:flex;align-items:center;gap:4px;cursor:pointer' })
+    const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id })
+    if (tilknyttedeIds.has(k.id)) cb.checked = true
+    lbl.appendChild(cb)
+    lbl.appendChild(document.createTextNode(k.name))
+    klDiv.appendChild(lbl)
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
