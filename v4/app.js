@@ -173,8 +173,7 @@ async function sjekkVentendeOverforinger() {
   if (!APP.profile) return
   const { data } = await sb.from('pending_transfers')
     .select('*, sessions(*)')
-    .eq('to_teacher_id', APP.profile.id)
-    .eq('status', 'pending')
+    .eq('to_user', APP.profile.id)
   if (data && data.length > 0) {
     showToast(`Du har ${data.length} ventende overføring(er)`, 'info')
   }
@@ -522,7 +521,7 @@ async function renderElevView(klasseNavn) {
       }})
       filterSel.appendChild(el('option', { value: '' }, 'Alle'))
       for (const d of divisions) {
-        const opt = el('option', { value: d.id }, `${d.type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`)
+        const opt = el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`)
         if (aktivFilter === d.id) opt.setAttribute('selected', 'true')
         filterSel.appendChild(opt)
       }
@@ -586,7 +585,7 @@ function renderSessionCard(s, showActions, actions = {}) {
   if (s.activity) card.appendChild(el('div', { class: 'aktivitet' }, truncate(s.activity)))
   if (s.meeting_point) card.appendChild(el('div', { class: 'session-card__meeting' }, `📍 ${s.meeting_point}`))
   if (s.info) card.appendChild(el('div', { class: 'session-card__info' }, truncate(s.info)))
-  if (s.users) card.appendChild(el('div', { class: 'session-card__teacher' }, s.users.name))
+  if (s.users) card.appendChild(el('div', { class: 'session-card__teacher' }, s.users.full_name))
   if (s.subject_divisions) {
     card.appendChild(el('div', { class: 'div-badge' }, s.subject_divisions.name))
   }
@@ -653,8 +652,8 @@ async function renderLaererView() {
 
   function setTab(idx) {
     activeTab = idx
-    tabBar.querySelectorAll('.tab-btn').forEach((b, i) => {
-      b.classList.toggle('fane aktiv', i === idx)
+    tabBar.querySelectorAll('.fane').forEach((b, i) => {
+      b.classList.toggle('aktiv', i === idx)
     })
     clearEl(tabContent)
     switch (idx) {
@@ -677,7 +676,7 @@ async function renderLaererView() {
 
 async function renderMinKlasseTab(container) {
   // Class selector
-  const { data: mine } = await sb.from('teacher_classes')
+  const { data: mine } = await sb.from('user_classes')
     .select('classes(*)')
     .eq('user_id', APP.profile.id)
   const klasser = (mine || []).map(r => r.classes).filter(Boolean)
@@ -949,9 +948,9 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
         week_nr: weekNr,
         day_of_week: dagOfWeek,
         teacher_id: fd.get('teacher_id'),
-        activity: fd.get('activity') || null,
-        meeting_point: fd.get('meeting_point') || null,
-        info: fd.get('info') || null,
+        activity: fd.get('activity') || '',
+        meeting_point: fd.get('meeting_point') || '',
+        info: fd.get('info') || '',
         version: 1,
       })
       if (error) throw error
@@ -984,7 +983,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
 
   async function oppdaterFagSel(classId) {
     clearEl(fagSel)
-    const { data: subj } = await sb.from('subjects').select('*').eq('class_id', classId).order('name')
+    const { data: subj } = await sb.from('subjects').select('*').eq('school_id', APP.school.id).order('name')
     for (const s of subj || []) {
       fagSel.appendChild(el('option', { value: s.id }, s.name))
     }
@@ -996,7 +995,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
     divSel.appendChild(el('option', { value: '' }, '(ingen)'))
     const { data: divs } = await sb.from('subject_divisions').select('*').eq('subject_id', subjectId)
     for (const d of divs || []) {
-      divSel.appendChild(el('option', { value: d.id }, `${d.type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`))
+      divSel.appendChild(el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`))
     }
   }
 
@@ -1015,7 +1014,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   // Teacher
   const laererSel = el('select', { name: 'teacher_id', class: 'felt select' })
   for (const t of teachers || []) {
-    const opt = el('option', { value: t.id }, t.name)
+    const opt = el('option', { value: t.id }, t.full_name)
     if (t.id === APP.profile.id) opt.setAttribute('selected', 'true')
     laererSel.appendChild(opt)
   }
@@ -1040,7 +1039,7 @@ async function visRedigerOktModal(session, onSave) {
   box.appendChild(el('h3', {}, 'Rediger økt'))
 
   const { data: subjects } = await sb.from('subjects').select('*')
-    .eq('class_id', session.class_id).order('name')
+    .eq('school_id', APP.school.id).order('name')
   const { data: divisions } = await sb.from('subject_divisions').select('*')
     .eq('subject_id', session.subject_id)
   const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
@@ -1097,7 +1096,7 @@ async function visRedigerOktModal(session, onSave) {
 
   const laererSel = el('select', { name: 'teacher_id', class: 'felt select' })
   for (const t of teachers || []) {
-    const opt = el('option', { value: t.id }, t.name)
+    const opt = el('option', { value: t.id }, t.full_name)
     if (t.id === session.teacher_id) opt.setAttribute('selected', 'true')
     laererSel.appendChild(opt)
   }
@@ -1185,7 +1184,7 @@ async function visOverforModal(session, onSave) {
 
   const sel = el('select', { class: 'felt select' })
   for (const t of teachers || []) {
-    sel.appendChild(el('option', { value: t.id }, t.name))
+    sel.appendChild(el('option', { value: t.id }, t.full_name))
   }
 
   box.appendChild(lagFormRad('Ny lærer', sel))
@@ -1195,15 +1194,15 @@ async function visOverforModal(session, onSave) {
       await sb.from('sessions').update({ teacher_id: targetId }).eq('id', session.id)
       await sb.from('pending_transfers').insert({
         session_id: session.id,
-        from_teacher_id: APP.profile.id,
-        to_teacher_id: targetId,
-        status: 'pending',
+        from_user: APP.profile.id,
+        to_user: targetId,
       })
       await sb.from('audit_log').insert({
-        action: 'transfer',
-        session_id: session.id,
-        performed_by: APP.profile.id,
-        note: `Overført til ${targetId}`,
+        table_name: 'sessions',
+        record_id: session.id,
+        action: 'update',
+        changed_by: APP.profile.id,
+        new_data: { transferred_to: targetId },
       })
     })
     modal.remove()
@@ -1256,7 +1255,7 @@ async function visBulkEditModal(ids, onSave) {
 
 async function visAIPasteModal(defaultKlasse, onSave) {
   const modal = el('div', { class: 'modal' })
-  const box = el('div', { class: 'modal__box modal__box--wide' })
+  const box = el('div', { class: 'modal modal-xl' })
   box.appendChild(el('h3', {}, 'Importer økter med AI'))
 
   const textarea = el('textarea', { class: 'felt textarea textarea-large', placeholder: 'Lim inn tekst her…' })
@@ -1331,9 +1330,9 @@ async function visAIPasteModal(defaultKlasse, onSave) {
               week_nr: s.week_nr,
               day_of_week: s.day_of_week,
               teacher_id: APP.profile.id,
-              activity: s.activity || null,
-              meeting_point: s.meeting_point || null,
-              info: s.info || null,
+              activity: s.activity || '',
+              meeting_point: s.meeting_point || '',
+              info: s.info || '',
               version: 1,
             })
           }
@@ -1358,7 +1357,7 @@ async function visAIPasteModal(defaultKlasse, onSave) {
 // ─────────────────────────────────────────
 
 async function renderKlasseAdminTab(container) {
-  const { data: mine } = await sb.from('teacher_classes')
+  const { data: mine } = await sb.from('user_classes')
     .select('classes(*)')
     .eq('user_id', APP.profile.id)
   const klasser = (mine || []).map(r => r.classes).filter(Boolean)
@@ -1421,7 +1420,7 @@ async function renderKlasseAdminTab(container) {
           const updated = cb.checked
             ? [...current, d].sort()
             : current.filter(x => x !== d)
-          await sb.from('subjects').update({ preferred_days: updated }).eq('id', subj.id)
+          await sb.from('class_subject_config').upsert({ class_id: APP.currentClass, subject_id: subj.id, preferred_days: updated })
         })
         daysRow.appendChild(cb)
         daysRow.appendChild(el('label', { for: `pd-${subj.id}-${d}` }, dagNavn(d).slice(0, 2)))
@@ -1627,7 +1626,7 @@ async function renderAdminPanel() {
 
   function setTab(idx) {
     activeTab = idx
-    tabBar.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('fane aktiv', i === idx))
+    tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
     switch (idx) {
       case 0: renderSkoleInfoTab(tabContent); break
@@ -1699,9 +1698,9 @@ async function renderSkoleInfoTab(container) {
   const themeRow = el('div', { class: 'felt' })
   themeRow.appendChild(el('label', {}, 'Fargetema'))
   const themes = [
-    { value: 'default', label: 'Standard (blå)', color: '#1a73e8' },
-    { value: 'green', label: 'Grønn', color: '#2e7d32' },
-    { value: 'purple', label: 'Lilla', color: '#6a1b9a' },
+    { value: 'standard', label: 'Standard (grønn)', color: '#2d6a4f' },
+    { value: 'lys', label: 'Lys (blå)', color: '#0077b6' },
+    { value: 'mork', label: 'Mørk', color: '#74c69d' },
   ]
   const themeGroup = el('div', { class: 'theme-group' })
   for (const t of themes) {
@@ -1737,7 +1736,7 @@ async function renderFagTab(container) {
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerFagModal(s, refresh) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
         if (!confirm(`Slette faget "${s.name}"? Dette vil påvirke alle eksisterende økter.`)) return
-        await medLagreOverlay(() => sb.from('subjects').update({ deleted: true }).eq('id', s.id))
+        await medLagreOverlay(() => sb.from('subjects').update({ deleted_at: new Date().toISOString() }).eq('id', s.id))
         refresh()
       }}, '🗑️'))
       container.appendChild(row)
@@ -1816,7 +1815,7 @@ async function renderKlasserTab(container) {
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
         if (!confirm(`Slette klassen "${k.name}"? Dette er alvorlig og kan ikke angres!`)) return
         if (!confirm('Er du helt sikker? Alle tilknyttede data vil bli slettet.')) return
-        await medLagreOverlay(() => sb.from('classes').update({ deleted: true }).eq('id', k.id))
+        await medLagreOverlay(() => sb.from('classes').update({ deleted_at: new Date().toISOString() }).eq('id', k.id))
         refresh()
       }}, '🗑️'))
       row.appendChild(el('button', { class: 'btn btn-sm', onclick: () => visMergeKlasseModal(k, klasser, refresh) }, 'Slå sammen'))
@@ -1851,7 +1850,7 @@ async function visMergeKlasseModal(klasse, alleKlasser, onSave) {
       // Move all sessions from target class to this class
       await sb.from('sessions').update({ class_id: klasse.id }).eq('class_id', sel.value)
       // Soft delete target
-      await sb.from('classes').update({ deleted: true }).eq('id', sel.value)
+      await sb.from('classes').update({ deleted_at: new Date().toISOString() }).eq('id', sel.value)
     })
     modal.remove()
     if (onSave) onSave()
@@ -1866,15 +1865,15 @@ async function visMergeKlasseModal(klasse, alleKlasser, onSave) {
 async function renderBrukereTab(container) {
   async function refresh() {
     clearEl(container)
-    const { data: users } = await sb.from('users').select('*, teacher_classes(classes(*))').eq('school_id', APP.school.id).order('name')
+    const { data: users } = await sb.from('users').select('*, user_classes(classes(*))').eq('school_id', APP.school.id).order('full_name')
     const { data: klasser } = await sb.from('classes').select('*').order('name')
 
     container.appendChild(el('h3', {}, 'Brukere'))
 
     for (const u of users || []) {
-      const klList = (u.teacher_classes || []).map(tc => tc.classes?.name).filter(Boolean).join(', ')
+      const klList = (u.user_classes || []).map(tc => tc.classes?.name).filter(Boolean).join(', ')
       const row = el('div', { class: 'admin-row' })
-      row.appendChild(el('span', { class: 'tekst' }, `${u.name} (${u.email}) – ${u.role}`))
+      row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} (${u.id}) – ${u.role}`))
       if (klList) row.appendChild(el('span', { class: 'admin-row__detail' }, klList))
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
@@ -1905,14 +1904,13 @@ async function visNyBrukerModal(klasser, onSave) {
     await medLagreOverlay(async () => {
       const { data: newUser, error } = await sb.from('users').insert({
         id: fd.get('auth_id'),
-        name: fd.get('name'),
-        email: fd.get('email'),
+        full_name: fd.get('full_name'),
         role: fd.get('role'),
         school_id: APP.school.id,
       }).select().single()
       if (error) throw error
       for (const kid of klassIds) {
-        await sb.from('teacher_classes').insert({ user_id: newUser.id, class_id: kid })
+        await sb.from('user_classes').insert({ user_id: newUser.id, class_id: kid })
       }
     })
     modal.remove()
@@ -1920,8 +1918,7 @@ async function visNyBrukerModal(klasser, onSave) {
   }})
 
   form.appendChild(lagFormRad('Auth UUID', el('input', { name: 'auth_id', type: 'text', class: 'felt input', placeholder: 'UUID fra Supabase Auth', required: 'true' })))
-  form.appendChild(lagFormRad('Navn', el('input', { name: 'name', type: 'text', class: 'felt input', required: 'true' })))
-  form.appendChild(lagFormRad('E-post', el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true' })))
+  form.appendChild(lagFormRad('Navn', el('input', { name: 'full_name', type: 'text', class: 'felt input', required: 'true' })))
 
   const roleSel = el('select', { name: 'role', class: 'felt select' })
   for (const r of ['elev', 'laerer', 'kontaktlaerer', 'admin']) {
@@ -1950,7 +1947,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Rediger bruker'))
 
-  const { data: tilknyttede } = await sb.from('teacher_classes').select('class_id').eq('user_id', user.id)
+  const { data: tilknyttede } = await sb.from('user_classes').select('class_id').eq('user_id', user.id)
   const tilknyttedeIds = new Set((tilknyttede || []).map(r => r.class_id))
 
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
@@ -1959,20 +1956,20 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
     const newKlassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
       await sb.from('users').update({
-        name: fd.get('name'),
+        full_name: fd.get('full_name'),
         role: fd.get('role'),
       }).eq('id', user.id)
       // Update classes
-      await sb.from('teacher_classes').delete().eq('user_id', user.id)
+      await sb.from('user_classes').delete().eq('user_id', user.id)
       for (const kid of newKlassIds) {
-        await sb.from('teacher_classes').insert({ user_id: user.id, class_id: kid })
+        await sb.from('user_classes').insert({ user_id: user.id, class_id: kid })
       }
     })
     modal.remove()
     if (onSave) onSave()
   }})
 
-  const nameInput = el('input', { name: 'name', type: 'text', class: 'felt input', value: user.name })
+  const nameInput = el('input', { name: 'full_name', type: 'text', class: 'felt input', value: user.full_name })
   const nameWarning = el('small', { class: 'warning-text' }, '⚠️ Navneendring påvirker visning overalt')
   form.appendChild(lagFormRad('Navn', nameInput, nameWarning))
 
@@ -2004,7 +2001,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
 async function visSlettBrukerModal(user, onSave) {
   const modal = el('div', { class: 'modal' })
   const box = el('div', { class: 'modal' })
-  box.appendChild(el('h3', {}, `Slett bruker: ${user.name}`))
+  box.appendChild(el('h3', {}, `Slett bruker: ${user.full_name}`))
 
   const { data: future } = await sb.from('sessions')
     .select('id')
@@ -2022,7 +2019,7 @@ async function visSlettBrukerModal(user, onSave) {
     const reassignSel = el('select', { class: 'felt select' })
     reassignSel.appendChild(el('option', { value: '' }, 'Slett øktene'))
     for (const o of others || []) {
-      reassignSel.appendChild(el('option', { value: o.id }, `Overfør til ${o.name}`))
+      reassignSel.appendChild(el('option', { value: o.id }, `Overfør til ${o.full_name}`))
     }
     box.appendChild(lagFormRad('Fremtidige økter', reassignSel))
 
@@ -2036,7 +2033,7 @@ async function visSlettBrukerModal(user, onSave) {
           await sb.from('sessions').delete()
             .eq('teacher_id', user.id).gte('week_nr', getCurrentISOWeek())
         }
-        await sb.from('users').update({ deleted: true }).eq('id', user.id)
+        await sb.from('users').update({ deleted_at: new Date().toISOString() }).eq('id', user.id)
       })
       modal.remove()
       if (onSave) onSave()
@@ -2044,7 +2041,7 @@ async function visSlettBrukerModal(user, onSave) {
   } else {
     box.appendChild(el('p', {}, 'Brukeren har ingen fremtidige økter.'))
     box.appendChild(el('button', { class: 'btn btn-f', onclick: async () => {
-      await medLagreOverlay(() => sb.from('users').update({ deleted: true }).eq('id', user.id))
+      await medLagreOverlay(() => sb.from('users').update({ deleted_at: new Date().toISOString() }).eq('id', user.id))
       modal.remove()
       if (onSave) onSave()
     }}, 'Slett bruker'))
@@ -2202,7 +2199,7 @@ async function init() {
   const { data: schools } = await sb.from('schools').select('*').limit(1)
   if (schools && schools.length) {
     APP.school = schools[0]
-    document.documentElement.dataset.theme = APP.school.color_theme || 'default'
+    document.documentElement.dataset.theme = APP.school.color_theme || 'standard'
     if (APP.school.logo_url) {
       const logo = document.getElementById('hdr-logo')
       if (logo) logo.src = APP.school.logo_url
