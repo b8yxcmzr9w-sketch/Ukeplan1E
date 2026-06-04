@@ -226,6 +226,7 @@ function renderLoginForm() {
       APP.isAdminActive = APP.profile.is_admin_active || false
       oppdaterHeader()
       await sjekkVentendeOverforinger()
+      showToast(`Velkommen, ${APP.profile.full_name}!`, 'info')
       if (APP.isAdminActive) navigate('#/admin')
       else navigate('#/laerer')
     } catch (err) {
