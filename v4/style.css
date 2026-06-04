@@ -383,3 +383,43 @@ tr:hover td { background: var(--primær-svak); }
   }
 }
 .utskrift-hode { display: none; }
+
+/* ── Admin-rader ─────────────────────────────────────────────────── */
+.admin-rad {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--kant); flex-wrap: wrap;
+}
+.admin-rad:last-child { border-bottom: none; }
+.admin-rad .tekst-svak { font-size: .82rem; color: var(--tekst-svak); }
+.admin-rad .spacer { flex: 1; }
+
+/* ── Login-skjerm ────────────────────────────────────────────────── */
+.login-wrap {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60vh; padding: 20px;
+}
+.login-kort {
+  background: var(--bg-kort); border-radius: var(--radius);
+  box-shadow: var(--skygge); padding: 32px; width: 100%; max-width: 380px;
+}
+.login-kort h2 { margin-bottom: 20px; font-size: 1.1rem; }
+
+/* ── Laerer/admin-layout ─────────────────────────────────────────── */
+.side-wrap { padding: 16px 20px 40px; max-width: 1200px; margin: 0 auto; }
+.fane-innhold { padding-top: 4px; }
+
+/* ── Skjema-rader ────────────────────────────────────────────────── */
+.skjema .felt { margin-bottom: 14px; }
+
+/* ── Uke-input ───────────────────────────────────────────────────── */
+.uke-nr-input {
+  width: 50px; padding: 5px 6px;
+  border: 1px solid var(--kant); border-radius: var(--radius);
+  font-size: 1rem; font-weight: 700; text-align: center;
+  background: var(--bg-kort); color: var(--tekst);
+  -moz-appearance: textfield;
+}
+.uke-nr-input::-webkit-inner-spin-button,
+.uke-nr-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.uke-label { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+
