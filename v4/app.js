@@ -1986,34 +1986,40 @@ async function visNyBrukerModal(klasser, onSave) {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Ny bruker'))
-  box.appendChild(el('div', { class: 'info-box' }, 'Auth-bruker må opprettes manuelt i Supabase Dashboard først. Fyll inn auth user ID nedenfor.'))
 
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const klassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
-      const { data: newUser, error } = await sb.from('users').insert({
-        id: fd.get('auth_id'),
-        full_name: fd.get('full_name'),
-        role: fd.get('role'),
-        school_id: APP.school.id,
-      }).select().single()
-      if (error) throw error
-      for (const kid of klassIds) {
-        await sb.from('user_classes').insert({ user_id: newUser.id, class_id: kid })
-      }
+      const { data: { session } } = await sb.auth.getSession()
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          email: fd.get('email'),
+          full_name: fd.get('full_name'),
+          role: fd.get('role'),
+          class_ids: klassIds,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Ukjent feil')
     })
     modal.remove()
     if (onSave) onSave()
   }})
 
-  form.appendChild(lagFormRad('Auth UUID', el('input', { name: 'auth_id', type: 'text', class: 'felt input', placeholder: 'UUID fra Supabase Auth', required: 'true' })))
+  form.appendChild(lagFormRad('E-post', el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true', placeholder: 'laerer@skole.no' })))
   form.appendChild(lagFormRad('Navn', el('input', { name: 'full_name', type: 'text', class: 'felt input', required: 'true' })))
 
   const roleSel = el('select', { name: 'role', class: 'felt select' })
-  for (const r of ['elev', 'laerer', 'kontaktlaerer', 'admin']) {
-    roleSel.appendChild(el('option', { value: r }, r))
+  for (const [val, label] of [['laerer','Lærer'],['kontaktlaerer','Kontaktlærer'],['admin','Admin']]) {
+    roleSel.appendChild(el('option', { value: val }, label))
   }
   form.appendChild(lagFormRad('Rolle', roleSel))
 
