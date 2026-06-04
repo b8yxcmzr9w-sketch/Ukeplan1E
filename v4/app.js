@@ -696,8 +696,10 @@ async function renderLaererView() {
     tabBar.appendChild(btn)
   })
 
-  main.appendChild(tabBar)
-  main.appendChild(tabContent)
+  const wrap = el('div', { class: 'side-wrap' })
+  wrap.appendChild(tabBar)
+  wrap.appendChild(tabContent)
+  main.appendChild(wrap)
   setTab(0)
 }
 
@@ -1670,8 +1672,10 @@ async function renderAdminPanel() {
     tabBar.appendChild(btn)
   })
 
-  main.appendChild(tabBar)
-  main.appendChild(tabContent)
+  const adminWrap = el('div', { class: 'side-wrap' })
+  adminWrap.appendChild(tabBar)
+  adminWrap.appendChild(tabContent)
+  main.appendChild(adminWrap)
   setTab(0)
 }
 
