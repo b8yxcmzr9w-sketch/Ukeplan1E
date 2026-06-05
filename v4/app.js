@@ -16,6 +16,50 @@ window.APP = {
   isAdminActive: false,
 }
 
+// Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
+// fra recovery-lenken i URL-en ikke går tapt før init() rekker å kjøre.
+let _recoveryHandtert = false
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_OUT') {
+    APP.user = null
+    APP.profile = null
+    APP.isAdminActive = false
+    oppdaterHeader()
+    navigate('#/')
+  } else if (event === 'PASSWORD_RECOVERY') {
+    if (_recoveryHandtert) return
+    _recoveryHandtert = true
+    APP.user = session?.user || APP.user
+    if (session && !APP.profile) {
+      try { APP.profile = await fetchProfile(session.user.id) } catch {}
+    }
+    oppdaterHeader()
+    visSettPassordModal({
+      tvungen: true,
+      tittel: 'Velg nytt passord',
+      ingress: 'Du fulgte en tilbakestillingslenke. Velg et nytt passord for å fullføre.',
+      onFerdig: () => navigate('#/laerer'),
+    })
+  } else if (event === 'SIGNED_IN' && session) {
+    APP.user = session.user
+    if (!APP.profile) {
+      try { APP.profile = await fetchProfile(session.user.id) } catch {}
+    }
+    APP.isAdminActive = APP.profile?.is_admin_active || false
+    oppdaterHeader()
+    // Invitasjonslenke: ny bruker uten passord – be om å sette ett
+    if (!_recoveryHandtert && (location.hash.includes('type=invite') || location.search.includes('type=invite'))) {
+      _recoveryHandtert = true
+      visSettPassordModal({
+        tvungen: true,
+        tittel: 'Velkommen! Velg et passord',
+        ingress: 'Kontoen din er opprettet. Velg et passord for å logge inn.',
+        onFerdig: () => navigate('#/laerer'),
+      })
+    }
+  }
+})
+
 const FUNNY_TEXTS = [
   'Sender tanker til skyene…',
   'Overtaler databasen…',
@@ -189,6 +233,23 @@ async function byttEpost(nyEpost) {
     { emailRedirectTo: window.location.origin + window.location.pathname }
   )
   if (error) throw error
+}
+
+// Kaller admin-user Edge Function (krever aktiv admin-sesjon)
+async function kallAdminUser(action, payload = {}) {
+  const { data: { session } } = await sb.auth.getSession()
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-user`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ action, ...payload }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || 'Ukjent feil')
+  return json
 }
 
 async function toggleAdminModus() {
@@ -2373,7 +2434,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
 
   const klDiv = el('div', { class: 'class-checkboxes' })
   for (const k of klasser || []) {
-    const lbl = el('label', { style: 'display:flex;align-items:center;gap:4px;cursor:pointer' })
+    const lbl = el('label')
     const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id })
     if (tilknyttedeIds.has(k.id)) cb.checked = true
     lbl.appendChild(cb)
@@ -2384,6 +2445,76 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(form)
+
+  // ── Kontoadministrasjon (e-post + passord) ──
+  box.appendChild(el('div', { class: 'seksjon-tittel' }, 'Kontoadministrasjon'))
+
+  // E-post
+  const epostFeil = el('p', { class: 'feil-tekst skjult' })
+  box.appendChild(epostFeil)
+  const epostInput = el('input', { type: 'email', class: 'felt input', placeholder: 'Laster e-post…', disabled: 'true' })
+  const epostRad = lagFormRad('E-postadresse', epostInput)
+  box.appendChild(epostRad)
+  // Hent nåværende e-post
+  kallAdminUser('get_email', { user_id: user.id })
+    .then(r => { epostInput.value = r.email || ''; epostInput.placeholder = 'din@epost.no'; epostInput.removeAttribute('disabled') })
+    .catch(() => { epostInput.placeholder = 'kunne ikke hente e-post'; epostInput.removeAttribute('disabled') })
+  const endreEpostBtn = el('button', { type: 'button', class: 'btn btn-s', onclick: async () => {
+    epostFeil.classList.add('skjult')
+    const ny = epostInput.value.trim()
+    if (!ny) { epostFeil.textContent = 'Skriv inn en e-postadresse'; epostFeil.classList.remove('skjult'); return }
+    if (!confirm(`Endre e-post til ${ny}? Gammel adresse blir varslet.`)) return
+    try {
+      const r = await medLagreOverlay(() => kallAdminUser('change_email', { user_id: user.id, new_email: ny, redirect_to: window.location.origin + window.location.pathname }))
+      showToast(r.notified ? 'E-post endret. Gammel adresse er varslet.' : 'E-post endret. (Varsel kunne ikke sendes – gi beskjed manuelt.)', 'ok')
+    } catch (err) { epostFeil.textContent = err.message; epostFeil.classList.remove('skjult') }
+  }}, 'Endre e-post')
+  box.appendChild(endreEpostBtn)
+
+  // Passord
+  const pwRad = el('div', { style: 'display:flex; gap:8px; flex-wrap:wrap; margin-top:14px' })
+  pwRad.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => visAdminSettPassord(user) }, 'Sett nytt passord'))
+  pwRad.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: async () => {
+    if (!confirm('Sende resett-e-post til brukeren?')) return
+    try {
+      await medLagreOverlay(() => kallAdminUser('send_reset', { user_id: user.id, redirect_to: window.location.origin + window.location.pathname }))
+      showToast('Resett-e-post sendt', 'ok')
+    } catch (err) { showToast(err.message, 'error') }
+  }}, 'Send resett-e-post'))
+  box.appendChild(pwRad)
+
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
+
+// Admin setter et nytt passord direkte for en bruker (omgår e-postgrense)
+function visAdminSettPassord(user) {
+  const modal = el('div', { class: 'modal-bg' })
+  const box = el('div', { class: 'modal' })
+  box.appendChild(el('h3', {}, `Sett passord – ${user.full_name}`))
+  box.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.85rem;margin:0 0 12px' },
+    'Du setter passordet direkte. Gi det til brukeren på en trygg måte, og be dem bytte det selv etterpå.'))
+  const feil = el('p', { class: 'feil-tekst skjult' })
+  box.appendChild(feil)
+  const form = el('form', { class: 'skjema' })
+  const pw = el('input', { type: 'text', class: 'felt input', placeholder: 'Nytt passord (minst 8 tegn)', minlength: 8, required: 'true' })
+  form.appendChild(pw)
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  bunn.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Sett passord'))
+  form.appendChild(bunn)
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    feil.classList.add('skjult')
+    if (pw.value.length < 8) { feil.textContent = 'Passordet må være minst 8 tegn'; feil.classList.remove('skjult'); return }
+    try {
+      const r = await medLagreOverlay(() => kallAdminUser('set_password', { user_id: user.id, password: pw.value }))
+      modal.remove()
+      showToast(r.notified ? 'Passord satt. Brukeren er varslet.' : 'Passord satt.', 'ok')
+    } catch (err) { feil.textContent = err.message; feil.classList.remove('skjult') }
+  })
   box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -2703,46 +2834,6 @@ async function init() {
       console.warn('Kunne ikke hente brukerprofil:', err.message)
     }
   }
-
-  // Listen for auth changes
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_OUT') {
-      APP.user = null
-      APP.profile = null
-      APP.isAdminActive = false
-      oppdaterHeader()
-      navigate('#/')
-    } else if (event === 'PASSWORD_RECOVERY') {
-      // Bruker klikket på tilbakestillingslenke – tving valg av nytt passord
-      APP.user = session?.user || APP.user
-      if (session && !APP.profile) {
-        try { APP.profile = await fetchProfile(session.user.id) } catch {}
-      }
-      oppdaterHeader()
-      visSettPassordModal({
-        tvungen: true,
-        tittel: 'Velg nytt passord',
-        ingress: 'Du fulgte en tilbakestillingslenke. Velg et nytt passord for å fullføre.',
-        onFerdig: () => navigate('#/laerer'),
-      })
-    } else if (event === 'SIGNED_IN' && session) {
-      APP.user = session.user
-      if (!APP.profile) {
-        try { APP.profile = await fetchProfile(session.user.id) } catch {}
-      }
-      APP.isAdminActive = APP.profile?.is_admin_active || false
-      oppdaterHeader()
-      // Invitasjonslenke: ny bruker uten passord – be om å sette ett
-      if (location.hash.includes('type=invite')) {
-        visSettPassordModal({
-          tvungen: true,
-          tittel: 'Velkommen! Velg et passord',
-          ingress: 'Kontoen din er opprettet. Velg et passord for å logge inn.',
-          onFerdig: () => navigate('#/laerer'),
-        })
-      }
-    }
-  })
 
   // Route immediately — don't wait for school data
   window.addEventListener('hashchange', router)

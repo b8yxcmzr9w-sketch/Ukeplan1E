@@ -40,8 +40,19 @@ supabase functions deploy ical               --project-ref DIN_PROJECT_REF
 supabase functions deploy ai-parse-sessions  --project-ref DIN_PROJECT_REF
 supabase functions deploy ai-parse-skolerute --project-ref DIN_PROJECT_REF
 supabase functions deploy generate-facts     --project-ref DIN_PROJECT_REF
+supabase functions deploy create-user        --project-ref DIN_PROJECT_REF
+supabase functions deploy admin-user         --project-ref DIN_PROJECT_REF
 supabase functions deploy cleanup            --project-ref DIN_PROJECT_REF
 ```
+
+> **Varsel-e-poster (valgfritt):** `admin-user` kan varsle brukere når admin
+> setter passord eller endrer e-post. Dette krever en Resend-konto:
+> ```bash
+> supabase secrets set RESEND_API_KEY=re_... --project-ref DIN_PROJECT_REF
+> supabase secrets set RESEND_FROM="Ukeplan <noreply@dittdomene.no>" --project-ref DIN_PROJECT_REF
+> ```
+> Uten disse fungerer endringene fortsatt, men varsel sendes ikke (admin får
+> beskjed om å varsle brukeren manuelt).
 
 ### 6. Oppdater app.js
 Åpne `v4/app.js` og endre de to øverste linjene:
@@ -131,6 +142,7 @@ v4/
         ├── ai-parse-skolerute/index.ts
         ├── generate-facts/index.ts
         ├── create-user/index.ts
+        ├── admin-user/index.ts
         └── cleanup/index.ts
 ```
 
