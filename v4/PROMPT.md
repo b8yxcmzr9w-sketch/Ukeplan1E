@@ -77,7 +77,7 @@ Tilgang via direkte URL: `/#/klasse/1E` (admin kopierer lenken fra Klasser-fanen
 - **Soft-delete:** Slettede økter mellomlagres 30 dager, kan gjenopprettes
 - **Utskrift:** Skriv ut aktiv visning (klasse eller tverrklasse)
 - **iCal-abonnement:** Abonner på egne økter (alle klasser)
-- **Passordbytte:** Tilgjengelig i innstillinger
+- **Passordbytte og e-postbytte:** Tilgjengelig i Innstillinger-fanen
 
 **Sanntid / samtidige brukere:**
 Bruk Supabase Realtime for å lytte på endringer i `sessions`-tabellen for aktiv klasse/uke. Ved konflikt (to lærere redigerer samme økt): bruk optimistic locking (`version`-felt). Vis varsel: «Denne økten ble endret av [navn] mens du redigerte. Dine endringer ble ikke lagret – se oppdatert versjon.»
@@ -148,9 +148,24 @@ Alt som lærer, pluss:
 - Innloggingsskjema sentrert midt på siden i et kort
 - Feil passord/e-post: rød feilmelding direkte i skjemaet (ikke toast)
 - Ved vellykket innlogging: kort toast «Velkommen, [navn]!»
-- «Glemt passord?»-lenke sender tilbakestillingslenke til e-post (fyll inn e-post først)
+- «Glemt passord?»-lenke: sender tilbakestillingslenke. Av sikkerhetshensyn avsløres **ikke** om e-posten er registrert – samme nøytrale melding vises alltid: «Hvis [e-post] er registrert, sender vi en e-post med en lenke …»
 - Utlogging (knapp eller token-utløp via `onAuthStateChange SIGNED_OUT`) navigerer alltid til `#/` (forsiden), ikke til `#/login`
 - `#/laerer` og `#/admin` redirecter til `#/` hvis bruker ikke er innlogget
+
+**Passord-recovery og invitasjon:**
+- `onAuthStateChange PASSWORD_RECOVERY`: åpner en tvungen «Velg nytt passord»-modal (kan ikke avbrytes) når brukeren følger en tilbakestillingslenke
+- Invitasjonslenke (`type=invite` i URL): åpner samme tvungne modal med velkomsttekst slik at ny bruker setter passord
+- `visSettPassordModal({ tvungen, tittel, ingress, onFerdig })`: gjenbrukbar modal med passordbekreftelse (min. 8 tegn)
+
+**Innstillinger (lærer/kontaktlærer):**
+- Egen «Innstillinger»-fane i lærerpanelet (slug `innstillinger`), tilgjengelig for alle innloggede
+- Viser kontoinfo (navn, e-post, rolle)
+- «Bytt passord» åpner `visSettPassordModal`
+- «Endre e-post» via `sb.auth.updateUser({ email })` – krever bekreftelse på både gammel og ny adresse
+
+**Invitasjons-e-post:**
+- `create-user` sender metadata (full_name, school_name, rolle) og `redirectTo` til `inviteUserByEmail`
+- Norske e-postmaler ligger i `supabase/templates/` (invite.html, recovery.html) og limes inn i Supabase Dashboard → Authentication → Emails
 
 **Lagre-knapper:**
 Alle lagre-knapper er passive (deaktivert) inntil brukeren har gjort en endring i skjemaet. Bruker `overvakSkjema(form, lagreKnapp)` som tar snapshot av alle felt ved oppstart og aktiverer knappen ved avvik.

@@ -32,13 +32,26 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Krever admin-tilgang' }), { status: 403, headers: corsHeaders })
     }
 
-    const { email, full_name, role, is_admin, class_ids } = await req.json()
+    const { email, full_name, role, is_admin, class_ids, redirect_to, school_name } = await req.json()
     if (!email || !full_name || !role) {
       return new Response(JSON.stringify({ error: 'Mangler påkrevde felt' }), { status: 400, headers: corsHeaders })
     }
 
-    // Create auth user and send invite email
-    const { data: newAuthUser, error: authError } = await adminClient.auth.admin.inviteUserByEmail(email)
+    const rolleNavn: Record<string, string> = {
+      laerer: 'lærer', kontaktlaerer: 'kontaktlærer', admin: 'administrator',
+    }
+
+    // Create auth user and send invite email.
+    // Metadata (full_name, school_name, rolle) er tilgjengelig i e-postmalen
+    // som {{ .Data.full_name }}, {{ .Data.school_name }} osv.
+    const { data: newAuthUser, error: authError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      data: {
+        full_name,
+        school_name: school_name || '',
+        rolle: rolleNavn[role] || role,
+      },
+      redirectTo: redirect_to || undefined,
+    })
     if (authError) throw authError
 
     // Insert into users table
