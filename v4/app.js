@@ -351,12 +351,7 @@ function oppdaterHeader() {
 
     if (adminToggle && APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)) {
       adminToggle.classList.remove('skjult')
-      if (APP.isAdminActive) {
-        const tilbake = APP.profile.role === 'kontaktlaerer' ? '← Til kontaktlærerpanel' : '← Til lærerpanel'
-        adminToggle.textContent = tilbake
-      } else {
-        adminToggle.textContent = 'Aktiver admin-modus'
-      }
+      adminToggle.textContent = 'Admin'
       adminToggle.classList.toggle('admin-aktiv', APP.isAdminActive)
       adminToggle.onclick = toggleAdminModus
     }
