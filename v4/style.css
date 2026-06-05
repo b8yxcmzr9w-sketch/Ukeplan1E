@@ -258,13 +258,14 @@ header .spacer { flex: 1; }
 /* ── Skjema ─────────────────────────────────────────────────────── */
 .felt { margin-bottom: 14px; }
 .felt label { display: block; font-size: .86rem; font-weight: 600; margin-bottom: 4px; color: var(--tekst); }
-.felt input, .felt select, .felt textarea,
+.felt input:not([type=checkbox]):not([type=radio]), .felt select, .felt textarea,
 input.felt, select.felt, textarea.felt {
   width: 100%; padding: 8px 11px;
   border: 1px solid var(--kant); border-radius: var(--radius);
   font-size: .92rem; font-family: inherit;
   background: var(--bg-kort); color: var(--tekst);
 }
+.felt input[type=checkbox], .felt input[type=radio] { width: auto; flex-shrink: 0; }
 .felt textarea, textarea.felt { resize: vertical; min-height: 70px; }
 .felt input:focus, .felt select:focus, .felt textarea:focus,
 input.felt:focus, select.felt:focus, textarea.felt:focus {
@@ -477,8 +478,11 @@ tr:hover td { background: var(--primær-svak); }
 }
 .admin-rad:last-child { border-bottom: none; }
 .color-swatch { display: inline-block; width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
-.class-checkboxes { display: flex; flex-wrap: wrap; gap: 6px 16px; }
-.class-checkboxes input[type=checkbox] { margin-right: 4px; }
+.class-checkboxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px 12px; }
+.class-checkboxes label { display: flex; align-items: center; gap: 6px; }
+.class-checkboxes input[type=checkbox] { margin-right: 0; }
+.rolle-gruppe { display: flex; flex-direction: column; gap: 8px; }
+.rolle-gruppe label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .admin-rad .tekst-svak { font-size: .82rem; color: var(--tekst-svak); }
 .admin-rad .spacer { flex: 1; }
 

@@ -124,10 +124,15 @@ Alt som lærer, pluss:
 **Brukere:**
 - Legg til ny bruker: e-post, navn, rolle (radioknapper: Lærer / Kontaktlærer) + sjekkboks «Administrator». Brukeren opprettes automatisk via Edge Function `create-user` og mottar en invitasjons-e-post.
 - Rediger bruker: endre navn (advarsel: «Navn endres i alle oppføringer»), rolle (radioknapper), admin-status (sjekkboks), klasser
+- **Kontoadministrasjon** (i rediger-modalen, via Edge Function `admin-user` med service_role):
+  - **Endre e-post:** settes direkte (umiddelbart bekreftet). Gammel adresse varsles om endringen.
+  - **Sett nytt passord:** admin setter passordet direkte (omgår Supabase sin e-postgrense). Vises i klartekst slik at admin kan gi det videre; brukeren bør bytte selv etterpå.
+  - **Send resett-e-post:** sender en vanlig tilbakestillingslenke til brukeren.
 - Slett bruker: kun fremtidige sessions (fra og med i dag) tildeles annen lærer eller slettes. Historiske sessions beholdes med opprinnelig navn.
 - Maks 3 kontaktlærere per klasse – håndheves ved lagring
 - Maks 2 administratorer per skole – håndheves ved lagring
 - En administrator må alltid også ha rollen Lærer eller Kontaktlærer
+- Mobilvennlig layout: rolle-radioknapper stables vertikalt, klasse-avkrysninger i responsivt rutenett (avkrysningsbokser/radioknapper strekkes ikke til full bredde)
 
 **Skolerute:**
 - Eksisterende hendelser vises som `admin-rad`-lister (tittel, datoperiode, type-badge, slett-knapp) – ingen tabell
@@ -203,6 +208,9 @@ Alle forhåndsdefinerte verdier (fag, klasse, dag, uke, parti/gruppe, lærer) ve
 - `.input-sm { width:180px !important; }` – smal input
 - `.backup-list { max-height:300px; overflow-y:auto; border:1px solid var(--kant); ... }` – backup-filvisning
 - `.ai-preview`, `.preview-table`, `.conf--high/medium/low` – AI-forhåndsvisning med konfidensfarger
+- `.class-checkboxes { display:grid; grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:8px 12px; }` – responsivt rutenett for klasse-avkrysninger
+- `.rolle-gruppe { display:flex; flex-direction:column; gap:8px; }` – vertikalt stablede rolle-radioknapper
+- Avkrysningsbokser/radioknapper inne i `.felt` skal **ikke** strekkes til full bredde (`.felt input[type=checkbox]/[type=radio] { width:auto }`)
 
 **Responsivt design:**
 - **Laptop:** 5-kolonners ukevisning, minst 3 synlige økter per dag (dagkolonnen har fast minimumshøyde og scroller ved overflow)
@@ -226,10 +234,15 @@ Definer tre komplette CSS-temaer med CSS custom properties (variabler). Tema las
 2. **`/ai-parse-sessions`** – Mottar tekst + klasse/kontekst. Sender til Gemini Flash med strukturert system-prompt. Returnerer array av parsede økt-objekter.
 3. **`/ai-parse-skolerute`** – Mottar tekst. Sender til Gemini Flash. Returnerer array av kalender-hendelser.
 4. **`/cleanup`** – Kjøres periodisk (pg_cron eller scheduled function): sletter soft-deleted records eldre enn 30 dager permanent.
-5. **`/create-user`** – Oppretter ny auth-bruker via Supabase Admin API (service_role) og sender invitasjons-e-post. Krever aktiv admin-sesjon. Oppretter også rad i `users`-tabellen og kobler til klasser.
+5. **`/create-user`** – Oppretter ny auth-bruker via Supabase Admin API (service_role) og sender invitasjons-e-post med metadata (navn, skole, rolle) og `redirectTo`. Krever aktiv admin-sesjon. Oppretter også rad i `users`-tabellen og kobler til klasser.
 6. **`/generate-facts`** – Genererer ~40 lokaltilpassede funfacts via Gemini Flash. Krever aktiv admin-sesjon. Returnerer array av faktatekster med lokal tilknytning til Jæren, Øksnevad, naturbruk, vikinger, husdyr m.m.
+7. **`/admin-user`** – Admin-handlinger på eksisterende brukere (service_role, krever aktiv admin i samme skole). Actions: `get_email`, `set_password` (sett passord direkte), `send_reset` (send tilbakestillingslenke), `change_email` (sett ny e-post direkte + varsle gammel adresse). Varsel-e-poster sendes via Resend hvis `RESEND_API_KEY`/`RESEND_FROM` er satt.
 
-Gemini API-nøkkel lagres som Supabase secret (`GEMINI_API_KEY`).
+**E-postmaler:** Norske maler for invitasjon og passordtilbakestilling ligger i `supabase/templates/` (invite.html, recovery.html) og limes inn manuelt i Supabase Dashboard → Authentication → Emails.
+
+**Passord-recovery/invitasjon i frontend:** `onAuthStateChange`-lytteren registreres ved modullast (ikke i `init`) slik at `PASSWORD_RECOVERY`- og invitasjons-eventer fra URL-en ikke går tapt. Begge åpner en tvungen «velg passord»-modal.
+
+Gemini API-nøkkel lagres som Supabase secret (`GEMINI_API_KEY`). Resend-nøkler (`RESEND_API_KEY`, `RESEND_FROM`) er valgfrie og brukes kun til varsel-e-poster fra `admin-user`.
 
 ---
 
