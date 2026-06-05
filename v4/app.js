@@ -480,7 +480,7 @@ async function renderElevView(klasseNavn) {
   }
 
   // Wrapper
-  const wrap = el('div', { class: 'container' })
+  const wrap = el('div', { class: 'side-wrap' })
   main.appendChild(wrap)
 
   // Class selector

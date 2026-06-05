@@ -348,6 +348,71 @@ tr:hover td { background: var(--primær-svak); }
 [data-theme="mork"] .varsel { background: #2d2400; color: var(--advarsel); }
 .varsel-fare { background: rgba(220,53,69,.1); border-color: var(--fare); }
 
+/* ── Lærerpanel: topprad ─────────────────────────────────────────── */
+.laerer-top {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 4px 0 12px;
+}
+.laerer-top label { font-weight: 600; font-size: .9rem; }
+
+/* ── Session-wrapper (kort + avkrysning) ─────────────────────────── */
+.session-wrapper { display: flex; align-items: flex-start; gap: 6px; }
+.session-cb { margin-top: 6px; cursor: pointer; flex-shrink: 0; }
+
+/* ── Økt-kort sub-elementer ──────────────────────────────────────── */
+.session-card__meeting,
+.session-card__info,
+.session-card__teacher { font-size: .78rem; color: var(--tekst-svak); margin-top: 2px; }
+.session-card__info { font-style: italic; }
+.session-card__class {
+  display: block; font-size: .75rem; font-weight: 700;
+  color: var(--primær); margin-bottom: 4px; letter-spacing: .02em;
+}
+
+/* ── Søkeresultater ──────────────────────────────────────────────── */
+.search-results { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.search-results .okt-kort { cursor: default; }
+
+/* ── Klasse-admin ────────────────────────────────────────────────── */
+.klasse-admin-innhold { margin-top: 16px; }
+.mde-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--kant);
+}
+.mde-row:last-of-type { border-bottom: none; }
+.mde-row > span { flex: 1; font-size: .92rem; }
+
+.subj-config-box {
+  background: var(--bg-kort); border: 1px solid var(--kant);
+  border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px;
+  box-shadow: var(--skygge);
+}
+.subj-config-box > strong { font-size: .95rem; }
+.days-row { display: flex; gap: 14px; margin: 8px 0 4px; flex-wrap: wrap; align-items: center; }
+.days-row label { font-size: .88rem; display: flex; align-items: center; gap: 4px; }
+.div-list { margin-top: 10px; border-top: 1px solid var(--kant); padding-top: 8px; }
+.div-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.input-sm { width: 180px !important; }
+
+/* ── Sikkerhetskopi ──────────────────────────────────────────────── */
+.backup-list {
+  max-height: 300px; overflow-y: auto;
+  border: 1px solid var(--kant); border-radius: var(--radius);
+  padding: 6px 12px; margin: 10px 0; background: var(--bg-kort);
+  font-size: .88rem;
+}
+.backup-list > div { padding: 5px 0; border-bottom: 1px solid var(--kant); display: flex; gap: 8px; align-items: center; }
+.backup-list > div:last-child { border-bottom: none; }
+
+/* ── AI økt-forhåndsvisning ──────────────────────────────────────── */
+.ai-preview { margin-top: 14px; }
+.preview-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.preview-table th { padding: 6px 8px; text-align: left; border-bottom: 2px solid var(--kant); font-weight: 700; color: var(--tekst-svak); font-size: .8rem; }
+.preview-table td { padding: 6px 8px; border-bottom: 1px solid var(--kant); }
+.conf--high   { color: #198754; font-weight: 700; }
+.conf--medium { color: #e67e22; font-weight: 700; }
+.conf--low    { color: var(--fare); font-weight: 700; }
+
 /* ── ════════════════════════════════════════════
    MOBIL
    ════════════════════════════════════════════ */
