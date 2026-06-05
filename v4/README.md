@@ -68,6 +68,16 @@ Når admin inviterer nye brukere sendes en e-post med en lenke. Lenken må peke 
 
 > Hvis adressen endres (nytt domene, ny mappe), må dette oppdateres her.
 
+### 8b. Tilpass e-postmaler (anbefalt)
+Standard Supabase-maler er på engelsk og lite informative. Bytt dem ut med de norske:
+
+1. Gå til Supabase Dashboard → **Authentication → Emails**
+2. Velg **«Invite user»** → lim inn innholdet fra `supabase/templates/invite.html`
+3. Velg **«Reset password»** → lim inn innholdet fra `supabase/templates/recovery.html`
+
+Invitasjonsmalen bruker metadata (navn, skole, rolle) som sendes av `create-user`-funksjonen,
+og vises via `{{ .Data.full_name }}`, `{{ .Data.school_name }}` og `{{ .Data.rolle }}`.
+
 ### 9. Opprett første admin-bruker
 1. Supabase Dashboard → Authentication → Users → Add user
    - Fyll inn e-post og passord
@@ -92,8 +102,10 @@ values (
 ## Elev-URL
 Del denne lenken med elevene (erstatt `1E` med klassenavnet):
 ```
-https://DIN_SIDE.github.io/?klasse=1E
+https://DIN_SIDE.github.io/#/klasse/1E
 ```
+Lærere og admin kan også kopiere lenken eller vise QR-kode direkte i appen
+(Min klasse → «Del elevlenke», eller Admin → Klasser → «Kopier elevlenke»).
 
 ---
 
@@ -110,10 +122,15 @@ v4/
     │   ├── 001_initial_schema.sql
     │   ├── 002_rls.sql
     │   └── 003_cleanup_cron.sql
+    ├── templates/
+    │   ├── invite.html          Invitasjons-e-post (norsk)
+    │   └── recovery.html        Tilbakestill passord-e-post (norsk)
     └── functions/
         ├── ical/index.ts
         ├── ai-parse-sessions/index.ts
         ├── ai-parse-skolerute/index.ts
+        ├── generate-facts/index.ts
+        ├── create-user/index.ts
         └── cleanup/index.ts
 ```
 

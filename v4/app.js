@@ -183,6 +183,14 @@ async function byttPassord(nytt) {
   if (error) throw error
 }
 
+async function byttEpost(nyEpost) {
+  const { error } = await sb.auth.updateUser(
+    { email: nyEpost },
+    { emailRedirectTo: window.location.origin + window.location.pathname }
+  )
+  if (error) throw error
+}
+
 async function toggleAdminModus() {
   const ny = !APP.isAdminActive
   await sb.from('users').update({ is_admin_active: ny }).eq('id', APP.profile.id)
@@ -258,9 +266,11 @@ function renderLoginForm() {
   form.appendChild(el('button', { type: 'submit', class: 'btn btn-p', style: 'width:100%;margin-top:8px' }, 'Logg inn'))
 
   // Glemt passord
+  const infoMelding = el('p', { class: 'info-tekst skjult', style: 'font-size:.85rem;color:var(--tekst-svak);margin-top:10px;text-align:center' })
   const glemt = el('button', { type: 'button', class: 'btn-lenke', style: 'margin-top:12px;font-size:.85rem;color:var(--tekst-svak);background:none;border:none;cursor:pointer;display:block;width:100%;text-align:center' }, 'Glemt passord?')
   glemt.addEventListener('click', async () => {
-    const email = form.querySelector('[name=email]').value
+    feilMelding.classList.add('skjult')
+    const email = form.querySelector('[name=email]').value.trim()
     if (!email) {
       feilMelding.textContent = 'Fyll inn e-postadressen din først'
       feilMelding.classList.remove('skjult')
@@ -268,46 +278,71 @@ function renderLoginForm() {
     }
     glemt.disabled = true
     glemt.textContent = 'Sender…'
-    const { error } = await sb.auth.resetPasswordForEmail(email, {
+    // Av sikkerhetshensyn avslører vi ikke om e-posten finnes – samme svar uansett
+    await sb.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname
     })
-    if (error) {
-      feilMelding.textContent = 'Kunne ikke sende e-post: ' + error.message
-      feilMelding.classList.remove('skjult')
-      glemt.disabled = false
-      glemt.textContent = 'Glemt passord?'
-    } else {
-      glemt.textContent = '✓ Sjekk e-posten din'
-    }
+    infoMelding.textContent = 'Hvis ' + email + ' er registrert, sender vi en e-post med en lenke for å tilbakestille passordet. Sjekk også søppelpost.'
+    infoMelding.classList.remove('skjult')
+    glemt.textContent = 'Glemt passord?'
+    glemt.disabled = false
   })
   form.appendChild(glemt)
+  form.appendChild(infoMelding)
 
   kort.appendChild(form)
   wrap.appendChild(kort)
   main.appendChild(wrap)
 }
 
-function renderPassordModal() {
+// Fleksibel «sett nytt passord»-modal.
+// opts.tvungen = true: kan ikke avbrytes (brukes etter recovery-/invitasjonslenke)
+function visSettPassordModal(opts = {}) {
+  const { tvungen = false, tittel = 'Bytt passord', ingress = null, onFerdig = null } = opts
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
-  box.appendChild(el('h3', {}, 'Bytt passord'))
-  const nytt = el('input', { type: 'password', placeholder: 'Nytt passord', class: 'felt input' })
-  const bekreft = el('input', { type: 'password', placeholder: 'Bekreft passord', class: 'felt input' })
-  box.appendChild(nytt)
-  box.appendChild(bekreft)
-  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
-    if (nytt.value !== bekreft.value) { showToast('Passordene er ikke like', 'error'); return }
+  box.appendChild(el('h3', {}, tittel))
+  if (ingress) box.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.88rem;margin:0 0 12px' }, ingress))
+
+  const feil = el('p', { class: 'feil-tekst skjult' })
+  box.appendChild(feil)
+
+  const form = el('form', { class: 'skjema' })
+  const nytt = el('input', { type: 'password', placeholder: 'Nytt passord (minst 8 tegn)', class: 'felt input', autocomplete: 'new-password', minlength: 8, required: 'true' })
+  const bekreft = el('input', { type: 'password', placeholder: 'Gjenta nytt passord', class: 'felt input', autocomplete: 'new-password', required: 'true', style: 'margin-top:10px' })
+  form.appendChild(nytt)
+  form.appendChild(bekreft)
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  if (!tvungen) {
+    bunn.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  }
+  bunn.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  form.appendChild(bunn)
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    feil.classList.add('skjult')
+    if (nytt.value.length < 8) {
+      feil.textContent = 'Passordet må være minst 8 tegn'; feil.classList.remove('skjult'); return
+    }
+    if (nytt.value !== bekreft.value) {
+      feil.textContent = 'Passordene er ikke like'; feil.classList.remove('skjult'); return
+    }
     try {
       await medLagreOverlay(() => byttPassord(nytt.value))
       modal.remove()
+      showToast('Passordet er oppdatert', 'ok')
+      if (onFerdig) onFerdig()
     } catch (err) {
-      showToast(err.message, 'error')
+      feil.textContent = err.message; feil.classList.remove('skjult')
     }
-  }}, 'Lagre'))
-  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  })
+
+  box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+  if (!tvungen) modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
 // ─────────────────────────────────────────
@@ -746,8 +781,9 @@ async function renderLaererView() {
   const isKontakt = APP.profile.role === 'kontaktlaerer' || APP.isAdminActive
 
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
-  const tabSlugs = ['klasse', 'alle', 'sok', 'klasse-admin']
-  if (isKontakt) tabs.push('Klasse-admin')
+  const tabSlugs = ['klasse', 'alle', 'sok']
+  if (isKontakt) { tabs.push('Klasse-admin'); tabSlugs.push('klasse-admin') }
+  tabs.push('Innstillinger'); tabSlugs.push('innstillinger')
 
   const hashTab = location.hash.split('/')[2]
   const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
@@ -756,15 +792,15 @@ async function renderLaererView() {
   const tabContent = el('div', { class: 'fane-innhold' })
 
   function setTab(idx) {
-    history.replaceState(null, '', `#/laerer/${tabSlugs[idx]}`)
+    const slug = tabSlugs[idx]
+    history.replaceState(null, '', `#/laerer/${slug}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
-    switch (idx) {
-      case 0: renderMinKlasseTab(tabContent); break
-      case 1: renderAlleOkterTab(tabContent); break
-      case 2: renderSokTab(tabContent); break
-      case 3: renderKlasseAdminTab(tabContent); break
-    }
+    if (slug === 'klasse') renderMinKlasseTab(tabContent)
+    else if (slug === 'alle') renderAlleOkterTab(tabContent)
+    else if (slug === 'sok') renderSokTab(tabContent)
+    else if (slug === 'klasse-admin') renderKlasseAdminTab(tabContent)
+    else if (slug === 'innstillinger') renderInnstillingerTab(tabContent)
   }
 
   tabs.forEach((t, i) => {
@@ -777,6 +813,55 @@ async function renderLaererView() {
   wrap.appendChild(tabContent)
   main.appendChild(wrap)
   setTab(initTab)
+}
+
+async function renderInnstillingerTab(container) {
+  const wrap = el('div', { class: 'skjema-smal' })
+  wrap.appendChild(el('h3', {}, 'Innstillinger'))
+
+  // Kontoinfo
+  const { data: { user } } = await sb.auth.getUser()
+  const naavaerendeEpost = user?.email || ''
+
+  const info = el('div', { class: 'subj-config-box', style: 'margin-bottom:18px' })
+  info.appendChild(el('div', { style: 'font-weight:600;margin-bottom:2px' }, APP.profile?.full_name || ''))
+  info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.88rem' }, naavaerendeEpost))
+  const rolleNavn = { laerer: 'Lærer', kontaktlaerer: 'Kontaktlærer', admin: 'Administrator' }
+  info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:4px' }, rolleNavn[APP.profile?.role] || APP.profile?.role || ''))
+  wrap.appendChild(info)
+
+  // Bytt passord
+  wrap.appendChild(el('div', { class: 'seksjon-tittel' }, 'Passord'))
+  wrap.appendChild(el('button', { class: 'btn btn-p', onclick: () => visSettPassordModal({ tittel: 'Bytt passord' }) }, 'Bytt passord'))
+
+  // Bytt e-post
+  wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'E-postadresse'))
+  const epostForm = el('form', { class: 'skjema' })
+  const epostFeil = el('p', { class: 'feil-tekst skjult' })
+  epostForm.appendChild(epostFeil)
+  const epostInput = el('input', { type: 'email', class: 'felt input', value: naavaerendeEpost, required: 'true' })
+  epostForm.appendChild(lagFormRad('Ny e-postadresse', epostInput))
+  const epostBtn = el('button', { type: 'submit', class: 'btn btn-p' }, 'Endre e-post')
+  epostForm.appendChild(epostBtn)
+  epostForm.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:8px' },
+    'Du må bekrefte endringen via en lenke som sendes til både den gamle og den nye adressen.'))
+  epostForm.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    epostFeil.classList.add('skjult')
+    const ny = epostInput.value.trim()
+    if (!ny || ny === naavaerendeEpost) {
+      epostFeil.textContent = 'Skriv inn en ny e-postadresse'; epostFeil.classList.remove('skjult'); return
+    }
+    try {
+      await medLagreOverlay(() => byttEpost(ny))
+      showToast('Bekreftelse sendt – sjekk e-posten din', 'info')
+    } catch (err) {
+      epostFeil.textContent = err.message; epostFeil.classList.remove('skjult')
+    }
+  })
+  wrap.appendChild(epostForm)
+
+  container.appendChild(wrap)
 }
 
 async function renderMinKlasseTab(container) {
@@ -2171,6 +2256,8 @@ async function visNyBrukerModal(klasser, onSave) {
           role: rolle,
           is_admin: erAdmin,
           class_ids: klassIds,
+          redirect_to: window.location.origin + window.location.pathname,
+          school_name: APP.school?.name || '',
         }),
       })
       const json = await res.json()
@@ -2625,6 +2712,19 @@ async function init() {
       APP.isAdminActive = false
       oppdaterHeader()
       navigate('#/')
+    } else if (event === 'PASSWORD_RECOVERY') {
+      // Bruker klikket på tilbakestillingslenke – tving valg av nytt passord
+      APP.user = session?.user || APP.user
+      if (session && !APP.profile) {
+        try { APP.profile = await fetchProfile(session.user.id) } catch {}
+      }
+      oppdaterHeader()
+      visSettPassordModal({
+        tvungen: true,
+        tittel: 'Velg nytt passord',
+        ingress: 'Du fulgte en tilbakestillingslenke. Velg et nytt passord for å fullføre.',
+        onFerdig: () => navigate('#/laerer'),
+      })
     } else if (event === 'SIGNED_IN' && session) {
       APP.user = session.user
       if (!APP.profile) {
@@ -2632,6 +2732,15 @@ async function init() {
       }
       APP.isAdminActive = APP.profile?.is_admin_active || false
       oppdaterHeader()
+      // Invitasjonslenke: ny bruker uten passord – be om å sette ett
+      if (location.hash.includes('type=invite')) {
+        visSettPassordModal({
+          tvungen: true,
+          tittel: 'Velkommen! Velg et passord',
+          ingress: 'Kontoen din er opprettet. Velg et passord for å logge inn.',
+          onFerdig: () => navigate('#/laerer'),
+        })
+      }
     }
   })
 
