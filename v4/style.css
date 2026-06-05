@@ -258,14 +258,16 @@ header .spacer { flex: 1; }
 /* ── Skjema ─────────────────────────────────────────────────────── */
 .felt { margin-bottom: 14px; }
 .felt label { display: block; font-size: .86rem; font-weight: 600; margin-bottom: 4px; color: var(--tekst); }
-.felt input, .felt select, .felt textarea {
+.felt input, .felt select, .felt textarea,
+input.felt, select.felt, textarea.felt {
   width: 100%; padding: 8px 11px;
   border: 1px solid var(--kant); border-radius: var(--radius);
   font-size: .92rem; font-family: inherit;
   background: var(--bg-kort); color: var(--tekst);
 }
-.felt textarea { resize: vertical; min-height: 70px; }
-.felt input:focus, .felt select:focus, .felt textarea:focus {
+.felt textarea, textarea.felt { resize: vertical; min-height: 70px; }
+.felt input:focus, .felt select:focus, .felt textarea:focus,
+input.felt:focus, select.felt:focus, textarea.felt:focus {
   outline: none; border-color: var(--primær-lys);
   box-shadow: 0 0 0 3px rgba(64,145,108,.15);
 }
