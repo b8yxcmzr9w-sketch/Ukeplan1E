@@ -63,6 +63,7 @@ Tilgang via direkte URL: `/#/klasse/1E` (admin kopierer lenken fra Klasser-fanen
 - Klassevis ukeoversikt (velg klasse fra liste over tilknyttede klasser)
 - Egen tverrklassevisning: alle egne økter på tvers av klasser, samme ukenavigasjon
 - Fritekst-søk i alle felt (fag, aktivitet, oppmøtested, info, lærer)
+- «🔗 Del elevlenke»-knapp i «Min klasse»-fanen: åpner modal med QR-kode (via api.qrserver.com) og kopier-knapp for direkte URL til klassen – brukes til å dele lenke på skjerm eller papir
 
 **Redigering:**
 - Kan kun redigere, kopiere eller slette egne økter
@@ -143,11 +144,13 @@ Alt som lærer, pluss:
 
 ## UX-krav
 
-**Innlogging:**
-- Skjema sentrert midt på siden i et kort
+**Innlogging og utlogging:**
+- Innloggingsskjema sentrert midt på siden i et kort
 - Feil passord/e-post: rød feilmelding direkte i skjemaet (ikke toast)
 - Ved vellykket innlogging: kort toast «Velkommen, [navn]!»
 - «Glemt passord?»-lenke sender tilbakestillingslenke til e-post (fyll inn e-post først)
+- Utlogging (knapp eller token-utløp via `onAuthStateChange SIGNED_OUT`) navigerer alltid til `#/` (forsiden), ikke til `#/login`
+- `#/laerer` og `#/admin` redirecter til `#/` hvis bruker ikke er innlogget
 
 **Lagre-knapper:**
 Alle lagre-knapper er passive (deaktivert) inntil brukeren har gjort en endring i skjemaet. Bruker `overvakSkjema(form, lagreKnapp)` som tar snapshot av alle felt ved oppstart og aktiverer knappen ved avvik.
