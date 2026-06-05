@@ -2487,7 +2487,8 @@ async function renderFaktaTab(container) {
     APP.facts = facts || []
 
     const wrap = el('div', { class: 'skjema-smal' })
-    wrap.appendChild(el('h3', {}, 'Funfacts'))
+    const antall = facts?.length || 0
+    wrap.appendChild(el('h3', {}, `Funfacts (${antall}/100)`))
     wrap.appendChild(el('p', { class: 'tekst-svak', style: 'margin:4px 0 14px; font-size:.9rem' },
       'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe.'))
 
@@ -2499,14 +2500,21 @@ async function renderFaktaTab(container) {
       aiBtn.disabled = true; aiBtn.textContent = 'Genererer…'
       try {
         const { data, error } = await sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } })
-        if (error) throw error
-        const ny = data.facts || []
+        if (error) throw new Error(error.message || JSON.stringify(error))
+        const ny = data?.facts || []
         if (!ny.length) { showToast('Ingen fakta generert', 'info'); return }
+
+        // Respect 100-fact limit
+        const ledigePlasser = Math.max(0, 100 - (facts?.length || 0))
+        if (ledigePlasser === 0) { showToast('Listen er full (maks 100 funfacts). Slett noen først.', 'info'); return }
+        const skalLeggesTil = ny.slice(0, ledigePlasser)
+
         await medLagreOverlay(async () => {
-          for (const txt of ny)
-            await sb.from('school_facts').insert({ school_id: APP.school.id, fact_text: txt })
+          const rows = skalLeggesTil.map(txt => ({ school_id: APP.school.id, fact_text: txt }))
+          const { error: insErr } = await sb.from('school_facts').insert(rows)
+          if (insErr) throw new Error(insErr.message)
         })
-        showToast(`${ny.length} funfacts lagt til!`, 'ok')
+        showToast(`${skalLeggesTil.length} funfacts lagt til!`, 'ok')
         refresh()
       } catch (err) {
         showToast(err.message, 'error')
@@ -2602,24 +2610,7 @@ function lagFormRad(label, ...inputs) {
 // ─────────────────────────────────────────
 
 async function init() {
-  // Load school config
-  const { data: schools } = await sb.from('schools').select('*').limit(1)
-  if (schools && schools.length) {
-    APP.school = schools[0]
-    document.documentElement.dataset.theme = APP.school.color_theme || 'standard'
-    if (APP.school.logo_url) {
-      const logo = document.getElementById('hdr-logo')
-      if (logo) logo.src = APP.school.logo_url
-    }
-  }
-
-  // Load school facts for overlay
-  if (APP.school) {
-    const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
-    APP.facts = facts || []
-  }
-
-  // Restore session
+  // Restore session first (fast, local)
   const { data: { session } } = await sb.auth.getSession()
   if (session) {
     APP.user = session.user
@@ -2630,8 +2621,6 @@ async function init() {
       console.warn('Kunne ikke hente brukerprofil:', err.message)
     }
   }
-
-  oppdaterHeader()
 
   // Listen for auth changes
   sb.auth.onAuthStateChange(async (event, session) => {
@@ -2651,9 +2640,29 @@ async function init() {
     }
   })
 
-  // Route
+  // Route immediately — don't wait for school data
   window.addEventListener('hashchange', router)
+  oppdaterHeader()
   await router()
+
+  // Load school config in background (used by router on next render)
+  const { data: schools } = await sb.from('schools').select('*').limit(1)
+  if (schools && schools.length) {
+    APP.school = schools[0]
+    document.documentElement.dataset.theme = APP.school.color_theme || 'standard'
+    const logo = document.getElementById('hdr-logo')
+    if (logo && APP.school.logo_url) { logo.src = APP.school.logo_url; logo.classList.remove('skjult') }
+    const skolenavn = document.getElementById('hdr-skolenavn')
+    if (skolenavn) skolenavn.textContent = APP.school.name
+    // Re-render current view now that school data is available
+    await router()
+  }
+
+  // Load school facts for overlay (background)
+  if (APP.school) {
+    const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
+    APP.facts = facts || []
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init)
