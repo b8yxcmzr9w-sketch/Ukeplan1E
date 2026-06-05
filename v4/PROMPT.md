@@ -167,6 +167,21 @@ Alle forhåndsdefinerte verdier (fag, klasse, dag, uke, parti/gruppe, lærer) ve
 **Layout:**
 - Innhold på alle sider er innrykket med fleksible marger: `padding: 28px clamp(20px, 5vw, 80px) 60px`
 - Skjemaer (f.eks. Skoleinfo) begrenses til maks 560px bredde på bred skjerm
+- Alle visninger (elev, lærer, kontaktlærer, admin) bruker `side-wrap` som wrapper-klasse for konsistente marger
+
+**CSS-klasser for ikke-admin-visninger:**
+- `.laerer-top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:4px 0 12px; }` – topprad i lærerpanel
+- `.session-wrapper { display:flex; align-items:flex-start; gap:6px; }` / `.session-cb { margin-top:6px; cursor:pointer; flex-shrink:0; }` – økt med avkrysningsboks
+- `.session-card__meeting`, `.session-card__info`, `.session-card__teacher { font-size:.78rem; color:var(--tekst-svak); margin-top:2px; }` – korttekst for økt
+- `.session-card__class { display:block; font-size:.75rem; font-weight:700; color:var(--primær); margin-bottom:4px; }` – klasse-merke på økt
+- `.search-results { display:flex; flex-direction:column; gap:10px; margin-top:12px; }` – søkeresultat-liste
+- `.mde-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--kant); }` – rad i multi-day-event-liste
+- `.subj-config-box { background:var(--bg-kort); border:1px solid var(--kant); border-radius:var(--radius); padding:12px 14px; margin-bottom:10px; }` – fagkonfigurasjonsboks
+- `.days-row { display:flex; gap:14px; margin:8px 0 4px; flex-wrap:wrap; align-items:center; }` – dagvalg-rad
+- `.div-list / .div-row` – inndelingsliste (partier/grupper) i fagkonfig
+- `.input-sm { width:180px !important; }` – smal input
+- `.backup-list { max-height:300px; overflow-y:auto; border:1px solid var(--kant); ... }` – backup-filvisning
+- `.ai-preview`, `.preview-table`, `.conf--high/medium/low` – AI-forhåndsvisning med konfidensfarger
 
 **Responsivt design:**
 - **Laptop:** 5-kolonners ukevisning, minst 3 synlige økter per dag (dagkolonnen har fast minimumshøyde og scroller ved overflow)
