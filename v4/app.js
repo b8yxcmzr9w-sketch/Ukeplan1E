@@ -500,7 +500,29 @@ async function renderElevView(klasseNavn) {
   wrap.appendChild(klasseHeader)
 
   if (!klasse) {
-    wrap.appendChild(el('p', { class: 'tom-uke' }, 'Velg en klasse for å se ukeplanen.'))
+    const velkomst = el('div', { class: 'velkomst-side' })
+
+    if (APP.school?.logo_url) {
+      velkomst.appendChild(el('img', { src: APP.school.logo_url, alt: 'Logo', class: 'velkomst-logo' }))
+    }
+    velkomst.appendChild(el('h1', { class: 'velkomst-tittel' }, APP.school?.name || 'Ukeplan'))
+    velkomst.appendChild(el('p', { class: 'velkomst-ingress' }, 'Velg klassen din for å se ukeplanen:'))
+
+    if (alleKlasser.length === 0) {
+      velkomst.appendChild(el('p', { class: 'velkomst-tom' }, 'Lærerne er i gang med å sette opp ukeplanen – kom tilbake snart!'))
+    } else {
+      const liste = el('div', { class: 'velkomst-klasser' })
+      for (const k of alleKlasser) {
+        const lenke = el('a', {
+          href: `#/klasse/${encodeURIComponent(k.name)}`,
+          class: 'velkomst-klasse-btn'
+        }, k.name)
+        liste.appendChild(lenke)
+      }
+      velkomst.appendChild(liste)
+    }
+
+    wrap.appendChild(velkomst)
     return
   }
 
@@ -1994,6 +2016,13 @@ async function renderKlasserTab(container) {
     for (const k of klasser || []) {
       const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { class: 'tekst' }, k.name))
+      const kopierBtn = el('button', { class: 'btn btn-sm', onclick: async () => {
+        const url = `${location.origin}${location.pathname}#/klasse/${encodeURIComponent(k.name)}`
+        await navigator.clipboard.writeText(url)
+        kopierBtn.textContent = 'Kopiert!'
+        setTimeout(() => { kopierBtn.textContent = 'Kopier elevlenke' }, 2000)
+      }}, 'Kopier elevlenke')
+      row.appendChild(kopierBtn)
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
         const nyttNavn = prompt('Nytt navn:', k.name)
         if (!nyttNavn) return
