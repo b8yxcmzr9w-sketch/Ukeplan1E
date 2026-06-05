@@ -169,7 +169,7 @@ async function logout() {
   APP.profile = null
   APP.isAdminActive = false
   oppdaterHeader()
-  navigate('#/login')
+  navigate('#/')
 }
 
 async function fetchProfile(userId) {
@@ -816,6 +816,7 @@ async function renderMinKlasseTab(container) {
   topRow.appendChild(klasseSel)
   topRow.appendChild(el('button', { class: 'btn btn-p', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
   topRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
+  topRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
   container.appendChild(topRow)
 
   const weekArea = el('div', { id: 'laerer-week-area' })
@@ -1011,6 +1012,35 @@ async function renderSokTab(container) {
 // ─────────────────────────────────────────
 // SESSION MODALS
 // ─────────────────────────────────────────
+
+function visElevLenkeModal(klasse) {
+  const url = `${location.origin}${location.pathname}#/klasse/${encodeURIComponent(klasse.name)}`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`
+
+  const modal = el('div', { class: 'modal-bg' })
+  const box = el('div', { class: 'modal', style: 'max-width:360px;text-align:center' })
+
+  box.appendChild(el('h3', {}, `Elevlenke – ${klasse.name}`))
+  box.appendChild(el('img', { src: qrUrl, alt: 'QR-kode', style: 'display:block;margin:12px auto;border:1px solid var(--kant);border-radius:6px' }))
+  box.appendChild(el('p', { style: 'font-size:.8rem;color:var(--tekst-svak);word-break:break-all;margin:0 0 12px' }, url))
+
+  const kopierBtn = el('button', { class: 'btn btn-p', onclick: async () => {
+    await navigator.clipboard.writeText(url)
+    kopierBtn.textContent = 'Kopiert!'
+    setTimeout(() => { kopierBtn.textContent = 'Kopier lenke' }, 2000)
+  }}, 'Kopier lenke')
+
+  const lukkBtn = el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Lukk')
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(kopierBtn)
+  bunn.appendChild(lukkBtn)
+  box.appendChild(bunn)
+
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
 
 async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   const modal = el('div', { class: 'modal-bg' })
@@ -2610,6 +2640,7 @@ async function init() {
       APP.profile = null
       APP.isAdminActive = false
       oppdaterHeader()
+      navigate('#/')
     } else if (event === 'SIGNED_IN' && session) {
       APP.user = session.user
       if (!APP.profile) {
