@@ -496,7 +496,8 @@ async function renderElevView(klasseNavn) {
   }
   klasseHeader.appendChild(el('label', { style: 'font-weight:600;margin-right:8px' }, 'Klasse:'))
   klasseHeader.appendChild(selector)
-  wrap.appendChild(klasseHeader)
+  // Skjul dropdown på velkomstsiden — klasser vises som knapper i stedet
+  if (klasse) wrap.appendChild(klasseHeader)
 
   if (!klasse) {
     const velkomst = el('div', { class: 'velkomst-side' })
@@ -2644,17 +2645,15 @@ async function init() {
   oppdaterHeader()
   await router()
 
-  // Load school config in background (used by router on next render)
+  // Load school config in background — update header/theme only, no re-render
   const { data: schools } = await sb.from('schools').select('*').limit(1)
   if (schools && schools.length) {
     APP.school = schools[0]
-    document.documentElement.dataset.theme = APP.school.color_theme || 'standard'
-    const logo = document.getElementById('hdr-logo')
-    if (logo && APP.school.logo_url) { logo.src = APP.school.logo_url; logo.classList.remove('skjult') }
-    const skolenavn = document.getElementById('hdr-skolenavn')
-    if (skolenavn) skolenavn.textContent = APP.school.name
-    // Re-render current view now that school data is available
-    await router()
+    oppdaterHeader()
+    // Re-render only if we're still on the elev forside (school data changes the welcome content)
+    if (!location.hash || location.hash === '#/' || location.hash === '#') {
+      await router()
+    }
   }
 
   // Load school facts for overlay (background)
