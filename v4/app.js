@@ -365,7 +365,6 @@ function oppdaterHeader() {
     if (loginBtn)    loginBtn.classList.remove('skjult')
     if (logoutBtn)   logoutBtn.classList.add('skjult')
     if (laererBtn)   laererBtn.classList.add('skjult')
-    if (adminBtn)    adminBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
   }
 
