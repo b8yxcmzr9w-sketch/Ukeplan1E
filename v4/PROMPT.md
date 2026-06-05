@@ -44,7 +44,9 @@ school_facts     – id, school_id, fact_text (morsomme/interessante fakta om sk
 ## Roller og tilganger
 
 ### Elev (ikke innlogget)
-Tilgang via URL: `/?klasse=1E` eller `/#/klasse/1E`
+Tilgang via direkte URL: `/#/klasse/1E` (admin kopierer lenken fra Klasser-fanen og sender til elevene)
+
+**Velkomstside (ingen klasse i URL):** Viser skolens logo, navn, en kort innbydende tekst og alle klasser som store klikkbare knapper. Hvis ingen klasser er opprettet ennå: «Lærerne er i gang med å sette opp ukeplanen – kom tilbake snart!»
 
 - **Ukevisning:** 5 dager × **minst** 3 synlige økter per dag (scroll inni dagkolonnen ved flere) i responsivt rutenett. Fungerer på laptop og mobil.
 - **Navigasjon:** Pil frem/tilbake per uke. Direktehopp til ukenummer. Kun uker innen skoleårets definerte start/slutt.
@@ -116,6 +118,7 @@ Alt som lærer, pluss:
 - Legg til klasser
 - Slett klasse: sterk advarsel + soft-delete (30 dager)
 - Slå sammen to klasser: velg hvilke fag som tas med. Vis konfliktoversikt (overlappende sessions). Admin løser konflikter manuelt. Bruk søppel-funksjon for det som ikke tas med.
+- «Kopier elevlenke»-knapp per klasse: kopierer direkte URL (`#/klasse/[navn]`) til utklippstavlen slik at admin kan sende lenken til elevene
 
 **Brukere:**
 - Legg til ny bruker: e-post, navn, rolle (radioknapper: Lærer / Kontaktlærer) + sjekkboks «Administrator». Brukeren opprettes automatisk via Edge Function `create-user` og mottar en invitasjons-e-post.

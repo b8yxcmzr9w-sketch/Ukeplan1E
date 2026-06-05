@@ -214,6 +214,20 @@ header .spacer { flex: 1; }
 /* ── Tom uke ────────────────────────────────────────────────────── */
 .tom-uke { text-align: center; color: var(--tekst-svak); padding: 40px 20px; font-size: .95rem; }
 
+/* ── Velkomstside (ingen klasse valgt) ──────────────────────────── */
+.velkomst-side { text-align: center; padding: 40px 20px 60px; max-width: 560px; margin: 0 auto; }
+.velkomst-logo { max-height: 80px; max-width: 200px; object-fit: contain; margin-bottom: 16px; }
+.velkomst-tittel { font-size: 1.6rem; font-weight: 700; margin: 0 0 8px; color: var(--tekst); }
+.velkomst-ingress { font-size: 1rem; color: var(--tekst-svak); margin: 0 0 24px; }
+.velkomst-tom { font-size: .95rem; color: var(--tekst-svak); font-style: italic; }
+.velkomst-klasser { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.velkomst-klasse-btn {
+  display: inline-block; padding: 14px 28px; background: var(--primær); color: #fff;
+  border-radius: var(--radius); font-size: 1.1rem; font-weight: 700; text-decoration: none;
+  transition: opacity .15s;
+}
+.velkomst-klasse-btn:hover { opacity: .85; }
+
 /* ── Knapper ────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
