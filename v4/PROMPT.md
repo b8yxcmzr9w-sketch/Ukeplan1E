@@ -106,7 +106,7 @@ Alt som lærer, pluss:
 
 **Skoleinfo:**
 - Navn på skolen (maks 30 tegn med live tegnteller)
-- Logo: last opp bildefil (lagres i Supabase Storage) ELLER skriv inn URL. Logo brukes også som favicon.
+- Logo: last opp bildefil (lagres i Supabase Storage) ELLER skriv inn URL. Logo brukes også som favicon. Hvis ingen logo er satt, brukes `unoicon.png` som standard favicon.
 - Skoleårets start- og sluttuke vises på samme linje med to kompakte tallfelt + datohint under hvert felt (viser mandatodato for valgt ukenummer)
 - **Fargepalett:** Velg mellom tre forhåndsdefinerte temaer – Standard (nåværende grønn), Lys (lys palett med kontrasterende farger) og Mørk (mørk palett). Valget lagres i `schools.color_theme` og lastes automatisk for alle besøkende på skolen.
 
