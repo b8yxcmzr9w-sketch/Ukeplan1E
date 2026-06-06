@@ -629,8 +629,7 @@ async function renderElevView(klasseNavn) {
   }
   klasseHeader.appendChild(el('label', { style: 'font-weight:600;margin-right:8px' }, 'Klasse:'))
   klasseHeader.appendChild(selector)
-  // Skjul dropdown på velkomstsiden — klasser vises som knapper i stedet
-  if (klasse) wrap.appendChild(klasseHeader)
+  // Klassevelger vises aldri når klasse er valgt – bruk velkomstsiden for å velge klasse
 
   if (!klasse) {
     const velkomst = el('div', { class: 'velkomst-side' })
