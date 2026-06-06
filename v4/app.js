@@ -14,6 +14,7 @@ window.APP = {
   currentView: null,
   realtimeChannel: null,
   isAdminActive: false,
+  renderToken: 0,
 }
 
 // Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
@@ -415,14 +416,15 @@ function oppdaterHeader() {
   const skolenavn = document.getElementById('hdr-skolenavn')
   const logo = document.getElementById('hdr-logo')
   if (skolenavn) skolenavn.textContent = APP.school ? APP.school.name : 'Ukeplan1e'
+  const favicon = document.getElementById('favicon')
   if (logo && APP.school && (APP.school.logo_url || APP.school.logo_file_path)) {
     logo.src = APP.school.logo_file_path
       ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
       : APP.school.logo_url
     logo.classList.remove('skjult')
-    // Oppdater favicon til skolelogo
-    const favicon = document.getElementById('favicon')
     if (favicon) favicon.href = logo.src
+  } else {
+    if (favicon) favicon.href = 'unoicon.png'
   }
 
   // Tema
@@ -430,37 +432,75 @@ function oppdaterHeader() {
     document.documentElement.dataset.theme = APP.school.color_theme
   }
 
-  // Knapper
+  // PC-knapper
   const loginBtn   = document.getElementById('hdr-login-btn')
   const logoutBtn  = document.getElementById('hdr-logout-btn')
   const laererBtn  = document.getElementById('hdr-laerer-btn')
   const adminToggle= document.getElementById('hdr-admin-toggle')
   const username   = document.getElementById('hdr-username')
 
+  // Hamburger-elementer
+  const hamburger   = document.getElementById('hdr-hamburger')
+  const dropdown    = document.getElementById('hdr-dropdown')
+  const ddNavn      = document.getElementById('hdr-dropdown-navn')
+  const ddAdmin     = document.getElementById('hdr-dd-admin')
+  const ddLaerer    = document.getElementById('hdr-dd-laerer')
+  const ddLogout    = document.getElementById('hdr-dd-logout')
+  const ddLogin     = document.getElementById('hdr-dd-login')
+
   if (APP.user && APP.profile) {
+    const rolle = APP.profile.role
+    const visAdmin = APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)
+    const skjulLaerer = rolle === 'admin' && APP.isAdminActive
+
+    // PC
     if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
     if (loginBtn)    loginBtn.classList.add('skjult')
-    if (logoutBtn)   logoutBtn.classList.remove('skjult')
-
-    const rolle = APP.profile.role
-    if (laererBtn)  laererBtn.classList.toggle('skjult', rolle === 'admin' && APP.isAdminActive)
-
-    if (adminToggle && APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)) {
+    if (logoutBtn)   { logoutBtn.classList.remove('skjult'); logoutBtn.onclick = logout }
+    if (laererBtn)   laererBtn.classList.toggle('skjult', skjulLaerer)
+    if (adminToggle && visAdmin) {
       adminToggle.classList.remove('skjult')
       adminToggle.textContent = 'Admin'
       adminToggle.classList.toggle('admin-aktiv', APP.isAdminActive)
       adminToggle.onclick = toggleAdminModus
-    }
+    } else if (adminToggle) adminToggle.classList.add('skjult')
+
+    // Hamburger
+    if (hamburger) hamburger.classList.remove('skjult')
+    if (ddNavn)   { ddNavn.textContent = APP.profile.full_name; ddNavn.classList.remove('skjult') }
+    if (ddLogin)  ddLogin.classList.add('skjult')
+    if (ddLogout) { ddLogout.classList.remove('skjult'); ddLogout.onclick = () => { dropdown?.classList.add('skjult'); logout() } }
+    if (ddLaerer) ddLaerer.classList.toggle('skjult', skjulLaerer)
+    if (ddAdmin && visAdmin) {
+      ddAdmin.classList.remove('skjult')
+      ddAdmin.classList.toggle('admin-aktiv', APP.isAdminActive)
+      ddAdmin.onclick = () => { dropdown?.classList.add('skjult'); toggleAdminModus() }
+    } else if (ddAdmin) ddAdmin.classList.add('skjult')
   } else {
     if (username)    username.classList.add('skjult')
     if (loginBtn)    loginBtn.classList.remove('skjult')
     if (logoutBtn)   logoutBtn.classList.add('skjult')
     if (laererBtn)   laererBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
+
+    if (hamburger) hamburger.classList.remove('skjult')
+    if (ddNavn)   ddNavn.classList.add('skjult')
+    if (ddAdmin)  ddAdmin.classList.add('skjult')
+    if (ddLaerer) ddLaerer.classList.add('skjult')
+    if (ddLogout) ddLogout.classList.add('skjult')
+    if (ddLogin)  ddLogin.classList.remove('skjult')
   }
 
-  // Logout-knapp
-  if (logoutBtn) logoutBtn.onclick = logout
+  // Hamburger toggle
+  if (hamburger && dropdown) {
+    hamburger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('skjult') }
+  }
+  document.addEventListener('click', (e) => {
+    if (dropdown && !dropdown.classList.contains('skjult') &&
+        !dropdown.contains(e.target) && e.target !== hamburger) {
+      dropdown.classList.add('skjult')
+    }
+  }, { once: false })
 }
 
 // ─────────────────────────────────────────
@@ -502,7 +542,7 @@ async function router() {
   // Elev view
   const klasseMatch = hash.match(/^#\/klasse\/(.+)$/)
   const klasseNavn = klasseMatch ? decodeURIComponent(klasseMatch[1]) : null
-  renderElevView(klasseNavn)
+  await renderElevView(klasseNavn)
 }
 
 // ─────────────────────────────────────────
@@ -555,6 +595,7 @@ function showConflictWarning() {
 // ─────────────────────────────────────────
 
 async function renderElevView(klasseNavn) {
+  const myToken = ++APP.renderToken
   const main = document.getElementById('app-main')
   clearEl(main)
   APP.currentView = 'elev'
@@ -563,6 +604,7 @@ async function renderElevView(klasseNavn) {
   let alleKlasser = []
 
   const { data: klasser } = await sb.from('classes').select('*').order('name')
+  if (myToken !== APP.renderToken) return  // nyere render har startet
   alleKlasser = klasser || []
 
   if (klasseNavn) {
@@ -2845,8 +2887,9 @@ async function init() {
   if (schools && schools.length) {
     APP.school = schools[0]
     oppdaterHeader()
-    // Re-render only if we're still on the elev forside (school data changes the welcome content)
-    if (!location.hash || location.hash === '#/' || location.hash === '#') {
+    // Re-render elev forside only if still there AND no class selected
+    const h = location.hash
+    if (!h || h === '#/' || h === '#') {
       await router()
     }
   }
