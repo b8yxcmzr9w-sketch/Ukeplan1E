@@ -415,14 +415,15 @@ function oppdaterHeader() {
   const skolenavn = document.getElementById('hdr-skolenavn')
   const logo = document.getElementById('hdr-logo')
   if (skolenavn) skolenavn.textContent = APP.school ? APP.school.name : 'Ukeplan1e'
+  const favicon = document.getElementById('favicon')
   if (logo && APP.school && (APP.school.logo_url || APP.school.logo_file_path)) {
     logo.src = APP.school.logo_file_path
       ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
       : APP.school.logo_url
     logo.classList.remove('skjult')
-    // Oppdater favicon til skolelogo
-    const favicon = document.getElementById('favicon')
     if (favicon) favicon.href = logo.src
+  } else {
+    if (favicon) favicon.href = 'https://uno.ganddal.net/favicon.ico'
   }
 
   // Tema
