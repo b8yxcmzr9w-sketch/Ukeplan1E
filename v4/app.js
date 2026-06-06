@@ -424,7 +424,7 @@ function oppdaterHeader() {
     logo.classList.remove('skjult')
     if (favicon) favicon.href = logo.src
   } else {
-    if (favicon) favicon.href = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232d6a4f'/><text x='16' y='22' font-size='18' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle'>U</text></svg>"
+    if (favicon) favicon.href = 'unoicon.png'
   }
 
   // Tema
