@@ -431,37 +431,75 @@ function oppdaterHeader() {
     document.documentElement.dataset.theme = APP.school.color_theme
   }
 
-  // Knapper
+  // PC-knapper
   const loginBtn   = document.getElementById('hdr-login-btn')
   const logoutBtn  = document.getElementById('hdr-logout-btn')
   const laererBtn  = document.getElementById('hdr-laerer-btn')
   const adminToggle= document.getElementById('hdr-admin-toggle')
   const username   = document.getElementById('hdr-username')
 
+  // Hamburger-elementer
+  const hamburger   = document.getElementById('hdr-hamburger')
+  const dropdown    = document.getElementById('hdr-dropdown')
+  const ddNavn      = document.getElementById('hdr-dropdown-navn')
+  const ddAdmin     = document.getElementById('hdr-dd-admin')
+  const ddLaerer    = document.getElementById('hdr-dd-laerer')
+  const ddLogout    = document.getElementById('hdr-dd-logout')
+  const ddLogin     = document.getElementById('hdr-dd-login')
+
   if (APP.user && APP.profile) {
+    const rolle = APP.profile.role
+    const visAdmin = APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)
+    const skjulLaerer = rolle === 'admin' && APP.isAdminActive
+
+    // PC
     if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
     if (loginBtn)    loginBtn.classList.add('skjult')
-    if (logoutBtn)   logoutBtn.classList.remove('skjult')
-
-    const rolle = APP.profile.role
-    if (laererBtn)  laererBtn.classList.toggle('skjult', rolle === 'admin' && APP.isAdminActive)
-
-    if (adminToggle && APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)) {
+    if (logoutBtn)   { logoutBtn.classList.remove('skjult'); logoutBtn.onclick = logout }
+    if (laererBtn)   laererBtn.classList.toggle('skjult', skjulLaerer)
+    if (adminToggle && visAdmin) {
       adminToggle.classList.remove('skjult')
       adminToggle.textContent = 'Admin'
       adminToggle.classList.toggle('admin-aktiv', APP.isAdminActive)
       adminToggle.onclick = toggleAdminModus
-    }
+    } else if (adminToggle) adminToggle.classList.add('skjult')
+
+    // Hamburger
+    if (hamburger) hamburger.classList.remove('skjult')
+    if (ddNavn)   { ddNavn.textContent = APP.profile.full_name; ddNavn.classList.remove('skjult') }
+    if (ddLogin)  ddLogin.classList.add('skjult')
+    if (ddLogout) { ddLogout.classList.remove('skjult'); ddLogout.onclick = () => { dropdown?.classList.add('skjult'); logout() } }
+    if (ddLaerer) ddLaerer.classList.toggle('skjult', skjulLaerer)
+    if (ddAdmin && visAdmin) {
+      ddAdmin.classList.remove('skjult')
+      ddAdmin.classList.toggle('admin-aktiv', APP.isAdminActive)
+      ddAdmin.onclick = () => { dropdown?.classList.add('skjult'); toggleAdminModus() }
+    } else if (ddAdmin) ddAdmin.classList.add('skjult')
   } else {
     if (username)    username.classList.add('skjult')
     if (loginBtn)    loginBtn.classList.remove('skjult')
     if (logoutBtn)   logoutBtn.classList.add('skjult')
     if (laererBtn)   laererBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
+
+    if (hamburger) hamburger.classList.remove('skjult')
+    if (ddNavn)   ddNavn.classList.add('skjult')
+    if (ddAdmin)  ddAdmin.classList.add('skjult')
+    if (ddLaerer) ddLaerer.classList.add('skjult')
+    if (ddLogout) ddLogout.classList.add('skjult')
+    if (ddLogin)  ddLogin.classList.remove('skjult')
   }
 
-  // Logout-knapp
-  if (logoutBtn) logoutBtn.onclick = logout
+  // Hamburger toggle
+  if (hamburger && dropdown) {
+    hamburger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('skjult') }
+  }
+  document.addEventListener('click', (e) => {
+    if (dropdown && !dropdown.classList.contains('skjult') &&
+        !dropdown.contains(e.target) && e.target !== hamburger) {
+      dropdown.classList.add('skjult')
+    }
+  }, { once: false })
 }
 
 // ─────────────────────────────────────────

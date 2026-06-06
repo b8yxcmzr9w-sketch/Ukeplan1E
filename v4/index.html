@@ -27,16 +27,28 @@
   <a href="#/" id="hdr-home-link" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit">
     <img id="hdr-logo" src="" alt="Logo" class="skjult">
     <div>
-      <div class="skole-navn" id="hdr-skolenavn">Ukeplan1E</div>
+      <div class="skole-navn" id="hdr-skolenavn">Ukeplan1e</div>
       <div class="skole-klasse skjult" id="hdr-klasse"></div>
     </div>
   </a>
   <span class="spacer"></span>
-  <span id="hdr-username" style="font-size:.84rem;opacity:.8"></span>
-  <button class="hdr-btn skjult" id="hdr-admin-toggle">Admin-modus</button>
-  <button class="hdr-btn skjult" id="hdr-laerer-btn" onclick="location.hash='#/laerer'">Min plan</button>
-  <button class="hdr-btn skjult" id="hdr-logout-btn">Logg ut</button>
-  <button class="hdr-btn" id="hdr-login-btn" onclick="location.hash='#/login'">Logg inn</button>
+
+  <!-- PC-knapper (skjules på mobil) -->
+  <span id="hdr-username" class="hdr-pc-only" style="font-size:.84rem;opacity:.8"></span>
+  <button class="hdr-btn skjult hdr-pc-only" id="hdr-admin-toggle">Admin</button>
+  <button class="hdr-btn skjult hdr-pc-only" id="hdr-laerer-btn" onclick="location.hash='#/laerer'">Lærervisning</button>
+  <button class="hdr-btn skjult hdr-pc-only" id="hdr-logout-btn">Logg ut</button>
+  <button class="hdr-btn hdr-pc-only" id="hdr-login-btn" onclick="location.hash='#/login'">Logg inn</button>
+
+  <!-- Hamburger (vises bare på mobil) -->
+  <button class="hdr-btn hdr-hamburger skjult" id="hdr-hamburger" aria-label="Meny">☰</button>
+  <div class="hdr-dropdown skjult" id="hdr-dropdown">
+    <span class="hdr-dropdown-navn skjult" id="hdr-dropdown-navn"></span>
+    <button class="hdr-dropdown-btn skjult" id="hdr-dd-admin">Admin</button>
+    <button class="hdr-dropdown-btn skjult" id="hdr-dd-laerer" onclick="document.getElementById('hdr-dropdown').classList.add('skjult');location.hash='#/laerer'">Lærervisning</button>
+    <button class="hdr-dropdown-btn skjult" id="hdr-dd-logout">Logg ut</button>
+    <button class="hdr-dropdown-btn" id="hdr-dd-login" onclick="document.getElementById('hdr-dropdown').classList.add('skjult');location.hash='#/login'">Logg inn</button>
+  </div>
 </header>
 
 <!-- ── Utskrift-hode (synlig bare ved print) ────────────────────── -->

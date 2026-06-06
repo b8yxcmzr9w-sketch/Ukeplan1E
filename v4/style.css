@@ -118,6 +118,33 @@ header .spacer { flex: 1; }
 .hdr-btn:hover { background: rgba(255,255,255,.28); }
 .hdr-btn.admin-aktiv { background: var(--advarsel); color: #000; border-color: transparent; }
 
+/* Hamburger-meny */
+.hdr-hamburger { font-size: 1.2rem; padding: 6px 11px; display: none; }
+.hdr-dropdown {
+  position: absolute; top: 56px; right: 12px;
+  background: var(--header-bg); border: 1px solid rgba(255,255,255,.2);
+  border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  display: flex; flex-direction: column; min-width: 160px; z-index: 200;
+  overflow: hidden;
+}
+.hdr-dropdown-navn {
+  padding: 10px 14px 6px; font-size: .82rem; opacity: .7;
+  border-bottom: 1px solid rgba(255,255,255,.15); color: var(--header-tekst);
+}
+.hdr-dropdown-btn {
+  background: none; color: var(--header-tekst); border: none;
+  padding: 10px 14px; text-align: left; cursor: pointer; font-size: .92rem;
+  transition: background .12s;
+}
+.hdr-dropdown-btn:hover { background: rgba(255,255,255,.15); }
+.hdr-dropdown-btn.admin-aktiv { color: var(--advarsel); font-weight: 700; }
+
+@media (max-width: 600px) {
+  .hdr-pc-only { display: none !important; }
+  .hdr-hamburger { display: inline-flex !important; }
+  header { position: relative; }
+}
+
 /* ── Navigasjon ─────────────────────────────────────────────────── */
 .nav-bar {
   display: flex; align-items: center; gap: 8px;
