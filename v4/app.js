@@ -265,7 +265,7 @@ function oppdaterHeader() {
   // Skolenavn + logo
   const skolenavn = document.getElementById('hdr-skolenavn')
   const logo = document.getElementById('hdr-logo')
-  if (skolenavn) skolenavn.textContent = APP.school ? APP.school.name : 'Ukeplan'
+  if (skolenavn) skolenavn.textContent = APP.school ? APP.school.name : 'Ukeplan1e'
   if (logo && APP.school && (APP.school.logo_url || APP.school.logo_file_path)) {
     logo.src = APP.school.logo_file_path
       ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
