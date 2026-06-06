@@ -495,12 +495,6 @@ function oppdaterHeader() {
   if (hamburger && dropdown) {
     hamburger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('skjult') }
   }
-  document.addEventListener('click', (e) => {
-    if (dropdown && !dropdown.classList.contains('skjult') &&
-        !dropdown.contains(e.target) && e.target !== hamburger) {
-      dropdown.classList.add('skjult')
-    }
-  }, { once: false })
 }
 
 // ─────────────────────────────────────────
@@ -2888,6 +2882,16 @@ async function init() {
       console.warn('Kunne ikke hente brukerprofil:', err.message)
     }
   }
+
+  // Lukk hamburger-dropdown ved klikk utenfor (én gang ved oppstart)
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('hdr-dropdown')
+    const hamburger = document.getElementById('hdr-hamburger')
+    if (dropdown && !dropdown.classList.contains('skjult') &&
+        !dropdown.contains(e.target) && e.target !== hamburger) {
+      dropdown.classList.add('skjult')
+    }
+  })
 
   // Route immediately — don't wait for school data
   window.addEventListener('hashchange', router)
