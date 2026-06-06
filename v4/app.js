@@ -14,6 +14,7 @@ window.APP = {
   currentView: null,
   realtimeChannel: null,
   isAdminActive: false,
+  renderToken: 0,
 }
 
 // Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
@@ -423,7 +424,7 @@ function oppdaterHeader() {
     logo.classList.remove('skjult')
     if (favicon) favicon.href = logo.src
   } else {
-    if (favicon) favicon.href = 'https://uno.ganddal.net/favicon.ico'
+    if (favicon) favicon.href = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232d6a4f'/><text x='16' y='22' font-size='18' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle'>U</text></svg>"
   }
 
   // Tema
@@ -541,7 +542,7 @@ async function router() {
   // Elev view
   const klasseMatch = hash.match(/^#\/klasse\/(.+)$/)
   const klasseNavn = klasseMatch ? decodeURIComponent(klasseMatch[1]) : null
-  renderElevView(klasseNavn)
+  await renderElevView(klasseNavn)
 }
 
 // ─────────────────────────────────────────
@@ -594,6 +595,7 @@ function showConflictWarning() {
 // ─────────────────────────────────────────
 
 async function renderElevView(klasseNavn) {
+  const myToken = ++APP.renderToken
   const main = document.getElementById('app-main')
   clearEl(main)
   APP.currentView = 'elev'
@@ -602,6 +604,7 @@ async function renderElevView(klasseNavn) {
   let alleKlasser = []
 
   const { data: klasser } = await sb.from('classes').select('*').order('name')
+  if (myToken !== APP.renderToken) return  // nyere render har startet
   alleKlasser = klasser || []
 
   if (klasseNavn) {
@@ -2884,8 +2887,9 @@ async function init() {
   if (schools && schools.length) {
     APP.school = schools[0]
     oppdaterHeader()
-    // Re-render only if we're still on the elev forside (school data changes the welcome content)
-    if (!location.hash || location.hash === '#/' || location.hash === '#') {
+    // Re-render elev forside only if still there AND no class selected
+    const h = location.hash
+    if (!h || h === '#/' || h === '#') {
       await router()
     }
   }
