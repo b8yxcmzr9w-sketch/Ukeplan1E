@@ -495,12 +495,6 @@ function oppdaterHeader() {
   if (hamburger && dropdown) {
     hamburger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('skjult') }
   }
-  document.addEventListener('click', (e) => {
-    if (dropdown && !dropdown.classList.contains('skjult') &&
-        !dropdown.contains(e.target) && e.target !== hamburger) {
-      dropdown.classList.add('skjult')
-    }
-  }, { once: false })
 }
 
 // ─────────────────────────────────────────
@@ -2513,17 +2507,30 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   }}, 'Endre e-post')
   box.appendChild(endreEpostBtn)
 
-  // Passord
-  const pwRad = el('div', { style: 'display:flex; gap:8px; flex-wrap:wrap; margin-top:14px' })
-  pwRad.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => visAdminSettPassord(user) }, 'Sett nytt passord'))
-  pwRad.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: async () => {
+  // Passord (sammenleggbar)
+  const pwSeksjon = el('div', { style: 'margin-top:16px; border:1px solid var(--kant); border-radius:var(--radius); overflow:hidden' })
+  const pwToggle = el('button', { type: 'button', class: 'btn btn-s', style: 'width:100%; text-align:left; border-radius:0; background:var(--bakgrunn2); border:none; padding:10px 14px; font-weight:600; display:flex; justify-content:space-between; align-items:center' })
+  const pwPil = el('span', {}, '▶')
+  pwToggle.appendChild(el('span', {}, 'Passord'))
+  pwToggle.appendChild(pwPil)
+  const pwInnhold = el('div', { style: 'display:none; padding:12px 14px; display:none; gap:8px; flex-wrap:wrap' })
+  pwInnhold.style.display = 'none'
+  pwToggle.onclick = () => {
+    const open = pwInnhold.style.display !== 'none'
+    pwInnhold.style.display = open ? 'none' : 'flex'
+    pwPil.textContent = open ? '▶' : '▼'
+  }
+  pwInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => visAdminSettPassord(user) }, 'Endre nå'))
+  pwInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: async () => {
     if (!confirm('Sende resett-e-post til brukeren?')) return
     try {
       await medLagreOverlay(() => kallAdminUser('send_reset', { user_id: user.id, redirect_to: window.location.origin + window.location.pathname }))
       showToast('Resett-e-post sendt', 'ok')
     } catch (err) { showToast(err.message, 'error') }
   }}, 'Send resett-e-post'))
-  box.appendChild(pwRad)
+  pwSeksjon.appendChild(pwToggle)
+  pwSeksjon.appendChild(pwInnhold)
+  box.appendChild(pwSeksjon)
 
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -2875,6 +2882,16 @@ async function init() {
       console.warn('Kunne ikke hente brukerprofil:', err.message)
     }
   }
+
+  // Lukk hamburger-dropdown ved klikk utenfor (én gang ved oppstart)
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('hdr-dropdown')
+    const hamburger = document.getElementById('hdr-hamburger')
+    if (dropdown && !dropdown.classList.contains('skjult') &&
+        !dropdown.contains(e.target) && e.target !== hamburger) {
+      dropdown.classList.add('skjult')
+    }
+  })
 
   // Route immediately — don't wait for school data
   window.addEventListener('hashchange', router)
