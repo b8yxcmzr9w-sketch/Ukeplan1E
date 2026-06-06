@@ -2,6 +2,8 @@
 
 ## Prosjektbeskrivelse
 
+Tjenesten heter **Ukeplan1e** (uttales «ukeplanene» – én tjeneste for mange ukeplaner).
+
 Bygg en nettbasert ukeplantjeneste for én videregående skole. Elevene kan se ukeplanen for sin klasse via en dedikert URL. Lærere og kontaktlærere administrerer egne og klassens økter. Admin styrer hele oppsettet.
 
 **Teknologistack:**
