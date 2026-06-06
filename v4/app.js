@@ -16,6 +16,50 @@ window.APP = {
   isAdminActive: false,
 }
 
+// Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
+// fra recovery-lenken i URL-en ikke går tapt før init() rekker å kjøre.
+let _recoveryHandtert = false
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_OUT') {
+    APP.user = null
+    APP.profile = null
+    APP.isAdminActive = false
+    oppdaterHeader()
+    navigate('#/')
+  } else if (event === 'PASSWORD_RECOVERY') {
+    if (_recoveryHandtert) return
+    _recoveryHandtert = true
+    APP.user = session?.user || APP.user
+    if (session && !APP.profile) {
+      try { APP.profile = await fetchProfile(session.user.id) } catch {}
+    }
+    oppdaterHeader()
+    visSettPassordModal({
+      tvungen: true,
+      tittel: 'Velg nytt passord',
+      ingress: 'Du fulgte en tilbakestillingslenke. Velg et nytt passord for å fullføre.',
+      onFerdig: () => navigate('#/laerer'),
+    })
+  } else if (event === 'SIGNED_IN' && session) {
+    APP.user = session.user
+    if (!APP.profile) {
+      try { APP.profile = await fetchProfile(session.user.id) } catch {}
+    }
+    APP.isAdminActive = APP.profile?.is_admin_active || false
+    oppdaterHeader()
+    // Invitasjonslenke: ny bruker uten passord – be om å sette ett
+    if (!_recoveryHandtert && (location.hash.includes('type=invite') || location.search.includes('type=invite'))) {
+      _recoveryHandtert = true
+      visSettPassordModal({
+        tvungen: true,
+        tittel: 'Velkommen! Velg et passord',
+        ingress: 'Kontoen din er opprettet. Velg et passord for å logge inn.',
+        onFerdig: () => navigate('#/laerer'),
+      })
+    }
+  }
+})
+
 const FUNNY_TEXTS = [
   'Sender tanker til skyene…',
   'Overtaler databasen…',
@@ -99,7 +143,7 @@ function overvakSkjema(form, lagreKnapp) {
 
   function snapshot() {
     return Array.from(form.querySelectorAll('input,select,textarea'))
-      .map(e => (e.type === 'checkbox' ? e.checked : e.value))
+      .map(e => (e.type === 'checkbox' || e.type === 'radio') ? `${e.value}:${e.checked}` : e.value)
       .join('§')
   }
 
@@ -169,7 +213,7 @@ async function logout() {
   APP.profile = null
   APP.isAdminActive = false
   oppdaterHeader()
-  navigate('#/login')
+  navigate('#/')
 }
 
 async function fetchProfile(userId) {
@@ -183,6 +227,31 @@ async function byttPassord(nytt) {
   if (error) throw error
 }
 
+async function byttEpost(nyEpost) {
+  const { error } = await sb.auth.updateUser(
+    { email: nyEpost },
+    { emailRedirectTo: window.location.origin + window.location.pathname }
+  )
+  if (error) throw error
+}
+
+// Kaller admin-user Edge Function (krever aktiv admin-sesjon)
+async function kallAdminUser(action, payload = {}) {
+  const { data: { session } } = await sb.auth.getSession()
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-user`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ action, ...payload }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || 'Ukjent feil')
+  return json
+}
+
 async function toggleAdminModus() {
   const ny = !APP.isAdminActive
   await sb.from('users').update({ is_admin_active: ny }).eq('id', APP.profile.id)
@@ -190,6 +259,12 @@ async function toggleAdminModus() {
   APP.profile.is_admin_active = ny
   oppdaterHeader()
   navigate(ny ? '#/admin' : '#/laerer')
+}
+
+async function erFerdigSattOpp() {
+  const { data: klasser } = await sb.from('classes').select('id').eq('school_id', APP.school.id).limit(1)
+  const { data: fag } = await sb.from('subjects').select('id').eq('school_id', APP.school.id).limit(1)
+  return (klasser?.length > 0) && (fag?.length > 0)
 }
 
 async function sjekkVentendeOverforinger() {
@@ -206,55 +281,129 @@ function renderLoginForm() {
   const main = document.getElementById('app-main')
   clearEl(main)
 
+  const wrap = el('div', { class: 'login-wrap' })
+  const kort = el('div', { class: 'login-kort' })
+
+  const feilMelding = el('p', { class: 'feil-tekst skjult' })
+
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
+    feilMelding.classList.add('skjult')
     const email = form.querySelector('[name=email]').value
     const password = form.querySelector('[name=password]').value
+    const btn = form.querySelector('button[type=submit]')
+    btn.disabled = true
     try {
-      await medLagreOverlay(() => login(email, password))
-      const session = (await sb.auth.getSession()).data.session
-      APP.user = session.user
-      APP.profile = await fetchProfile(session.user.id)
+      const { data, error } = await sb.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      APP.user = data.user
+      APP.profile = await fetchProfile(data.user.id)
       APP.isAdminActive = APP.profile.is_admin_active || false
       oppdaterHeader()
       await sjekkVentendeOverforinger()
-      if (APP.isAdminActive) navigate('#/admin')
-      else navigate('#/laerer')
+      showToast(`Velkommen, ${APP.profile.full_name}!`, 'info')
+      const erAdmin = APP.profile.role === 'admin' || APP.isAdminActive
+      if (erAdmin && !(await erFerdigSattOpp())) {
+        APP.isAdminActive = true
+        navigate('#/admin')
+      } else {
+        APP.isAdminActive = false
+        await sb.from('users').update({ is_admin_active: false }).eq('id', APP.profile.id)
+        navigate('#/laerer')
+      }
     } catch (err) {
-      showToast('Feil ved innlogging: ' + err.message, 'error')
+      feilMelding.textContent = 'Feil e-post eller passord'
+      feilMelding.classList.remove('skjult')
+      btn.disabled = false
     }
   }})
 
-  form.appendChild(el('h2', {}, 'Logg inn'))
-  form.appendChild(el('label', {}, 'E-post'))
-  form.appendChild(el('input', { name: 'email', type: 'email', required: 'true', placeholder: 'din@epost.no' }))
-  form.appendChild(el('label', {}, 'Passord'))
-  form.appendChild(el('input', { name: 'password', type: 'password', required: 'true' }))
-  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Logg inn'))
-  main.appendChild(form)
+  kort.appendChild(el('h2', {}, 'Logg inn'))
+  kort.appendChild(feilMelding)
+  form.appendChild(el('label', { class: 'felt-label' }, 'E-post'))
+  form.appendChild(el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true', placeholder: 'din@epost.no' }))
+  form.appendChild(el('label', { class: 'felt-label' }, 'Passord'))
+  form.appendChild(el('input', { name: 'password', type: 'password', class: 'felt input', required: 'true' }))
+  form.appendChild(el('button', { type: 'submit', class: 'btn btn-p', style: 'width:100%;margin-top:8px' }, 'Logg inn'))
+
+  // Glemt passord
+  const infoMelding = el('p', { class: 'info-tekst skjult', style: 'font-size:.85rem;color:var(--tekst-svak);margin-top:10px;text-align:center' })
+  const glemt = el('button', { type: 'button', class: 'btn-lenke', style: 'margin-top:12px;font-size:.85rem;color:var(--tekst-svak);background:none;border:none;cursor:pointer;display:block;width:100%;text-align:center' }, 'Glemt passord?')
+  glemt.addEventListener('click', async () => {
+    feilMelding.classList.add('skjult')
+    const email = form.querySelector('[name=email]').value.trim()
+    if (!email) {
+      feilMelding.textContent = 'Fyll inn e-postadressen din først'
+      feilMelding.classList.remove('skjult')
+      return
+    }
+    glemt.disabled = true
+    glemt.textContent = 'Sender…'
+    // Av sikkerhetshensyn avslører vi ikke om e-posten finnes – samme svar uansett
+    await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    })
+    infoMelding.textContent = 'Hvis ' + email + ' er registrert, sender vi en e-post med en lenke for å tilbakestille passordet. Sjekk også søppelpost.'
+    infoMelding.classList.remove('skjult')
+    glemt.textContent = 'Glemt passord?'
+    glemt.disabled = false
+  })
+  form.appendChild(glemt)
+  form.appendChild(infoMelding)
+
+  kort.appendChild(form)
+  wrap.appendChild(kort)
+  main.appendChild(wrap)
 }
 
-function renderPassordModal() {
+// Fleksibel «sett nytt passord»-modal.
+// opts.tvungen = true: kan ikke avbrytes (brukes etter recovery-/invitasjonslenke)
+function visSettPassordModal(opts = {}) {
+  const { tvungen = false, tittel = 'Bytt passord', ingress = null, onFerdig = null } = opts
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
-  box.appendChild(el('h3', {}, 'Bytt passord'))
-  const nytt = el('input', { type: 'password', placeholder: 'Nytt passord', class: 'felt input' })
-  const bekreft = el('input', { type: 'password', placeholder: 'Bekreft passord', class: 'felt input' })
-  box.appendChild(nytt)
-  box.appendChild(bekreft)
-  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
-    if (nytt.value !== bekreft.value) { showToast('Passordene er ikke like', 'error'); return }
+  box.appendChild(el('h3', {}, tittel))
+  if (ingress) box.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.88rem;margin:0 0 12px' }, ingress))
+
+  const feil = el('p', { class: 'feil-tekst skjult' })
+  box.appendChild(feil)
+
+  const form = el('form', { class: 'skjema' })
+  const nytt = el('input', { type: 'password', placeholder: 'Nytt passord (minst 8 tegn)', class: 'felt input', autocomplete: 'new-password', minlength: 8, required: 'true' })
+  const bekreft = el('input', { type: 'password', placeholder: 'Gjenta nytt passord', class: 'felt input', autocomplete: 'new-password', required: 'true', style: 'margin-top:10px' })
+  form.appendChild(nytt)
+  form.appendChild(bekreft)
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  if (!tvungen) {
+    bunn.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  }
+  bunn.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  form.appendChild(bunn)
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    feil.classList.add('skjult')
+    if (nytt.value.length < 8) {
+      feil.textContent = 'Passordet må være minst 8 tegn'; feil.classList.remove('skjult'); return
+    }
+    if (nytt.value !== bekreft.value) {
+      feil.textContent = 'Passordene er ikke like'; feil.classList.remove('skjult'); return
+    }
     try {
       await medLagreOverlay(() => byttPassord(nytt.value))
       modal.remove()
+      showToast('Passordet er oppdatert', 'ok')
+      if (onFerdig) onFerdig()
     } catch (err) {
-      showToast(err.message, 'error')
+      feil.textContent = err.message; feil.classList.remove('skjult')
     }
-  }}, 'Lagre'))
-  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  })
+
+  box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+  if (!tvungen) modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
 // ─────────────────────────────────────────
@@ -271,6 +420,9 @@ function oppdaterHeader() {
       ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
       : APP.school.logo_url
     logo.classList.remove('skjult')
+    // Oppdater favicon til skolelogo
+    const favicon = document.getElementById('favicon')
+    if (favicon) favicon.href = logo.src
   }
 
   // Tema
@@ -282,7 +434,6 @@ function oppdaterHeader() {
   const loginBtn   = document.getElementById('hdr-login-btn')
   const logoutBtn  = document.getElementById('hdr-logout-btn')
   const laererBtn  = document.getElementById('hdr-laerer-btn')
-  const adminBtn   = document.getElementById('hdr-admin-btn')
   const adminToggle= document.getElementById('hdr-admin-toggle')
   const username   = document.getElementById('hdr-username')
 
@@ -293,11 +444,10 @@ function oppdaterHeader() {
 
     const rolle = APP.profile.role
     if (laererBtn)  laererBtn.classList.toggle('skjult', rolle === 'admin' && APP.isAdminActive)
-    if (adminBtn)   adminBtn.classList.toggle('skjult', !APP.isAdminActive)
 
-    if (adminToggle && (rolle === 'admin' || rolle === 'kontaktlaerer')) {
+    if (adminToggle && APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)) {
       adminToggle.classList.remove('skjult')
-      adminToggle.textContent = APP.isAdminActive ? 'Gå ut av admin-modus' : 'Aktiver admin-modus'
+      adminToggle.textContent = 'Admin'
       adminToggle.classList.toggle('admin-aktiv', APP.isAdminActive)
       adminToggle.onclick = toggleAdminModus
     }
@@ -306,7 +456,6 @@ function oppdaterHeader() {
     if (loginBtn)    loginBtn.classList.remove('skjult')
     if (logoutBtn)   logoutBtn.classList.add('skjult')
     if (laererBtn)   laererBtn.classList.add('skjult')
-    if (adminBtn)    adminBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
   }
 
@@ -421,7 +570,7 @@ async function renderElevView(klasseNavn) {
   }
 
   // Wrapper
-  const wrap = el('div', { class: 'container' })
+  const wrap = el('div', { class: 'side-wrap' })
   main.appendChild(wrap)
 
   // Class selector
@@ -438,10 +587,33 @@ async function renderElevView(klasseNavn) {
   }
   klasseHeader.appendChild(el('label', { style: 'font-weight:600;margin-right:8px' }, 'Klasse:'))
   klasseHeader.appendChild(selector)
-  wrap.appendChild(klasseHeader)
+  // Skjul dropdown på velkomstsiden — klasser vises som knapper i stedet
+  if (klasse) wrap.appendChild(klasseHeader)
 
   if (!klasse) {
-    wrap.appendChild(el('p', { class: 'tom-uke' }, 'Velg en klasse for å se ukeplanen.'))
+    const velkomst = el('div', { class: 'velkomst-side' })
+
+    if (APP.school?.logo_url) {
+      velkomst.appendChild(el('img', { src: APP.school.logo_url, alt: 'Logo', class: 'velkomst-logo' }))
+    }
+    velkomst.appendChild(el('h1', { class: 'velkomst-tittel' }, APP.school?.name || 'Ukeplan'))
+    velkomst.appendChild(el('p', { class: 'velkomst-ingress' }, 'Velg klassen din for å se ukeplanen:'))
+
+    if (alleKlasser.length === 0) {
+      velkomst.appendChild(el('p', { class: 'velkomst-tom' }, 'Lærerne er i gang med å sette opp ukeplanen – kom tilbake snart!'))
+    } else {
+      const liste = el('div', { class: 'velkomst-klasser' })
+      for (const k of alleKlasser) {
+        const lenke = el('a', {
+          href: `#/klasse/${encodeURIComponent(k.name)}`,
+          class: 'velkomst-klasse-btn'
+        }, k.name)
+        liste.appendChild(lenke)
+      }
+      velkomst.appendChild(liste)
+    }
+
+    wrap.appendChild(velkomst)
     return
   }
 
@@ -670,25 +842,26 @@ async function renderLaererView() {
   const isKontakt = APP.profile.role === 'kontaktlaerer' || APP.isAdminActive
 
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
-  if (isKontakt) tabs.push('Klasse-admin')
+  const tabSlugs = ['klasse', 'alle', 'sok']
+  if (isKontakt) { tabs.push('Klasse-admin'); tabSlugs.push('klasse-admin') }
+  tabs.push('Innstillinger'); tabSlugs.push('innstillinger')
 
-  let activeTab = 0
+  const hashTab = location.hash.split('/')[2]
+  const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
 
   const tabBar = el('div', { class: 'fane-bar' })
   const tabContent = el('div', { class: 'fane-innhold' })
 
   function setTab(idx) {
-    activeTab = idx
-    tabBar.querySelectorAll('.fane').forEach((b, i) => {
-      b.classList.toggle('aktiv', i === idx)
-    })
+    const slug = tabSlugs[idx]
+    history.replaceState(null, '', `#/laerer/${slug}`)
+    tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
-    switch (idx) {
-      case 0: renderMinKlasseTab(tabContent); break
-      case 1: renderAlleOkterTab(tabContent); break
-      case 2: renderSokTab(tabContent); break
-      case 3: renderKlasseAdminTab(tabContent); break
-    }
+    if (slug === 'klasse') renderMinKlasseTab(tabContent)
+    else if (slug === 'alle') renderAlleOkterTab(tabContent)
+    else if (slug === 'sok') renderSokTab(tabContent)
+    else if (slug === 'klasse-admin') renderKlasseAdminTab(tabContent)
+    else if (slug === 'innstillinger') renderInnstillingerTab(tabContent)
   }
 
   tabs.forEach((t, i) => {
@@ -696,9 +869,60 @@ async function renderLaererView() {
     tabBar.appendChild(btn)
   })
 
-  main.appendChild(tabBar)
-  main.appendChild(tabContent)
-  setTab(0)
+  const wrap = el('div', { class: 'side-wrap' })
+  wrap.appendChild(tabBar)
+  wrap.appendChild(tabContent)
+  main.appendChild(wrap)
+  setTab(initTab)
+}
+
+async function renderInnstillingerTab(container) {
+  const wrap = el('div', { class: 'skjema-smal' })
+  wrap.appendChild(el('h3', {}, 'Innstillinger'))
+
+  // Kontoinfo
+  const { data: { user } } = await sb.auth.getUser()
+  const naavaerendeEpost = user?.email || ''
+
+  const info = el('div', { class: 'subj-config-box', style: 'margin-bottom:18px' })
+  info.appendChild(el('div', { style: 'font-weight:600;margin-bottom:2px' }, APP.profile?.full_name || ''))
+  info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.88rem' }, naavaerendeEpost))
+  const rolleNavn = { laerer: 'Lærer', kontaktlaerer: 'Kontaktlærer', admin: 'Administrator' }
+  info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:4px' }, rolleNavn[APP.profile?.role] || APP.profile?.role || ''))
+  wrap.appendChild(info)
+
+  // Bytt passord
+  wrap.appendChild(el('div', { class: 'seksjon-tittel' }, 'Passord'))
+  wrap.appendChild(el('button', { class: 'btn btn-p', onclick: () => visSettPassordModal({ tittel: 'Bytt passord' }) }, 'Bytt passord'))
+
+  // Bytt e-post
+  wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'E-postadresse'))
+  const epostForm = el('form', { class: 'skjema' })
+  const epostFeil = el('p', { class: 'feil-tekst skjult' })
+  epostForm.appendChild(epostFeil)
+  const epostInput = el('input', { type: 'email', class: 'felt input', value: naavaerendeEpost, required: 'true' })
+  epostForm.appendChild(lagFormRad('Ny e-postadresse', epostInput))
+  const epostBtn = el('button', { type: 'submit', class: 'btn btn-p' }, 'Endre e-post')
+  epostForm.appendChild(epostBtn)
+  epostForm.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:8px' },
+    'Du må bekrefte endringen via en lenke som sendes til både den gamle og den nye adressen.'))
+  epostForm.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    epostFeil.classList.add('skjult')
+    const ny = epostInput.value.trim()
+    if (!ny || ny === naavaerendeEpost) {
+      epostFeil.textContent = 'Skriv inn en ny e-postadresse'; epostFeil.classList.remove('skjult'); return
+    }
+    try {
+      await medLagreOverlay(() => byttEpost(ny))
+      showToast('Bekreftelse sendt – sjekk e-posten din', 'info')
+    } catch (err) {
+      epostFeil.textContent = err.message; epostFeil.classList.remove('skjult')
+    }
+  })
+  wrap.appendChild(epostForm)
+
+  container.appendChild(wrap)
 }
 
 async function renderMinKlasseTab(container) {
@@ -733,6 +957,7 @@ async function renderMinKlasseTab(container) {
   topRow.appendChild(klasseSel)
   topRow.appendChild(el('button', { class: 'btn btn-p', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
   topRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
+  topRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
   container.appendChild(topRow)
 
   const weekArea = el('div', { id: 'laerer-week-area' })
@@ -928,6 +1153,35 @@ async function renderSokTab(container) {
 // ─────────────────────────────────────────
 // SESSION MODALS
 // ─────────────────────────────────────────
+
+function visElevLenkeModal(klasse) {
+  const url = `${location.origin}${location.pathname}#/klasse/${encodeURIComponent(klasse.name)}`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`
+
+  const modal = el('div', { class: 'modal-bg' })
+  const box = el('div', { class: 'modal', style: 'max-width:360px;text-align:center' })
+
+  box.appendChild(el('h3', {}, `Elevlenke – ${klasse.name}`))
+  box.appendChild(el('img', { src: qrUrl, alt: 'QR-kode', style: 'display:block;margin:12px auto;border:1px solid var(--kant);border-radius:6px' }))
+  box.appendChild(el('p', { style: 'font-size:.8rem;color:var(--tekst-svak);word-break:break-all;margin:0 0 12px' }, url))
+
+  const kopierBtn = el('button', { class: 'btn btn-p', onclick: async () => {
+    await navigator.clipboard.writeText(url)
+    kopierBtn.textContent = 'Kopiert!'
+    setTimeout(() => { kopierBtn.textContent = 'Kopier lenke' }, 2000)
+  }}, 'Kopier lenke')
+
+  const lukkBtn = el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Lukk')
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(kopierBtn)
+  bunn.appendChild(lukkBtn)
+  box.appendChild(bunn)
+
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
 
 async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
   const modal = el('div', { class: 'modal-bg' })
@@ -1645,14 +1899,17 @@ async function renderAdminPanel() {
   clearEl(main)
   APP.currentView = 'admin'
 
-  const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Fakta']
-  let activeTab = 0
+  const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Funfacts']
+  const tabSlugs = ['skoleinfo', 'fag', 'klasser', 'brukere', 'skolerute', 'funfacts']
+
+  const hashTab = location.hash.split('/')[2]
+  const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
 
   const tabBar = el('div', { class: 'fane-bar' })
   const tabContent = el('div', { class: 'fane-innhold' })
 
   function setTab(idx) {
-    activeTab = idx
+    history.replaceState(null, '', `#/admin/${tabSlugs[idx]}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
     switch (idx) {
@@ -1670,15 +1927,17 @@ async function renderAdminPanel() {
     tabBar.appendChild(btn)
   })
 
-  main.appendChild(tabBar)
-  main.appendChild(tabContent)
-  setTab(0)
+  const adminWrap = el('div', { class: 'side-wrap' })
+  adminWrap.appendChild(tabBar)
+  adminWrap.appendChild(tabContent)
+  main.appendChild(adminWrap)
+  setTab(initTab)
 }
 
 async function renderSkoleInfoTab(container) {
   const school = APP.school
 
-  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
+  const form = el('form', { class: 'skjema skjema-smal', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const updates = {
@@ -1701,11 +1960,36 @@ async function renderSkoleInfoTab(container) {
     })
   }})
 
-  form.appendChild(lagFormRad('Skolenavn', el('input', { name: 'name', type: 'text', class: 'felt input', value: school.name })))
-  form.appendChild(lagFormRad('Skoleårsstart (uke)',
-    el('input', { name: 'start_week', type: 'number', class: 'felt input', value: school.school_year_start_week, min: 1, max: 53 })))
-  form.appendChild(lagFormRad('Skoleårslutt (uke)',
-    el('input', { name: 'end_week', type: 'number', class: 'felt input', value: school.school_year_end_week, min: 1, max: 53 })))
+  // Skolenavn med tegnteller
+  const navnInput = el('input', { name: 'name', type: 'text', class: 'felt input', value: school.name, maxlength: 30, style: 'width:100%' })
+  const navnTeller = el('span', { class: 'tegnteller', style: 'float:right;font-size:.8rem;opacity:.6' }, `${(school.name||'').length}/30`)
+  navnInput.addEventListener('input', () => { navnTeller.textContent = `${navnInput.value.length}/30` })
+  const navnWrap = el('div')
+  navnWrap.appendChild(navnTeller)
+  navnWrap.appendChild(navnInput)
+  form.appendChild(lagFormRad('Skolenavn', navnWrap))
+
+  // Uker på samme linje
+  function ukeHint(uke) {
+    if (!uke) return ''
+    const year = new Date().getFullYear()
+    const d = new Date(year, 0, 1 + (uke - 1) * 7)
+    d.setDate(d.getDate() - (d.getDay() || 7) + 1)
+    return d.toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+  const startInput = el('input', { name: 'start_week', type: 'number', class: 'felt input', value: school.school_year_start_week, min: 1, max: 53, style: 'width:5rem' })
+  const sluttInput = el('input', { name: 'end_week', type: 'number', class: 'felt input', value: school.school_year_end_week, min: 1, max: 53, style: 'width:5rem' })
+  const startHint = el('small', { class: 'uke-hint' }, ukeHint(school.school_year_start_week))
+  const sluttHint = el('small', { class: 'uke-hint' }, ukeHint(school.school_year_end_week))
+  startInput.addEventListener('input', () => { startHint.textContent = ukeHint(parseInt(startInput.value)) })
+  sluttInput.addEventListener('input', () => { sluttHint.textContent = ukeHint(parseInt(sluttInput.value)) })
+  const ukeRad = el('div', { class: 'uke-rad' })
+  const startGrp = el('div', { class: 'uke-grp' })
+  startGrp.appendChild(el('label', {}, 'Fra uke')); startGrp.appendChild(startInput); startGrp.appendChild(startHint)
+  const sluttGrp = el('div', { class: 'uke-grp' })
+  sluttGrp.appendChild(el('label', {}, 'Til uke')); sluttGrp.appendChild(sluttInput); sluttGrp.appendChild(sluttHint)
+  ukeRad.appendChild(startGrp); ukeRad.appendChild(sluttGrp)
+  form.appendChild(lagFormRad('Skoleår', ukeRad))
 
   // Logo
   const logoRow = el('div', { class: 'felt' })
@@ -1903,6 +2187,13 @@ async function renderKlasserTab(container) {
     for (const k of klasser || []) {
       const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { class: 'tekst' }, k.name))
+      const kopierBtn = el('button', { class: 'btn btn-sm', onclick: async () => {
+        const url = `${location.origin}${location.pathname}#/klasse/${encodeURIComponent(k.name)}`
+        await navigator.clipboard.writeText(url)
+        kopierBtn.textContent = 'Kopiert!'
+        setTimeout(() => { kopierBtn.textContent = 'Kopier elevlenke' }, 2000)
+      }}, 'Kopier elevlenke')
+      row.appendChild(kopierBtn)
       row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
         const nyttNavn = prompt('Nytt navn:', k.name)
         if (!nyttNavn) return
@@ -1986,42 +2277,82 @@ async function visNyBrukerModal(klasser, onSave) {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Ny bruker'))
-  box.appendChild(el('div', { class: 'info-box' }, 'Auth-bruker må opprettes manuelt i Supabase Dashboard først. Fyll inn auth user ID nedenfor.'))
 
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
+    const rolle = fd.get('role')
+    const erAdmin = form.querySelector('[name=is_admin]').checked
     const klassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
-      const { data: newUser, error } = await sb.from('users').insert({
-        id: fd.get('auth_id'),
-        full_name: fd.get('full_name'),
-        role: fd.get('role'),
-        school_id: APP.school.id,
-      }).select().single()
-      if (error) throw error
-      for (const kid of klassIds) {
-        await sb.from('user_classes').insert({ user_id: newUser.id, class_id: kid })
+      // Sjekk maks 2 admins
+      if (erAdmin) {
+        const { data: admins } = await sb.from('users').select('id').eq('school_id', APP.school.id).eq('role', 'admin').is('deleted_at', null)
+        if ((admins?.length || 0) >= 2) throw new Error('Maks 2 administratorer er tillatt per skole')
       }
+      // Sjekk maks 3 kontaktlærere per klasse
+      if (rolle === 'kontaktlaerer') {
+        for (const kid of klassIds) {
+          const { data: kl } = await sb.from('user_classes')
+            .select('user_id, users!inner(role)')
+            .eq('class_id', kid)
+            .eq('users.role', 'kontaktlaerer')
+          if ((kl?.length || 0) >= 3) {
+            const k = klasser.find(k => k.id === kid)
+            throw new Error(`Klasse ${k?.name || ''} har allerede 3 kontaktlærere`)
+          }
+        }
+      }
+      const { data: { session } } = await sb.auth.getSession()
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          email: fd.get('email'),
+          full_name: fd.get('full_name'),
+          role: rolle,
+          is_admin: erAdmin,
+          class_ids: klassIds,
+          redirect_to: window.location.origin + window.location.pathname,
+          school_name: APP.school?.name || '',
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Ukjent feil')
     })
     modal.remove()
     if (onSave) onSave()
   }})
 
-  form.appendChild(lagFormRad('Auth UUID', el('input', { name: 'auth_id', type: 'text', class: 'felt input', placeholder: 'UUID fra Supabase Auth', required: 'true' })))
+  form.appendChild(lagFormRad('E-post', el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true', placeholder: 'laerer@skole.no' })))
   form.appendChild(lagFormRad('Navn', el('input', { name: 'full_name', type: 'text', class: 'felt input', required: 'true' })))
 
-  const roleSel = el('select', { name: 'role', class: 'felt select' })
-  for (const r of ['elev', 'laerer', 'kontaktlaerer', 'admin']) {
-    roleSel.appendChild(el('option', { value: r }, r))
+  const rolleWrap = el('div', { class: 'rolle-gruppe' })
+  for (const [val, label] of [['laerer','Lærer'],['kontaktlaerer','Kontaktlærer']]) {
+    const lbl = el('label', { style: 'display:flex;align-items:center;gap:6px;cursor:pointer' })
+    const rb = el('input', { type: 'radio', name: 'role', value: val, required: 'true' })
+    if (val === 'laerer') rb.checked = true
+    lbl.appendChild(rb); lbl.appendChild(document.createTextNode(label))
+    rolleWrap.appendChild(lbl)
   }
-  form.appendChild(lagFormRad('Rolle', roleSel))
+  form.appendChild(lagFormRad('Rolle', rolleWrap))
+
+  const adminLbl = el('label', { style: 'display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:4px' })
+  const adminCb = el('input', { type: 'checkbox', name: 'is_admin' })
+  adminLbl.appendChild(adminCb); adminLbl.appendChild(document.createTextNode('Administrator'))
+  form.appendChild(el('div', { class: 'felt' }, adminLbl))
 
   const klDiv = el('div', { class: 'class-checkboxes' })
   for (const k of klasser || []) {
-    const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id, id: `nk-${k.id}` })
-    klDiv.appendChild(cb)
-    klDiv.appendChild(el('label', { for: `nk-${k.id}` }, k.name))
+    const lbl = el('label', { style: 'display:flex;align-items:center;gap:4px;cursor:pointer' })
+    const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id })
+    lbl.appendChild(cb)
+    lbl.appendChild(document.createTextNode(k.name))
+    klDiv.appendChild(lbl)
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
@@ -2044,13 +2375,34 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
+    const rolle = fd.get('role')
+    const erAdmin = form.querySelector('[name=is_admin]').checked
     const newKlassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
+      // Sjekk maks 2 admins (unntatt seg selv)
+      if (erAdmin && !user.is_admin_active) {
+        const { data: admins } = await sb.from('users').select('id').eq('school_id', APP.school.id).eq('is_admin_active', true).is('deleted_at', null).neq('id', user.id)
+        if ((admins?.length || 0) >= 2) throw new Error('Maks 2 administratorer er tillatt per skole')
+      }
+      // Sjekk maks 3 kontaktlærere per klasse
+      if (rolle === 'kontaktlaerer') {
+        for (const kid of newKlassIds) {
+          if (tilknyttedeIds.has(kid)) continue
+          const { data: kl } = await sb.from('user_classes')
+            .select('user_id, users!inner(role)')
+            .eq('class_id', kid)
+            .eq('users.role', 'kontaktlaerer')
+          if ((kl?.length || 0) >= 3) {
+            const k = klasser.find(k => k.id === kid)
+            throw new Error(`Klasse ${k?.name || ''} har allerede 3 kontaktlærere`)
+          }
+        }
+      }
       await sb.from('users').update({
         full_name: fd.get('full_name'),
-        role: fd.get('role'),
+        role: rolle,
+        is_admin_active: erAdmin,
       }).eq('id', user.id)
-      // Update classes
       await sb.from('user_classes').delete().eq('user_id', user.id)
       for (const kid of newKlassIds) {
         await sb.from('user_classes').insert({ user_id: user.id, class_id: kid })
@@ -2064,25 +2416,105 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   const nameWarning = el('small', { class: 'warning-text' }, '⚠️ Navneendring påvirker visning overalt')
   form.appendChild(lagFormRad('Navn', nameInput, nameWarning))
 
-  const roleSel = el('select', { name: 'role', class: 'felt select' })
-  for (const r of ['elev', 'laerer', 'kontaktlaerer', 'admin']) {
-    const opt = el('option', { value: r }, r)
-    if (r === user.role) opt.setAttribute('selected', 'true')
-    roleSel.appendChild(opt)
+  const rolleWrap2 = el('div', { class: 'rolle-gruppe' })
+  for (const [val, label] of [['laerer','Lærer'],['kontaktlaerer','Kontaktlærer']]) {
+    const lbl = el('label', { style: 'display:flex;align-items:center;gap:6px;cursor:pointer' })
+    const rb = el('input', { type: 'radio', name: 'role', value: val, required: 'true' })
+    if ((user.role === val) || (user.role === 'admin' && val === 'laerer')) rb.checked = true
+    lbl.appendChild(rb); lbl.appendChild(document.createTextNode(label))
+    rolleWrap2.appendChild(lbl)
   }
-  form.appendChild(lagFormRad('Rolle', roleSel))
+  form.appendChild(lagFormRad('Rolle', rolleWrap2))
+
+  const adminLbl2 = el('label', { style: 'display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:4px' })
+  const adminCb2 = el('input', { type: 'checkbox', name: 'is_admin' })
+  if (user.is_admin_active) adminCb2.checked = true
+  adminLbl2.appendChild(adminCb2); adminLbl2.appendChild(document.createTextNode('Administrator'))
+  form.appendChild(el('div', { class: 'felt' }, adminLbl2))
 
   const klDiv = el('div', { class: 'class-checkboxes' })
   for (const k of klasser || []) {
-    const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id, id: `rk-${k.id}` })
-    if (tilknyttedeIds.has(k.id)) cb.setAttribute('checked', 'true')
-    klDiv.appendChild(cb)
-    klDiv.appendChild(el('label', { for: `rk-${k.id}` }, k.name))
+    const lbl = el('label')
+    const cb = el('input', { type: 'checkbox', name: 'class_id', value: k.id })
+    if (tilknyttedeIds.has(k.id)) cb.checked = true
+    lbl.appendChild(cb)
+    lbl.appendChild(document.createTextNode(k.name))
+    klDiv.appendChild(lbl)
   }
   form.appendChild(lagFormRad('Klasser', klDiv))
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(form)
+
+  // ── Kontoadministrasjon (e-post + passord) ──
+  box.appendChild(el('div', { class: 'seksjon-tittel' }, 'Kontoadministrasjon'))
+
+  // E-post
+  const epostFeil = el('p', { class: 'feil-tekst skjult' })
+  box.appendChild(epostFeil)
+  const epostInput = el('input', { type: 'email', class: 'felt input', placeholder: 'Laster e-post…', disabled: 'true' })
+  const epostRad = lagFormRad('E-postadresse', epostInput)
+  box.appendChild(epostRad)
+  // Hent nåværende e-post
+  kallAdminUser('get_email', { user_id: user.id })
+    .then(r => { epostInput.value = r.email || ''; epostInput.placeholder = 'din@epost.no'; epostInput.removeAttribute('disabled') })
+    .catch(() => { epostInput.placeholder = 'kunne ikke hente e-post'; epostInput.removeAttribute('disabled') })
+  const endreEpostBtn = el('button', { type: 'button', class: 'btn btn-s', onclick: async () => {
+    epostFeil.classList.add('skjult')
+    const ny = epostInput.value.trim()
+    if (!ny) { epostFeil.textContent = 'Skriv inn en e-postadresse'; epostFeil.classList.remove('skjult'); return }
+    if (!confirm(`Endre e-post til ${ny}? Gammel adresse blir varslet.`)) return
+    try {
+      const r = await medLagreOverlay(() => kallAdminUser('change_email', { user_id: user.id, new_email: ny, redirect_to: window.location.origin + window.location.pathname }))
+      showToast(r.notified ? 'E-post endret. Gammel adresse er varslet.' : 'E-post endret. (Varsel kunne ikke sendes – gi beskjed manuelt.)', 'ok')
+    } catch (err) { epostFeil.textContent = err.message; epostFeil.classList.remove('skjult') }
+  }}, 'Endre e-post')
+  box.appendChild(endreEpostBtn)
+
+  // Passord
+  const pwRad = el('div', { style: 'display:flex; gap:8px; flex-wrap:wrap; margin-top:14px' })
+  pwRad.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => visAdminSettPassord(user) }, 'Sett nytt passord'))
+  pwRad.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: async () => {
+    if (!confirm('Sende resett-e-post til brukeren?')) return
+    try {
+      await medLagreOverlay(() => kallAdminUser('send_reset', { user_id: user.id, redirect_to: window.location.origin + window.location.pathname }))
+      showToast('Resett-e-post sendt', 'ok')
+    } catch (err) { showToast(err.message, 'error') }
+  }}, 'Send resett-e-post'))
+  box.appendChild(pwRad)
+
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
+
+// Admin setter et nytt passord direkte for en bruker (omgår e-postgrense)
+function visAdminSettPassord(user) {
+  const modal = el('div', { class: 'modal-bg' })
+  const box = el('div', { class: 'modal' })
+  box.appendChild(el('h3', {}, `Sett passord – ${user.full_name}`))
+  box.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.85rem;margin:0 0 12px' },
+    'Du setter passordet direkte. Gi det til brukeren på en trygg måte, og be dem bytte det selv etterpå.'))
+  const feil = el('p', { class: 'feil-tekst skjult' })
+  box.appendChild(feil)
+  const form = el('form', { class: 'skjema' })
+  const pw = el('input', { type: 'text', class: 'felt input', placeholder: 'Nytt passord (minst 8 tegn)', minlength: 8, required: 'true' })
+  form.appendChild(pw)
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  bunn.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Sett passord'))
+  form.appendChild(bunn)
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    feil.classList.add('skjult')
+    if (pw.value.length < 8) { feil.textContent = 'Passordet må være minst 8 tegn'; feil.classList.remove('skjult'); return }
+    try {
+      const r = await medLagreOverlay(() => kallAdminUser('set_password', { user_id: user.id, password: pw.value }))
+      modal.remove()
+      showToast(r.notified ? 'Passord satt. Brukeren er varslet.' : 'Passord satt.', 'ok')
+    } catch (err) { feil.textContent = err.message; feil.classList.remove('skjult') }
+  })
   box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
@@ -2147,78 +2579,54 @@ async function visSlettBrukerModal(user, onSave) {
 async function renderSkolerute(container) {
   async function refresh() {
     clearEl(container)
+    const wrap = el('div', { class: 'skjema-smal' })
     const { data: events } = await sb.from('school_calendar').select('*').order('start_date')
-    container.appendChild(el('h3', {}, 'Skolerute'))
+    wrap.appendChild(el('h3', {}, 'Skolerute'))
 
-    const table = el('table', { class: 'admin-table' })
-    const thead = el('thead')
-    thead.appendChild(el('tr', {},
-      el('th', {}, 'Tittel'), el('th', {}, 'Fra'), el('th', {}, 'Til'), el('th', {}, 'Type'), el('th', {})
-    ))
-    table.appendChild(thead)
-    const tbody = el('tbody')
+    // Events list – same admin-rad pattern as rest of admin panel
     for (const e of events || []) {
-      const tr = el('tr', {},
-        el('td', {}, e.title),
-        el('td', {}, formatDatoNO(e.start_date)),
-        el('td', {}, formatDatoNO(e.end_date)),
-        el('td', {}, e.type || ''),
-        el('td', {},
-          el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
-            await medLagreOverlay(() => sb.from('school_calendar').delete().eq('id', e.id))
-            refresh()
-          }}, '🗑️')
-        )
-      )
-      tbody.appendChild(tr)
+      const row = el('div', { class: 'admin-rad' })
+      const info = el('div', { style: 'flex:1; min-width:0' })
+      info.appendChild(el('span', { class: 'tekst', style: 'font-weight:600; margin-right:8px' }, e.title))
+      info.appendChild(el('span', { class: 'tekst-svak', style: 'font-size:.85rem; white-space:nowrap' },
+        `${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)}`))
+      row.appendChild(info)
+      row.appendChild(el('span', { class: 'div-badge' }, e.type || ''))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+        await medLagreOverlay(() => sb.from('school_calendar').delete().eq('id', e.id))
+        refresh()
+      }}, '🗑️'))
+      wrap.appendChild(row)
     }
-    table.appendChild(tbody)
-    container.appendChild(table)
 
-    // Add form
-    container.appendChild(el('h4', {}, 'Legg til'))
-    const form = el('form', { class: 'skjema', onsubmit: async (ev) => {
-      ev.preventDefault()
-      const fd = new FormData(form)
-      await medLagreOverlay(async () => {
-        const { error } = await sb.from('school_calendar').insert({
-          school_id: APP.school.id,
-          title: fd.get('title'),
-          start_date: fd.get('start_date'),
-          end_date: fd.get('end_date'),
-          type: fd.get('type'),
-        })
-        if (error) throw error
-      })
-      refresh()
-    }})
-    form.appendChild(lagFormRad('Tittel', el('input', { name: 'title', type: 'text', class: 'felt input', required: 'true' })))
-    form.appendChild(lagFormRad('Fra', el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })))
-    form.appendChild(lagFormRad('Til', el('input', { name: 'end_date', type: 'date', class: 'felt input', required: 'true' })))
-    const typeSel = el('select', { name: 'type', class: 'felt select' })
-    for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet']) {
-      typeSel.appendChild(el('option', { value: t }, t))
+    wrap.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:14px', onclick: () => visNySkolerute(refresh) }, '+ Legg til'))
+
+    // AI import – hidden by default, tip shown when calendar is empty
+    const aiWrap = el('div', { class: 'ai-import-seksjon' })
+    if (!(events && events.length)) {
+      const tip = el('p', { class: 'ai-tip' },
+        '💡 Ingen hendelser ennå. Har du skoleruten som tekst? Lim den inn og la AI legge det inn for deg.')
+      aiWrap.appendChild(tip)
     }
-    form.appendChild(lagFormRad('Type', typeSel))
-    form.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Legg til'))
-    container.appendChild(form)
-
-    // AI import
-    container.appendChild(el('h4', {}, 'AI-import'))
-    const aiText = el('textarea', { class: 'felt textarea', placeholder: 'Lim inn skolerute som tekst…' })
-    container.appendChild(aiText)
-    container.appendChild(el('button', { class: 'btn btn-s', onclick: async () => {
+    const aiToggleBtn = el('button', { type: 'button', class: 'btn btn-s', onclick: () => {
+      aiInnhold.classList.toggle('skjult')
+      aiToggleBtn.textContent = aiInnhold.classList.contains('skjult') ? '📋 Importer med AI' : '▲ Skjul AI-import'
+    }}, '📋 Importer med AI')
+    const aiInnhold = el('div', { class: 'skjult' })
+    const aiText = el('textarea', { class: 'felt textarea ai-tekstfelt', placeholder: 'Lim inn skoleruten som tekst (f.eks. fra PDF eller e-post)…', rows: 8 })
+    aiInnhold.appendChild(aiText)
+    aiInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-p', onclick: async () => {
       if (!aiText.value.trim()) return
       try {
         const { data, error } = await sb.functions.invoke('ai-parse-skolerute', {
           body: { text: aiText.value, school_id: APP.school.id }
         })
         if (error) throw error
-        const events = data.events || []
-        if (!events.length) { showToast('Ingen hendelser funnet', 'info'); return }
-        if (!confirm(`Importere ${events.length} hendelse(r)?`)) return
+        const evs = data.events || []
+        if (!evs.length) { showToast('Ingen hendelser funnet', 'info'); return }
+        if (!confirm(`Importere ${evs.length} hendelse(r)?`)) return
         await medLagreOverlay(async () => {
-          for (const e of events) {
+          for (const e of evs) {
             await sb.from('school_calendar').insert({ ...e, school_id: APP.school.id })
           }
         })
@@ -2227,8 +2635,62 @@ async function renderSkolerute(container) {
         showToast(err.message, 'error')
       }
     }}, 'Analyser med AI'))
+    aiWrap.appendChild(aiToggleBtn)
+    aiWrap.appendChild(aiInnhold)
+    wrap.appendChild(aiWrap)
+    container.appendChild(wrap)
   }
   await refresh()
+}
+
+function visNySkolerute(onSave) {
+  const modal = el('div', { class: 'modal-bg' })
+  const box   = el('div', { class: 'modal' })
+  box.appendChild(el('h3', {}, 'Legg til hendelse'))
+
+  const form = el('form', { class: 'skjema', onsubmit: async (ev) => {
+    ev.preventDefault()
+    const fd = new FormData(form)
+    await medLagreOverlay(async () => {
+      const { error } = await sb.from('school_calendar').insert({
+        school_id: APP.school.id,
+        title: fd.get('title'),
+        start_date: fd.get('start_date'),
+        end_date: fd.get('end_date'),
+        type: fd.get('type'),
+      })
+      if (error) throw error
+    })
+    modal.remove()
+    if (onSave) onSave()
+  }})
+
+  form.appendChild(lagFormRad('Tittel',
+    el('input', { name: 'title', type: 'text', class: 'felt input', required: 'true', maxlength: 30 })))
+
+  const fraIn = el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })
+  const tilIn = el('input', { name: 'end_date',   type: 'date', class: 'felt input', required: 'true' })
+  const datoRad = el('div', { class: 'uke-rad' })
+  const fraGrp  = el('div', { class: 'uke-grp dato-grp' })
+  fraGrp.appendChild(el('label', {}, 'Fra')); fraGrp.appendChild(fraIn)
+  const tilGrp  = el('div', { class: 'uke-grp dato-grp' })
+  tilGrp.appendChild(el('label', {}, 'Til')); tilGrp.appendChild(tilIn)
+  datoRad.appendChild(fraGrp); datoRad.appendChild(tilGrp)
+  form.appendChild(lagFormRad('Dato', datoRad))
+
+  const typeSel = el('select', { name: 'type', class: 'felt select' })
+  for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
+    typeSel.appendChild(el('option', { value: t }, t))
+  form.appendChild(lagFormRad('Type', typeSel))
+
+  const rad = el('div', { class: 'modal-bunn' })
+  rad.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  rad.appendChild(el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'))
+  form.appendChild(rad)
+  box.appendChild(form)
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
 async function renderFaktaTab(container) {
@@ -2237,35 +2699,110 @@ async function renderFaktaTab(container) {
     const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
     APP.facts = facts || []
 
-    container.appendChild(el('h3', {}, 'Skolefakta (vises i lagre-overlay)'))
+    const wrap = el('div', { class: 'skjema-smal' })
+    const antall = facts?.length || 0
+    wrap.appendChild(el('h3', {}, `Funfacts (${antall}/100)`))
+    wrap.appendChild(el('p', { class: 'tekst-svak', style: 'margin:4px 0 14px; font-size:.9rem' },
+      'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe.'))
+
+    // Knapper øverst
+    const knappeRad = el('div', { style: 'display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap' })
+    knappeRad.appendChild(el('button', { class: 'btn btn-p', onclick: () => visFunfactModal(null, refresh) }, '+ Legg til'))
+    const aiBtn = el('button', { class: 'btn btn-s', onclick: async () => {
+      if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
+      aiBtn.disabled = true; aiBtn.textContent = 'Genererer…'
+      try {
+        const { data, error } = await sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } })
+        if (error) throw new Error(error.message || JSON.stringify(error))
+        const ny = data?.facts || []
+        if (!ny.length) { showToast('Ingen fakta generert', 'info'); return }
+
+        // Respect 100-fact limit
+        const ledigePlasser = Math.max(0, 100 - (facts?.length || 0))
+        if (ledigePlasser === 0) { showToast('Listen er full (maks 100 funfacts). Slett noen først.', 'info'); return }
+        const skalLeggesTil = ny.slice(0, ledigePlasser)
+
+        await medLagreOverlay(async () => {
+          const rows = skalLeggesTil.map(txt => ({ school_id: APP.school.id, fact_text: txt }))
+          const { error: insErr } = await sb.from('school_facts').insert(rows)
+          if (insErr) throw new Error(insErr.message)
+        })
+        showToast(`${skalLeggesTil.length} funfacts lagt til!`, 'ok')
+        refresh()
+      } catch (err) {
+        showToast(err.message, 'error')
+      } finally {
+        aiBtn.disabled = false; aiBtn.textContent = '✨ Generer med AI'
+      }
+    }}, '✨ Generer med AI')
+    knappeRad.appendChild(aiBtn)
+    wrap.appendChild(knappeRad)
+
+    // Tom-tilstand
+    if (!(facts && facts.length)) {
+      wrap.appendChild(el('p', { class: 'ai-tip' },
+        'Ingen funfacts ennå. Legg til manuelt eller generer med AI.'))
+    }
+
+    // Liste
     for (const f of facts || []) {
       const row = el('div', { class: 'admin-rad' })
-      row.appendChild(el('span', { class: 'tekst' }, truncate(f.fact_text, 80)))
-      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
-        const ny = prompt('Rediger fakta:', f.fact_text)
-        if (!ny) return
-        medLagreOverlay(() => sb.from('school_facts').update({ fact_text: ny }).eq('id', f.id)).then(refresh)
-      }}, '✏️'))
+      row.appendChild(el('span', { style: 'flex:1; font-size:.92rem' }, f.fact_text))
+      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visFunfactModal(f, refresh) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+        if (!confirm('Slette denne funfacten?')) return
         await medLagreOverlay(() => sb.from('school_facts').delete().eq('id', f.id))
         refresh()
       }}, '🗑️'))
-      container.appendChild(row)
+      wrap.appendChild(row)
     }
-
-    const addInput = el('input', { type: 'text', class: 'felt input', placeholder: 'Nytt fakta…' })
-    container.appendChild(el('div', { class: 'admin-rad' },
-      addInput,
-      el('button', { class: 'btn btn-p', onclick: async () => {
-        if (!addInput.value.trim()) return
-        await medLagreOverlay(() => sb.from('school_facts').insert({
-          school_id: APP.school.id, fact_text: addInput.value.trim()
-        }))
-        refresh()
-      }}, '+ Legg til')
-    ))
+    container.appendChild(wrap)
   }
   await refresh()
+}
+
+function visFunfactModal(fact, onSave) {
+  const modal = el('div', { class: 'modal-bg' })
+  const box   = el('div', { class: 'modal' })
+  box.appendChild(el('h3', {}, fact ? 'Rediger funfact' : 'Ny funfact'))
+
+  const textarea = el('textarea', {
+    class: 'felt textarea',
+    maxlength: 150,
+    rows: 3,
+    style: 'width:100%; resize:vertical',
+    placeholder: 'Skriv en kort, morsom setning…',
+  })
+  if (fact) textarea.value = fact.fact_text
+  box.appendChild(textarea)
+
+  const teller = el('div', { style: 'text-align:right; font-size:.8rem; opacity:.6; margin-bottom:12px' },
+    `${(fact?.fact_text || '').length}/150`)
+  textarea.addEventListener('input', () => { teller.textContent = `${textarea.value.length}/150` })
+  box.appendChild(teller)
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  bunn.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+    const tekst = textarea.value.trim()
+    if (!tekst) return
+    await medLagreOverlay(async () => {
+      if (fact) {
+        const { error } = await sb.from('school_facts').update({ fact_text: tekst }).eq('id', fact.id)
+        if (error) throw error
+      } else {
+        const { error } = await sb.from('school_facts').insert({ school_id: APP.school.id, fact_text: tekst })
+        if (error) throw error
+      }
+    })
+    modal.remove()
+    if (onSave) onSave()
+  }}, 'Lagre'))
+  box.appendChild(bunn)
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+  setTimeout(() => textarea.focus(), 50)
 }
 
 // ─────────────────────────────────────────
@@ -2286,24 +2823,7 @@ function lagFormRad(label, ...inputs) {
 // ─────────────────────────────────────────
 
 async function init() {
-  // Load school config
-  const { data: schools } = await sb.from('schools').select('*').limit(1)
-  if (schools && schools.length) {
-    APP.school = schools[0]
-    document.documentElement.dataset.theme = APP.school.color_theme || 'standard'
-    if (APP.school.logo_url) {
-      const logo = document.getElementById('hdr-logo')
-      if (logo) logo.src = APP.school.logo_url
-    }
-  }
-
-  // Load school facts for overlay
-  if (APP.school) {
-    const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
-    APP.facts = facts || []
-  }
-
-  // Restore session
+  // Restore session first (fast, local)
   const { data: { session } } = await sb.auth.getSession()
   if (session) {
     APP.user = session.user
@@ -2315,28 +2835,27 @@ async function init() {
     }
   }
 
-  oppdaterHeader()
-
-  // Listen for auth changes
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_OUT') {
-      APP.user = null
-      APP.profile = null
-      APP.isAdminActive = false
-      oppdaterHeader()
-    } else if (event === 'SIGNED_IN' && session) {
-      APP.user = session.user
-      if (!APP.profile) {
-        try { APP.profile = await fetchProfile(session.user.id) } catch {}
-      }
-      APP.isAdminActive = APP.profile?.is_admin_active || false
-      oppdaterHeader()
-    }
-  })
-
-  // Route
+  // Route immediately — don't wait for school data
   window.addEventListener('hashchange', router)
+  oppdaterHeader()
   await router()
+
+  // Load school config in background — update header/theme only, no re-render
+  const { data: schools } = await sb.from('schools').select('*').limit(1)
+  if (schools && schools.length) {
+    APP.school = schools[0]
+    oppdaterHeader()
+    // Re-render only if we're still on the elev forside (school data changes the welcome content)
+    if (!location.hash || location.hash === '#/' || location.hash === '#') {
+      await router()
+    }
+  }
+
+  // Load school facts for overlay (background)
+  if (APP.school) {
+    const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
+    APP.facts = facts || []
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init)

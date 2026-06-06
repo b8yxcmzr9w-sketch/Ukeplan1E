@@ -39,8 +39,20 @@ Alternativt: Supabase Dashboard → Edge Functions → Secrets → Add new secre
 supabase functions deploy ical               --project-ref DIN_PROJECT_REF
 supabase functions deploy ai-parse-sessions  --project-ref DIN_PROJECT_REF
 supabase functions deploy ai-parse-skolerute --project-ref DIN_PROJECT_REF
+supabase functions deploy generate-facts     --project-ref DIN_PROJECT_REF
+supabase functions deploy create-user        --project-ref DIN_PROJECT_REF
+supabase functions deploy admin-user         --project-ref DIN_PROJECT_REF
 supabase functions deploy cleanup            --project-ref DIN_PROJECT_REF
 ```
+
+> **Varsel-e-poster (valgfritt):** `admin-user` kan varsle brukere når admin
+> setter passord eller endrer e-post. Dette krever en Resend-konto:
+> ```bash
+> supabase secrets set RESEND_API_KEY=re_... --project-ref DIN_PROJECT_REF
+> supabase secrets set RESEND_FROM="Ukeplan <noreply@dittdomene.no>" --project-ref DIN_PROJECT_REF
+> ```
+> Uten disse fungerer endringene fortsatt, men varsel sendes ikke (admin får
+> beskjed om å varsle brukeren manuelt).
 
 ### 6. Oppdater app.js
 Åpne `v4/app.js` og endre de to øverste linjene:
@@ -55,7 +67,29 @@ const SUPABASE_ANON_KEY = 'din_anon_key_her'
    (eller flytt innholdet i `v4/` til rot)
 3. Nettsiden er tilgjengelig på `https://BRUKERNAVN.github.io/REPO/`
 
-### 8. Opprett første admin-bruker
+### 8. Konfigurer invitasjons-URL i Supabase
+Når admin inviterer nye brukere sendes en e-post med en lenke. Lenken må peke til riktig nettadresse.
+
+1. Gå til Supabase Dashboard → **Authentication → URL Configuration**
+2. Sett **Site URL** til nettadressen der appen kjører, f.eks.:
+   ```
+   https://ukeplan1e.ganddal.net/v4
+   ```
+3. Legg til samme adresse under **Redirect URLs**
+
+> Hvis adressen endres (nytt domene, ny mappe), må dette oppdateres her.
+
+### 8b. Tilpass e-postmaler (anbefalt)
+Standard Supabase-maler er på engelsk og lite informative. Bytt dem ut med de norske:
+
+1. Gå til Supabase Dashboard → **Authentication → Emails**
+2. Velg **«Invite user»** → lim inn innholdet fra `supabase/templates/invite.html`
+3. Velg **«Reset password»** → lim inn innholdet fra `supabase/templates/recovery.html`
+
+Invitasjonsmalen bruker metadata (navn, skole, rolle) som sendes av `create-user`-funksjonen,
+og vises via `{{ .Data.full_name }}`, `{{ .Data.school_name }}` og `{{ .Data.rolle }}`.
+
+### 9. Opprett første admin-bruker
 1. Supabase Dashboard → Authentication → Users → Add user
    - Fyll inn e-post og passord
 2. Kjør i SQL Editor:
@@ -79,8 +113,10 @@ values (
 ## Elev-URL
 Del denne lenken med elevene (erstatt `1E` med klassenavnet):
 ```
-https://DIN_SIDE.github.io/?klasse=1E
+https://DIN_SIDE.github.io/#/klasse/1E
 ```
+Lærere og admin kan også kopiere lenken eller vise QR-kode direkte i appen
+(Min klasse → «Del elevlenke», eller Admin → Klasser → «Kopier elevlenke»).
 
 ---
 
@@ -97,10 +133,16 @@ v4/
     │   ├── 001_initial_schema.sql
     │   ├── 002_rls.sql
     │   └── 003_cleanup_cron.sql
+    ├── templates/
+    │   ├── invite.html          Invitasjons-e-post (norsk)
+    │   └── recovery.html        Tilbakestill passord-e-post (norsk)
     └── functions/
         ├── ical/index.ts
         ├── ai-parse-sessions/index.ts
         ├── ai-parse-skolerute/index.ts
+        ├── generate-facts/index.ts
+        ├── create-user/index.ts
+        ├── admin-user/index.ts
         └── cleanup/index.ts
 ```
 

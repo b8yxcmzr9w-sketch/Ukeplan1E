@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ukeplan</title>
+<title>Ukeplan1E</title>
+<link rel="icon" id="favicon" href="https://uno.ganddal.net/favicon.ico">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,16 +24,17 @@
 
 <!-- ── Header ───────────────────────────────────────────────────── -->
 <header id="app-header">
-  <img id="hdr-logo" src="" alt="Logo" class="skjult">
-  <div>
-    <div class="skole-navn" id="hdr-skolenavn">Ukeplan</div>
-    <div class="skole-klasse skjult" id="hdr-klasse"></div>
-  </div>
+  <a href="#/" id="hdr-home-link" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit">
+    <img id="hdr-logo" src="" alt="Logo" class="skjult">
+    <div>
+      <div class="skole-navn" id="hdr-skolenavn">Ukeplan1E</div>
+      <div class="skole-klasse skjult" id="hdr-klasse"></div>
+    </div>
+  </a>
   <span class="spacer"></span>
   <span id="hdr-username" style="font-size:.84rem;opacity:.8"></span>
   <button class="hdr-btn skjult" id="hdr-admin-toggle">Admin-modus</button>
   <button class="hdr-btn skjult" id="hdr-laerer-btn" onclick="location.hash='#/laerer'">Min plan</button>
-  <button class="hdr-btn skjult" id="hdr-admin-btn" onclick="location.hash='#/admin'">Admin</button>
   <button class="hdr-btn skjult" id="hdr-logout-btn">Logg ut</button>
   <button class="hdr-btn" id="hdr-login-btn" onclick="location.hash='#/login'">Logg inn</button>
 </header>
