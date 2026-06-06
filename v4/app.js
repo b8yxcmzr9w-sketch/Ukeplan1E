@@ -2871,18 +2871,6 @@ function lagFormRad(label, ...inputs) {
 // ─────────────────────────────────────────
 
 async function init() {
-  // Restore session first (fast, local)
-  const { data: { session } } = await sb.auth.getSession()
-  if (session) {
-    APP.user = session.user
-    try {
-      APP.profile = await fetchProfile(session.user.id)
-      APP.isAdminActive = APP.profile.is_admin_active || false
-    } catch (err) {
-      console.warn('Kunne ikke hente brukerprofil:', err.message)
-    }
-  }
-
   // Lukk hamburger-dropdown ved klikk utenfor (én gang ved oppstart)
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('hdr-dropdown')
@@ -2893,17 +2881,39 @@ async function init() {
     }
   })
 
-  // Route immediately — don't wait for school data
   window.addEventListener('hashchange', router)
+
+  // Sjekk lokal sesjon (rask, ingen nettverkskall)
+  const { data: { session } } = await sb.auth.getSession()
+  if (session) {
+    APP.user = session.user
+  }
+
+  // Vis siden umiddelbart – ikke vent på profil eller skoledata
   oppdaterHeader()
   await router()
 
-  // Load school config in background — update header/theme only, no re-render
+  // Last profil og skoledata i bakgrunnen
+  if (session) {
+    try {
+      APP.profile = await fetchProfile(session.user.id)
+      APP.isAdminActive = APP.profile.is_admin_active || false
+      oppdaterHeader()
+      // Re-render hvis vi er på en side som trenger profil
+      const h = location.hash || '#/'
+      if (h === '#/' || h === '#' || h.startsWith('#/laerer') || h.startsWith('#/admin')) {
+        await router()
+      }
+    } catch (err) {
+      console.warn('Kunne ikke hente brukerprofil:', err.message)
+    }
+  }
+
+  // Last skoledata i bakgrunnen
   const { data: schools } = await sb.from('schools').select('*').limit(1)
   if (schools && schools.length) {
     APP.school = schools[0]
     oppdaterHeader()
-    // Re-render elev forside only if still there AND no class selected
     const h = location.hash
     if (!h || h === '#/' || h === '#') {
       await router()
