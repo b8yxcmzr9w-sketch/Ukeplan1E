@@ -168,32 +168,35 @@ async function medLagreOverlay(asyncFn) {
   const overlay = el('div', { class: 'lagre-overlay' })
   const box = el('div', { class: 'overlay-boks' })
   const spinner = el('div', { class: 'spinner' })
-
-  // Pick random text from facts or funny texts
-  const texts = APP.facts.length
-    ? [...FUNNY_TEXTS, ...APP.facts.map(f => f.fact_text)]
-    : FUNNY_TEXTS
-  const msg = texts[Math.floor(Math.random() * texts.length)]
-
-  const msgEl = el('p', { class: 'overlay-tekst' }, msg)
+  const msgEl = el('p', { class: 'overlay-tekst', style: 'visibility:hidden' }, '…')
   box.appendChild(spinner)
   box.appendChild(msgEl)
   overlay.appendChild(box)
   document.body.appendChild(overlay)
 
+  // Vis morsomt sitat etter 3 sekunder
+  const sitatTimer = setTimeout(() => {
+    const texts = APP.facts.length
+      ? [...FUNNY_TEXTS, ...APP.facts.map(f => f.fact_text)]
+      : FUNNY_TEXTS
+    msgEl.textContent = texts[Math.floor(Math.random() * texts.length)]
+    msgEl.style.visibility = 'visible'
+  }, 3000)
+
   try {
     const result = await asyncFn()
+    clearTimeout(sitatTimer)
     clearEl(box)
     box.appendChild(el('div', { class: 'overlay-ok' }, '✓'))
     box.appendChild(el('p', {}, 'Lagret!'))
-    await new Promise(r => setTimeout(r, 1500))
+    await new Promise(r => setTimeout(r, 1200))
     overlay.remove()
     return result
   } catch (err) {
+    clearTimeout(sitatTimer)
     clearEl(box)
     box.appendChild(el('p', { class: 'feil-tekst' }, `Feil: ${err.message}`))
-    const retryBtn = el('button', { class: 'btn btn-s', onclick: () => overlay.remove() }, 'Lukk')
-    box.appendChild(retryBtn)
+    box.appendChild(el('button', { class: 'btn btn-s', onclick: () => overlay.remove() }, 'Lukk'))
     throw err
   }
 }
