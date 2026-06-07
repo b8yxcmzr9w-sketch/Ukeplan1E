@@ -15,6 +15,7 @@ window.APP = {
   realtimeChannel: null,
   isAdminActive: false,
   renderToken: 0,
+  klasseVelger: null,    // { klasser, aktivKlasse, onChange } – satt av renderMinKlasseTab
 }
 
 // Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
@@ -429,14 +430,35 @@ function oppdaterHeader() {
   const logo = document.getElementById('hdr-logo')
   if (skolenavn) skolenavn.textContent = APP.school ? APP.school.name : 'Ukeplan1e'
 
-  // Valgt klasse i header (informativ)
+  // Valgt klasse i header – select (lærervisning) eller statisk tekst (elevvisning)
   const klasseEl = document.getElementById('hdr-klasse')
   if (klasseEl) {
-    if (APP.currentKlasse) {
+    clearEl(klasseEl)
+    if (APP.klasseVelger && APP.klasseVelger.klasser.length > 0) {
+      klasseEl.classList.remove('skjult')
+      if (APP.klasseVelger.klasser.length === 1) {
+        klasseEl.textContent = APP.klasseVelger.aktivKlasse?.name || ''
+      } else {
+        const sel = document.createElement('select')
+        sel.className = 'hdr-klasse-sel'
+        sel.title = 'Velg klasse'
+        for (const k of APP.klasseVelger.klasser) {
+          const opt = document.createElement('option')
+          opt.value = k.id
+          opt.textContent = k.name
+          if (APP.klasseVelger.aktivKlasse?.id === k.id) opt.selected = true
+          sel.appendChild(opt)
+        }
+        sel.addEventListener('change', (e) => {
+          const k = APP.klasseVelger.klasser.find(k => k.id === e.target.value)
+          if (k) { APP.klasseVelger.aktivKlasse = k; APP.klasseVelger.onChange(k) }
+        })
+        klasseEl.appendChild(sel)
+      }
+    } else if (APP.currentKlasse) {
       klasseEl.textContent = APP.currentKlasse
       klasseEl.classList.remove('skjult')
     } else {
-      klasseEl.textContent = ''
       klasseEl.classList.add('skjult')
     }
   }
@@ -618,6 +640,7 @@ async function renderElevView(klasseNavn) {
   const main = document.getElementById('app-main')
   clearEl(main)
   APP.currentView = 'elev'
+  APP.klasseVelger = null
 
   let klasse = null
   let alleKlasser = []
@@ -855,12 +878,19 @@ function renderSessionCard(s, showActions, actions = {}) {
   }
 
   if (showActions) {
-    const actionRow = el('div', { class: 'okt-handlinger' })
+    const skjulHandlinger = localStorage.getItem('ukeplan_skjul_handlinger') === '1'
+    const actionRow = el('div', { class: 'okt-handlinger' + (skjulHandlinger ? ' skjult' : '') })
     if (actions.edit) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger økt', onclick: actions.edit }, '✏️'))
     if (actions.copy) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Kopier økt', onclick: actions.copy }, '📋'))
     if (actions.del) actionRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett økt', onclick: actions.del }, '🗑️'))
     if (actions.transfer) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Overfør til annen klasse', onclick: actions.transfer }, '↗️'))
     card.appendChild(actionRow)
+    if (skjulHandlinger) {
+      card.addEventListener('contextmenu', (e) => {
+        e.preventDefault()
+        actionRow.classList.toggle('skjult')
+      })
+    }
   }
 
   return card
@@ -924,6 +954,7 @@ async function renderLaererView() {
     history.replaceState(null, '', `#/laerer/${slug}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
+    if (slug !== 'klasse') { APP.klasseVelger = null; oppdaterHeader() }
     if (slug === 'klasse') renderMinKlasseTab(tabContent)
     else if (slug === 'alle') renderAlleOkterTab(tabContent)
     else if (slug === 'sok') renderSokTab(tabContent)
@@ -958,8 +989,20 @@ async function renderInnstillingerTab(container) {
   info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:4px' }, rolleNavn[APP.profile?.role] || APP.profile?.role || ''))
   wrap.appendChild(info)
 
+  // Visningsvalg
+  wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'Visning'))
+  const skjulHandlingerLabel = el('label', { class: 'toggle-rad', style: 'display:flex;align-items:center;gap:10px;cursor:pointer' })
+  const skjulHandlingerCb = el('input', { type: 'checkbox' })
+  skjulHandlingerCb.checked = localStorage.getItem('ukeplan_skjul_handlinger') === '1'
+  skjulHandlingerCb.addEventListener('change', () => {
+    localStorage.setItem('ukeplan_skjul_handlinger', skjulHandlingerCb.checked ? '1' : '0')
+  })
+  skjulHandlingerLabel.appendChild(skjulHandlingerCb)
+  skjulHandlingerLabel.appendChild(document.createTextNode('Skjul handlingsknapper (✏️ 📋 🗑️ ↗️) på økt-kort – høyreklikk på økt for å vise dem'))
+  wrap.appendChild(skjulHandlingerLabel)
+
   // Bytt passord
-  wrap.appendChild(el('div', { class: 'seksjon-tittel' }, 'Passord'))
+  wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'Passord'))
   wrap.appendChild(el('button', { class: 'btn btn-p', title: 'Endre ditt innloggingspassord', onclick: () => visSettPassordModal({ tittel: 'Bytt passord' }) }, 'Bytt passord'))
 
   // Bytt e-post
@@ -993,11 +1036,17 @@ async function renderInnstillingerTab(container) {
 }
 
 async function renderMinKlasseTab(container) {
-  // Class selector
-  const { data: mine } = await sb.from('user_classes')
-    .select('classes(*)')
-    .eq('user_id', APP.profile.id)
-  const klasser = (mine || []).map(r => r.classes).filter(Boolean)
+  // Hent klasser: admin ser alle, andre kun sine tilknyttede klasser
+  let klasser
+  if (APP.isAdminActive) {
+    const { data } = await sb.from('classes').select('*').eq('school_id', APP.school.id).order('name')
+    klasser = data || []
+  } else {
+    const { data: mine } = await sb.from('user_classes')
+      .select('classes(*)')
+      .eq('user_id', APP.profile.id)
+    klasser = (mine || []).map(r => r.classes).filter(Boolean)
+  }
 
   if (!klasser.length) {
     container.appendChild(el('p', {}, 'Du er ikke tilknyttet noen klasser.'))
@@ -1011,17 +1060,11 @@ async function renderMinKlasseTab(container) {
   if (currentWeek < schoolStart) currentWeek = schoolStart
   if (currentWeek > schoolEnd) currentWeek = schoolEnd
 
+  // Klassevelger i header
+  APP.klasseVelger = { klasser, aktivKlasse, onChange: (k) => { aktivKlasse = k; APP.klasseVelger.aktivKlasse = k; renderUke() } }
+  oppdaterHeader()
+
   const topRow = el('div', { class: 'laerer-top' })
-  const klasseSel = el('select', { class: 'felt select', onchange: (e) => {
-    aktivKlasse = klasser.find(k => k.id === e.target.value)
-    renderUke()
-  }})
-  for (const k of klasser) {
-    const opt = el('option', { value: k.id }, k.name)
-    klasseSel.appendChild(opt)
-  }
-  topRow.appendChild(el('label', {}, 'Klasse: '))
-  topRow.appendChild(klasseSel)
   topRow.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Lim inn ukeplan som tekst og la AI tolke den', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier lenke til elevvisning', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
@@ -1983,6 +2026,7 @@ async function renderAdminPanel() {
   clearEl(main)
   APP.currentView = 'admin'
   APP.currentKlasse = null
+  APP.klasseVelger = null
   oppdaterHeader()
 
   const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Funfacts']
