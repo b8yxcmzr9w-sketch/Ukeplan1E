@@ -680,11 +680,15 @@ async function renderElevView(klasseNavn) {
     if (!weekContainer) main.appendChild(wc)
 
     // Fetch sessions
-    const { data: sessions } = await sb.from('sessions')
-      .select('*, subjects(name, color_hex, short_code), users(name), subject_divisions(name, type)')
+    const { data: sessions, error: sessionsError } = await sb.from('sessions')
+      .select('*, subjects(name, color_hex, short_code), users(full_name), subject_divisions(name, division_type)')
       .eq('class_id', klasse.id)
       .eq('week_nr', weekNr)
       .order('day_of_week')
+    if (sessionsError) {
+      console.error('Feil ved henting av økter:', sessionsError)
+      showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
+    }
 
     // Fetch calendar events for the week
     const weekStartDate = isoWeekToDate(new Date().getFullYear(), weekNr, 1)
@@ -1069,10 +1073,14 @@ async function renderMinKlasseTab(container) {
     navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visICalModal(null) }, '📅'))
     weekArea.appendChild(navRow)
 
-    const { data: sessions } = await sb.from('sessions')
-      .select('*, subjects(name, color_hex, short_code), users(name), subject_divisions(name, type)')
+    const { data: sessions, error: sessionsError } = await sb.from('sessions')
+      .select('*, subjects(name, color_hex, short_code), users(full_name), subject_divisions(name, division_type)')
       .eq('class_id', aktivKlasse.id)
       .eq('week_nr', currentWeek)
+    if (sessionsError) {
+      console.error('Feil ved henting av økter:', sessionsError)
+      showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
+    }
 
     // Bulk edit bar
     const bulkBar = el('div', { class: 'bulk-bar', style: 'display:none' })
@@ -1196,7 +1204,7 @@ async function renderSokTab(container) {
     if (!q) return
 
     const { data } = await sb.from('sessions')
-      .select('*, subjects(name, color_hex), users(name), classes(name)')
+      .select('*, subjects(name, color_hex), users(full_name), classes(name)')
       .or(`activity.ilike.%${q}%,meeting_point.ilike.%${q}%,info.ilike.%${q}%`)
       .eq('teacher_id', APP.profile.id)
 
