@@ -138,6 +138,17 @@ function erNesteAarVinduApent() {
   return (now.getMonth() + 1) > 5 || ((now.getMonth() + 1) === 5 && now.getDate() >= 17)
 }
 
+// Kalenderår for en gitt uke innenfor et skoleår.
+// Uker f.o.m. oppstartsuka hører til første årstall, resten til andre.
+// Eksempel: '25/26', uke 40, startUke 33 → 2025; uke 10 → 2026.
+// Speiler SQL-funksjonen skoleaar_kalenderaar() i migrering 004.
+function skoleaarKalenderaar(schoolYear, weekNr, startWeek) {
+  if (!schoolYear || !/^\d{2}\/\d{2}$/.test(schoolYear)) return new Date().getFullYear()
+  const foersteAar = 2000 + parseInt(schoolYear.split('/')[0], 10)
+  const andreAar   = 2000 + parseInt(schoolYear.split('/')[1], 10)
+  return weekNr >= (startWeek || 1) ? foersteAar : andreAar
+}
+
 function truncate(s, n = 60) {
   if (!s) return ''
   return s.length > n ? s.slice(0, n) + '…' : s
@@ -743,9 +754,10 @@ async function renderElevView(klasseNavn) {
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
     }
 
-    // Fetch calendar events for the week
-    const weekStartDate = isoWeekToDate(new Date().getFullYear(), weekNr, 1)
-    const weekEndDate = isoWeekToDate(new Date().getFullYear(), weekNr, 5)
+    // Fetch calendar events for the week (kalenderår utledet fra skoleåret)
+    const visKalenderaar = skoleaarKalenderaar(aktivtSkolear, weekNr, APP.school?.school_year_start_week)
+    const weekStartDate = isoWeekToDate(visKalenderaar, weekNr, 1)
+    const weekEndDate = isoWeekToDate(visKalenderaar, weekNr, 5)
     const wStart = weekStartDate.toISOString().slice(0, 10)
     const wEnd = weekEndDate.toISOString().slice(0, 10)
 
@@ -848,7 +860,7 @@ async function renderElevView(klasseNavn) {
     const grid = el('div', { class: 'uke-grid' })
     for (let dag = 1; dag <= 5; dag++) {
       const dayCol = el('div', { class: 'dag-kol' })
-      const dateForDay = isoWeekToDate(new Date().getFullYear(), weekNr, dag)
+      const dateForDay = isoWeekToDate(visKalenderaar, weekNr, dag)
       const dayHeader = el('div', { class: 'dag-tittel' })
       dayHeader.appendChild(document.createTextNode(dagNavn(dag)))
       dayHeader.appendChild(el('span', { class: 'dag-dato' }, ` ${formatDatoNO(dateForDay.toISOString().slice(0, 10))}`))
