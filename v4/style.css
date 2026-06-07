@@ -467,12 +467,11 @@ tr:hover td { background: var(--primær-svak); }
    ════════════════════════════════════════════ */
 @media (max-width: 700px) {
   .uke-grid {
-    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    display: flex; flex-direction: column;
     padding: 12px 12px 20px; gap: 10px;
   }
   .dag-kol {
-    min-width: 260px; max-width: 80vw;
-    scroll-snap-align: start; flex-shrink: 0;
+    min-width: 0; max-width: 100%; width: 100%;
   }
   .filter-bar { padding: 8px 12px; }
   .nav-bar    { padding: 10px 12px 0; }
