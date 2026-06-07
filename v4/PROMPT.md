@@ -2,7 +2,7 @@
 
 ## Prosjektbeskrivelse
 
-Tjenesten heter **Ukeplan1e** (uttales «ukeplanene» – én tjeneste for mange ukeplaner).
+Tjenesten heter **Ukeplan1e** (uttales «ukeplanene» – én tjeneste for mange ukeplaner, med liten e). Brukes av **Øksnevad vgs**.
 
 Bygg en nettbasert ukeplantjeneste for én videregående skole. Elevene kan se ukeplanen for sin klasse via en dedikert URL. Lærere og kontaktlærere administrerer egne og klassens økter. Admin styrer hele oppsettet.
 
@@ -28,10 +28,17 @@ users            – id (auth.uid), school_id, full_name, role(enum: laerer|kont
 user_classes     – user_id, class_id (hvilke klasser læreren er tilknyttet)
 sessions         – id, school_id, class_id, subject_id, division_id(nullable), week_nr, day_of_week(1-5), teacher_id, activity, meeting_point, info, created_by, deleted_at, deleted_by, last_modified_at, last_modified_by, version(int for optimistic locking)
 multi_day_events – id, school_id, class_id(nullable – null=alle klasser), title, description, start_date, end_date, created_by, deleted_at
-school_calendar  – id, school_id, title, start_date, end_date, type(enum: ferie|fridag|annet)
+school_calendar  – id, school_id, title, start_date, end_date, type(enum: ferie|helligdag|planleggingsdag|annet)
 audit_log        – id, table_name, record_id, action, changed_by, changed_at, old_data(jsonb), new_data(jsonb)
 school_facts     – id, school_id, fact_text (morsomme/interessante fakta om skolen for lagre-overlay)
+pending_transfers– varsler om overføringer mellom lærere
 ```
+
+**Viktig om kolonnenavn:**
+- `users`-tabellen bruker `full_name` (ikke `name`)
+- `subject_divisions`-tabellen bruker `division_type` (ikke `type`)
+- Supabase PostgREST: ved embedding via FK, bruk `users!teacher_id(full_name)` for å unngå tvetydighet (sessions har 4 FK-er til users)
+- Feil kolonnenavn gir 400 for hele spørringen → tom side uten feilmelding
 
 **Row Level Security:**
 - Elever (uautorisert): SELECT på sessions, multi_day_events, school_calendar, subjects, subject_divisions, classes, schools for sin skole
@@ -39,264 +46,241 @@ school_facts     – id, school_id, fact_text (morsomme/interessante fakta om sk
 - Kontaktlærer: som lærer + INSERT/UPDATE/DELETE alle sessions i egne klasser
 - Admin (når `is_admin_active=true`): full tilgang til alt for sin skole
 - Ingen kryssdata mellom skoler
-- RLS-policyer skal bruke inline EXISTS-subspørringer (ikke security definer-funksjoner) for å sikre korrekt evaluering
+- RLS-policyer skal bruke inline EXISTS-subspørringer (ikke security definer-funksjoner)
 
 ---
 
 ## Roller og tilganger
 
 ### Elev (ikke innlogget)
-Tilgang via direkte URL: `/#/klasse/1E` (admin kopierer lenken fra Klasser-fanen og sender til elevene)
+Tilgang via direkte URL: `/#/klasse/1D` (admin kopierer lenken fra Klasser-fanen og sender til elevene)
 
 **Velkomstside (ingen klasse i URL):** Viser skolens logo, navn, en kort innbydende tekst og alle klasser som store klikkbare knapper. Hvis ingen klasser er opprettet ennå: «Lærerne er i gang med å sette opp ukeplanen – kom tilbake snart!»
 
-- **Ukevisning:** 5 dager × **minst** 3 synlige økter per dag (scroll inni dagkolonnen ved flere) i responsivt rutenett. Fungerer på laptop og mobil.
-- **Navigasjon:** Pil frem/tilbake per uke. Direktehopp til ukenummer. Kun uker innen skoleårets definerte start/slutt.
-- **Skolerute:** Vises i ukeplanen – ferieperioder og fridager vises som banner over ukeplanen.
+- **Ukevisning:** 5 dager stablet vertikalt på mobil, 5-kolonner på desktop. Minst 3 synlige økter per dag (scroll inni dagkolonnen ved flere).
+- **Navigasjon:**
+  - Pil frem/tilbake per uke (← Forrige uke / Neste uke →)
+  - Ukenummer kun i input-feltet (ingen «Uke X»-label ved siden av)
+  - **«Nå»-knapp:** hopper til gjeldende uke. Passiv (disabled) når du allerede er på den. Logikk: fredag etter kl. 18 og lørdag/søndag viser *neste* uke som «Nå».
+  - Kun uker innen skoleårets definerte start/slutt
+- **Dag-tittel:** Viser dagsnavn (MANDAG etc.) + dato uten årstall (`dd.mm`) i et diskret, lysere span (`.dag-dato`)
+- **Skolenavn og klasse i header:** Vises informativt i header. `APP.currentKlasse` settes i `renderElevView`, nullstilles i lærer-/admin-visning.
+- **Skolerute:** Ferieperioder, helligdager og planleggingsdager vises som banner over ukeplanen.
 - **Flerdagshendelser:** Vises øverst i uken de gjelder.
-- **Sortering:** Økter sorteres alfabetisk etter fagnavn innen hver dag.
-- **Filter:** Velg parti ELLER gruppe (avhengig av hva som er definert for klassen) – kun ett aktivt filter av gangen. Alle valg fra nedtrekkslister, ingen fritekst.
-- **Utskrift:** Liggende A4 med overskrift: skolenavn, klasse, uke [nr]. Optimalisert med `@media print`.
-- **iCal-abonnement:** Generer abonnements-URL basert på valgt klasse + evt. filter. Edge Function returnerer iCal-feed. Instruksjoner for Google Kalender, Apple Kalender og Outlook vises.
+- **Sortering:** Alfabetisk etter fagnavn innen hver dag.
+- **Filter:** Velg parti ELLER gruppe – kun ett aktivt filter av gangen.
+- **Utskrift:** Liggende A4. `#utskrift-hode` fylles med «Skolenavn – Klasse – Uke N».
+- **iCal-abonnement:** Kalendernavn: «Skolenavn – Klasse» (PRODID: `//Ukeplan1e//NO`).
 
 ### Lærer (innlogget)
 
-**Visning:**
-- Klassevis ukeoversikt (velg klasse fra liste over tilknyttede klasser)
-- Egen tverrklassevisning: alle egne økter på tvers av klasser, samme ukenavigasjon
-- Fritekst-søk i alle felt (fag, aktivitet, oppmøtested, info, lærer)
-- «🔗 Del elevlenke»-knapp i «Min klasse»-fanen: åpner modal med QR-kode (via api.qrserver.com) og kopier-knapp for direkte URL til klassen – brukes til å dele lenke på skjerm eller papir
+- Klassevis ukeoversikt + tverrklassevisning av egne økter
+- Fritekst-søk i alle felt
+- «🔗 Del elevlenke»: QR-kode + kopier-knapp
+- Kan kun redigere/slette egne økter; kan kopiere andres
+- AI-innliming, bulkredigering, soft-delete (30 dager)
+- **«Nå»-knapp** i navigering (som elevvisning)
+- Passordbytte og e-postbytte i Innstillinger-fanen
 
-**Redigering:**
-- Kan kun redigere, kopiere eller slette egne økter
-- Kan se andres økter i klassen, men kun kopiere – ikke redigere
-- Kopier økt: oppretter ny økt med samme innhold, tilknyttet innlogget lærer
-- **Overfør økt til annen lærer:** Lærer kan overføre en av sine egne økter til en annen lærer. Den mottakende læreren varsles (varsel i app ved neste innlogging). Overføringen loggføres i audit_log.
-- Kan legge inn egne økter i hvilken som helst klasse (ikke bare tilknyttede)
-- **Ny økt (enkeltvis):** Alle felt velges fra nedtrekkslister/datovelger – ingen fritekst unntatt aktivitet, oppmøtested og info
-- **Ny økt (AI-innliming):** Lim inn tekst → Edge Function sender til Gemini Flash med strukturert prompt → returnerer liste med parsede økter → vis forhåndsvisning med duplikatkontroll (sammenlign mot eksisterende i samme uke/dag/fag/klasse) → advar om konflikter (samme lærer, samme uke/dag) → lærer godkjenner og lagrer
-- **Bulkredigering:** Velg flere egne økter med avkrysningsbokser → endre felles felt (dag, uke, info) for alle valgte
-- **Soft-delete:** Slettede økter mellomlagres 30 dager, kan gjenopprettes
-- **Utskrift:** Skriv ut aktiv visning (klasse eller tverrklasse)
-- **iCal-abonnement:** Abonner på egne økter (alle klasser)
-- **Passordbytte og e-postbytte:** Tilgjengelig i Innstillinger-fanen
-
-**Sanntid / samtidige brukere:**
-Bruk Supabase Realtime for å lytte på endringer i `sessions`-tabellen for aktiv klasse/uke. Ved konflikt (to lærere redigerer samme økt): bruk optimistic locking (`version`-felt). Vis varsel: «Denne økten ble endret av [navn] mens du redigerte. Dine endringer ble ikke lagret – se oppdatert versjon.»
+**Sanntid:** Supabase Realtime for aktiv klasse/uke. Optimistic locking med `version`-felt.
 
 ### Kontaktlærer (innlogget)
 
-Alt som lærer, pluss:
-- Kan redigere alle økter for egne klasser uavhengig av hvem som opprettet dem
-- **Flerdagshendelser:** Opprett/rediger/slett hendelser for egen klasse eller andre klasser. Advar ved overlapping med eksisterende enkeltøkter.
-- **Klassestruktur:** Definer for hver klasse hvilke dager hvert fag fortrinnsvis undervises (standard dager). Definer antall partier/grupper per fag og navngi dem (inntil 20).
-- **Backup:** Last ned komplett backup av klassen som JSON (alle sessions, multi_day_events, school_calendar-rader for klassen, klassestruktur). Last opp backup → vis liste over økter i backup-filen → la kontaktlærer velge hvilke økter som skal importeres → duplikatkontroll → importer valgte.
-- Kan ha inntil 2 kontaktlærere per klasse
+Alt som lærer, pluss: redigere alle økter for egne klasser, flerdagshendelser, klassestruktur, backup (JSON ned/opp).
 
 ### Admin (innlogget, `is_admin_active=true`)
 
-**Rollebytte:** Én toggle-knapp alltid synlig i header for admin-brukere (ingen separat «Admin»-knapp). Tekst tilpasses kontekst:
-- I lærerpanelet: «Aktiver admin-modus»
-- I admin-panelet: «← Til lærerpanel» eller «← Til kontaktlærerpanel» avhengig av brukerens rolle
-- Ingen ny innlogging nødvendig
-
-**Oppstart etter innlogging for admin:**
-- Hvis skolen ikke er satt opp (ingen klasser ELLER ingen fag): åpne admin-panelet direkte
-- Ellers: åpne lærer-/kontaktlærerpanelet (admin-modus deaktivert)
-
-**Skoleinfo:**
-- Navn på skolen (maks 30 tegn med live tegnteller)
-- Logo: last opp bildefil (lagres i Supabase Storage) ELLER skriv inn URL. Logo brukes også som favicon. Hvis ingen logo er satt, brukes `unoicon.png` som standard favicon.
-- Skoleårets start- og sluttuke vises på samme linje med to kompakte tallfelt + datohint under hvert felt (viser mandatodato for valgt ukenummer)
-- **Fargepalett:** Velg mellom tre forhåndsdefinerte temaer – Standard (nåværende grønn), Lys (lys palett med kontrasterende farger) og Mørk (mørk palett). Valget lagres i `schools.color_theme` og lastes automatisk for alle besøkende på skolen.
-
-**Fag:**
-- Legg til/rediger fagnavn og forkortelse. Kortkode genereres automatisk fra fagnavn (kan overstyres).
-- Velg farge fra forhåndsdefinert palett med 12 farger. Neste ledige farge velges automatisk.
-- Definer: har dette faget parti eller gruppe (ikke begge)? Maks 20 inndelinger (støtter tverrfaglige uker).
-- Endre fagnavn: vis advarsel «Dette endrer alle eksisterende økter med dette faget». Endre i alle sessions ved bekreftelse.
-- Slett fag: bruk soft-delete
-
-**Klasser:**
-- Legg til klasser
-- Slett klasse: sterk advarsel + soft-delete (30 dager)
-- Slå sammen to klasser: velg hvilke fag som tas med. Vis konfliktoversikt (overlappende sessions). Admin løser konflikter manuelt. Bruk søppel-funksjon for det som ikke tas med.
-- «Kopier elevlenke»-knapp per klasse: kopierer direkte URL (`#/klasse/[navn]`) til utklippstavlen slik at admin kan sende lenken til elevene
-
-**Brukere:**
-- Legg til ny bruker: e-post, navn, rolle (radioknapper: Lærer / Kontaktlærer) + sjekkboks «Administrator». Brukeren opprettes automatisk via Edge Function `create-user` og mottar en invitasjons-e-post.
-- Rediger bruker: endre navn (advarsel: «Navn endres i alle oppføringer»), rolle (radioknapper), admin-status (sjekkboks), klasser
-- **Kontoadministrasjon** (i rediger-modalen, via Edge Function `admin-user` med service_role):
-  - **Endre e-post:** settes direkte (umiddelbart bekreftet). Gammel adresse varsles om endringen.
-  - **Sett nytt passord:** admin setter passordet direkte (omgår Supabase sin e-postgrense). Vises i klartekst slik at admin kan gi det videre; brukeren bør bytte selv etterpå.
-  - **Send resett-e-post:** sender en vanlig tilbakestillingslenke til brukeren.
-- Slett bruker: kun fremtidige sessions (fra og med i dag) tildeles annen lærer eller slettes. Historiske sessions beholdes med opprinnelig navn.
-- Maks 3 kontaktlærere per klasse – håndheves ved lagring
-- Maks 2 administratorer per skole – håndheves ved lagring
-- En administrator må alltid også ha rollen Lærer eller Kontaktlærer
-- Mobilvennlig layout: rolle-radioknapper stables vertikalt, klasse-avkrysninger i responsivt rutenett (avkrysningsbokser/radioknapper strekkes ikke til full bredde)
-
-**Skolerute:**
-- Eksisterende hendelser vises som `admin-rad`-lister (tittel, datoperiode, type-badge, slett-knapp) – ingen tabell
-- Legg til-skjema bruker `lagFormRad` med label over hvert felt (likt Skoleinfo), Fra/Til på samme linje med `uke-rad`/`uke-grp`-mønsteret (mobilvennlig flex-wrap)
-- AI-import: knapp skjult som standard. Når ingen hendelser er lagt inn vises en oppfordring om å bruke AI. Lim inn tekst → Gemini Flash parser → forhåndsvis → lagre
-
-**Funfacts:**
-- Fane tidligere kalt «Fakta», nå «Funfacts»
-- Pausetekster som vises tilfeldig i lagre-overlaydet for å holde humøret oppe
-- Admin kan legge til/redigere/slette enkeltvis
-- Knapp «✨ Generer med AI» kaller Edge Function `generate-facts` som bruker Gemini til å generere ~40 lokaltilpassede funfacts om Jæren, Øksnevad, naturbruk, vikinger, husdyr m.m.
+- Toggle-knapp i header for rollebytte
+- Åpner admin-panelet direkte ved oppstart hvis skolen ikke er satt opp
+- **Skoleinfo:** Navn (maks 30 tegn), logo (fil eller URL → favicon), skoleårets start/sluttuke, fargetema
+- **Fag:** Legg til/rediger, farge (12 farger), parti/gruppe-inndelinger, soft-delete
+- **Klasser:** Legg til, slett (soft-delete), slå sammen, «Kopier elevlenke»
+- **Brukere:** Legg til via `create-user` (invitasjons-e-post), rediger, slett. Kontoadministrasjon via `admin-user`: `get_email`, `change_email`, `set_password`, `send_reset`. Passord-seksjon i modal er sammenleggbar (▶/▼ toggle).
+- **Skolerute:** Typer: `ferie|helligdag|planleggingsdag|annet`. AI-import via `ai-parse-skolerute` (Gemini Flash, krever CORS).
+- **Funfacts:** Pausetekster i lagre-overlay. «✨ Generer med AI» via `generate-facts`.
 
 ---
 
 ## UX-krav
 
-**Innlogging og utlogging:**
-- Innloggingsskjema sentrert midt på siden i et kort
-- Feil passord/e-post: rød feilmelding direkte i skjemaet (ikke toast)
-- Ved vellykket innlogging: kort toast «Velkommen, [navn]!»
-- «Glemt passord?»-lenke: sender tilbakestillingslenke. Av sikkerhetshensyn avsløres **ikke** om e-posten er registrert – samme nøytrale melding vises alltid: «Hvis [e-post] er registrert, sender vi en e-post med en lenke …»
-- Utlogging (knapp eller token-utløp via `onAuthStateChange SIGNED_OUT`) navigerer alltid til `#/` (forsiden), ikke til `#/login`
-- `#/laerer` og `#/admin` redirecter til `#/` hvis bruker ikke er innlogget
+### Init-rekkefølge (viktig for Safari)
+1. `sb.auth.getSession()` (lokal, ingen nettverkskall)
+2. Sett `APP.user`, kall `oppdaterHeader()`, kall `await router()` → siden vises
+3. I bakgrunnen: hent profil via `fetchProfile()`, hent skoledata
+4. Kall `oppdaterHeader()` på nytt etter bakgrunnsdata
 
-**Passord-recovery og invitasjon:**
-- `onAuthStateChange PASSWORD_RECOVERY`: åpner en tvungen «Velg nytt passord»-modal (kan ikke avbrytes) når brukeren følger en tilbakestillingslenke
-- Invitasjonslenke (`type=invite` i URL): åpner samme tvungne modal med velkomsttekst slik at ny bruker setter passord
-- `visSettPassordModal({ tvungen, tittel, ingress, onFerdig })`: gjenbrukbar modal med passordbekreftelse (min. 8 tegn)
+`document.addEventListener` for hamburger-dropdown legges **kun i `init()`** (ikke i `oppdaterHeader()` som kalles mange ganger).
 
-**Innstillinger (lærer/kontaktlærer):**
-- Egen «Innstillinger»-fane i lærerpanelet (slug `innstillinger`), tilgjengelig for alle innloggede
-- Viser kontoinfo (navn, e-post, rolle)
-- «Bytt passord» åpner `visSettPassordModal`
-- «Endre e-post» via `sb.auth.updateUser({ email })` – krever bekreftelse på både gammel og ny adresse
+### Race condition
+`APP.renderToken` forhindrer stale async-renders:
+```js
+async function renderElevView(klasseNavn) {
+  const myToken = ++APP.renderToken
+  // ... async ...
+  if (myToken !== APP.renderToken) return
+}
+```
 
-**Invitasjons-e-post:**
-- `create-user` sender metadata (full_name, school_name, rolle) og `redirectTo` til `inviteUserByEmail`
-- Norske e-postmaler ligger i `supabase/templates/` (invite.html, recovery.html) og limes inn i Supabase Dashboard → Authentication → Emails
+### Lagre-overlay
+`medLagreOverlay(asyncFn)`:
+- Spinner vises umiddelbart
+- Etter **3 sekunder** vises tilfeldig sitat (FUNNY_TEXTS eller school_facts). Sitatelementet har `visibility:hidden` frem til timeren utløper.
+- `clearTimeout` ved suksess/feil
+- Suksess: ✓ + «Lagret!» i 1,2 sek
 
-**Lagre-knapper:**
-Alle lagre-knapper er passive (deaktivert) inntil brukeren har gjort en endring i skjemaet. Bruker `overvakSkjema(form, lagreKnapp)` som tar snapshot av alle felt ved oppstart og aktiverer knappen ved avvik.
+### Lagre-knapper (passive)
+`overvakSkjema(form, lagreKnapp)`: snapshot av alle felt ved oppstart, aktiverer knappen ved avvik. Brukes i alle 6 skjema-modaler.
 
-**Lagre-overlay:**
-Alle lagre-operasjoner bruker et morsomt overlay-mønster:
-1. Klikk «Lagre» → overlay vises med spinner og én av følgende (tilfeldig):
-   - En kort morsom tekst (f.eks. «Sender tanker til skyene…», «Overtaler databasen…», «Stokker bits…»)
-   - Et tilfeldig skolefakta/-sitat hentet fra `school_facts`-tabellen (hvis admin har lagt inn noen)
-2. Ved suksess: sjekk-ikon + «Lagret!» i 1,5 sek
-3. Ved feil: rød feilmelding med mulighet for retry
-Overlay hindrer dobbeltklikk og utilsiktede hendelser.
+### Dato- og ukevisning
+- `formatDatoNO(dateStr)`: returnerer `dd.mm` uten årstall
+- Dag-tittel: dagsnavn + `.dag-dato`-span (lav opacity, normal vekt)
+- Nav-bar: ukenummer kun i input-feltet
 
-**Modaler:**
-Alle modaler (vinduer) er sentrert midt på skjermen med mørk bakgrunn. Bakdrop-element bruker klassen `modal-bg`, innholdsboks bruker `modal`.
+### Nå-knapp logikk
+```js
+function getCurrentISOWeek() {
+  const now = new Date()
+  if (now.getDay() === 5 && now.getHours() >= 18) return getISOWeek(new Date(now.getTime() + 7*86400000))
+  if (now.getDay() === 6 || now.getDay() === 0) return getISOWeek(new Date(now.getTime() + 7*86400000))
+  return getISOWeek(now)
+}
+```
 
-**Felt i skjema:**
-Alle forhåndsdefinerte verdier (fag, klasse, dag, uke, parti/gruppe, lærer) velges fra nedtrekkslister. Ingen fritekst for strukturerte felt.
+### Scrolling (mobil)
+- `html, body { overflow-x: hidden; max-width: 100%; }` – ingen horisontal scrolling
+- `.side-wrap { overflow-wrap: break-word; word-break: break-word; }` – lange ord brytes
+- Mobil ukevisning: `.uke-grid { display:flex; flex-direction:column; }` – dager stables vertikalt
 
-**Layout:**
-- Innhold på alle sider er innrykket med fleksible marger: `padding: 28px clamp(20px, 5vw, 80px) 60px`
-- Skjemaer (f.eks. Skoleinfo) begrenses til maks 560px bredde på bred skjerm
-- Alle visninger (elev, lærer, kontaktlærer, admin) bruker `side-wrap` som wrapper-klasse for konsistente marger
+### Tooltips
+Alle `<button>`-elementer har `title`-attributt med norsk hjelpetekst (hover). Eksempler:
+- `← Forrige uke` → «Gå til forrige uke»
+- `Nå` → «Gå til gjeldende uke»
+- `✏️` → «Rediger»
+- `🗑️` → «Slett»
+- `📋` → «Kopier økt»
+- `↗️` → «Overfør til annen klasse»
+- `☰` → «Åpne meny»
+- Fane-knapper → «Gå til [fanenavn]»
+- Logg ut → «Logg ut av Ukeplan1e»
 
-**CSS-klasser for ikke-admin-visninger:**
-- `.laerer-top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:4px 0 12px; }` – topprad i lærerpanel
-- `.session-wrapper { display:flex; align-items:flex-start; gap:6px; }` / `.session-cb { margin-top:6px; cursor:pointer; flex-shrink:0; }` – økt med avkrysningsboks
-- `.session-card__meeting`, `.session-card__info`, `.session-card__teacher { font-size:.78rem; color:var(--tekst-svak); margin-top:2px; }` – korttekst for økt
-- `.session-card__class { display:block; font-size:.75rem; font-weight:700; color:var(--primær); margin-bottom:4px; }` – klasse-merke på økt
-- `.search-results { display:flex; flex-direction:column; gap:10px; margin-top:12px; }` – søkeresultat-liste
-- `.mde-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--kant); }` – rad i multi-day-event-liste
-- `.subj-config-box { background:var(--bg-kort); border:1px solid var(--kant); border-radius:var(--radius); padding:12px 14px; margin-bottom:10px; }` – fagkonfigurasjonsboks
-- `.days-row { display:flex; gap:14px; margin:8px 0 4px; flex-wrap:wrap; align-items:center; }` – dagvalg-rad
-- `.div-list / .div-row` – inndelingsliste (partier/grupper) i fagkonfig
-- `.input-sm { width:180px !important; }` – smal input
-- `.backup-list { max-height:300px; overflow-y:auto; border:1px solid var(--kant); ... }` – backup-filvisning
-- `.ai-preview`, `.preview-table`, `.conf--high/medium/low` – AI-forhåndsvisning med konfidensfarger
-- `.class-checkboxes { display:grid; grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:8px 12px; }` – responsivt rutenett for klasse-avkrysninger
-- `.rolle-gruppe { display:flex; flex-direction:column; gap:8px; }` – vertikalt stablede rolle-radioknapper
-- Avkrysningsbokser/radioknapper inne i `.felt` skal **ikke** strekkes til full bredde (`.felt input[type=checkbox]/[type=radio] { width:auto }`)
+### Utskrift og iCal
+- `#utskrift-hode` fylles med «Skolenavn – Klasse – Uke N» i `renderUke()`, vises kun ved print
+- iCal-kalendernavn: `${school.name} – ${klasse}` (PRODID: `//Ukeplan1e//NO`)
 
-**Responsivt design:**
-- **Laptop:** 5-kolonners ukevisning, minst 3 synlige økter per dag (dagkolonnen har fast minimumshøyde og scroller ved overflow)
-- **Mobil:** én kolonne per dag (horisontal scroll mellom dager), kondensert kortvisning
-
-**Fargetemaer:**
-Definer tre komplette CSS-temaer med CSS custom properties (variabler). Tema lastes ved oppstart basert på `schools.color_theme`:
-- `standard` – nåværende grønn palett (`--primær: #2d6a4f` osv.)
-- `lys` – lys, luftig palett med en annen primærfarge (f.eks. blå eller teal)
-- `mork` – mørk palett egnet for lavlysbruk
-
-**Favicon:**
-- Standard favicon: Uno-ikonet (`https://uno.ganddal.net/favicon.ico`) – kun hunden, uten tekst
-- Når skolen har lastet opp logo: favicon oppdateres automatisk til skolelogoen i samme sesjon
+### Layout og spacing
+- Nav-bar: `padding: 4px 20px 0` (lite toppmargin)
+- Side-wrap: `padding: 28px clamp(20px, 5vw, 80px) 60px; max-width: 1200px; margin: 0 auto`
+- Elev-visning: ingen tom `side-wrap` wrapper – `week-container` appendes direkte til `main`
 
 ---
 
 ## Edge Functions (Supabase)
 
-1. **`/ical`** – Generer iCal-feed. Params: `klasse`, `laerer`, `parti`, `gruppe`. Henter data fra DB og returnerer `text/calendar`.
-2. **`/ai-parse-sessions`** – Mottar tekst + klasse/kontekst. Sender til Gemini Flash med strukturert system-prompt. Returnerer array av parsede økt-objekter.
-3. **`/ai-parse-skolerute`** – Mottar tekst. Sender til Gemini Flash. Returnerer array av kalender-hendelser.
-4. **`/cleanup`** – Kjøres periodisk (pg_cron eller scheduled function): sletter soft-deleted records eldre enn 30 dager permanent.
-5. **`/create-user`** – Oppretter ny auth-bruker via Supabase Admin API (service_role) og sender invitasjons-e-post med metadata (navn, skole, rolle) og `redirectTo`. Krever aktiv admin-sesjon. Oppretter også rad i `users`-tabellen og kobler til klasser.
-6. **`/generate-facts`** – Genererer ~40 lokaltilpassede funfacts via Gemini Flash. Krever aktiv admin-sesjon. Returnerer array av faktatekster med lokal tilknytning til Jæren, Øksnevad, naturbruk, vikinger, husdyr m.m.
-7. **`/admin-user`** – Admin-handlinger på eksisterende brukere (service_role, krever aktiv admin i samme skole). Actions: `get_email`, `set_password` (sett passord direkte), `send_reset` (send tilbakestillingslenke), `change_email` (sett ny e-post direkte + varsle gammel adresse). Varsel-e-poster sendes via Resend hvis `RESEND_API_KEY`/`RESEND_FROM` er satt.
+1. **`/ical`** – iCal-feed. Bruker `users!teacher_id(full_name)` og `subject_divisions(name, division_type)`.
+2. **`/ai-parse-sessions`** – Gemini Flash → parsede økt-objekter.
+3. **`/ai-parse-skolerute`** – Gemini Flash → kalender-hendelser (`ferie|helligdag|planleggingsdag|annet`).
+4. **`/cleanup`** – Sletter soft-deleted records eldre enn 30 dager.
+5. **`/create-user`** – Oppretter auth-bruker (service_role), sender invitasjons-e-post.
+6. **`/generate-facts`** – Genererer ~40 lokaltilpassede funfacts via Gemini Flash.
+7. **`/admin-user`** – `get_email`, `set_password`, `send_reset`, `change_email`. Fallback name: `'Ukeplan1e'`.
 
-**E-postmaler:** Norske maler for invitasjon og passordtilbakestilling ligger i `supabase/templates/` (invite.html, recovery.html) og limes inn manuelt i Supabase Dashboard → Authentication → Emails.
+**Alle edge functions kalt fra browser MÅ ha CORS-headers:**
+```ts
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  // ...
+  return new Response(JSON.stringify(result), { headers: { ...CORS, 'Content-Type': 'application/json' } })
+})
+```
 
-**Passord-recovery/invitasjon i frontend:** `onAuthStateChange`-lytteren registreres ved modullast (ikke i `init`) slik at `PASSWORD_RECOVERY`- og invitasjons-eventer fra URL-en ikke går tapt. Begge åpner en tvungen «velg passord»-modal.
-
-Gemini API-nøkkel lagres som Supabase secret (`GEMINI_API_KEY`). Resend-nøkler (`RESEND_API_KEY`, `RESEND_FROM`) er valgfrie og brukes kun til varsel-e-poster fra `admin-user`.
+Secrets: `GEMINI_API_KEY` (påkrevd), `RESEND_API_KEY` + `RESEND_FROM` (valgfrie, for varsel-e-poster).
 
 ---
 
-## Footer
+## CSS-arkitektur
 
-Alle sider skal ha en diskret footer med:
-- Uno-logo (lenke til `https://uno.ganddal.net`) med lav opasitet, slik som i v2
-- © årstall basert på `document.lastModified` (årstallet dokumentet sist ble redigert/deployet)
-- Implementeres via `uno-footer.js` som legges inn rett før `</body>` på alle HTML-sider
-- Skal **ikke** vises ved utskrift (`@media print`)
-- Footer er alltid synlig nederst i vinduet (sticky footer via `body { display:flex; flex-direction:column }` + `main { flex:1 }`)
+### Temavariabler
+Tre temaer: `standard` (grønn `#2d6a4f`), `lys` (blå `#0077b6`), `mork`. Lastes fra `schools.color_theme`.
+
+### Reset og overflow
+```css
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { max-width: 100%; overflow-x: hidden; }
+body { font-family: ...; min-height: 100vh; display: flex; flex-direction: column; }
+main { flex: 1; overflow-x: hidden; }
+```
+
+### Viktige klasser
+- `.skjult { display: none !important; }` – universell skjulingsklasse
+- `.dag-dato { font-size:.75rem; font-weight:400; opacity:.6; text-transform:none; }` – diskret dato
+- `.hdr-home-link { display:flex; align-items:center; gap:8px; text-decoration:none; color:inherit; }`
+- `.hdr-hamburger { display:none; }` / `@media (max-width:600px) { .hdr-hamburger { display:inline-flex !important; } .hdr-pc-only { display:none !important; } }`
+- `.nav-bar { padding: 4px 20px 0; }` – liten toppmargin
+- `.uke-grid` desktop: `display:grid; grid-template-columns:repeat(5,1fr);` / mobil: `display:flex; flex-direction:column;`
+- `.dag-okter { max-height:70vh; overflow-y:auto; }` – scrollbar i dagkolonne
+
+### Ingen duplikater
+Én definisjon per selektor. Fjernede duplikater: `.uke-nr-input`, `.feil-tekst`, `.felt`, `.dato-grp input`.
+
+### Cache-busting
+`style.css?v=YYYYMMDD` og `app.js?v=YYYYMMDD` – oppdateres ved hver deploy.
 
 ---
 
 ## Filstruktur
 
 ```
-/
-├── index.html          – Appskall, navigasjon, routing (tittel: Ukeplan1E)
-├── app.js              – All applogikk, Supabase-klient, views
-├── uno-footer.js       – Footer med Uno-logo og © årstall sist redigert
-├── style.css           – Styling inkl. fargetemaer, @media print og mobile
+/v4/
+├── index.html                         – Appskall (tittel: Ukeplan1e)
+├── app.js                             – All applogikk, Supabase-klient, views
+├── uno-footer.js                      – Footer med Uno-logo og © årstall
+├── style.css                          – Styling, fargetemaer, @media print og mobile
+├── unoicon.png                        – Standard favicon (hundeikon)
+├── PROMPT.md                          – Dette dokumentet
 ├── supabase/
-│   ├── migrations/     – SQL-migrasjoner i rekkefølge
-│   └── functions/      – Edge Functions (ical, ai-parse-sessions, ai-parse-skolerute, cleanup, create-user, generate-facts)
-└── README.md           – Oppsettsinstruksjoner
+│   ├── migrations/
+│   │   ├── 001_initial_schema.sql
+│   │   ├── 002_rls.sql
+│   │   └── 003_cleanup_cron.sql
+│   ├── functions/
+│   │   ├── ical/index.ts
+│   │   ├── ai-parse-sessions/index.ts
+│   │   ├── ai-parse-skolerute/index.ts  (krever CORS-headers)
+│   │   ├── cleanup/index.ts
+│   │   ├── create-user/index.ts
+│   │   ├── generate-facts/index.ts
+│   │   └── admin-user/index.ts
+│   └── templates/
+│       ├── invite.html
+│       └── recovery.html
+└── README.md
 ```
 
 ---
 
-## Oppsettsinstruksjoner (README)
+## Favicon
+- Standard: `unoicon.png` (lokal fil). **Ikke** `uno.ganddal.net/favicon.ico` – returnerer 403.
+- Med logo: favicon settes til logo-URL
+- Fallback i `oppdaterHeader()`: `favicon.href = APP.school?.logo ? logo.src : 'unoicon.png'`
 
-Inkluder steg-for-steg:
-1. Opprett Supabase-prosjekt
-2. Kjør migrasjoner
-3. Sett secrets (`GEMINI_API_KEY`)
-4. Deploy Edge Functions: `supabase functions deploy --project-ref <ref>` (kjøres fra `v4/`-mappen)
-5. Oppdater Supabase URL + anon key i `app.js`
-6. Push til GitHub, aktiver GitHub Pages på `main`-branch
-7. Opprett første admin-bruker via Supabase Auth-konsoll + INSERT i `users`-tabellen
-8. Logg inn og fullfør oppsett i admin-panelet
-9. Legg til GitHub Secrets `SUPABASE_URL` og `SUPABASE_ANON_KEY` for keep-alive workflow
+---
+
+## Footer
+Diskret footer med Uno-logo (lenke til `https://uno.ganddal.net`) og © årstall. Via `uno-footer.js` rett før `</body>`. Skjules ved print. Sticky via flex-layout.
 
 ---
 
 ## Viktige hensyn
 
-- **Sikkerhet:** RLS på alle tabeller. Ingen sensitiv data, men beskytt mot manipulering. Elever skal aldri kunne skrive til databasen. Lærere kun egne records.
-- **Driftssikkerhet:** Bruk Supabase innebygde backup. Edge Functions er stateless og idempotente.
-- **Supabase pause-problem:** GitHub Actions keep-alive workflow pinger Supabase REST API hver 5. dag for å hindre at prosjektet pauses i ferier.
-- **Samtidige redigeringer:** Optimistic locking + Realtime-varsler.
-- **Soft-delete overalt:** 30-dagers søppelbøtte for sessions, klasser, fag, brukere.
+- **Safari/mobil:** `init()` ikke-blokkerende – `router()` kalles umiddelbart etter lokal `getSession()`.
+- **Kolonnenavn:** `users.full_name`, `subject_divisions.division_type`, `users!teacher_id(full_name)`.
+- **CORS:** Alle edge functions kalt fra browser MÅ ha OPTIONS-handler og CORS-headers.
+- **Driftssikkerhet:** GitHub Actions keep-alive pinger Supabase hver 5. dag.
+- **Soft-delete:** 30 dager for sessions, klasser, fag, brukere.
 - **Ingen fritekst i strukturerte felt.**
 
 ---
