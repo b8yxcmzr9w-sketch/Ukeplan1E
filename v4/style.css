@@ -92,6 +92,10 @@ body {
 #lastelinje.ferdig { width: 100% !important; animation: none; }
 
 /* ── Header ─────────────────────────────────────────────────────── */
+.hdr-home-link { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
+.hdr-username  { font-size: .84rem; opacity: .8; }
+.laster-start  { padding-top: 60px; }
+
 header {
   background: var(--header-bg);
   color: var(--header-tekst);
@@ -473,6 +477,11 @@ tr:hover td { background: var(--primær-svak); }
   .nav-bar    { padding: 10px 12px 0; }
   .bulk-bar   { margin: 0 12px 10px; }
   .fdag-banner, .ferie-banner { margin: 8px 12px; }
+  .side-wrap  { padding: 16px 16px 40px; }
+  .kort       { padding: 14px; }
+  .login-kort { padding: 20px; }
+  .modal      { padding: 16px; }
+  .admin-rad  { gap: 6px; }
 }
 
 /* ── ════════════════════════════════════════════
@@ -525,8 +534,7 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 /* Seksjonstittel i admin-faner */
 .seksjon-tittel { font-size: 1rem; font-weight: 700; margin: 18px 0 6px; border-top: 1px solid var(--kant); padding-top: 14px; }
 
-/* Dato-gruppe (Fra/Til) – gjenbruker uke-grp men med full dato-bredde */
-.dato-grp input { width: 100%; }
+/* Dato-gruppe (Fra/Til) – se .dato-grp i hjelpeklasser-seksjonen */
 
 /* ── Admin-tabell (skolerute) ────────────────────────────────────── */
 .admin-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
@@ -552,7 +560,6 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
   box-shadow: var(--skygge); padding: 32px; width: 100%; max-width: 380px;
 }
 .login-kort h2 { margin-bottom: 16px; font-size: 1.1rem; }
-.feil-tekst { color: var(--fare); font-size: .88rem; margin-bottom: 10px; }
 .felt-label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: 4px; margin-top: 12px; }
 
 /* ── Laerer/admin-layout ─────────────────────────────────────────── */
@@ -563,15 +570,23 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 /* ── Skjema-rader ────────────────────────────────────────────────── */
 .skjema .felt { margin-bottom: 14px; }
 
-/* ── Uke-input ───────────────────────────────────────────────────── */
-.uke-nr-input {
-  width: 50px; padding: 5px 6px;
-  border: 1px solid var(--kant); border-radius: var(--radius);
-  font-size: 1rem; font-weight: 700; text-align: center;
-  background: var(--bg-kort); color: var(--tekst);
-  -moz-appearance: textfield;
-}
-.uke-nr-input::-webkit-inner-spin-button,
-.uke-nr-input::-webkit-outer-spin-button { -webkit-appearance: none; }
-.uke-label { font-size: 1rem; font-weight: 700; white-space: nowrap; }
-
+/* ── Manglende hjelpeklasser ─────────────────────────────────────── */
+.btn-lenke { background: none; border: none; color: var(--primær); cursor: pointer; padding: 0; font-size: inherit; text-decoration: underline; }
+.btn-lenke:hover { opacity: .75; }
+.dato-grp { display: flex; flex-direction: column; gap: 4px; }
+.dato-grp input, .dato-grp select { width: 100%; }
+.day-col--holiday .dag-tittel { color: var(--advarsel); }
+.day-col--holiday .dag-okter { opacity: .5; pointer-events: none; }
+.holiday-label { font-size: .78rem; color: var(--advarsel); font-weight: 600; margin-top: 4px; }
+.info-tekst { font-size: .88rem; color: var(--tekst-svak); line-height: 1.5; }
+.tegnteller { font-size: .78rem; color: var(--tekst-svak); text-align: right; margin-top: 2px; }
+.tekst { font-size: .92rem; line-height: 1.5; }
+.textarea { resize: vertical; min-height: 70px; }
+.textarea-large { resize: vertical; min-height: 140px; }
+.theme-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.theme-swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color .15s; }
+.theme-swatch.aktiv { border-color: var(--tekst); }
+.warning-text { color: var(--advarsel); font-size: .86rem; font-weight: 600; }
+.error { color: var(--fare); font-size: .86rem; }
+.knapper-rad { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.input-med-hint { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

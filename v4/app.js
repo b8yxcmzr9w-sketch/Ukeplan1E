@@ -168,32 +168,35 @@ async function medLagreOverlay(asyncFn) {
   const overlay = el('div', { class: 'lagre-overlay' })
   const box = el('div', { class: 'overlay-boks' })
   const spinner = el('div', { class: 'spinner' })
-
-  // Pick random text from facts or funny texts
-  const texts = APP.facts.length
-    ? [...FUNNY_TEXTS, ...APP.facts.map(f => f.fact_text)]
-    : FUNNY_TEXTS
-  const msg = texts[Math.floor(Math.random() * texts.length)]
-
-  const msgEl = el('p', { class: 'overlay-tekst' }, msg)
+  const msgEl = el('p', { class: 'overlay-tekst', style: 'visibility:hidden' }, '…')
   box.appendChild(spinner)
   box.appendChild(msgEl)
   overlay.appendChild(box)
   document.body.appendChild(overlay)
 
+  // Vis morsomt sitat etter 3 sekunder
+  const sitatTimer = setTimeout(() => {
+    const texts = APP.facts.length
+      ? [...FUNNY_TEXTS, ...APP.facts.map(f => f.fact_text)]
+      : FUNNY_TEXTS
+    msgEl.textContent = texts[Math.floor(Math.random() * texts.length)]
+    msgEl.style.visibility = 'visible'
+  }, 3000)
+
   try {
     const result = await asyncFn()
+    clearTimeout(sitatTimer)
     clearEl(box)
     box.appendChild(el('div', { class: 'overlay-ok' }, '✓'))
     box.appendChild(el('p', {}, 'Lagret!'))
-    await new Promise(r => setTimeout(r, 1500))
+    await new Promise(r => setTimeout(r, 1200))
     overlay.remove()
     return result
   } catch (err) {
+    clearTimeout(sitatTimer)
     clearEl(box)
     box.appendChild(el('p', { class: 'feil-tekst' }, `Feil: ${err.message}`))
-    const retryBtn = el('button', { class: 'btn btn-s', onclick: () => overlay.remove() }, 'Lukk')
-    box.appendChild(retryBtn)
+    box.appendChild(el('button', { class: 'btn btn-s', onclick: () => overlay.remove() }, 'Lukk'))
     throw err
   }
 }
@@ -457,7 +460,7 @@ function oppdaterHeader() {
     if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
     if (loginBtn)    loginBtn.classList.add('skjult')
     if (logoutBtn)   { logoutBtn.classList.remove('skjult'); logoutBtn.onclick = logout }
-    if (laererBtn)   laererBtn.classList.toggle('skjult', skjulLaerer)
+    if (laererBtn)   { laererBtn.classList.toggle('skjult', skjulLaerer); laererBtn.onclick = () => navigate('#/laerer') }
     if (adminToggle && visAdmin) {
       adminToggle.classList.remove('skjult')
       adminToggle.textContent = 'Admin'
@@ -470,7 +473,7 @@ function oppdaterHeader() {
     if (ddNavn)   { ddNavn.textContent = APP.profile.full_name; ddNavn.classList.remove('skjult') }
     if (ddLogin)  ddLogin.classList.add('skjult')
     if (ddLogout) { ddLogout.classList.remove('skjult'); ddLogout.onclick = () => { dropdown?.classList.add('skjult'); logout() } }
-    if (ddLaerer) ddLaerer.classList.toggle('skjult', skjulLaerer)
+    if (ddLaerer) { ddLaerer.classList.toggle('skjult', skjulLaerer); ddLaerer.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/laerer') } }
     if (ddAdmin && visAdmin) {
       ddAdmin.classList.remove('skjult')
       ddAdmin.classList.toggle('admin-aktiv', APP.isAdminActive)
@@ -478,7 +481,7 @@ function oppdaterHeader() {
     } else if (ddAdmin) ddAdmin.classList.add('skjult')
   } else {
     if (username)    username.classList.add('skjult')
-    if (loginBtn)    loginBtn.classList.remove('skjult')
+    if (loginBtn)    { loginBtn.classList.remove('skjult'); loginBtn.onclick = () => navigate('#/login') }
     if (logoutBtn)   logoutBtn.classList.add('skjult')
     if (laererBtn)   laererBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
@@ -488,7 +491,7 @@ function oppdaterHeader() {
     if (ddAdmin)  ddAdmin.classList.add('skjult')
     if (ddLaerer) ddLaerer.classList.add('skjult')
     if (ddLogout) ddLogout.classList.add('skjult')
-    if (ddLogin)  ddLogin.classList.remove('skjult')
+    if (ddLogin)  { ddLogin.classList.remove('skjult'); ddLogin.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/login') } }
   }
 
   // Hamburger toggle
@@ -2146,7 +2149,7 @@ async function visRedigerFagModal(subj, onSave) {
   if (subj?.short_code) kortInput.dataset.manuelt = '1'
   const kortRad = el('div', { class: 'felt' })
   kortRad.appendChild(el('label', {}, 'Kortkode'))
-  const kortWrap = el('div', { style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap' })
+  const kortWrap = el('div', { class: 'input-med-hint' })
   kortWrap.appendChild(kortInput)
   kortWrap.appendChild(kortInfo)
   kortRad.appendChild(kortWrap)
@@ -2754,7 +2757,7 @@ async function renderFaktaTab(container) {
       'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe.'))
 
     // Knapper øverst
-    const knappeRad = el('div', { style: 'display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap' })
+    const knappeRad = el('div', { class: 'knapper-rad' })
     knappeRad.appendChild(el('button', { class: 'btn btn-p', onclick: () => visFunfactModal(null, refresh) }, '+ Legg til'))
     const aiBtn = el('button', { class: 'btn btn-s', onclick: async () => {
       if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
