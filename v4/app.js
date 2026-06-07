@@ -480,17 +480,18 @@ function oppdaterHeader() {
     // PC
     if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
     if (loginBtn)    loginBtn.classList.add('skjult')
-    if (logoutBtn)   { logoutBtn.classList.remove('skjult'); logoutBtn.onclick = logout }
-    if (laererBtn)   { laererBtn.classList.toggle('skjult', skjulLaerer); laererBtn.onclick = () => navigate('#/laerer') }
+    if (logoutBtn)   { logoutBtn.classList.remove('skjult'); logoutBtn.onclick = logout; logoutBtn.title = 'Logg ut av Ukeplan1e' }
+    if (laererBtn)   { laererBtn.classList.toggle('skjult', skjulLaerer); laererBtn.onclick = () => navigate('#/laerer'); laererBtn.title = 'Gå til lærervisning' }
     if (adminToggle && visAdmin) {
       adminToggle.classList.remove('skjult')
       adminToggle.textContent = 'Admin'
       adminToggle.classList.toggle('admin-aktiv', APP.isAdminActive)
       adminToggle.onclick = toggleAdminModus
+      adminToggle.title = APP.isAdminActive ? 'Bytt til lærervisning' : 'Bytt til adminvisning'
     } else if (adminToggle) adminToggle.classList.add('skjult')
 
     // Hamburger
-    if (hamburger) hamburger.classList.remove('skjult')
+    if (hamburger) { hamburger.classList.remove('skjult'); hamburger.title = 'Åpne meny' }
     if (ddNavn)   { ddNavn.textContent = APP.profile.full_name; ddNavn.classList.remove('skjult') }
     if (ddLogin)  ddLogin.classList.add('skjult')
     if (ddLogout) { ddLogout.classList.remove('skjult'); ddLogout.onclick = () => { dropdown?.classList.add('skjult'); logout() } }
@@ -502,12 +503,12 @@ function oppdaterHeader() {
     } else if (ddAdmin) ddAdmin.classList.add('skjult')
   } else {
     if (username)    username.classList.add('skjult')
-    if (loginBtn)    { loginBtn.classList.remove('skjult'); loginBtn.onclick = () => navigate('#/login') }
+    if (loginBtn)    { loginBtn.classList.remove('skjult'); loginBtn.onclick = () => navigate('#/login'); loginBtn.title = 'Logg inn' }
     if (logoutBtn)   logoutBtn.classList.add('skjult')
     if (laererBtn)   laererBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
 
-    if (hamburger) hamburger.classList.remove('skjult')
+    if (hamburger) { hamburger.classList.remove('skjult'); hamburger.title = 'Åpne meny' }
     if (ddNavn)   ddNavn.classList.add('skjult')
     if (ddAdmin)  ddAdmin.classList.add('skjult')
     if (ddLaerer) ddLaerer.classList.add('skjult')
@@ -715,12 +716,13 @@ async function renderElevView(klasseNavn) {
 
     // Week navigation
     const navRow = el('div', { class: 'nav-bar' })
-    const prevBtn = el('button', { class: 'btn btn-s', onclick: () => {
+    const prevBtn = el('button', { class: 'btn btn-s', title: 'Gå til forrige uke', onclick: () => {
       if (weekNr > schoolStart) { currentWeek = weekNr - 1; renderUke(currentWeek) }
     }}, '← Forrige uke')
     if (weekNr <= schoolStart) prevBtn.setAttribute('disabled', 'true')
 
     const weekInput = el('input', { type: 'number', class: 'uke-nr-input', value: weekNr,
+      title: 'Skriv inn ukenummer og trykk Enter',
       min: schoolStart, max: schoolEnd,
       onchange: (e) => {
         const v = parseInt(e.target.value)
@@ -728,13 +730,13 @@ async function renderElevView(klasseNavn) {
       }
     })
 
-    const nextBtn = el('button', { class: 'btn btn-s', onclick: () => {
+    const nextBtn = el('button', { class: 'btn btn-s', title: 'Gå til neste uke', onclick: () => {
       if (weekNr < schoolEnd) { currentWeek = weekNr + 1; renderUke(currentWeek) }
     }}, 'Neste uke →')
     if (weekNr >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
 
     const naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)
-    const naaBtn = el('button', { class: 'btn btn-s', onclick: () => {
+    const naaBtn = el('button', { class: 'btn btn-s', title: 'Gå til gjeldende uke', onclick: () => {
       currentWeek = naaWeek; renderUke(currentWeek)
     }}, 'Nå')
     if (weekNr === naaWeek) naaBtn.setAttribute('disabled', 'true')
@@ -744,8 +746,8 @@ async function renderElevView(klasseNavn) {
     navRow.appendChild(nextBtn)
     navRow.appendChild(naaBtn)
 
-    const printBtn = el('button', { class: 'btn btn-s', onclick: () => window.print() }, '🖨️ Skriv ut')
-    const icalBtn = el('button', { class: 'btn btn-s', onclick: () => visICalModal(klasse) }, '📅 iCal-abonnement')
+    const printBtn = el('button', { class: 'btn btn-s', title: 'Skriv ut ukeplanen', onclick: () => window.print() }, '🖨️ Skriv ut')
+    const icalBtn = el('button', { class: 'btn btn-s', title: 'Abonner på kalender (iCal)', onclick: () => visICalModal(klasse) }, '📅 iCal-abonnement')
     navRow.appendChild(printBtn)
     navRow.appendChild(icalBtn)
     wc.appendChild(navRow)
@@ -854,10 +856,10 @@ function renderSessionCard(s, showActions, actions = {}) {
 
   if (showActions) {
     const actionRow = el('div', { class: 'okt-handlinger' })
-    if (actions.edit) actionRow.appendChild(el('button', { class: 'btn btn-ikon', onclick: actions.edit }, '✏️'))
-    if (actions.copy) actionRow.appendChild(el('button', { class: 'btn btn-ikon', onclick: actions.copy }, '📋'))
-    if (actions.del) actionRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: actions.del }, '🗑️'))
-    if (actions.transfer) actionRow.appendChild(el('button', { class: 'btn btn-ikon', onclick: actions.transfer }, '↗️'))
+    if (actions.edit) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger økt', onclick: actions.edit }, '✏️'))
+    if (actions.copy) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Kopier økt', onclick: actions.copy }, '📋'))
+    if (actions.del) actionRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett økt', onclick: actions.del }, '🗑️'))
+    if (actions.transfer) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Overfør til annen klasse', onclick: actions.transfer }, '↗️'))
     card.appendChild(actionRow)
   }
 
@@ -930,7 +932,7 @@ async function renderLaererView() {
   }
 
   tabs.forEach((t, i) => {
-    const btn = el('button', { class: 'fane', onclick: () => setTab(i) }, t)
+    const btn = el('button', { class: 'fane', title: `Gå til ${t}`, onclick: () => setTab(i) }, t)
     tabBar.appendChild(btn)
   })
 
@@ -958,7 +960,7 @@ async function renderInnstillingerTab(container) {
 
   // Bytt passord
   wrap.appendChild(el('div', { class: 'seksjon-tittel' }, 'Passord'))
-  wrap.appendChild(el('button', { class: 'btn btn-p', onclick: () => visSettPassordModal({ tittel: 'Bytt passord' }) }, 'Bytt passord'))
+  wrap.appendChild(el('button', { class: 'btn btn-p', title: 'Endre ditt innloggingspassord', onclick: () => visSettPassordModal({ tittel: 'Bytt passord' }) }, 'Bytt passord'))
 
   // Bytt e-post
   wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'E-postadresse'))
@@ -1020,9 +1022,9 @@ async function renderMinKlasseTab(container) {
   }
   topRow.appendChild(el('label', {}, 'Klasse: '))
   topRow.appendChild(klasseSel)
-  topRow.appendChild(el('button', { class: 'btn btn-p', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
-  topRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
-  topRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
+  topRow.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
+  topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Lim inn ukeplan som tekst og la AI tolke den', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
+  topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier lenke til elevvisning', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
   container.appendChild(topRow)
 
   const weekArea = el('div', { id: 'laerer-week-area' })
@@ -1041,17 +1043,18 @@ async function renderMinKlasseTab(container) {
     }
 
     const navRow = el('div', { class: 'nav-bar' })
-    const prevBtn = el('button', { class: 'btn btn-s', onclick: () => {
+    const prevBtn = el('button', { class: 'btn btn-s', title: 'Gå til forrige uke', onclick: () => {
       if (currentWeek > schoolStart) { currentWeek--; renderUke() }
     }}, '← Forrige')
     if (currentWeek <= schoolStart) prevBtn.setAttribute('disabled', 'true')
 
-    const nextBtn = el('button', { class: 'btn btn-s', onclick: () => {
+    const nextBtn = el('button', { class: 'btn btn-s', title: 'Gå til neste uke', onclick: () => {
       if (currentWeek < schoolEnd) { currentWeek++; renderUke() }
     }}, 'Neste →')
     if (currentWeek >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
 
     const weekInput = el('input', { type: 'number', class: 'uke-nr-input', value: currentWeek,
+      title: 'Skriv inn ukenummer og trykk Enter',
       min: schoolStart, max: schoolEnd,
       onchange: (e) => {
         const v = parseInt(e.target.value)
@@ -1060,7 +1063,7 @@ async function renderMinKlasseTab(container) {
     })
 
     const naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)
-    const naaBtn = el('button', { class: 'btn btn-s', onclick: () => {
+    const naaBtn = el('button', { class: 'btn btn-s', title: 'Gå til gjeldende uke', onclick: () => {
       currentWeek = naaWeek; renderUke()
     }}, 'Nå')
     if (currentWeek === naaWeek) naaBtn.setAttribute('disabled', 'true')
@@ -1069,8 +1072,8 @@ async function renderMinKlasseTab(container) {
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
     navRow.appendChild(naaBtn)
-    navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => window.print() }, '🖨️'))
-    navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visICalModal(null) }, '📅'))
+    navRow.appendChild(el('button', { class: 'btn btn-s', title: 'Skriv ut ukeplanen', onclick: () => window.print() }, '🖨️'))
+    navRow.appendChild(el('button', { class: 'btn btn-s', title: 'Abonner på kalender (iCal)', onclick: () => visICalModal(null) }, '📅'))
     weekArea.appendChild(navRow)
 
     const { data: sessions, error: sessionsError } = await sb.from('sessions')
@@ -1086,8 +1089,8 @@ async function renderMinKlasseTab(container) {
     const bulkBar = el('div', { class: 'bulk-bar', style: 'display:none' })
     const bulkCount = el('span', {}, '0 valgt')
     bulkBar.appendChild(bulkCount)
-    bulkBar.appendChild(el('button', { class: 'btn btn-s', onclick: () => visBulkEditModal([...bulkSelected], renderUke) }, 'Rediger valgte'))
-    bulkBar.appendChild(el('button', { class: 'btn btn-f', onclick: async () => {
+    bulkBar.appendChild(el('button', { class: 'btn btn-s', title: 'Rediger alle valgte økter samtidig', onclick: () => visBulkEditModal([...bulkSelected], renderUke) }, 'Rediger valgte'))
+    bulkBar.appendChild(el('button', { class: 'btn btn-f', title: 'Slett alle valgte økter', onclick: async () => {
       if (!confirm('Slette alle valgte?')) return
       await medLagreOverlay(async () => {
         for (const id of bulkSelected) {
@@ -1753,15 +1756,15 @@ async function renderKlasseAdminTab(container) {
     for (const e of mde || []) {
       const row = el('div', { class: 'mde-row' })
       row.appendChild(el('span', {}, `${e.title} (${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)})`))
-      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerMDEModal(e, renderKlasseAdminInnhold) }, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger arrangement', onclick: () => visRedigerMDEModal(e, renderKlasseAdminInnhold) }, '✏️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett arrangement', onclick: async () => {
         if (!confirm('Slette?')) return
         await medLagreOverlay(() => sb.from('multi_day_events').delete().eq('id', e.id))
         renderKlasseAdminInnhold()
       }}, '🗑️'))
       innhold.appendChild(row)
     }
-    innhold.appendChild(el('button', { class: 'btn btn-s', onclick: () => visNyMDEModal(aktivKlasse.id, renderKlasseAdminInnhold) }, '+ Nytt arrangement'))
+    innhold.appendChild(el('button', { class: 'btn btn-s', title: 'Legg til flerdagsarrangement', onclick: () => visNyMDEModal(aktivKlasse.id, renderKlasseAdminInnhold) }, '+ Nytt arrangement'))
 
     // Subject config
     innhold.appendChild(el('h3', {}, 'Faginnstillinger'))
@@ -1797,11 +1800,11 @@ async function renderKlasseAdminTab(container) {
         const divRow = el('div', { class: 'div-row' })
         const nameInput = el('input', { type: 'text', class: 'felt input input-sm', value: d.name })
         divRow.appendChild(nameInput)
-        divRow.appendChild(el('button', { class: 'btn btn-ikon', onclick: async () => {
+        divRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Lagre navn på inndeling', onclick: async () => {
           await medLagreOverlay(() => sb.from('subject_divisions').update({ name: nameInput.value }).eq('id', d.id))
           showToast('Lagret', 'success')
         }}, '💾'))
-        divRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+        divRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett inndeling', onclick: async () => {
           if (!confirm('Slette?')) return
           await medLagreOverlay(() => sb.from('subject_divisions').delete().eq('id', d.id))
           renderKlasseAdminInnhold()
@@ -1809,7 +1812,7 @@ async function renderKlasseAdminTab(container) {
         divList.appendChild(divRow)
       }
       if ((divs || []).length < 8) {
-        divList.appendChild(el('button', { class: 'btn btn-sm', onclick: async () => {
+        divList.appendChild(el('button', { class: 'btn btn-sm', title: 'Legg til parti eller gruppe', onclick: async () => {
           const type = prompt('Type (parti/gruppe):') || 'gruppe'
           const navn = prompt('Navn:')
           if (!navn) return
@@ -1825,7 +1828,7 @@ async function renderKlasseAdminTab(container) {
 
     // Backup
     innhold.appendChild(el('h3', {}, 'Sikkerhetskopiering'))
-    innhold.appendChild(el('button', { class: 'btn btn-s', onclick: () => lastNedSikkerhetskopi(aktivKlasse) }, '⬇️ Last ned sikkerhetskopi'))
+    innhold.appendChild(el('button', { class: 'btn btn-s', title: 'Last ned alle økter som JSON-fil', onclick: () => lastNedSikkerhetskopi(aktivKlasse) }, '⬇️ Last ned sikkerhetskopi'))
     const uploadInput = el('input', { type: 'file', accept: '.json', onchange: (e) => {
       if (e.target.files[0]) lastOppSikkerhetskopi(e.target.files[0], aktivKlasse)
     }})
@@ -2006,7 +2009,7 @@ async function renderAdminPanel() {
   }
 
   tabs.forEach((t, i) => {
-    const btn = el('button', { class: 'fane', onclick: () => setTab(i) }, t)
+    const btn = el('button', { class: 'fane', title: `Gå til ${t}`, onclick: () => setTab(i) }, t)
     tabBar.appendChild(btn)
   })
 
@@ -2130,15 +2133,15 @@ async function renderFagTab(container) {
       const swatch = el('span', { class: 'color-swatch', style: `background:${s.color_hex || '#ccc'}` })
       row.appendChild(swatch)
       row.appendChild(el('span', { class: 'tekst' }, `${s.name} (${s.short_code})`))
-      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerFagModal(s, refresh) }, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon', title: `Rediger faget ${s.name}`, onclick: () => visRedigerFagModal(s, refresh) }, '✏️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: `Slett faget ${s.name}`, onclick: async () => {
         if (!confirm(`Slette faget "${s.name}"? Dette vil påvirke alle eksisterende økter.`)) return
         await medLagreOverlay(() => sb.from('subjects').update({ deleted_at: new Date().toISOString() }).eq('id', s.id))
         refresh()
       }}, '🗑️'))
       container.appendChild(row)
     }
-    container.appendChild(el('button', { class: 'btn btn-p', onclick: () => visRedigerFagModal(null, refresh) }, '+ Nytt fag'))
+    container.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til nytt fag', onclick: () => visRedigerFagModal(null, refresh) }, '+ Nytt fag'))
   }
   await refresh()
 }
@@ -2214,7 +2217,7 @@ async function visRedigerFagModal(subj, onSave) {
 
   const palettWrap = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;align-items:center' })
   for (const farge of FAG_FARGER) {
-    const btn = el('button', { type: 'button', style: `width:28px;height:28px;border-radius:50%;background:${farge};border:3px solid ${farge===valgtFarge?'var(--tekst)':'transparent'};cursor:pointer;flex-shrink:0` })
+    const btn = el('button', { type: 'button', title: `Velg farge ${farge}`, style: `width:28px;height:28px;border-radius:50%;background:${farge};border:3px solid ${farge===valgtFarge?'var(--tekst)':'transparent'};cursor:pointer;flex-shrink:0` })
     btn.addEventListener('click', () => {
       valgtFarge = farge
       fargeHidden.value = farge
@@ -2270,29 +2273,29 @@ async function renderKlasserTab(container) {
     for (const k of klasser || []) {
       const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { class: 'tekst' }, k.name))
-      const kopierBtn = el('button', { class: 'btn btn-sm', onclick: async () => {
+      const kopierBtn = el('button', { class: 'btn btn-sm', title: 'Kopier elevlenke til utklippstavlen', onclick: async () => {
         const url = `${location.origin}${location.pathname}#/klasse/${encodeURIComponent(k.name)}`
         await navigator.clipboard.writeText(url)
         kopierBtn.textContent = 'Kopiert!'
         setTimeout(() => { kopierBtn.textContent = 'Kopier elevlenke' }, 2000)
       }}, 'Kopier elevlenke')
       row.appendChild(kopierBtn)
-      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon', title: 'Endre navn på klassen', onclick: () => {
         const nyttNavn = prompt('Nytt navn:', k.name)
         if (!nyttNavn) return
         medLagreOverlay(() => sb.from('classes').update({ name: nyttNavn }).eq('id', k.id)).then(refresh)
       }}, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett klassen og all tilknyttet data', onclick: async () => {
         if (!confirm(`Slette klassen "${k.name}"? Dette er alvorlig og kan ikke angres!`)) return
         if (!confirm('Er du helt sikker? Alle tilknyttede data vil bli slettet.')) return
         await medLagreOverlay(() => sb.from('classes').update({ deleted_at: new Date().toISOString() }).eq('id', k.id))
         refresh()
       }}, '🗑️'))
-      row.appendChild(el('button', { class: 'btn btn-sm', onclick: () => visMergeKlasseModal(k, klasser, refresh) }, 'Slå sammen'))
+      row.appendChild(el('button', { class: 'btn btn-sm', title: 'Slå denne klassen sammen med en annen', onclick: () => visMergeKlasseModal(k, klasser, refresh) }, 'Slå sammen'))
       container.appendChild(row)
     }
 
-    container.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+    container.appendChild(el('button', { class: 'btn btn-p', title: 'Opprett ny klasse', onclick: async () => {
       const navn = prompt('Klassenavn:')
       if (!navn) return
       await medLagreOverlay(() => sb.from('classes').insert({ name: navn, school_id: APP.school.id }))
@@ -2345,12 +2348,12 @@ async function renderBrukereTab(container) {
       const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} – ${u.role}`))
       if (klList) row.appendChild(el('span', { class: 'tekst-svak' }, klList))
-      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon', title: `Rediger bruker ${u.full_name}`, onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: `Slett bruker ${u.full_name}`, onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
       container.appendChild(row)
     }
 
-    container.appendChild(el('button', { class: 'btn btn-p', onclick: () => visNyBrukerModal(klasser, refresh) }, '+ Ny bruker'))
+    container.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til ny bruker', onclick: () => visNyBrukerModal(klasser, refresh) }, '+ Ny bruker'))
 
   }
   await refresh()
@@ -2543,7 +2546,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   kallAdminUser('get_email', { user_id: user.id })
     .then(r => { epostInput.value = r.email || ''; epostInput.placeholder = 'din@epost.no'; epostInput.removeAttribute('disabled') })
     .catch(() => { epostInput.placeholder = 'kunne ikke hente e-post'; epostInput.removeAttribute('disabled') })
-  const endreEpostBtn = el('button', { type: 'button', class: 'btn btn-s', onclick: async () => {
+  const endreEpostBtn = el('button', { type: 'button', class: 'btn btn-s', title: 'Endre brukerens e-postadresse', onclick: async () => {
     epostFeil.classList.add('skjult')
     const ny = epostInput.value.trim()
     if (!ny) { epostFeil.textContent = 'Skriv inn en e-postadresse'; epostFeil.classList.remove('skjult'); return }
@@ -2557,7 +2560,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
 
   // Passord (sammenleggbar)
   const pwSeksjon = el('div', { style: 'margin-top:16px; border:1px solid var(--kant); border-radius:var(--radius); overflow:hidden' })
-  const pwToggle = el('button', { type: 'button', class: 'btn btn-s', style: 'width:100%; text-align:left; border-radius:0; background:var(--bakgrunn2); border:none; padding:10px 14px; font-weight:600; display:flex; justify-content:space-between; align-items:center' })
+  const pwToggle = el('button', { type: 'button', class: 'btn btn-s', title: 'Vis eller skjul passord-alternativer', style: 'width:100%; text-align:left; border-radius:0; background:var(--bakgrunn2); border:none; padding:10px 14px; font-weight:600; display:flex; justify-content:space-between; align-items:center' })
   const pwPil = el('span', {}, '▶')
   pwToggle.appendChild(el('span', {}, 'Passord'))
   pwToggle.appendChild(pwPil)
@@ -2568,8 +2571,8 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
     pwInnhold.style.display = open ? 'none' : 'flex'
     pwPil.textContent = open ? '▶' : '▼'
   }
-  pwInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => visAdminSettPassord(user) }, 'Endre nå'))
-  pwInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: async () => {
+  pwInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-s', title: 'Sett nytt passord direkte (uten e-post)', onclick: () => visAdminSettPassord(user) }, 'Endre nå'))
+  pwInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-s', title: 'Send e-post med lenke for å tilbakestille passord', onclick: async () => {
     if (!confirm('Sende resett-e-post til brukeren?')) return
     try {
       await medLagreOverlay(() => kallAdminUser('send_reset', { user_id: user.id, redirect_to: window.location.origin + window.location.pathname }))
@@ -2642,7 +2645,7 @@ async function visSlettBrukerModal(user, onSave) {
     }
     box.appendChild(lagFormRad('Fremtidige økter', reassignSel))
 
-    box.appendChild(el('button', { class: 'btn btn-f', onclick: async () => {
+    box.appendChild(el('button', { class: 'btn btn-f', title: 'Slett brukeren og overfør eller slett fremtidige økter', onclick: async () => {
       const targetId = reassignSel.value
       await medLagreOverlay(async () => {
         if (targetId) {
@@ -2659,7 +2662,7 @@ async function visSlettBrukerModal(user, onSave) {
     }}, 'Slett bruker'))
   } else {
     box.appendChild(el('p', {}, 'Brukeren har ingen fremtidige økter.'))
-    box.appendChild(el('button', { class: 'btn btn-f', onclick: async () => {
+    box.appendChild(el('button', { class: 'btn btn-f', title: 'Slett brukeren permanent', onclick: async () => {
       await medLagreOverlay(() => sb.from('users').update({ deleted_at: new Date().toISOString() }).eq('id', user.id))
       modal.remove()
       if (onSave) onSave()
@@ -2688,14 +2691,14 @@ async function renderSkolerute(container) {
         `${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)}`))
       row.appendChild(info)
       row.appendChild(el('span', { class: 'div-badge' }, e.type || ''))
-      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett denne hendelsen fra skoleruten', onclick: async () => {
         await medLagreOverlay(() => sb.from('school_calendar').delete().eq('id', e.id))
         refresh()
       }}, '🗑️'))
       wrap.appendChild(row)
     }
 
-    wrap.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:14px', onclick: () => visNySkolerute(refresh) }, '+ Legg til'))
+    wrap.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:14px', title: 'Legg til ny hendelse i skoleruten', onclick: () => visNySkolerute(refresh) }, '+ Legg til'))
 
     // AI import – hidden by default, tip shown when calendar is empty
     const aiWrap = el('div', { class: 'ai-import-seksjon' })
@@ -2704,14 +2707,14 @@ async function renderSkolerute(container) {
         '💡 Ingen hendelser ennå. Har du skoleruten som tekst? Lim den inn og la AI legge det inn for deg.')
       aiWrap.appendChild(tip)
     }
-    const aiToggleBtn = el('button', { type: 'button', class: 'btn btn-s', onclick: () => {
+    const aiToggleBtn = el('button', { type: 'button', class: 'btn btn-s', title: 'Lim inn skoleruten som tekst og la AI analysere den', onclick: () => {
       aiInnhold.classList.toggle('skjult')
       aiToggleBtn.textContent = aiInnhold.classList.contains('skjult') ? '📋 Importer med AI' : '▲ Skjul AI-import'
     }}, '📋 Importer med AI')
     const aiInnhold = el('div', { class: 'skjult' })
     const aiText = el('textarea', { class: 'felt textarea ai-tekstfelt', placeholder: 'Lim inn skoleruten som tekst (f.eks. fra PDF eller e-post)…', rows: 8 })
     aiInnhold.appendChild(aiText)
-    aiInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-p', onclick: async () => {
+    aiInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-p', title: 'Send tekst til AI for tolking av datoer og hendelser', onclick: async () => {
       if (!aiText.value.trim()) return
       try {
         const { data, error } = await sb.functions.invoke('ai-parse-skolerute', {
@@ -2806,8 +2809,8 @@ async function renderFaktaTab(container) {
 
     // Knapper øverst
     const knappeRad = el('div', { class: 'knapper-rad' })
-    knappeRad.appendChild(el('button', { class: 'btn btn-p', onclick: () => visFunfactModal(null, refresh) }, '+ Legg til'))
-    const aiBtn = el('button', { class: 'btn btn-s', onclick: async () => {
+    knappeRad.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til nytt funfact manuelt', onclick: () => visFunfactModal(null, refresh) }, '+ Legg til'))
+    const aiBtn = el('button', { class: 'btn btn-s', title: 'Generer ~40 funfacts automatisk med AI', onclick: async () => {
       if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
       aiBtn.disabled = true; aiBtn.textContent = 'Genererer…'
       try {
@@ -2847,8 +2850,8 @@ async function renderFaktaTab(container) {
     for (const f of facts || []) {
       const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { style: 'flex:1; font-size:.92rem' }, f.fact_text))
-      row.appendChild(el('button', { class: 'btn btn-ikon', onclick: () => visFunfactModal(f, refresh) }, '✏️'))
-      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', onclick: async () => {
+      row.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger funfact', onclick: () => visFunfactModal(f, refresh) }, '✏️'))
+      row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett funfact', onclick: async () => {
         if (!confirm('Slette denne funfacten?')) return
         await medLagreOverlay(() => sb.from('school_facts').delete().eq('id', f.id))
         refresh()
