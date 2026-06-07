@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ukeplan1e</title>
 <link rel="icon" id="favicon" href="unoicon.png">
-<link rel="stylesheet" href="style.css?v=20260609">
+<link rel="stylesheet" href="style.css?v=20260610">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
 
 <!-- ── Header ───────────────────────────────────────────────────── -->
 <header id="app-header">
-  <a href="#/" id="hdr-home-link" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit">
+  <a href="#/" id="hdr-home-link" class="hdr-home-link">
     <img id="hdr-logo" src="" alt="Logo" class="skjult">
     <div>
       <div class="skole-navn" id="hdr-skolenavn">Ukeplan1e</div>
@@ -34,7 +34,7 @@
   <span class="spacer"></span>
 
   <!-- PC-knapper (skjules på mobil) -->
-  <span id="hdr-username" class="hdr-pc-only" style="font-size:.84rem;opacity:.8"></span>
+  <span id="hdr-username" class="hdr-pc-only hdr-username"></span>
   <button class="hdr-btn skjult hdr-pc-only" id="hdr-admin-toggle">Admin</button>
   <button class="hdr-btn skjult hdr-pc-only" id="hdr-laerer-btn" onclick="location.hash='#/laerer'">Lærervisning</button>
   <button class="hdr-btn skjult hdr-pc-only" id="hdr-logout-btn">Logg ut</button>
@@ -57,7 +57,7 @@
 <!-- ── Hoved-innhold ────────────────────────────────────────────── -->
 <main id="app-main">
   <!-- Fylles av router/views i app.js -->
-  <div class="tom-uke" style="padding-top:60px">Laster…</div>
+  <div class="tom-uke laster-start">Laster…</div>
 </main>
 
 <!-- ── Modal-container ──────────────────────────────────────────── -->
@@ -70,7 +70,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <!-- ── App ──────────────────────────────────────────────────────── -->
-<script src="app.js?v=20260609"></script>
+<script src="app.js?v=20260610"></script>
 
 <!-- ── Footer-script ────────────────────────────────────────────── -->
 <script src="uno-footer.js"></script>
