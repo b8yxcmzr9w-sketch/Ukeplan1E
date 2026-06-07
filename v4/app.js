@@ -33,7 +33,17 @@ window.APP = {
 // Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
 // fra recovery-lenken i URL-en ikke går tapt før init() rekker å kjøre.
 let _recoveryHandtert = false
-sb.auth.onAuthStateChange(async (event, session) => {
+sb.auth.onAuthStateChange((event, session) => {
+  // ⚠️ Callbacken kjører MENS supabase-js holder auth-låsen (navigator
+  // LockManager). Gjør vi awaitede Supabase-kall (f.eks. fetchProfile →
+  // sb.from(...), som internt tar samme lås) direkte her, deadlocker vi:
+  // låsen slippes aldri, og ALLE påfølgende spørringer henger til brukeren
+  // sletter nettstedsdata. Utsett derfor arbeidet til etter at låsen er
+  // sluppet. Se: supabase-js – «Avoid awaiting calls inside onAuthStateChange».
+  setTimeout(() => { handterAuthEndring(event, session) }, 0)
+})
+
+async function handterAuthEndring(event, session) {
   if (event === 'SIGNED_OUT') {
     APP.user = null
     APP.profile = null
@@ -72,7 +82,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       })
     }
   }
-})
+}
 
 const FUNNY_TEXTS = [
   'Sender tanker til skyene…',
