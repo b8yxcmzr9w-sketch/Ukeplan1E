@@ -1193,6 +1193,10 @@ async function renderMinKlasseTab(container) {
     const bulkCount = el('span', {}, '0 valgt')
     bulkBar.appendChild(bulkCount)
     bulkBar.appendChild(el('button', { class: 'btn btn-s', title: 'Rediger alle valgte økter samtidig', onclick: () => visBulkEditModal([...bulkSelected], renderUke) }, 'Rediger valgte'))
+    bulkBar.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier alle valgte økter til en annen uke', onclick: () => {
+      const valgte = (sessions || []).filter(s => bulkSelected.has(s.id))
+      visBulkKopierModal(valgte, renderUke)
+    }}, 'Kopier valgte'))
     bulkBar.appendChild(el('button', { class: 'btn btn-f', title: 'Slett alle valgte økter', onclick: async () => {
       if (!confirm('Slette alle valgte?')) return
       await medLagreOverlay(async () => {
@@ -1632,41 +1636,100 @@ async function visKopierOktModal(session, onSave) {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Kopier økt'))
-  box.appendChild(el('p', {}, 'Velg uke og dag for kopien:'))
 
-  const weekInput = el('input', { type: 'number', class: 'felt input', value: session.week_nr, min: 1, max: 53, placeholder: 'Uke' })
-  const dagSel = el('select', { class: 'felt select' })
-  for (let i = 1; i <= 5; i++) {
-    const opt = el('option', { value: i }, dagNavn(i))
-    if (i === session.day_of_week) opt.setAttribute('selected', 'true')
-    dagSel.appendChild(opt)
+  const aktivtSkolear = APP.school?.active_school_year
+  // Kopier alltid inn i aktivt skoleår – også når kilden er et tidligere år.
+  if (session.school_year && aktivtSkolear && session.school_year !== aktivtSkolear) {
+    box.appendChild(el('p', { class: 'kopi-hint' },
+      `Kopien lagres i aktivt skoleår (${aktivtSkolear}). Du kan endre detaljene før du lagrer.`))
+  } else {
+    box.appendChild(el('p', { class: 'kopi-hint' }, 'Endre detaljene før du lagrer kopien:'))
   }
 
-  box.appendChild(lagFormRad('Uke', weekInput))
-  box.appendChild(lagFormRad('Dag', dagSel))
+  const { data: subjects } = await sb.from('subjects').select('*')
+    .eq('school_id', APP.school.id).order('name')
+  const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
 
-  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
+    e.preventDefault()
+    const fd = new FormData(form)
     await medLagreOverlay(async () => {
       const { error } = await sb.from('sessions').insert({
         class_id: session.class_id,
-        subject_id: session.subject_id,
-        division_id: session.division_id,
-        week_nr: parseInt(weekInput.value),
-        day_of_week: parseInt(dagSel.value),
-        teacher_id: APP.profile.id,
-        activity: session.activity,
-        meeting_point: session.meeting_point,
-        info: session.info,
-        school_year: APP.school?.active_school_year,
+        subject_id: fd.get('subject_id'),
+        division_id: fd.get('division_id') || null,
+        week_nr: parseInt(fd.get('week_nr')),
+        day_of_week: parseInt(fd.get('day_of_week')),
+        teacher_id: fd.get('teacher_id'),
+        activity: fd.get('activity') || '',
+        meeting_point: fd.get('meeting_point') || '',
+        info: fd.get('info') || '',
+        school_year: aktivtSkolear,
         version: 1,
       })
       if (error) throw error
     })
     modal.remove()
     if (onSave) onSave()
-  }}, 'Kopier'))
-  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  }})
 
+  // Fag
+  const fagSel = el('select', { name: 'subject_id', class: 'felt select', required: 'true',
+    onchange: (e) => oppdaterDivisionSel(e.target.value) })
+  for (const s of subjects || []) {
+    const opt = el('option', { value: s.id }, s.name)
+    if (s.id === session.subject_id) opt.setAttribute('selected', 'true')
+    fagSel.appendChild(opt)
+  }
+  form.appendChild(lagFormRad('Fag', fagSel))
+
+  // Parti/gruppe
+  const divSel = el('select', { name: 'division_id', class: 'felt select' })
+  form.appendChild(lagFormRad('Parti/gruppe', divSel))
+
+  async function oppdaterDivisionSel(subjectId) {
+    clearEl(divSel)
+    divSel.appendChild(el('option', { value: '' }, '(ingen)'))
+    const { data: divs } = await sb.from('subject_divisions').select('*').eq('subject_id', subjectId)
+    for (const d of divs || []) {
+      const opt = el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`)
+      if (d.id === session.division_id) opt.setAttribute('selected', 'true')
+      divSel.appendChild(opt)
+    }
+  }
+  await oppdaterDivisionSel(session.subject_id)
+
+  // Uke
+  const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'felt input',
+    value: session.week_nr, min: 1, max: 53, required: 'true' })
+  form.appendChild(lagFormRad('Uke', weekInput))
+
+  // Dag
+  const dagSel = el('select', { name: 'day_of_week', class: 'felt select' })
+  for (let i = 1; i <= 5; i++) {
+    const opt = el('option', { value: i }, dagNavn(i))
+    if (i === session.day_of_week) opt.setAttribute('selected', 'true')
+    dagSel.appendChild(opt)
+  }
+  form.appendChild(lagFormRad('Dag', dagSel))
+
+  // Lærer (standard: meg)
+  const laererSel = el('select', { name: 'teacher_id', class: 'felt select' })
+  for (const t of teachers || []) {
+    const opt = el('option', { value: t.id }, t.full_name)
+    if (t.id === APP.profile.id) opt.setAttribute('selected', 'true')
+    laererSel.appendChild(opt)
+  }
+  form.appendChild(lagFormRad('Lærer', laererSel))
+
+  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input', value: session.activity || '' })))
+  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '' })))
+  form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')))
+
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre kopi'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
+  form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+
+  box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
@@ -1755,6 +1818,65 @@ async function visBulkEditModal(ids, onSave) {
     modal.remove()
     if (onSave) onSave()
   }}, 'Lagre'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
+
+// Bulk-kopi Nivå A: kopier valgte økter til én mål-uke (dag beholdes).
+// Kopiene stemples alltid med aktivt skoleår.
+async function visBulkKopierModal(valgte, onSave) {
+  if (!valgte || !valgte.length) return
+  const modal = el('div', { class: 'modal-bg' })
+  const box = el('div', { class: 'modal' })
+  box.appendChild(el('h3', {}, `Kopier ${valgte.length} økt(er)`))
+
+  const aktivtSkolear = APP.school?.active_school_year
+  const kildeUke = valgte[0].week_nr
+
+  box.appendChild(el('p', { class: 'kopi-hint' },
+    `Øktene kopieres til valgt mål-uke (samme ukedag beholdes)${aktivtSkolear ? `, i aktivt skoleår ${aktivtSkolear}` : ''}.`))
+
+  // AI-påminnelse ved mange økter
+  if (valgte.length >= 6) {
+    box.appendChild(el('p', { class: 'ai-paaminnelse' },
+      '💡 Tips: For mange økter på en gang kan «🤖 Lim inn med AI» være raskere.'))
+  }
+
+  const weekInput = el('input', { type: 'number', class: 'felt input', value: kildeUke, min: 1, max: 53, placeholder: 'Mål-uke' })
+  box.appendChild(lagFormRad('Mål-uke', weekInput))
+
+  const beholdLaerer = el('input', { type: 'checkbox', class: 'felt-cb' })
+  beholdLaerer.checked = false
+  box.appendChild(lagFormRad('Behold opprinnelig lærer', beholdLaerer))
+
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+    const malUke = parseInt(weekInput.value)
+    if (!malUke || malUke < 1 || malUke > 53) { showToast('Ugyldig ukenummer', 'error'); return }
+
+    await medLagreOverlay(async () => {
+      const rader = valgte.map(s => ({
+        class_id: s.class_id,
+        subject_id: s.subject_id,
+        division_id: s.division_id,
+        week_nr: malUke,
+        day_of_week: s.day_of_week,
+        teacher_id: beholdLaerer.checked ? s.teacher_id : APP.profile.id,
+        activity: s.activity || '',
+        meeting_point: s.meeting_point || '',
+        info: s.info || '',
+        school_year: aktivtSkolear,
+        version: 1,
+      }))
+      const { error } = await sb.from('sessions').insert(rader)
+      if (error) throw error
+    })
+    showToast(`${valgte.length} økt(er) kopiert til uke ${malUke}`, 'success')
+    modal.remove()
+    if (onSave) onSave()
+  }}, 'Kopier'))
   box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)

@@ -427,6 +427,14 @@ tr:hover td { background: var(--primær-svak); }
   padding: 10px 14px; font-size: .88rem; color: #7a6000; margin-bottom: 12px;
 }
 
+/* ── Kopi-modal: hint og AI-påminnelse ──────────────────────────── */
+.kopi-hint { font-size: .85rem; color: var(--tekst-svak); margin-bottom: 12px; }
+.ai-paaminnelse {
+  background: var(--primær-svak); border-radius: var(--radius);
+  padding: 8px 12px; font-size: .82rem; color: var(--badge-tekst); margin-bottom: 12px;
+}
+.felt-cb { width: 18px; height: 18px; cursor: pointer; }
+
 /* ── Session-wrapper (kort + avkrysning) ─────────────────────────── */
 .session-wrapper { display: flex; align-items: flex-start; gap: 6px; }
 .session-cb { margin-top: 6px; cursor: pointer; flex-shrink: 0; }

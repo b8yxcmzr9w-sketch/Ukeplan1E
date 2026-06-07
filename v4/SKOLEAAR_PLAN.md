@@ -32,14 +32,14 @@ på hver økt / flerdagsarrangement.
   - Alle økter-fane: filtrerer på aktivt år.
   - Søk-fane: standard aktivt år + nedtrekksfilter for å søke i tidligere år
     (treff i gamle år er skrivebeskyttet, kun kopi).
+- ✅ **Fase 4** – Redigerbar kopi + bulk-kopi Nivå A:
+  - `visKopierOktModal`: full redigerbar, forhåndsutfylt kopi-modal (fag, parti,
+    uke, dag, lærer, aktivitet, møtested, info). Stempler alltid aktivt år.
+  - `visBulkKopierModal`: "Kopier valgte" i bulk-baren → mål-uke (dag beholdes),
+    valgfritt behold opprinnelig lærer. AI-påminnelse vises ved ≥6 økter.
 
 ## Gjenstår
 
-- **Fase 4** – Redigerbar kopi + bulk-kopi Nivå A
-  - Kopi-modal med redigerbare, forhåndsutfylte felt.
-  - "Kopier valgte" i bulk-baren → velg mål-uke.
-  - AI-påminnelse i UI ("Lim inn med AI" for mange økter).
-  - Kopier stempler alltid **aktivt** skoleår (ikke kildens år).
 - **Fase 5** – Neste-år-vindu (fast 17. mai som skille).
 - **Fase 6** – iCal + datovisning: utled kalenderår fra `school_year` + `week_nr`
   (bruk samme logikk som SQL-funksjonen `skoleaar_kalenderaar`).
