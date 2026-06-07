@@ -1359,6 +1359,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
         activity: fd.get('activity') || '',
         meeting_point: fd.get('meeting_point') || '',
         info: fd.get('info') || '',
+        school_year: APP.school?.active_school_year,
         version: 1,
       })
       if (error) throw error
@@ -1557,6 +1558,7 @@ async function visKopierOktModal(session, onSave) {
         activity: session.activity,
         meeting_point: session.meeting_point,
         info: session.info,
+        school_year: APP.school?.active_school_year,
         version: 1,
       })
       if (error) throw error
@@ -1741,6 +1743,7 @@ async function visAIPasteModal(defaultKlasse, onSave) {
               activity: s.activity || '',
               meeting_point: s.meeting_point || '',
               info: s.info || '',
+              school_year: APP.school?.active_school_year,
               version: 1,
             })
           }
@@ -1914,6 +1917,7 @@ async function visNyMDEModal(classId, onSave) {
         description: descInput.value || null,
         start_date: startInput.value,
         end_date: endInput.value,
+        school_year: APP.school?.active_school_year,
       })
       if (error) throw error
     })
@@ -2005,7 +2009,7 @@ async function lastOppSikkerhetskopi(file, klasse) {
     await medLagreOverlay(async () => {
       for (const s of toImport) {
         const { id, ...rest } = s
-        await sb.from('sessions').insert({ ...rest, class_id: klasse.id, version: 1 })
+        await sb.from('sessions').insert({ ...rest, class_id: klasse.id, school_year: APP.school?.active_school_year, version: 1 })
       }
     })
     modal.remove()
