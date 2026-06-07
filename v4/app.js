@@ -110,7 +110,7 @@ function truncate(s, n = 60) {
 function formatDatoNO(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return d.toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit' })
 }
 
 function el(tag, attrs = {}, ...children) {
@@ -716,7 +716,6 @@ async function renderElevView(klasseNavn) {
     if (weekNr >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
 
     navRow.appendChild(prevBtn)
-    navRow.appendChild(el('span', { class: 'uke-label' }, `Uke ${weekNr}`))
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
 
@@ -771,8 +770,9 @@ async function renderElevView(klasseNavn) {
     for (let dag = 1; dag <= 5; dag++) {
       const dayCol = el('div', { class: 'dag-kol' })
       const dateForDay = isoWeekToDate(new Date().getFullYear(), weekNr, dag)
-      const dayHeader = el('div', { class: 'dag-tittel' },
-        `${dagNavn(dag)} ${formatDatoNO(dateForDay.toISOString().slice(0, 10))}`)
+      const dayHeader = el('div', { class: 'dag-tittel' })
+      dayHeader.appendChild(document.createTextNode(dagNavn(dag)))
+      dayHeader.appendChild(el('span', { class: 'dag-dato' }, ` ${formatDatoNO(dateForDay.toISOString().slice(0, 10))}`))
       dayCol.appendChild(dayHeader)
 
       let daySessions = (sessions || []).filter(s => s.day_of_week === dag)
@@ -1027,7 +1027,6 @@ async function renderMinKlasseTab(container) {
     })
 
     navRow.appendChild(prevBtn)
-    navRow.appendChild(el('span', { class: 'uke-label' }, `Uke ${currentWeek}`))
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
     navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => window.print() }, '🖨️'))
