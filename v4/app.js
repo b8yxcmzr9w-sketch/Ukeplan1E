@@ -4,6 +4,18 @@
 const SUPABASE_URL = 'https://zstjfatkeqbbekqgbsgb.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_c-knXQEaZswHBZ4_TPgnWw_Tg6OA04J'
 
+// Vakt: hvis Supabase-CDN ikke lastet (treg/blokkert nettverk), vis en tydelig
+// feilmelding i stedet for at app.js kaster og siden henger på «Laster…».
+if (!window.supabase || !window.supabase.createClient) {
+  const m = document.getElementById('app-main')
+  if (m) {
+    m.innerHTML = '<div class="tom-uke" style="padding:40px;text-align:center">' +
+      'Kunne ikke laste appen (nettverksfeil mot Supabase-biblioteket).<br><br>' +
+      '<button class="btn btn-p" onclick="location.reload()">Prøv igjen</button></div>'
+  }
+  throw new Error('window.supabase ikke tilgjengelig – CDN lastet ikke')
+}
+
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 window.APP = {
@@ -3143,4 +3155,20 @@ async function init() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', init)
+// Kjør init med sikkerhetsnett: enhver uventet feil skal IKKE etterlate
+// siden hengende på «Laster…» – vis en feilmelding med «Prøv igjen» i stedet.
+async function startApp() {
+  try {
+    await init()
+  } catch (err) {
+    console.error('Init feilet:', err)
+    const m = document.getElementById('app-main')
+    if (m && m.querySelector('.laster-start')) {
+      m.innerHTML = '<div class="tom-uke" style="padding:40px;text-align:center">' +
+        'Noe gikk galt under oppstart.<br><br>' +
+        '<button class="btn btn-p" onclick="location.reload()">Prøv igjen</button></div>'
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', startApp)
