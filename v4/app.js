@@ -1304,20 +1304,46 @@ async function renderAlleOkterTab(container) {
 }
 
 async function renderSokTab(container) {
-  const searchInput = el('input', { type: 'search', class: 'felt input', placeholder: 'Søk i aktivitet, sted, info, fag, lærer…' })
+  const aktivtSkolear = APP.school?.active_school_year || null
+
+  // Hent tilgjengelige skoleår for filter
+  let tilgjengeligeSkolear = aktivtSkolear ? [aktivtSkolear] : []
+  try {
+    const { data: aarRows } = await sb.from('sessions')
+      .select('school_year')
+      .eq('teacher_id', APP.profile.id)
+      .not('school_year', 'is', null)
+    const unikeAar = [...new Set((aarRows || []).map(r => r.school_year))].sort().reverse()
+    if (unikeAar.length) tilgjengeligeSkolear = unikeAar
+  } catch {}
+
+  let valgtSkolear = aktivtSkolear
+
+  const searchInput = el('input', { type: 'search', class: 'felt input', placeholder: 'Søk i aktivitet, sted, info, fag, lærer…', style: 'flex:1;min-width:200px' })
   const results = el('div', { class: 'search-results' })
+
+  // Skoleår-filter (vises bare hvis det finnes mer enn ett år)
+  let aarSel = null
+  if (tilgjengeligeSkolear.length > 1) {
+    aarSel = el('select', { class: 'skolear-sel', title: 'Velg skoleår å søke i' })
+    for (const aa of tilgjengeligeSkolear) {
+      const opt = el('option', { value: aa }, aa + (aa === aktivtSkolear ? ' (aktivt)' : ''))
+      if (aa === valgtSkolear) opt.selected = true
+      aarSel.appendChild(opt)
+    }
+    aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; doSearch() })
+  }
 
   async function doSearch() {
     const q = searchInput.value.trim()
     clearEl(results)
     if (!q) return
 
-    const aktivtSkolear = APP.school?.active_school_year
     let sokQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
       .or(`activity.ilike.%${q}%,meeting_point.ilike.%${q}%,info.ilike.%${q}%`)
       .eq('teacher_id', APP.profile.id)
-    if (aktivtSkolear) sokQuery = sokQuery.eq('school_year', aktivtSkolear)
+    if (valgtSkolear) sokQuery = sokQuery.eq('school_year', valgtSkolear)
     const { data } = await sokQuery
 
     // Also search by subject name and teacher name with a join – approximate via client side
@@ -1326,11 +1352,14 @@ async function renderSokTab(container) {
       return
     }
 
+    // Skrivebeskyttet for tidligere skoleår – kun les + kopi
+    const erAktivtAar = !valgtSkolear || valgtSkolear === aktivtSkolear
+
     for (const s of data) {
       const card = renderSessionCard(s, true, {
-        edit: () => visRedigerOktModal(s, doSearch),
+        edit: erAktivtAar ? () => visRedigerOktModal(s, doSearch) : null,
         copy: () => visKopierOktModal(s, doSearch),
-        del: () => slettOkt(s.id, doSearch),
+        del: erAktivtAar ? () => slettOkt(s.id, doSearch) : null,
       })
       const klasseLabel = el('span', { class: 'session-card__class' }, `${s.classes?.name} – Uke ${s.week_nr} ${dagNavn(s.day_of_week)}`)
       card.prepend(klasseLabel)
@@ -1339,7 +1368,11 @@ async function renderSokTab(container) {
   }
 
   searchInput.addEventListener('input', doSearch)
-  container.appendChild(searchInput)
+
+  const sokRad = el('div', { class: 'laerer-top' })
+  sokRad.appendChild(searchInput)
+  if (aarSel) sokRad.appendChild(aarSel)
+  container.appendChild(sokRad)
   container.appendChild(results)
 }
 
