@@ -3362,7 +3362,7 @@ async function renderSkolerute(container) {
         const { data, error } = await sb.functions.invoke('ai-parse-skolerute', {
           body: { text: aiText.value, school_id: APP.school.id }
         })
-        if (error) throw error
+        if (error) throw new Error(error.message + (data?.error ? ` – ${data.error}: ${JSON.stringify(data.details ?? data.raw ?? '')}` : ''))
         const evs = data.events || []
         const warnings = data.warnings || []
         if (!evs.length) { showToast('Ingen hendelser funnet – prøv å legge inn teksten mer strukturert', 'info'); return }
