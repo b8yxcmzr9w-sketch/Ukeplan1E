@@ -471,21 +471,44 @@ function visSettPassordModal(opts = {}) {
 // HEADER
 // ─────────────────────────────────────────
 
+function oppdaterKlasseStatisk(navn) {
+  const el2 = document.getElementById('hdr-klasse-statisk')
+  if (!el2) return
+  if (navn) {
+    el2.textContent = `klasse ${navn}`
+    el2.classList.remove('skjult')
+  } else {
+    el2.classList.add('skjult')
+  }
+}
+
 function oppdaterHeader() {
   // Skolenavn + logo
   const skolenavn = document.getElementById('hdr-skolenavn')
   const logo = document.getElementById('hdr-logo')
   if (skolenavn) skolenavn.textContent = APP.school ? APP.school.name : 'Ukeplan1e'
 
+  // Skoleår før skolenavn
+  const skolearEl = document.getElementById('hdr-skolear')
+  if (skolearEl) {
+    const sy = APP.school?.active_school_year
+    if (sy) {
+      skolearEl.textContent = sy
+      skolearEl.classList.remove('skjult')
+    } else {
+      skolearEl.classList.add('skjult')
+    }
+  }
+
   // Valgt klasse i header – select (lærervisning) eller statisk tekst (elevvisning)
   const klasseEl = document.getElementById('hdr-klasse')
   if (klasseEl) {
     clearEl(klasseEl)
     if (APP.klasseVelger && APP.klasseVelger.klasser.length > 0) {
-      klasseEl.classList.remove('skjult')
       if (APP.klasseVelger.klasser.length === 1) {
-        klasseEl.textContent = APP.klasseVelger.aktivKlasse?.name || ''
+        klasseEl.classList.add('skjult')
       } else {
+        klasseEl.classList.remove('skjult')
         const sel = document.createElement('select')
         sel.className = 'hdr-klasse-sel'
         sel.title = 'Velg klasse'
@@ -498,15 +521,21 @@ function oppdaterHeader() {
         }
         sel.addEventListener('change', (e) => {
           const k = APP.klasseVelger.klasser.find(k => k.id === e.target.value)
-          if (k) { APP.klasseVelger.aktivKlasse = k; APP.klasseVelger.onChange(k) }
+          if (k) {
+            APP.klasseVelger.aktivKlasse = k
+            APP.klasseVelger.onChange(k)
+            oppdaterKlasseStatisk(k.name)
+          }
         })
         klasseEl.appendChild(sel)
       }
+      oppdaterKlasseStatisk(APP.klasseVelger.aktivKlasse?.name || '')
     } else if (APP.currentKlasse) {
-      klasseEl.textContent = APP.currentKlasse
-      klasseEl.classList.remove('skjult')
+      klasseEl.classList.add('skjult')
+      oppdaterKlasseStatisk(APP.currentKlasse)
     } else {
       klasseEl.classList.add('skjult')
+      oppdaterKlasseStatisk(null)
     }
   }
   const favicon = document.getElementById('favicon')
@@ -796,7 +825,8 @@ async function renderElevView(klasseNavn) {
     // Utskrift-hode (vises kun ved print)
     const utskriftHode = document.getElementById('utskrift-hode')
     if (utskriftHode) {
-      utskriftHode.textContent = `${APP.school?.name || 'Ukeplan1e'} – ${klasse.name} – Uke ${weekNr}`
+      const sy = APP.school?.active_school_year
+      utskriftHode.textContent = `${sy ? sy + ' ' : ''}${APP.school?.name || 'Ukeplan1e'}, klasse ${klasse.name} – Uke ${weekNr}`
     }
 
     // Week navigation
