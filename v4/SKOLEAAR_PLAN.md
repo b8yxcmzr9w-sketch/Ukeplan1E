@@ -55,9 +55,14 @@ på hver økt / flerdagsarrangement.
   - `visICalModal`: URL-mismatch fikset — sender nå `school_id` + `klasse`-navn
     (eller `laerer`-navn) som funksjonen faktisk forventer.
 
-## Gjenstår
+- ✅ **Fase 7** – Eksport + "Start nytt skoleår"-flyt:
+  - `eksporterSkolear(school, skolear, format)`: eksporterer alle sessions for et
+    gitt skoleår som JSON, CSV (med BOM for Excel) eller åpner utskriftsvindu (PDF).
+  - `lastNed(blob, filnavn)`: hjelpefunksjon for nedlasting.
+  - Eksport-seksjon nederst i admin-fanen "Skoleår": velg år + format.
+  - "Bekreft nytt skoleår"-knappen minner om å eksportere før bytte.
 
-- **Fase 7** – Neste-år-vindu (fast 17. mai som skille).
+## Alle faser fullført ✅ – Neste-år-vindu (fast 17. mai som skille).
 - **Fase 6** – iCal + datovisning: utled kalenderår fra `school_year` + `week_nr`
   (bruk samme logikk som SQL-funksjonen `skoleaar_kalenderaar`).
 - **Fase 7** – Eksport (JSON / Excel-CSV / PDF) + "Start nytt skoleår"-flyt i admin.

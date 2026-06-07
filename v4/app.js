@@ -2510,7 +2510,7 @@ async function renderSkoleaarTab(container) {
         showToast('Ugyldig format — bruk ÅÅ/ÅÅ, f.eks. 26/27', 'error'); return
       }
       if (nytt === aktivt) { showToast('Dette er allerede aktivt skoleår', 'info'); return }
-      if (!confirm(`Bytte aktivt skoleår fra ${aktivt} til ${nytt}?\n\nElevenes visning endres umiddelbart. Eksisterende økter beholdes.`)) return
+      if (!confirm(`Bytte aktivt skoleår fra ${aktivt} til ${nytt}?\n\nElevenes visning endres umiddelbart. Eksisterende økter beholdes.\n\nTips: Last ned en eksport av ${aktivt} fra eksport-seksjonen nedenfor før du bytter.`)) return
       await medLagreOverlay(async () => {
         const { data: oppdatert, error } = await sb
           .from('schools').update({ active_school_year: nytt }).eq('id', school.id).select().single()
@@ -2534,6 +2534,134 @@ async function renderSkoleaarTab(container) {
   inputRad.appendChild(avbrytBtn)
   redigerSection.appendChild(inputRad)
   container.appendChild(redigerSection)
+
+  // ── Eksport-seksjon ──────────────────────────────────────────
+  container.appendChild(el('hr', { style: 'margin:28px 0 20px;border:none;border-top:1px solid var(--kant)' }))
+  container.appendChild(el('h4', { style: 'margin-bottom:8px' }, 'Eksporter skoleår'))
+  container.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.83rem;margin-bottom:14px' },
+    'Last ned alle økter for et skoleår som sikkerhetskopi eller for videre bruk.'))
+
+  // Hent tilgjengelige skoleår
+  const { data: aarRader } = await sb.from('sessions')
+    .select('school_year').eq('school_id', school.id).not('school_year', 'is', null)
+  const alleAar = [...new Set((aarRader || []).map((r) => r.school_year))].sort().reverse()
+  if (!alleAar.length) alleAar.push(aktivt)
+
+  const eksportRad = el('div', { class: 'laerer-top', style: 'margin-bottom:6px' })
+
+  const aarSel = el('select', { class: 'skolear-sel' })
+  for (const a of alleAar) {
+    aarSel.appendChild(el('option', { value: a }, a + (a === aktivt ? ' (aktivt)' : '')))
+  }
+  eksportRad.appendChild(aarSel)
+
+  eksportRad.appendChild(el('button', { class: 'btn btn-s', title: 'Last ned som JSON-backup', onclick: async () => {
+    await eksporterSkolear(school, aarSel.value, 'json')
+  }}, '⬇ JSON'))
+
+  eksportRad.appendChild(el('button', { class: 'btn btn-s', title: 'Last ned som CSV (Excel)', onclick: async () => {
+    await eksporterSkolear(school, aarSel.value, 'csv')
+  }}, '⬇ CSV'))
+
+  eksportRad.appendChild(el('button', { class: 'btn btn-s', title: 'Skriv ut / lagre som PDF', onclick: async () => {
+    await eksporterSkolear(school, aarSel.value, 'print')
+  }}, '🖨 PDF/Skriv ut'))
+
+  container.appendChild(eksportRad)
+}
+
+// Eksporterer alle sessions for et skoleår.
+// format: 'json' | 'csv' | 'print'
+async function eksporterSkolear(school, skolear, format) {
+  const { data: sessions, error } = await sb.from('sessions')
+    .select('*, subjects(name, short_code, color_hex), classes(name), users!teacher_id(full_name), subject_divisions(name, division_type)')
+    .eq('school_id', school.id)
+    .eq('school_year', skolear)
+    .is('deleted_at', null)
+    .order('week_nr')
+    .order('day_of_week')
+
+  if (error) { showToast('Eksport feilet: ' + error.message, 'error'); return }
+  if (!sessions || !sessions.length) { showToast('Ingen økter funnet for ' + skolear, 'info'); return }
+
+  if (format === 'json') {
+    const blob = new Blob([JSON.stringify(sessions, null, 2)], { type: 'application/json' })
+    lastNed(blob, `ukeplan-${skolear.replace('/', '-')}.json`)
+
+  } else if (format === 'csv') {
+    const cols = ['Uke', 'Dag', 'Klasse', 'Fag', 'Kode', 'Parti/gruppe', 'Lærer', 'Aktivitet', 'Møtested', 'Info']
+    const rows = sessions.map(s => [
+      s.week_nr,
+      dagNavn(s.day_of_week),
+      s.classes?.name ?? '',
+      s.subjects?.name ?? '',
+      s.subjects?.short_code ?? '',
+      s.subject_divisions ? `${s.subject_divisions.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${s.subject_divisions.name}` : '',
+      s.users?.full_name ?? '',
+      s.activity ?? '',
+      s.meeting_point ?? '',
+      s.info ?? '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`))
+    const csv = [cols.map(c => `"${c}"`).join(';'), ...rows.map(r => r.join(';'))].join('\r\n')
+    // BOM for å sikre riktig norsk tegnsett i Excel
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    lastNed(blob, `ukeplan-${skolear.replace('/', '-')}.csv`)
+
+  } else if (format === 'print') {
+    // Bygg en utskriftsvennlig tabell i et nytt vindu
+    const datoMap = {}
+    const startWeek = school.school_year_start_week || 1
+    for (const s of sessions) {
+      const year = skoleaarKalenderaar(skolear, s.week_nr, startWeek)
+      const dato = isoWeekToDate(year, s.week_nr, s.day_of_week)
+      datoMap[`${s.week_nr}-${s.day_of_week}`] = dato.toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit' })
+    }
+
+    const rows = sessions.map(s => `
+      <tr>
+        <td>${s.week_nr}</td>
+        <td>${dagNavn(s.day_of_week)} ${datoMap[`${s.week_nr}-${s.day_of_week}`] || ''}</td>
+        <td>${s.classes?.name ?? ''}</td>
+        <td>${s.subjects?.short_code ?? ''} ${s.subjects?.name ?? ''}</td>
+        <td>${s.users?.full_name ?? ''}</td>
+        <td>${s.activity ?? ''}</td>
+        <td>${s.meeting_point ?? ''}</td>
+        <td>${s.info ?? ''}</td>
+      </tr>`).join('')
+
+    const html = `<!DOCTYPE html><html lang="no"><head><meta charset="UTF-8">
+      <title>Ukeplan ${school.name} – ${skolear}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
+        h1 { font-size: 16px; margin-bottom: 12px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+        th { background: #f0f0f0; font-weight: bold; }
+        tr:nth-child(even) { background: #fafafa; }
+        @media print { body { padding: 0; } }
+      </style>
+    </head><body>
+      <h1>${school.name} – Skoleår ${skolear}</h1>
+      <table>
+        <thead><tr>
+          <th>Uke</th><th>Dag</th><th>Klasse</th><th>Fag</th>
+          <th>Lærer</th><th>Aktivitet</th><th>Møtested</th><th>Info</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </body></html>`
+
+    const w = window.open('', '_blank')
+    if (w) { w.document.write(html); w.document.close(); w.print() }
+  }
+}
+
+function lastNed(blob, filnavn) {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filnavn
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000)
 }
 
 async function renderFagTab(container) {
