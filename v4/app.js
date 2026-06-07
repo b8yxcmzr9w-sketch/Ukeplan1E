@@ -2171,66 +2171,101 @@ async function renderSkoleInfoTab(container) {
   container.appendChild(form)
 }
 
-// Genererer skoleår-merkelapper ('25/26') rundt et utgangspunkt
-function skoleaarValg(senter) {
-  // senter f.eks. '25/26' → grunnår 25. Tilbyr -1 til +2.
-  let grunn = 25
-  if (senter && /^\d{2}\/\d{2}$/.test(senter)) grunn = parseInt(senter.split('/')[0])
-  const valg = []
-  for (let d = -1; d <= 2; d++) {
-    const a = ((grunn + d) % 100 + 100) % 100
-    const b = (a + 1) % 100
-    valg.push(`${String(a).padStart(2, '0')}/${String(b).padStart(2, '0')}`)
-  }
-  return valg
-}
-
 async function renderSkoleaarTab(container) {
   clearEl(container)
   const school = APP.school
   const aktivt = school.active_school_year || '25/26'
 
+  // Neste skoleår: øk første årstall med 1
+  function nesteSkolear(sy) {
+    if (!sy || !/^\d{2}\/\d{2}$/.test(sy)) return ''
+    const a = (parseInt(sy.split('/')[0]) + 1) % 100
+    const b = (a + 1) % 100
+    return `${String(a).padStart(2, '0')}/${String(b).padStart(2, '0')}`
+  }
+
   container.appendChild(el('h3', {}, 'Skoleår'))
 
-  const info = el('div', { class: 'subj-config-box', style: 'margin-bottom:18px' })
-  info.appendChild(el('div', { style: 'font-weight:600;margin-bottom:4px' }, 'Aktivt skoleår'))
-  info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.88rem' },
+  // Vis aktivt skoleår
+  const statusBoks = el('div', { class: 'subj-config-box', style: 'margin-bottom:24px' })
+  statusBoks.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-bottom:2px' }, 'Aktivt skoleår'))
+  statusBoks.appendChild(el('div', { style: 'font-size:1.5rem;font-weight:700;letter-spacing:.05em' }, aktivt))
+  statusBoks.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:6px' },
     'Elevene ser kun det aktive skoleåret. Lærere kan bla tilbake til tidligere år. Nye økter stemples automatisk med det aktive skoleåret.'))
-  container.appendChild(info)
+  container.appendChild(statusBoks)
 
-  const form = el('form', { class: 'skjema skjema-smal' })
+  // "Nytt skoleår"-knapp som viser redigerbart forslag
+  const forslag = nesteSkolear(aktivt)
+  const redigerSection = el('div', { style: 'display:none' })
 
-  const sel = el('select', { name: 'active_school_year', class: 'felt select' })
-  for (const v of skoleaarValg(aktivt)) {
-    const opt = el('option', { value: v }, v === aktivt ? `${v} (aktivt nå)` : v)
-    if (v === aktivt) opt.setAttribute('selected', 'true')
-    sel.appendChild(opt)
-  }
-  form.appendChild(lagFormRad('Aktivt skoleår', sel))
+  const nyttBtn = el('button', {
+    class: 'btn btn-p',
+    title: 'Start et nytt skoleår',
+    onclick: () => { redigerSection.style.display = ''; nyttBtn.style.display = 'none' }
+  }, `Nytt skoleår →  ${forslag}`)
+  container.appendChild(nyttBtn)
 
-  const advarsel = el('p', { class: 'tekst-svak', style: 'font-size:.82rem;margin:6px 0 12px' },
-    'Endrer du aktivt skoleår, bytter elevenes visning umiddelbart. Eksisterende økter beholdes og forblir knyttet til sitt skoleår.')
-  form.appendChild(advarsel)
+  // Redigerbart forslag + bekreft
+  const forklarTekst = el('p', { class: 'tekst-svak', style: 'font-size:.82rem;margin:6px 0 10px' },
+    'Kontroller skoleåret og trykk «Bekreft» for å aktivere. Elevenes visning endres umiddelbart.')
+  redigerSection.appendChild(forklarTekst)
 
-  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p', title: 'Lagre aktivt skoleår' }, 'Lagre skoleår')
-  form.appendChild(lagreKnapp)
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const nytt = sel.value
-    if (nytt === aktivt) { showToast('Skoleåret er allerede aktivt', 'info'); return }
-    await medLagreOverlay(async () => {
-      const { data: oppdatert, error } = await sb
-        .from('schools').update({ active_school_year: nytt }).eq('id', school.id).select().single()
-      if (error) throw error
-      if (!oppdatert) throw new Error('Ingen rader ble oppdatert – sjekk admin-tilgang i databasen')
-      APP.school = oppdatert
-    })
-    showToast(`Aktivt skoleår satt til ${nytt}`, 'success')
-    renderSkoleaarTab(container) // re-render med ny tilstand
+  const inputRad = el('div', { style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap' })
+  const aarInput = el('input', {
+    type: 'text',
+    class: 'felt input',
+    value: forslag,
+    maxlength: 5,
+    pattern: '\\d{2}/\\d{2}',
+    placeholder: '25/26',
+    title: 'Format: ÅÅ/ÅÅ, f.eks. 26/27',
+    style: 'width:90px;font-size:1.1rem;font-weight:600;text-align:center'
   })
 
-  container.appendChild(form)
+  // Auto-sett andre del når bruker skriver
+  aarInput.addEventListener('input', () => {
+    const v = aarInput.value.replace(/[^0-9/]/g, '')
+    if (/^\d{2}$/.test(v)) {
+      const b = (parseInt(v) + 1) % 100
+      aarInput.value = `${v}/${String(b).padStart(2, '0')}`
+    } else {
+      aarInput.value = v
+    }
+  })
+
+  const bekreftBtn = el('button', {
+    class: 'btn btn-p',
+    title: 'Aktiver dette skoleåret',
+    onclick: async () => {
+      const nytt = aarInput.value.trim()
+      if (!/^\d{2}\/\d{2}$/.test(nytt)) {
+        showToast('Ugyldig format — bruk ÅÅ/ÅÅ, f.eks. 26/27', 'error'); return
+      }
+      if (nytt === aktivt) { showToast('Dette er allerede aktivt skoleår', 'info'); return }
+      if (!confirm(`Bytte aktivt skoleår fra ${aktivt} til ${nytt}?\n\nElevenes visning endres umiddelbart. Eksisterende økter beholdes.`)) return
+      await medLagreOverlay(async () => {
+        const { data: oppdatert, error } = await sb
+          .from('schools').update({ active_school_year: nytt }).eq('id', school.id).select().single()
+        if (error) throw error
+        if (!oppdatert) throw new Error('Ingen rader ble oppdatert – sjekk admin-tilgang i databasen')
+        APP.school = oppdatert
+      })
+      showToast(`Aktivt skoleår endret til ${nytt}`, 'success')
+      renderSkoleaarTab(container)
+    }
+  }, 'Bekreft')
+
+  const avbrytBtn = el('button', {
+    class: 'btn btn-s',
+    title: 'Avbryt',
+    onclick: () => { redigerSection.style.display = 'none'; nyttBtn.style.display = '' }
+  }, 'Avbryt')
+
+  inputRad.appendChild(aarInput)
+  inputRad.appendChild(bekreftBtn)
+  inputRad.appendChild(avbrytBtn)
+  redigerSection.appendChild(inputRad)
+  container.appendChild(redigerSection)
 }
 
 async function renderFagTab(container) {
