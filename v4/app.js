@@ -95,7 +95,16 @@ function isoWeekToDate(year, week, dayOfWeek) {
 }
 
 function getCurrentISOWeek() {
-  return getISOWeek(new Date())
+  const now = new Date()
+  // Fredag (5) etter kl. 18 → vis neste uke
+  if (now.getDay() === 5 && now.getHours() >= 18) {
+    return getISOWeek(new Date(now.getTime() + 7 * 86400000))
+  }
+  // Helg (lørdag/søndag) → vis neste uke
+  if (now.getDay() === 6 || now.getDay() === 0) {
+    return getISOWeek(new Date(now.getTime() + 7 * 86400000))
+  }
+  return getISOWeek(now)
 }
 
 function dagNavn(n) {
@@ -419,6 +428,18 @@ function oppdaterHeader() {
   const skolenavn = document.getElementById('hdr-skolenavn')
   const logo = document.getElementById('hdr-logo')
   if (skolenavn) skolenavn.textContent = APP.school ? APP.school.name : 'Ukeplan1e'
+
+  // Valgt klasse i header (informativ)
+  const klasseEl = document.getElementById('hdr-klasse')
+  if (klasseEl) {
+    if (APP.currentKlasse) {
+      klasseEl.textContent = APP.currentKlasse
+      klasseEl.classList.remove('skjult')
+    } else {
+      klasseEl.textContent = ''
+      klasseEl.classList.add('skjult')
+    }
+  }
   const favicon = document.getElementById('favicon')
   if (logo && APP.school && (APP.school.logo_url || APP.school.logo_file_path)) {
     logo.src = APP.school.logo_file_path
@@ -608,27 +629,14 @@ async function renderElevView(klasseNavn) {
     klasse = alleKlasser.find(k => k.name === klasseNavn)
   }
 
-  // Wrapper
-  const wrap = el('div', { class: 'side-wrap' })
-  main.appendChild(wrap)
-
-  // Class selector
-  const klasseHeader = el('div', { class: 'nav-bar' })
-  const selector = el('select', { onchange: (e) => {
-    const val = e.target.value
-    navigate(val ? `#/klasse/${encodeURIComponent(val)}` : '#/')
-  }})
-  selector.appendChild(el('option', { value: '' }, '-- Velg klasse --'))
-  for (const k of alleKlasser) {
-    const opt = el('option', { value: k.name }, k.name)
-    if (klasse && k.id === klasse.id) opt.setAttribute('selected', 'true')
-    selector.appendChild(opt)
-  }
-  klasseHeader.appendChild(el('label', { style: 'font-weight:600;margin-right:8px' }, 'Klasse:'))
-  klasseHeader.appendChild(selector)
-  // Klassevelger vises aldri når klasse er valgt – bruk velkomstsiden for å velge klasse
+  // Header: vis valgt klasse (informativt)
+  APP.currentKlasse = klasse ? klasse.name : null
+  oppdaterHeader()
 
   if (!klasse) {
+    // Wrapper for velkomstside
+    const wrap = el('div', { class: 'side-wrap' })
+    main.appendChild(wrap)
     const velkomst = el('div', { class: 'velkomst-side' })
 
     if (APP.school?.logo_url) {
@@ -695,6 +703,12 @@ async function renderElevView(klasseNavn) {
       .lte('start_date', wEnd)
       .gte('end_date', wStart)
 
+    // Utskrift-hode (vises kun ved print)
+    const utskriftHode = document.getElementById('utskrift-hode')
+    if (utskriftHode) {
+      utskriftHode.textContent = `${APP.school?.name || 'Ukeplan1e'} – ${klasse.name} – Uke ${weekNr}`
+    }
+
     // Week navigation
     const navRow = el('div', { class: 'nav-bar' })
     const prevBtn = el('button', { class: 'btn btn-s', onclick: () => {
@@ -715,9 +729,16 @@ async function renderElevView(klasseNavn) {
     }}, 'Neste uke →')
     if (weekNr >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
 
+    const naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)
+    const naaBtn = el('button', { class: 'btn btn-s', onclick: () => {
+      currentWeek = naaWeek; renderUke(currentWeek)
+    }}, 'Nå')
+    if (weekNr === naaWeek) naaBtn.setAttribute('disabled', 'true')
+
     navRow.appendChild(prevBtn)
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
+    navRow.appendChild(naaBtn)
 
     const printBtn = el('button', { class: 'btn btn-s', onclick: () => window.print() }, '🖨️ Skriv ut')
     const icalBtn = el('button', { class: 'btn btn-s', onclick: () => visICalModal(klasse) }, '📅 iCal-abonnement')
@@ -876,6 +897,8 @@ async function renderLaererView() {
   const main = document.getElementById('app-main')
   clearEl(main)
   APP.currentView = 'laerer'
+  APP.currentKlasse = null
+  oppdaterHeader()
 
   const isKontakt = APP.profile.role === 'kontaktlaerer' || APP.isAdminActive
 
@@ -1007,6 +1030,12 @@ async function renderMinKlasseTab(container) {
     clearEl(weekArea)
     bulkSelected.clear()
 
+    // Utskrift-hode (vises kun ved print)
+    const utskriftHode = document.getElementById('utskrift-hode')
+    if (utskriftHode) {
+      utskriftHode.textContent = `${APP.school?.name || 'Ukeplan1e'} – ${aktivKlasse.name} – Uke ${currentWeek}`
+    }
+
     const navRow = el('div', { class: 'nav-bar' })
     const prevBtn = el('button', { class: 'btn btn-s', onclick: () => {
       if (currentWeek > schoolStart) { currentWeek--; renderUke() }
@@ -1026,9 +1055,16 @@ async function renderMinKlasseTab(container) {
       }
     })
 
+    const naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)
+    const naaBtn = el('button', { class: 'btn btn-s', onclick: () => {
+      currentWeek = naaWeek; renderUke()
+    }}, 'Nå')
+    if (currentWeek === naaWeek) naaBtn.setAttribute('disabled', 'true')
+
     navRow.appendChild(prevBtn)
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
+    navRow.appendChild(naaBtn)
     navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => window.print() }, '🖨️'))
     navRow.appendChild(el('button', { class: 'btn btn-s', onclick: () => visICalModal(null) }, '📅'))
     weekArea.appendChild(navRow)
@@ -1935,6 +1971,8 @@ async function renderAdminPanel() {
   const main = document.getElementById('app-main')
   clearEl(main)
   APP.currentView = 'admin'
+  APP.currentKlasse = null
+  oppdaterHeader()
 
   const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Funfacts']
   const tabSlugs = ['skoleinfo', 'fag', 'klasser', 'brukere', 'skolerute', 'funfacts']

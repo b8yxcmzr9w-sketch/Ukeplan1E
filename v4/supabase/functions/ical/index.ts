@@ -70,13 +70,13 @@ Deno.serve(async (req) => {
   // Build iCal
   const now = new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z'
   const calName = laerer
-    ? `Ukeplan – ${laerer} (${school.name})`
-    : `Ukeplan – ${klasse} (${school.name})`
+    ? `${school.name} – ${laerer}`
+    : `${school.name} – ${klasse}`
 
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Ukeplan v4//NO',
+    'PRODID:-//Ukeplan1e//NO',
     `X-WR-CALNAME:${calName}`,
     'X-WR-TIMEZONE:Europe/Oslo',
     'CALSCALE:GREGORIAN',
