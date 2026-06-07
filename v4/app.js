@@ -124,6 +124,31 @@ function dagNavn(n) {
   return ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'][n - 1]
 }
 
+// Returnerer neste skoleår som 'YY/YY', f.eks. '25/26' → '26/27'.
+function nesteSkolear(sy) {
+  if (!sy || !/^\d{2}\/\d{2}$/.test(sy)) return null
+  const a = (parseInt(sy.split('/')[0]) + 1) % 100
+  const b = (a + 1) % 100
+  return `${String(a).padStart(2, '0')}/${String(b).padStart(2, '0')}`
+}
+
+// Fra og med 17. mai er planleggingsvinduet for neste skoleår åpent.
+function erNesteAarVinduApent() {
+  const now = new Date()
+  return (now.getMonth() + 1) > 5 || ((now.getMonth() + 1) === 5 && now.getDate() >= 17)
+}
+
+// Kalenderår for en gitt uke innenfor et skoleår.
+// Uker f.o.m. oppstartsuka hører til første årstall, resten til andre.
+// Eksempel: '25/26', uke 40, startUke 33 → 2025; uke 10 → 2026.
+// Speiler SQL-funksjonen skoleaar_kalenderaar() i migrering 004.
+function skoleaarKalenderaar(schoolYear, weekNr, startWeek) {
+  if (!schoolYear || !/^\d{2}\/\d{2}$/.test(schoolYear)) return new Date().getFullYear()
+  const foersteAar = 2000 + parseInt(schoolYear.split('/')[0], 10)
+  const andreAar   = 2000 + parseInt(schoolYear.split('/')[1], 10)
+  return weekNr >= (startWeek || 1) ? foersteAar : andreAar
+}
+
 function truncate(s, n = 60) {
   if (!s) return ''
   return s.length > n ? s.slice(0, n) + '…' : s
@@ -716,19 +741,23 @@ async function renderElevView(klasseNavn) {
     if (!weekContainer) main.appendChild(wc)
 
     // Fetch sessions
-    const { data: sessions, error: sessionsError } = await sb.from('sessions')
+    const aktivtSkolear = APP.school?.active_school_year
+    let sesjonQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
       .eq('class_id', klasse.id)
       .eq('week_nr', weekNr)
       .order('day_of_week')
+    if (aktivtSkolear) sesjonQuery = sesjonQuery.eq('school_year', aktivtSkolear)
+    const { data: sessions, error: sessionsError } = await sesjonQuery
     if (sessionsError) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
     }
 
-    // Fetch calendar events for the week
-    const weekStartDate = isoWeekToDate(new Date().getFullYear(), weekNr, 1)
-    const weekEndDate = isoWeekToDate(new Date().getFullYear(), weekNr, 5)
+    // Fetch calendar events for the week (kalenderår utledet fra skoleåret)
+    const visKalenderaar = skoleaarKalenderaar(aktivtSkolear, weekNr, APP.school?.school_year_start_week)
+    const weekStartDate = isoWeekToDate(visKalenderaar, weekNr, 1)
+    const weekEndDate = isoWeekToDate(visKalenderaar, weekNr, 5)
     const wStart = weekStartDate.toISOString().slice(0, 10)
     const wEnd = weekEndDate.toISOString().slice(0, 10)
 
@@ -831,7 +860,7 @@ async function renderElevView(klasseNavn) {
     const grid = el('div', { class: 'uke-grid' })
     for (let dag = 1; dag <= 5; dag++) {
       const dayCol = el('div', { class: 'dag-kol' })
-      const dateForDay = isoWeekToDate(new Date().getFullYear(), weekNr, dag)
+      const dateForDay = isoWeekToDate(visKalenderaar, weekNr, dag)
       const dayHeader = el('div', { class: 'dag-tittel' })
       dayHeader.appendChild(document.createTextNode(dagNavn(dag)))
       dayHeader.appendChild(el('span', { class: 'dag-dato' }, ` ${formatDatoNO(dateForDay.toISOString().slice(0, 10))}`))
@@ -910,9 +939,10 @@ function renderSessionCard(s, showActions, actions = {}) {
 
 function visICalModal(klasse) {
   const baseUrl = `${SUPABASE_URL}/functions/v1/ical`
+  const schoolId = APP.school?.id ?? ''
   const url = klasse
-    ? `${baseUrl}?class_id=${klasse.id}`
-    : `${baseUrl}?teacher_id=${APP.profile?.id}`
+    ? `${baseUrl}?school_id=${schoolId}&klasse=${encodeURIComponent(klasse.name)}`
+    : `${baseUrl}?school_id=${schoolId}&laerer=${encodeURIComponent(APP.profile?.full_name ?? '')}`
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'iCal-abonnement'))
@@ -1072,12 +1102,52 @@ async function renderMinKlasseTab(container) {
   if (currentWeek < schoolStart) currentWeek = schoolStart
   if (currentWeek > schoolEnd) currentWeek = schoolEnd
 
+  // Hent tilgjengelige skoleår for denne skolen (for skoleår-velger)
+  const aktivtSkolear = APP.school?.active_school_year || null
+  const nesteAar = nesteSkolear(aktivtSkolear)
+  let valgtSkolear = aktivtSkolear
+  let tilgjengeligeSkolear = aktivtSkolear ? [aktivtSkolear] : []
+  try {
+    const { data: aarRows } = await sb.from('sessions')
+      .select('school_year')
+      .eq('school_id', APP.school.id)
+      .not('school_year', 'is', null)
+    const unikeAar = [...new Set((aarRows || []).map(r => r.school_year))].sort().reverse()
+    if (unikeAar.length) {
+      tilgjengeligeSkolear = unikeAar
+      if (!valgtSkolear) valgtSkolear = unikeAar[0]
+    }
+  } catch {}
+
+  // Fra 17. mai: legg til neste skoleår i velgeren som planleggingsvindu
+  if (nesteAar && erNesteAarVinduApent() && !tilgjengeligeSkolear.includes(nesteAar)) {
+    tilgjengeligeSkolear = [nesteAar, ...tilgjengeligeSkolear]
+  }
+
   // Klassevelger i header
   APP.klasseVelger = { klasser, aktivKlasse, onChange: (k) => { aktivKlasse = k; APP.klasseVelger.aktivKlasse = k; renderUke() } }
   oppdaterHeader()
 
   const topRow = el('div', { class: 'laerer-top' })
-  topRow.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
+
+  // Skoleår-velger (vises når det finnes mer enn ett alternativ)
+  let aarSel = null
+  if (tilgjengeligeSkolear.length > 1) {
+    aarSel = el('select', { class: 'skolear-sel', title: 'Velg skoleår å vise' })
+    for (const aa of tilgjengeligeSkolear) {
+      let label = aa
+      if (aa === aktivtSkolear) label += ' (aktivt)'
+      else if (aa === nesteAar && erNesteAarVinduApent()) label += ' (planlegg)'
+      const opt = el('option', { value: aa }, label)
+      if (aa === valgtSkolear) opt.selected = true
+      aarSel.appendChild(opt)
+    }
+    aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; renderUke() })
+    topRow.appendChild(aarSel)
+  }
+
+  const nyOktBtn = el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke, valgtSkolear) }, '+ Ny økt')
+  topRow.appendChild(nyOktBtn)
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Lim inn ukeplan som tekst og la AI tolke den', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier lenke til elevvisning', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
   container.appendChild(topRow)
@@ -1090,6 +1160,14 @@ async function renderMinKlasseTab(container) {
   async function renderUke() {
     clearEl(weekArea)
     bulkSelected.clear()
+
+    // Skrivebeskyttet for historiske år; aktivt år OG neste år (planleggingsvindu) er skrivbare
+    const erSkrivbar = !valgtSkolear || valgtSkolear === aktivtSkolear ||
+      (valgtSkolear === nesteAar && erNesteAarVinduApent())
+    const erAktivtAar = erSkrivbar  // brukes videre for tilgangskontroll på knapper
+
+    // Vis/skjul "+ Ny økt"-knapp basert på skrivetilgang
+    if (nyOktBtn) nyOktBtn.style.display = erSkrivbar ? '' : 'none'
 
     // Utskrift-hode (vises kun ved print)
     const utskriftHode = document.getElementById('utskrift-hode')
@@ -1131,10 +1209,23 @@ async function renderMinKlasseTab(container) {
     navRow.appendChild(el('button', { class: 'btn btn-s', title: 'Abonner på kalender (iCal)', onclick: () => visICalModal(null) }, '📅'))
     weekArea.appendChild(navRow)
 
-    const { data: sessions, error: sessionsError } = await sb.from('sessions')
+    // Banner: les-modus for historiske år / planlegging for neste år
+    if (!erSkrivbar) {
+      weekArea.appendChild(el('div', { class: 'tidligare-aar-banner' },
+        `📚 Du leser skoleår ${valgtSkolear}. Du kan kopiere økter, men ikke redigere eller slette.`
+      ))
+    } else if (valgtSkolear === nesteAar) {
+      weekArea.appendChild(el('div', { class: 'neste-aar-banner' },
+        `📅 Planleggingsvindu for ${valgtSkolear}. Øktene blir synlige for elever når dette settes som aktivt skoleår.`
+      ))
+    }
+
+    let laererSesjonQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
       .eq('class_id', aktivKlasse.id)
       .eq('week_nr', currentWeek)
+    if (valgtSkolear) laererSesjonQuery = laererSesjonQuery.eq('school_year', valgtSkolear)
+    const { data: sessions, error: sessionsError } = await laererSesjonQuery
     if (sessionsError) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
@@ -1145,6 +1236,10 @@ async function renderMinKlasseTab(container) {
     const bulkCount = el('span', {}, '0 valgt')
     bulkBar.appendChild(bulkCount)
     bulkBar.appendChild(el('button', { class: 'btn btn-s', title: 'Rediger alle valgte økter samtidig', onclick: () => visBulkEditModal([...bulkSelected], renderUke) }, 'Rediger valgte'))
+    bulkBar.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier alle valgte økter til en annen uke', onclick: () => {
+      const valgte = (sessions || []).filter(s => bulkSelected.has(s.id))
+      visBulkKopierModal(valgte, renderUke)
+    }}, 'Kopier valgte'))
     bulkBar.appendChild(el('button', { class: 'btn btn-f', title: 'Slett alle valgte økter', onclick: async () => {
       if (!confirm('Slette alle valgte?')) return
       await medLagreOverlay(async () => {
@@ -1175,7 +1270,7 @@ async function renderMinKlasseTab(container) {
 
         const wrapper = el('div', { class: 'session-wrapper' })
 
-        if (isMine || isKontakt) {
+        if (erAktivtAar && (isMine || isKontakt)) {
           const cb = el('input', { type: 'checkbox', class: 'session-cb' })
           if (isMine) {
             cb.addEventListener('change', () => {
@@ -1190,10 +1285,10 @@ async function renderMinKlasseTab(container) {
         }
 
         const card = renderSessionCard(s, true, {
-          edit: (isMine || isKontakt) ? () => visRedigerOktModal(s, renderUke) : null,
+          edit: erAktivtAar && (isMine || isKontakt) ? () => visRedigerOktModal(s, renderUke) : null,
           copy: () => visKopierOktModal(s, renderUke),
-          del: (isMine || isKontakt) ? () => slettOkt(s.id, renderUke) : null,
-          transfer: isMine ? () => visOverforModal(s, renderUke) : null,
+          del: erAktivtAar && (isMine || isKontakt) ? () => slettOkt(s.id, renderUke) : null,
+          transfer: erAktivtAar && isMine ? () => visOverforModal(s, renderUke) : null,
         })
         wrapper.appendChild(card)
         dayCol.appendChild(wrapper)
@@ -1216,11 +1311,14 @@ async function renderMinKlasseTab(container) {
 }
 
 async function renderAlleOkterTab(container) {
-  const { data: sessions } = await sb.from('sessions')
+  const aktivtSkolear = APP.school?.active_school_year
+  let alleOkterQuery = sb.from('sessions')
     .select('*, subjects(name, color_hex, short_code), classes(name), subject_divisions(name)')
     .eq('teacher_id', APP.profile.id)
     .order('week_nr')
     .order('day_of_week')
+  if (aktivtSkolear) alleOkterQuery = alleOkterQuery.eq('school_year', aktivtSkolear)
+  const { data: sessions } = await alleOkterQuery
 
   if (!sessions || !sessions.length) {
     container.appendChild(el('p', {}, 'Ingen økter funnet.'))
@@ -1253,18 +1351,47 @@ async function renderAlleOkterTab(container) {
 }
 
 async function renderSokTab(container) {
-  const searchInput = el('input', { type: 'search', class: 'felt input', placeholder: 'Søk i aktivitet, sted, info, fag, lærer…' })
+  const aktivtSkolear = APP.school?.active_school_year || null
+
+  // Hent tilgjengelige skoleår for filter
+  let tilgjengeligeSkolear = aktivtSkolear ? [aktivtSkolear] : []
+  try {
+    const { data: aarRows } = await sb.from('sessions')
+      .select('school_year')
+      .eq('teacher_id', APP.profile.id)
+      .not('school_year', 'is', null)
+    const unikeAar = [...new Set((aarRows || []).map(r => r.school_year))].sort().reverse()
+    if (unikeAar.length) tilgjengeligeSkolear = unikeAar
+  } catch {}
+
+  let valgtSkolear = aktivtSkolear
+
+  const searchInput = el('input', { type: 'search', class: 'felt input', placeholder: 'Søk i aktivitet, sted, info, fag, lærer…', style: 'flex:1;min-width:200px' })
   const results = el('div', { class: 'search-results' })
+
+  // Skoleår-filter (vises bare hvis det finnes mer enn ett år)
+  let aarSel = null
+  if (tilgjengeligeSkolear.length > 1) {
+    aarSel = el('select', { class: 'skolear-sel', title: 'Velg skoleår å søke i' })
+    for (const aa of tilgjengeligeSkolear) {
+      const opt = el('option', { value: aa }, aa + (aa === aktivtSkolear ? ' (aktivt)' : ''))
+      if (aa === valgtSkolear) opt.selected = true
+      aarSel.appendChild(opt)
+    }
+    aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; doSearch() })
+  }
 
   async function doSearch() {
     const q = searchInput.value.trim()
     clearEl(results)
     if (!q) return
 
-    const { data } = await sb.from('sessions')
+    let sokQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
       .or(`activity.ilike.%${q}%,meeting_point.ilike.%${q}%,info.ilike.%${q}%`)
       .eq('teacher_id', APP.profile.id)
+    if (valgtSkolear) sokQuery = sokQuery.eq('school_year', valgtSkolear)
+    const { data } = await sokQuery
 
     // Also search by subject name and teacher name with a join – approximate via client side
     if (!data || !data.length) {
@@ -1272,11 +1399,14 @@ async function renderSokTab(container) {
       return
     }
 
+    // Skrivebeskyttet for tidligere skoleår – kun les + kopi
+    const erAktivtAar = !valgtSkolear || valgtSkolear === aktivtSkolear
+
     for (const s of data) {
       const card = renderSessionCard(s, true, {
-        edit: () => visRedigerOktModal(s, doSearch),
+        edit: erAktivtAar ? () => visRedigerOktModal(s, doSearch) : null,
         copy: () => visKopierOktModal(s, doSearch),
-        del: () => slettOkt(s.id, doSearch),
+        del: erAktivtAar ? () => slettOkt(s.id, doSearch) : null,
       })
       const klasseLabel = el('span', { class: 'session-card__class' }, `${s.classes?.name} – Uke ${s.week_nr} ${dagNavn(s.day_of_week)}`)
       card.prepend(klasseLabel)
@@ -1285,7 +1415,11 @@ async function renderSokTab(container) {
   }
 
   searchInput.addEventListener('input', doSearch)
-  container.appendChild(searchInput)
+
+  const sokRad = el('div', { class: 'laerer-top' })
+  sokRad.appendChild(searchInput)
+  if (aarSel) sokRad.appendChild(aarSel)
+  container.appendChild(sokRad)
   container.appendChild(results)
 }
 
@@ -1322,7 +1456,7 @@ function visElevLenkeModal(klasse) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
-async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
+async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Ny økt'))
@@ -1371,7 +1505,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
         activity: fd.get('activity') || '',
         meeting_point: fd.get('meeting_point') || '',
         info: fd.get('info') || '',
-        school_year: APP.school?.active_school_year,
+        school_year: skoleAar || APP.school?.active_school_year,
         version: 1,
       })
       if (error) throw error
@@ -1545,41 +1679,100 @@ async function visKopierOktModal(session, onSave) {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Kopier økt'))
-  box.appendChild(el('p', {}, 'Velg uke og dag for kopien:'))
 
-  const weekInput = el('input', { type: 'number', class: 'felt input', value: session.week_nr, min: 1, max: 53, placeholder: 'Uke' })
-  const dagSel = el('select', { class: 'felt select' })
-  for (let i = 1; i <= 5; i++) {
-    const opt = el('option', { value: i }, dagNavn(i))
-    if (i === session.day_of_week) opt.setAttribute('selected', 'true')
-    dagSel.appendChild(opt)
+  const aktivtSkolear = APP.school?.active_school_year
+  // Kopier alltid inn i aktivt skoleår – også når kilden er et tidligere år.
+  if (session.school_year && aktivtSkolear && session.school_year !== aktivtSkolear) {
+    box.appendChild(el('p', { class: 'kopi-hint' },
+      `Kopien lagres i aktivt skoleår (${aktivtSkolear}). Du kan endre detaljene før du lagrer.`))
+  } else {
+    box.appendChild(el('p', { class: 'kopi-hint' }, 'Endre detaljene før du lagrer kopien:'))
   }
 
-  box.appendChild(lagFormRad('Uke', weekInput))
-  box.appendChild(lagFormRad('Dag', dagSel))
+  const { data: subjects } = await sb.from('subjects').select('*')
+    .eq('school_id', APP.school.id).order('name')
+  const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
 
-  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
+    e.preventDefault()
+    const fd = new FormData(form)
     await medLagreOverlay(async () => {
       const { error } = await sb.from('sessions').insert({
         class_id: session.class_id,
-        subject_id: session.subject_id,
-        division_id: session.division_id,
-        week_nr: parseInt(weekInput.value),
-        day_of_week: parseInt(dagSel.value),
-        teacher_id: APP.profile.id,
-        activity: session.activity,
-        meeting_point: session.meeting_point,
-        info: session.info,
-        school_year: APP.school?.active_school_year,
+        subject_id: fd.get('subject_id'),
+        division_id: fd.get('division_id') || null,
+        week_nr: parseInt(fd.get('week_nr')),
+        day_of_week: parseInt(fd.get('day_of_week')),
+        teacher_id: fd.get('teacher_id'),
+        activity: fd.get('activity') || '',
+        meeting_point: fd.get('meeting_point') || '',
+        info: fd.get('info') || '',
+        school_year: aktivtSkolear,
         version: 1,
       })
       if (error) throw error
     })
     modal.remove()
     if (onSave) onSave()
-  }}, 'Kopier'))
-  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  }})
 
+  // Fag
+  const fagSel = el('select', { name: 'subject_id', class: 'felt select', required: 'true',
+    onchange: (e) => oppdaterDivisionSel(e.target.value) })
+  for (const s of subjects || []) {
+    const opt = el('option', { value: s.id }, s.name)
+    if (s.id === session.subject_id) opt.setAttribute('selected', 'true')
+    fagSel.appendChild(opt)
+  }
+  form.appendChild(lagFormRad('Fag', fagSel))
+
+  // Parti/gruppe
+  const divSel = el('select', { name: 'division_id', class: 'felt select' })
+  form.appendChild(lagFormRad('Parti/gruppe', divSel))
+
+  async function oppdaterDivisionSel(subjectId) {
+    clearEl(divSel)
+    divSel.appendChild(el('option', { value: '' }, '(ingen)'))
+    const { data: divs } = await sb.from('subject_divisions').select('*').eq('subject_id', subjectId)
+    for (const d of divs || []) {
+      const opt = el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`)
+      if (d.id === session.division_id) opt.setAttribute('selected', 'true')
+      divSel.appendChild(opt)
+    }
+  }
+  await oppdaterDivisionSel(session.subject_id)
+
+  // Uke
+  const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'felt input',
+    value: session.week_nr, min: 1, max: 53, required: 'true' })
+  form.appendChild(lagFormRad('Uke', weekInput))
+
+  // Dag
+  const dagSel = el('select', { name: 'day_of_week', class: 'felt select' })
+  for (let i = 1; i <= 5; i++) {
+    const opt = el('option', { value: i }, dagNavn(i))
+    if (i === session.day_of_week) opt.setAttribute('selected', 'true')
+    dagSel.appendChild(opt)
+  }
+  form.appendChild(lagFormRad('Dag', dagSel))
+
+  // Lærer (standard: meg)
+  const laererSel = el('select', { name: 'teacher_id', class: 'felt select' })
+  for (const t of teachers || []) {
+    const opt = el('option', { value: t.id }, t.full_name)
+    if (t.id === APP.profile.id) opt.setAttribute('selected', 'true')
+    laererSel.appendChild(opt)
+  }
+  form.appendChild(lagFormRad('Lærer', laererSel))
+
+  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input', value: session.activity || '' })))
+  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '' })))
+  form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')))
+
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre kopi'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
+  form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+
+  box.appendChild(form)
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
@@ -1668,6 +1861,65 @@ async function visBulkEditModal(ids, onSave) {
     modal.remove()
     if (onSave) onSave()
   }}, 'Lagre'))
+  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
+
+// Bulk-kopi Nivå A: kopier valgte økter til én mål-uke (dag beholdes).
+// Kopiene stemples alltid med aktivt skoleår.
+async function visBulkKopierModal(valgte, onSave) {
+  if (!valgte || !valgte.length) return
+  const modal = el('div', { class: 'modal-bg' })
+  const box = el('div', { class: 'modal' })
+  box.appendChild(el('h3', {}, `Kopier ${valgte.length} økt(er)`))
+
+  const aktivtSkolear = APP.school?.active_school_year
+  const kildeUke = valgte[0].week_nr
+
+  box.appendChild(el('p', { class: 'kopi-hint' },
+    `Øktene kopieres til valgt mål-uke (samme ukedag beholdes)${aktivtSkolear ? `, i aktivt skoleår ${aktivtSkolear}` : ''}.`))
+
+  // AI-påminnelse ved mange økter
+  if (valgte.length >= 6) {
+    box.appendChild(el('p', { class: 'ai-paaminnelse' },
+      '💡 Tips: For mange økter på en gang kan «🤖 Lim inn med AI» være raskere.'))
+  }
+
+  const weekInput = el('input', { type: 'number', class: 'felt input', value: kildeUke, min: 1, max: 53, placeholder: 'Mål-uke' })
+  box.appendChild(lagFormRad('Mål-uke', weekInput))
+
+  const beholdLaerer = el('input', { type: 'checkbox', class: 'felt-cb' })
+  beholdLaerer.checked = false
+  box.appendChild(lagFormRad('Behold opprinnelig lærer', beholdLaerer))
+
+  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+    const malUke = parseInt(weekInput.value)
+    if (!malUke || malUke < 1 || malUke > 53) { showToast('Ugyldig ukenummer', 'error'); return }
+
+    await medLagreOverlay(async () => {
+      const rader = valgte.map(s => ({
+        class_id: s.class_id,
+        subject_id: s.subject_id,
+        division_id: s.division_id,
+        week_nr: malUke,
+        day_of_week: s.day_of_week,
+        teacher_id: beholdLaerer.checked ? s.teacher_id : APP.profile.id,
+        activity: s.activity || '',
+        meeting_point: s.meeting_point || '',
+        info: s.info || '',
+        school_year: aktivtSkolear,
+        version: 1,
+      }))
+      const { error } = await sb.from('sessions').insert(rader)
+      if (error) throw error
+    })
+    showToast(`${valgte.length} økt(er) kopiert til uke ${malUke}`, 'success')
+    modal.remove()
+    if (onSave) onSave()
+  }}, 'Kopier'))
   box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   modal.appendChild(box)
@@ -2188,14 +2440,6 @@ async function renderSkoleaarTab(container) {
   const school = APP.school
   const aktivt = school.active_school_year || '25/26'
 
-  // Neste skoleår: øk første årstall med 1
-  function nesteSkolear(sy) {
-    if (!sy || !/^\d{2}\/\d{2}$/.test(sy)) return ''
-    const a = (parseInt(sy.split('/')[0]) + 1) % 100
-    const b = (a + 1) % 100
-    return `${String(a).padStart(2, '0')}/${String(b).padStart(2, '0')}`
-  }
-
   container.appendChild(el('h3', {}, 'Skoleår'))
 
   // Vis aktivt skoleår
@@ -2204,6 +2448,18 @@ async function renderSkoleaarTab(container) {
   statusBoks.appendChild(el('div', { style: 'font-size:1.5rem;font-weight:700;letter-spacing:.05em' }, aktivt))
   statusBoks.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:6px' },
     'Elevene ser kun det aktive skoleåret. Lærere kan bla tilbake til tidligere år. Nye økter stemples automatisk med det aktive skoleåret.'))
+  // Vis om planleggingsvinduet er åpent
+  const neste = nesteSkolear(aktivt)
+  if (neste) {
+    const vinduApent = erNesteAarVinduApent()
+    statusBoks.appendChild(el('div', {
+      class: vinduApent ? 'neste-aar-banner' : '',
+      style: vinduApent ? 'margin-top:10px' : 'margin-top:10px;font-size:.82rem;color:var(--tekst-svak)'
+    }, vinduApent
+      ? `📅 Planleggingsvindu for ${neste} er åpent (fra 17. mai). Lærere kan allerede planlegge neste skoleår.`
+      : `📅 Planleggingsvindu for ${neste} åpner 17. mai — lærere kan da planlegge neste skoleår.`
+    ))
+  }
   container.appendChild(statusBoks)
 
   // "Nytt skoleår"-knapp som viser redigerbart forslag
@@ -2254,7 +2510,7 @@ async function renderSkoleaarTab(container) {
         showToast('Ugyldig format — bruk ÅÅ/ÅÅ, f.eks. 26/27', 'error'); return
       }
       if (nytt === aktivt) { showToast('Dette er allerede aktivt skoleår', 'info'); return }
-      if (!confirm(`Bytte aktivt skoleår fra ${aktivt} til ${nytt}?\n\nElevenes visning endres umiddelbart. Eksisterende økter beholdes.`)) return
+      if (!confirm(`Bytte aktivt skoleår fra ${aktivt} til ${nytt}?\n\nElevenes visning endres umiddelbart. Eksisterende økter beholdes.\n\nTips: Last ned en eksport av ${aktivt} fra eksport-seksjonen nedenfor før du bytter.`)) return
       await medLagreOverlay(async () => {
         const { data: oppdatert, error } = await sb
           .from('schools').update({ active_school_year: nytt }).eq('id', school.id).select().single()
@@ -2278,6 +2534,134 @@ async function renderSkoleaarTab(container) {
   inputRad.appendChild(avbrytBtn)
   redigerSection.appendChild(inputRad)
   container.appendChild(redigerSection)
+
+  // ── Eksport-seksjon ──────────────────────────────────────────
+  container.appendChild(el('hr', { style: 'margin:28px 0 20px;border:none;border-top:1px solid var(--kant)' }))
+  container.appendChild(el('h4', { style: 'margin-bottom:8px' }, 'Eksporter skoleår'))
+  container.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.83rem;margin-bottom:14px' },
+    'Last ned alle økter for et skoleår som sikkerhetskopi eller for videre bruk.'))
+
+  // Hent tilgjengelige skoleår
+  const { data: aarRader } = await sb.from('sessions')
+    .select('school_year').eq('school_id', school.id).not('school_year', 'is', null)
+  const alleAar = [...new Set((aarRader || []).map((r) => r.school_year))].sort().reverse()
+  if (!alleAar.length) alleAar.push(aktivt)
+
+  const eksportRad = el('div', { class: 'laerer-top', style: 'margin-bottom:6px' })
+
+  const aarSel = el('select', { class: 'skolear-sel' })
+  for (const a of alleAar) {
+    aarSel.appendChild(el('option', { value: a }, a + (a === aktivt ? ' (aktivt)' : '')))
+  }
+  eksportRad.appendChild(aarSel)
+
+  eksportRad.appendChild(el('button', { class: 'btn btn-s', title: 'Last ned som JSON-backup', onclick: async () => {
+    await eksporterSkolear(school, aarSel.value, 'json')
+  }}, '⬇ JSON'))
+
+  eksportRad.appendChild(el('button', { class: 'btn btn-s', title: 'Last ned som CSV (Excel)', onclick: async () => {
+    await eksporterSkolear(school, aarSel.value, 'csv')
+  }}, '⬇ CSV'))
+
+  eksportRad.appendChild(el('button', { class: 'btn btn-s', title: 'Skriv ut / lagre som PDF', onclick: async () => {
+    await eksporterSkolear(school, aarSel.value, 'print')
+  }}, '🖨 PDF/Skriv ut'))
+
+  container.appendChild(eksportRad)
+}
+
+// Eksporterer alle sessions for et skoleår.
+// format: 'json' | 'csv' | 'print'
+async function eksporterSkolear(school, skolear, format) {
+  const { data: sessions, error } = await sb.from('sessions')
+    .select('*, subjects(name, short_code, color_hex), classes(name), users!teacher_id(full_name), subject_divisions(name, division_type)')
+    .eq('school_id', school.id)
+    .eq('school_year', skolear)
+    .is('deleted_at', null)
+    .order('week_nr')
+    .order('day_of_week')
+
+  if (error) { showToast('Eksport feilet: ' + error.message, 'error'); return }
+  if (!sessions || !sessions.length) { showToast('Ingen økter funnet for ' + skolear, 'info'); return }
+
+  if (format === 'json') {
+    const blob = new Blob([JSON.stringify(sessions, null, 2)], { type: 'application/json' })
+    lastNed(blob, `ukeplan-${skolear.replace('/', '-')}.json`)
+
+  } else if (format === 'csv') {
+    const cols = ['Uke', 'Dag', 'Klasse', 'Fag', 'Kode', 'Parti/gruppe', 'Lærer', 'Aktivitet', 'Møtested', 'Info']
+    const rows = sessions.map(s => [
+      s.week_nr,
+      dagNavn(s.day_of_week),
+      s.classes?.name ?? '',
+      s.subjects?.name ?? '',
+      s.subjects?.short_code ?? '',
+      s.subject_divisions ? `${s.subject_divisions.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${s.subject_divisions.name}` : '',
+      s.users?.full_name ?? '',
+      s.activity ?? '',
+      s.meeting_point ?? '',
+      s.info ?? '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`))
+    const csv = [cols.map(c => `"${c}"`).join(';'), ...rows.map(r => r.join(';'))].join('\r\n')
+    // BOM for å sikre riktig norsk tegnsett i Excel
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    lastNed(blob, `ukeplan-${skolear.replace('/', '-')}.csv`)
+
+  } else if (format === 'print') {
+    // Bygg en utskriftsvennlig tabell i et nytt vindu
+    const datoMap = {}
+    const startWeek = school.school_year_start_week || 1
+    for (const s of sessions) {
+      const year = skoleaarKalenderaar(skolear, s.week_nr, startWeek)
+      const dato = isoWeekToDate(year, s.week_nr, s.day_of_week)
+      datoMap[`${s.week_nr}-${s.day_of_week}`] = dato.toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit' })
+    }
+
+    const rows = sessions.map(s => `
+      <tr>
+        <td>${s.week_nr}</td>
+        <td>${dagNavn(s.day_of_week)} ${datoMap[`${s.week_nr}-${s.day_of_week}`] || ''}</td>
+        <td>${s.classes?.name ?? ''}</td>
+        <td>${s.subjects?.short_code ?? ''} ${s.subjects?.name ?? ''}</td>
+        <td>${s.users?.full_name ?? ''}</td>
+        <td>${s.activity ?? ''}</td>
+        <td>${s.meeting_point ?? ''}</td>
+        <td>${s.info ?? ''}</td>
+      </tr>`).join('')
+
+    const html = `<!DOCTYPE html><html lang="no"><head><meta charset="UTF-8">
+      <title>Ukeplan ${school.name} – ${skolear}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
+        h1 { font-size: 16px; margin-bottom: 12px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+        th { background: #f0f0f0; font-weight: bold; }
+        tr:nth-child(even) { background: #fafafa; }
+        @media print { body { padding: 0; } }
+      </style>
+    </head><body>
+      <h1>${school.name} – Skoleår ${skolear}</h1>
+      <table>
+        <thead><tr>
+          <th>Uke</th><th>Dag</th><th>Klasse</th><th>Fag</th>
+          <th>Lærer</th><th>Aktivitet</th><th>Møtested</th><th>Info</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </body></html>`
+
+    const w = window.open('', '_blank')
+    if (w) { w.document.write(html); w.document.close(); w.print() }
+  }
+}
+
+function lastNed(blob, filnavn) {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filnavn
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000)
 }
 
 async function renderFagTab(container) {
