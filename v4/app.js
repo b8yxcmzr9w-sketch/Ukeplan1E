@@ -2146,7 +2146,7 @@ async function visRedigerFagModal(subj, onSave) {
   if (subj?.short_code) kortInput.dataset.manuelt = '1'
   const kortRad = el('div', { class: 'felt' })
   kortRad.appendChild(el('label', {}, 'Kortkode'))
-  const kortWrap = el('div', { style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap' })
+  const kortWrap = el('div', { class: 'input-med-hint' })
   kortWrap.appendChild(kortInput)
   kortWrap.appendChild(kortInfo)
   kortRad.appendChild(kortWrap)
@@ -2754,7 +2754,7 @@ async function renderFaktaTab(container) {
       'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe.'))
 
     // Knapper øverst
-    const knappeRad = el('div', { style: 'display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap' })
+    const knappeRad = el('div', { class: 'knapper-rad' })
     knappeRad.appendChild(el('button', { class: 'btn btn-p', onclick: () => visFunfactModal(null, refresh) }, '+ Legg til'))
     const aiBtn = el('button', { class: 'btn btn-s', onclick: async () => {
       if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
