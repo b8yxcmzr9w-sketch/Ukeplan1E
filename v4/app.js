@@ -1228,8 +1228,10 @@ async function renderMinKlasseTab(container) {
   container.appendChild(weekArea)
 
   let bulkSelected = new Set()
+  let ukeRenderToken = 0
 
   async function renderUke() {
+    const myToken = ++ukeRenderToken
     clearEl(weekArea)
     bulkSelected.clear()
 
@@ -1298,6 +1300,7 @@ async function renderMinKlasseTab(container) {
       .eq('week_nr', currentWeek)
     if (valgtSkolear) laererSesjonQuery = laererSesjonQuery.eq('school_year', valgtSkolear)
     const { data: sessions, error: sessionsError } = await laererSesjonQuery
+    if (myToken !== ukeRenderToken) return  // nyere render har startet, avbryt denne
     if (sessionsError) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
