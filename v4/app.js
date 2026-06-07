@@ -124,6 +124,20 @@ function dagNavn(n) {
   return ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'][n - 1]
 }
 
+// Returnerer neste skoleår som 'YY/YY', f.eks. '25/26' → '26/27'.
+function nesteSkolear(sy) {
+  if (!sy || !/^\d{2}\/\d{2}$/.test(sy)) return null
+  const a = (parseInt(sy.split('/')[0]) + 1) % 100
+  const b = (a + 1) % 100
+  return `${String(a).padStart(2, '0')}/${String(b).padStart(2, '0')}`
+}
+
+// Fra og med 17. mai er planleggingsvinduet for neste skoleår åpent.
+function erNesteAarVinduApent() {
+  const now = new Date()
+  return (now.getMonth() + 1) > 5 || ((now.getMonth() + 1) === 5 && now.getDate() >= 17)
+}
+
 function truncate(s, n = 60) {
   if (!s) return ''
   return s.length > n ? s.slice(0, n) + '…' : s
@@ -1077,6 +1091,7 @@ async function renderMinKlasseTab(container) {
 
   // Hent tilgjengelige skoleår for denne skolen (for skoleår-velger)
   const aktivtSkolear = APP.school?.active_school_year || null
+  const nesteAar = nesteSkolear(aktivtSkolear)
   let valgtSkolear = aktivtSkolear
   let tilgjengeligeSkolear = aktivtSkolear ? [aktivtSkolear] : []
   try {
@@ -1091,17 +1106,26 @@ async function renderMinKlasseTab(container) {
     }
   } catch {}
 
+  // Fra 17. mai: legg til neste skoleår i velgeren som planleggingsvindu
+  if (nesteAar && erNesteAarVinduApent() && !tilgjengeligeSkolear.includes(nesteAar)) {
+    tilgjengeligeSkolear = [nesteAar, ...tilgjengeligeSkolear]
+  }
+
   // Klassevelger i header
   APP.klasseVelger = { klasser, aktivKlasse, onChange: (k) => { aktivKlasse = k; APP.klasseVelger.aktivKlasse = k; renderUke() } }
   oppdaterHeader()
 
   const topRow = el('div', { class: 'laerer-top' })
 
-  // Skoleår-velger (vises bare hvis det finnes mer enn ett skoleår)
+  // Skoleår-velger (vises når det finnes mer enn ett alternativ)
+  let aarSel = null
   if (tilgjengeligeSkolear.length > 1) {
-    const aarSel = el('select', { class: 'skolear-sel', title: 'Velg skoleår å vise' })
+    aarSel = el('select', { class: 'skolear-sel', title: 'Velg skoleår å vise' })
     for (const aa of tilgjengeligeSkolear) {
-      const opt = el('option', { value: aa }, aa + (aa === aktivtSkolear ? ' (aktivt)' : ''))
+      let label = aa
+      if (aa === aktivtSkolear) label += ' (aktivt)'
+      else if (aa === nesteAar && erNesteAarVinduApent()) label += ' (planlegg)'
+      const opt = el('option', { value: aa }, label)
       if (aa === valgtSkolear) opt.selected = true
       aarSel.appendChild(opt)
     }
@@ -1109,7 +1133,7 @@ async function renderMinKlasseTab(container) {
     topRow.appendChild(aarSel)
   }
 
-  const nyOktBtn = el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt')
+  const nyOktBtn = el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke, valgtSkolear) }, '+ Ny økt')
   topRow.appendChild(nyOktBtn)
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Lim inn ukeplan som tekst og la AI tolke den', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier lenke til elevvisning', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
@@ -1124,11 +1148,13 @@ async function renderMinKlasseTab(container) {
     clearEl(weekArea)
     bulkSelected.clear()
 
-    // Skrivebeskyttet for tidligere skoleår
-    const erAktivtAar = !valgtSkolear || valgtSkolear === aktivtSkolear
+    // Skrivebeskyttet for historiske år; aktivt år OG neste år (planleggingsvindu) er skrivbare
+    const erSkrivbar = !valgtSkolear || valgtSkolear === aktivtSkolear ||
+      (valgtSkolear === nesteAar && erNesteAarVinduApent())
+    const erAktivtAar = erSkrivbar  // brukes videre for tilgangskontroll på knapper
 
-    // Vis/skjul "+ Ny økt"-knapp basert på aktivt år
-    if (nyOktBtn) nyOktBtn.style.display = erAktivtAar ? '' : 'none'
+    // Vis/skjul "+ Ny økt"-knapp basert på skrivetilgang
+    if (nyOktBtn) nyOktBtn.style.display = erSkrivbar ? '' : 'none'
 
     // Utskrift-hode (vises kun ved print)
     const utskriftHode = document.getElementById('utskrift-hode')
@@ -1170,10 +1196,14 @@ async function renderMinKlasseTab(container) {
     navRow.appendChild(el('button', { class: 'btn btn-s', title: 'Abonner på kalender (iCal)', onclick: () => visICalModal(null) }, '📅'))
     weekArea.appendChild(navRow)
 
-    // Banner: les-modus for tidligere skoleår
-    if (!erAktivtAar) {
+    // Banner: les-modus for historiske år / planlegging for neste år
+    if (!erSkrivbar) {
       weekArea.appendChild(el('div', { class: 'tidligare-aar-banner' },
         `📚 Du leser skoleår ${valgtSkolear}. Du kan kopiere økter, men ikke redigere eller slette.`
+      ))
+    } else if (valgtSkolear === nesteAar) {
+      weekArea.appendChild(el('div', { class: 'neste-aar-banner' },
+        `📅 Planleggingsvindu for ${valgtSkolear}. Øktene blir synlige for elever når dette settes som aktivt skoleår.`
       ))
     }
 
@@ -1413,7 +1443,7 @@ function visElevLenkeModal(klasse) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
-async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
+async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Ny økt'))
@@ -1462,7 +1492,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave) {
         activity: fd.get('activity') || '',
         meeting_point: fd.get('meeting_point') || '',
         info: fd.get('info') || '',
-        school_year: APP.school?.active_school_year,
+        school_year: skoleAar || APP.school?.active_school_year,
         version: 1,
       })
       if (error) throw error
@@ -2397,14 +2427,6 @@ async function renderSkoleaarTab(container) {
   const school = APP.school
   const aktivt = school.active_school_year || '25/26'
 
-  // Neste skoleår: øk første årstall med 1
-  function nesteSkolear(sy) {
-    if (!sy || !/^\d{2}\/\d{2}$/.test(sy)) return ''
-    const a = (parseInt(sy.split('/')[0]) + 1) % 100
-    const b = (a + 1) % 100
-    return `${String(a).padStart(2, '0')}/${String(b).padStart(2, '0')}`
-  }
-
   container.appendChild(el('h3', {}, 'Skoleår'))
 
   // Vis aktivt skoleår
@@ -2413,6 +2435,18 @@ async function renderSkoleaarTab(container) {
   statusBoks.appendChild(el('div', { style: 'font-size:1.5rem;font-weight:700;letter-spacing:.05em' }, aktivt))
   statusBoks.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:6px' },
     'Elevene ser kun det aktive skoleåret. Lærere kan bla tilbake til tidligere år. Nye økter stemples automatisk med det aktive skoleåret.'))
+  // Vis om planleggingsvinduet er åpent
+  const neste = nesteSkolear(aktivt)
+  if (neste) {
+    const vinduApent = erNesteAarVinduApent()
+    statusBoks.appendChild(el('div', {
+      class: vinduApent ? 'neste-aar-banner' : '',
+      style: vinduApent ? 'margin-top:10px' : 'margin-top:10px;font-size:.82rem;color:var(--tekst-svak)'
+    }, vinduApent
+      ? `📅 Planleggingsvindu for ${neste} er åpent (fra 17. mai). Lærere kan allerede planlegge neste skoleår.`
+      : `📅 Planleggingsvindu for ${neste} åpner 17. mai — lærere kan da planlegge neste skoleår.`
+    ))
+  }
   container.appendChild(statusBoks)
 
   // "Nytt skoleår"-knapp som viser redigerbart forslag

@@ -38,9 +38,18 @@ på hver økt / flerdagsarrangement.
   - `visBulkKopierModal`: "Kopier valgte" i bulk-baren → mål-uke (dag beholdes),
     valgfritt behold opprinnelig lærer. AI-påminnelse vises ved ≥6 økter.
 
+- ✅ **Fase 5** – Neste-år-vindu (fast 17. mai):
+  - `nesteSkolear(sy)` og `erNesteAarVinduApent()` som globale hjelpefunksjoner.
+  - Fra 17. mai vises neste skoleår i skoleår-velgeren i lærervisning med merkelapp
+    "(planlegg)". Vinduet er **skrivbart** — lærere kan legge inn og redigere økter
+    for neste år mens inneværende år fortsatt er aktivt.
+  - `visNyOktModal` tar valgfritt `skoleAar`-argument slik at nye økter stemples riktig.
+  - Blått banner vises når planleggingsvinduet er aktivt.
+  - Admin-fanen "Skoleår" viser om vinduet er åpent eller når det åpner (17. mai).
+
 ## Gjenstår
 
-- **Fase 5** – Neste-år-vindu (fast 17. mai som skille).
+- **Fase 6** – Neste-år-vindu (fast 17. mai som skille).
 - **Fase 6** – iCal + datovisning: utled kalenderår fra `school_year` + `week_nr`
   (bruk samme logikk som SQL-funksjonen `skoleaar_kalenderaar`).
 - **Fase 7** – Eksport (JSON / Excel-CSV / PDF) + "Start nytt skoleår"-flyt i admin.

@@ -427,6 +427,12 @@ tr:hover td { background: var(--primær-svak); }
   padding: 10px 14px; font-size: .88rem; color: #7a6000; margin-bottom: 12px;
 }
 
+/* ── Banner: planleggingsvindu for neste skoleår ────────────────── */
+.neste-aar-banner {
+  background: #e8f4fd; border: 1px solid #90caf9; border-radius: var(--radius);
+  padding: 10px 14px; font-size: .88rem; color: #0d47a1; margin-bottom: 12px;
+}
+
 /* ── Kopi-modal: hint og AI-påminnelse ──────────────────────────── */
 .kopi-hint { font-size: .85rem; color: var(--tekst-svak); margin-bottom: 12px; }
 .ai-paaminnelse {
