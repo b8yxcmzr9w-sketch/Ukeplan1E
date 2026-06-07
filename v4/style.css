@@ -153,7 +153,7 @@ header .spacer { flex: 1; }
 /* ── Navigasjon ─────────────────────────────────────────────────── */
 .nav-bar {
   display: flex; align-items: center; gap: 8px;
-  padding: 12px 20px 0; flex-wrap: wrap;
+  padding: 4px 20px 0; flex-wrap: wrap;
 }
 .uke-label { font-size: 1rem; font-weight: 700; white-space: nowrap; }
 .uke-nr-input {
