@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ukeplan1e</title>
 <link rel="icon" id="favicon" href="unoicon.png">
-<link rel="stylesheet" href="style.css?v=20260607d">
+<link rel="stylesheet" href="style.css?v=20260607e">
 </head>
 <body>
 
@@ -67,13 +67,14 @@
 <footer></footer>
 
 <!-- ── Supabase CDN ──────────────────────────────────────────────── -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- defer: bevarer rekkefølge og kjører etter at DOM er parset -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <!-- ── App ──────────────────────────────────────────────────────── -->
-<script src="app.js?v=20260607d"></script>
+<script defer src="app.js?v=20260607e"></script>
 
 <!-- ── Footer-script ────────────────────────────────────────────── -->
-<script src="uno-footer.js"></script>
+<script defer src="uno-footer.js"></script>
 
 </body>
 </html>
