@@ -2033,8 +2033,8 @@ async function renderAdminPanel() {
   APP.klasseVelger = null
   oppdaterHeader()
 
-  const tabs = ['Skoleinfo', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Funfacts']
-  const tabSlugs = ['skoleinfo', 'fag', 'klasser', 'brukere', 'skolerute', 'funfacts']
+  const tabs = ['Skoleinfo', 'Skoleår', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Funfacts']
+  const tabSlugs = ['skoleinfo', 'skolear', 'fag', 'klasser', 'brukere', 'skolerute', 'funfacts']
 
   const hashTab = location.hash.split('/')[2]
   const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
@@ -2048,11 +2048,12 @@ async function renderAdminPanel() {
     clearEl(tabContent)
     switch (idx) {
       case 0: renderSkoleInfoTab(tabContent); break
-      case 1: renderFagTab(tabContent); break
-      case 2: renderKlasserTab(tabContent); break
-      case 3: renderBrukereTab(tabContent); break
-      case 4: renderSkolerute(tabContent); break
-      case 5: renderFaktaTab(tabContent); break
+      case 1: renderSkoleaarTab(tabContent); break
+      case 2: renderFagTab(tabContent); break
+      case 3: renderKlasserTab(tabContent); break
+      case 4: renderBrukereTab(tabContent); break
+      case 5: renderSkolerute(tabContent); break
+      case 6: renderFaktaTab(tabContent); break
     }
   }
 
@@ -2167,6 +2168,68 @@ async function renderSkoleInfoTab(container) {
   form.appendChild(themeRow)
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre skoleinfo'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
+  container.appendChild(form)
+}
+
+// Genererer skoleår-merkelapper ('25/26') rundt et utgangspunkt
+function skoleaarValg(senter) {
+  // senter f.eks. '25/26' → grunnår 25. Tilbyr -1 til +2.
+  let grunn = 25
+  if (senter && /^\d{2}\/\d{2}$/.test(senter)) grunn = parseInt(senter.split('/')[0])
+  const valg = []
+  for (let d = -1; d <= 2; d++) {
+    const a = ((grunn + d) % 100 + 100) % 100
+    const b = (a + 1) % 100
+    valg.push(`${String(a).padStart(2, '0')}/${String(b).padStart(2, '0')}`)
+  }
+  return valg
+}
+
+async function renderSkoleaarTab(container) {
+  clearEl(container)
+  const school = APP.school
+  const aktivt = school.active_school_year || '25/26'
+
+  container.appendChild(el('h3', {}, 'Skoleår'))
+
+  const info = el('div', { class: 'subj-config-box', style: 'margin-bottom:18px' })
+  info.appendChild(el('div', { style: 'font-weight:600;margin-bottom:4px' }, 'Aktivt skoleår'))
+  info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.88rem' },
+    'Elevene ser kun det aktive skoleåret. Lærere kan bla tilbake til tidligere år. Nye økter stemples automatisk med det aktive skoleåret.'))
+  container.appendChild(info)
+
+  const form = el('form', { class: 'skjema skjema-smal' })
+
+  const sel = el('select', { name: 'active_school_year', class: 'felt select' })
+  for (const v of skoleaarValg(aktivt)) {
+    const opt = el('option', { value: v }, v === aktivt ? `${v} (aktivt nå)` : v)
+    if (v === aktivt) opt.setAttribute('selected', 'true')
+    sel.appendChild(opt)
+  }
+  form.appendChild(lagFormRad('Aktivt skoleår', sel))
+
+  const advarsel = el('p', { class: 'tekst-svak', style: 'font-size:.82rem;margin:6px 0 12px' },
+    'Endrer du aktivt skoleår, bytter elevenes visning umiddelbart. Eksisterende økter beholdes og forblir knyttet til sitt skoleår.')
+  form.appendChild(advarsel)
+
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p', title: 'Lagre aktivt skoleår' }, 'Lagre skoleår')
+  form.appendChild(lagreKnapp)
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const nytt = sel.value
+    if (nytt === aktivt) { showToast('Skoleåret er allerede aktivt', 'info'); return }
+    await medLagreOverlay(async () => {
+      const { data: oppdatert, error } = await sb
+        .from('schools').update({ active_school_year: nytt }).eq('id', school.id).select().single()
+      if (error) throw error
+      if (!oppdatert) throw new Error('Ingen rader ble oppdatert – sjekk admin-tilgang i databasen')
+      APP.school = oppdatert
+    })
+    showToast(`Aktivt skoleår satt til ${nytt}`, 'success')
+    renderSkoleaarTab(container) // re-render med ny tilstand
+  })
+
   container.appendChild(form)
 }
 
