@@ -2981,15 +2981,32 @@ async function init() {
 
   window.addEventListener('hashchange', router)
 
-  // Sjekk lokal sesjon (rask, ingen nettverkskall)
-  const { data: { session } } = await sb.auth.getSession()
-  if (session) {
-    APP.user = session.user
-  }
-
-  // Vis siden umiddelbart – ikke vent på profil eller skoledata
+  // Vis siden umiddelbart – ikke vent på Supabase auth (kan henge ved token-refresh)
   oppdaterHeader()
   await router()
+
+  // Hent sesjon i bakgrunnen – med timeout slik at vi ikke henger for alltid
+  let session = null
+  try {
+    const sessionPromise = sb.auth.getSession()
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('getSession timeout')), 5000)
+    )
+    const { data } = await Promise.race([sessionPromise, timeoutPromise])
+    session = data?.session ?? null
+  } catch (err) {
+    console.warn('Sesjonshenting feilet eller tok for lang tid:', err.message)
+  }
+
+  if (session) {
+    APP.user = session.user
+    // Re-render sider som trenger innloggingsstatus
+    const h = location.hash || '#/'
+    if (h.startsWith('#/laerer') || h.startsWith('#/admin') || h === '#/' || h === '#') {
+      oppdaterHeader()
+      await router()
+    }
+  }
 
   // Last profil og skoledata i bakgrunnen
   if (session) {
