@@ -49,7 +49,7 @@ serve(async (req) => {
 
     const adminClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     const { data: profile } = await adminClient.from('users').select('role, is_admin_active').eq('id', caller.id).single()
-    if (!profile || !profile.is_admin_active) {
+    if (!profile || (!profile.is_admin_active && profile.role !== 'admin')) {
       return new Response(JSON.stringify({ error: 'Krever admin-tilgang' }), { status: 403, headers: corsHeaders })
     }
 
