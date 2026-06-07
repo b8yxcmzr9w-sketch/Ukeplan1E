@@ -939,9 +939,10 @@ function renderSessionCard(s, showActions, actions = {}) {
 
 function visICalModal(klasse) {
   const baseUrl = `${SUPABASE_URL}/functions/v1/ical`
+  const schoolId = APP.school?.id ?? ''
   const url = klasse
-    ? `${baseUrl}?class_id=${klasse.id}`
-    : `${baseUrl}?teacher_id=${APP.profile?.id}`
+    ? `${baseUrl}?school_id=${schoolId}&klasse=${encodeURIComponent(klasse.name)}`
+    : `${baseUrl}?school_id=${schoolId}&laerer=${encodeURIComponent(APP.profile?.full_name ?? '')}`
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'iCal-abonnement'))

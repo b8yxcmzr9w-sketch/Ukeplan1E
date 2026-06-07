@@ -47,9 +47,17 @@ på hver økt / flerdagsarrangement.
   - Blått banner vises når planleggingsvinduet er aktivt.
   - Admin-fanen "Skoleår" viser om vinduet er åpent eller når det åpner (17. mai).
 
+- ✅ **Fase 6** – iCal + datovisning:
+  - `skoleaarKalenderaar()` i app.js brukes nå i elevvisning for korrekte datoer
+    over nyttår (uke 10 i skoleår 25/26 → 2026, ikke 2025).
+  - iCal Edge Function: filtrerer på `active_school_year`, bruker
+    `kalenderaarForUke()` (speiler SQL-funksjonen) for riktig kalenderår per økt.
+  - `visICalModal`: URL-mismatch fikset — sender nå `school_id` + `klasse`-navn
+    (eller `laerer`-navn) som funksjonen faktisk forventer.
+
 ## Gjenstår
 
-- **Fase 6** – Neste-år-vindu (fast 17. mai som skille).
+- **Fase 7** – Neste-år-vindu (fast 17. mai som skille).
 - **Fase 6** – iCal + datovisning: utled kalenderår fra `school_year` + `week_nr`
   (bruk samme logikk som SQL-funksjonen `skoleaar_kalenderaar`).
 - **Fase 7** – Eksport (JSON / Excel-CSV / PDF) + "Start nytt skoleår"-flyt i admin.

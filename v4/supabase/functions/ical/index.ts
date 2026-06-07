@@ -21,20 +21,22 @@ Deno.serve(async (req) => {
 
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-  // Fetch school info
+  // Fetch school info (inkl. aktivt skoleår)
   const { data: school } = await sb
     .from('schools')
-    .select('name, school_year_start_week, school_year_end_week')
+    .select('name, school_year_start_week, school_year_end_week, active_school_year')
     .eq('id', schoolId)
     .single()
 
   if (!school) return new Response('School not found', { status: 404 })
 
-  // Build sessions query
+  const activeYear: string | null = school.active_school_year ?? null
+
+  // Build sessions query – filtrer alltid på aktivt skoleår
   let query = sb
     .from('sessions')
     .select(`
-      id, week_nr, day_of_week, activity, meeting_point, info, version,
+      id, week_nr, day_of_week, activity, meeting_point, info, school_year, version,
       subjects!inner(name, short_code),
       classes!inner(name),
       users!teacher_id(full_name),
@@ -44,6 +46,8 @@ Deno.serve(async (req) => {
     .is('deleted_at', null)
     .gte('week_nr', school.school_year_start_week)
     .lte('week_nr', school.school_year_end_week)
+
+  if (activeYear) query = query.eq('school_year', activeYear)
 
   if (klasse) {
     const { data: cls } = await sb.from('classes').select('id').eq('school_id', schoolId).eq('name', klasse).single()
@@ -83,9 +87,9 @@ Deno.serve(async (req) => {
     'METHOD:PUBLISH',
   ]
 
-  const year = new Date().getFullYear()
-
   for (const s of filtered as any[]) {
+    // Utled riktig kalenderår fra skoleåret – speiler skoleaar_kalenderaar() i SQL
+    const year = kalenderaarForUke(s.school_year ?? activeYear, s.week_nr, school.school_year_start_week)
     const weekDate = isoWeekToDate(year, s.week_nr, s.day_of_week)
     const dateStr  = weekDate.toISOString().slice(0, 10).replace(/-/g, '')
     const uid      = `${s.id}@ukeplan-v4`
@@ -116,6 +120,14 @@ Deno.serve(async (req) => {
     },
   })
 })
+
+// Speiler skoleaar_kalenderaar() i migrering 004.
+function kalenderaarForUke(schoolYear: string | null, weekNr: number, startWeek: number): number {
+  if (!schoolYear || !/^\d{2}\/\d{2}$/.test(schoolYear)) return new Date().getFullYear()
+  const foersteAar = 2000 + parseInt(schoolYear.split('/')[0], 10)
+  const andreAar   = 2000 + parseInt(schoolYear.split('/')[1], 10)
+  return weekNr >= startWeek ? foersteAar : andreAar
+}
 
 function isoWeekToDate(year: number, week: number, dayOfWeek: number): Date {
   const jan4 = new Date(year, 0, 4)
