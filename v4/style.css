@@ -5,8 +5,9 @@
 
 /* ── Reset ──────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { max-width: 100%; overflow-x: hidden; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-main { flex: 1; }
+main { flex: 1; overflow-x: hidden; }
 
 /* ── Tema: standard (grønn) ─────────────────────────────────────── */
 :root,
@@ -563,7 +564,7 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 .felt-label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: 4px; margin-top: 12px; }
 
 /* ── Laerer/admin-layout ─────────────────────────────────────────── */
-.side-wrap { padding: 28px clamp(20px, 5vw, 80px) 60px; max-width: 1200px; margin: 0 auto; }
+.side-wrap { padding: 28px clamp(20px, 5vw, 80px) 60px; max-width: 1200px; margin: 0 auto; overflow-wrap: break-word; word-break: break-word; }
 .fane-innhold { padding-top: 8px; }
 .skjema-smal { max-width: 560px; }
 
