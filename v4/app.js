@@ -2981,6 +2981,15 @@ async function init() {
 
   window.addEventListener('hashchange', router)
 
+  // ─────────────────────────────────────────────────────────────
+  // VIKTIG – rekkefølge i init():
+  // router() ruter #/laerer og #/admin til #/login når APP.user mangler,
+  // og den omdirigeringen kan ikke angres. Derfor MÅ APP.user være satt
+  // (eller session-henting timet ut) FØR første kall til router().
+  // Endrer du rekkefølgen her: test refresh på #/, #/laerer og #/klasse/X
+  // i nettleser – ikke bare node --check.
+  // ─────────────────────────────────────────────────────────────
+
   // Hent sesjon med maks 4s timeout – getSession kan henge ved utløpt token-refresh
   let session = null
   try {
