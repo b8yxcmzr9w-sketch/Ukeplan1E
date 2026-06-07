@@ -1,16 +1,34 @@
 // Ukeplan v4 – AI parse sessions Edge Function
 // Accepts pasted text + context, returns structured session array via Gemini Flash
 
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY')!
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
 
-Deno.serve(async (req) => {
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders })
+
+  // Auth
+  const callerClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+  )
+  const { data: { user } } = await callerClient.auth.getUser()
+  if (!user) return new Response(JSON.stringify({ error: 'Ikke autentisert' }), { status: 401, headers: corsHeaders })
 
   const { text, context } = await req.json()
   // context: { subjects: [{id, name, short_code}], classes: [{id, name}], teachers: [{id, full_name}], divisions: [{id, name, subject_id, division_type}] }
 
-  if (!text) return new Response('Missing text', { status: 400 })
+  if (!text) return new Response(JSON.stringify({ error: 'Missing text' }), { status: 400, headers: corsHeaders })
 
   const systemPrompt = `Du er en assistent som hjelper lærere med å legge inn ukeplaner.
 Brukeren limer inn tekst med informasjon om undervisningsøkter. Du skal tolke teksten og returnere
@@ -51,7 +69,7 @@ Returner et objekt: { "sessions": [...], "warnings": ["eventuell advarsel"] }`
 
   if (!gemRes.ok) {
     const err = await gemRes.text()
-    return new Response(JSON.stringify({ error: 'Gemini error', details: err }), { status: 502 })
+    return new Response(JSON.stringify({ error: 'Gemini error', details: err }), { status: 502, headers: corsHeaders })
   }
 
   const gemData = await gemRes.json()
@@ -61,10 +79,10 @@ Returner et objekt: { "sessions": [...], "warnings": ["eventuell advarsel"] }`
   try {
     parsed = JSON.parse(rawText)
   } catch {
-    return new Response(JSON.stringify({ error: 'Could not parse Gemini response', raw: rawText }), { status: 502 })
+    return new Response(JSON.stringify({ error: 'Could not parse Gemini response', raw: rawText }), { status: 502, headers: corsHeaders })
   }
 
   return new Response(JSON.stringify(parsed), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })

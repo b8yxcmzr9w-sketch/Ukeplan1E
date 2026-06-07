@@ -513,6 +513,7 @@ tr:hover td { background: var(--primær-svak); }
 .conf--high   { color: #198754; font-weight: 700; }
 .conf--medium { color: #e67e22; font-weight: 700; }
 .conf--low    { color: var(--fare); font-weight: 700; }
+.advarsel-tekst { color: #856404; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; font-size: .87rem; }
 
 /* ── ════════════════════════════════════════════
    MOBIL

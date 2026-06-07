@@ -1986,25 +1986,45 @@ async function visAIPasteModal(defaultKlasse, onSave) {
     preview.appendChild(el('p', {}, 'Analyserer…'))
 
     try {
+      // Hent kontekstdata for AI-en
+      const [{ data: subjects }, { data: klasser }, { data: teachers }, { data: divisions }] = await Promise.all([
+        sb.from('subjects').select('id, name, short_code').eq('school_id', APP.school.id),
+        sb.from('classes').select('id, name').eq('school_id', APP.school.id),
+        sb.from('users').select('id, full_name').eq('school_id', APP.school.id).eq('role', 'teacher'),
+        sb.from('divisions').select('id, name, subject_id, division_type').eq('school_id', APP.school.id),
+      ])
+
       const { data, error } = await sb.functions.invoke('ai-parse-sessions', {
-        body: { text: textarea.value, class_id: defaultKlasse?.id, school_id: APP.school.id }
+        body: {
+          text: textarea.value,
+          context: { subjects: subjects || [], classes: klasser || [], teachers: teachers || [], divisions: divisions || [] },
+        }
       })
       if (error) throw error
 
       clearEl(preview)
-      const parsed = data.sessions || []
+      const parsed = (data.sessions || data || [])
       if (!parsed.length) { preview.appendChild(el('p', {}, 'Ingen økter funnet.')); return }
+
+      if (data.warnings?.length) {
+        preview.appendChild(el('p', { class: 'advarsel-tekst' }, `⚠️ ${data.warnings.join(' | ')}`))
+      }
+
+      // Slå opp navn fra kontekst
+      const subjectMap = Object.fromEntries((subjects || []).map(s => [s.id, s.name]))
+      const klassMap   = Object.fromEntries((klasser || []).map(k => [k.id, k.name]))
 
       const table = el('table', { class: 'preview-table' })
       const thead = el('thead')
       thead.appendChild(el('tr', {},
         el('th', {}, ''),
+        el('th', {}, 'Klasse'),
         el('th', {}, 'Fag'),
         el('th', {}, 'Uke'),
         el('th', {}, 'Dag'),
         el('th', {}, 'Aktivitet'),
-        el('th', {}, 'Konfidensgrad'),
-        el('th', {}, 'Advarsel'),
+        el('th', {}, 'Sikkerhet'),
+        el('th', {}, 'Merknad'),
       ))
       table.appendChild(thead)
       const tbody = el('tbody')
@@ -2014,34 +2034,30 @@ async function visAIPasteModal(defaultKlasse, onSave) {
       for (let i = 0; i < parsed.length; i++) {
         const s = parsed[i]
         const tr = el('tr', {})
-        const cb = el('input', { type: 'checkbox', checked: 'true' })
+        const cb = el('input', { type: 'checkbox' })
         cb.checked = true
-        cb.addEventListener('change', () => {
-          if (cb.checked) selected.add(i)
-          else selected.delete(i)
-        })
+        cb.addEventListener('change', () => { if (cb.checked) selected.add(i); else selected.delete(i) })
         tr.appendChild(el('td', {}, cb))
-        tr.appendChild(el('td', {}, s.subject_name || ''))
+        tr.appendChild(el('td', {}, klassMap[s.class_id] || (defaultKlasse?.name || '')))
+        tr.appendChild(el('td', {}, subjectMap[s.subject_id] || ''))
         tr.appendChild(el('td', {}, String(s.week_nr || '')))
         tr.appendChild(el('td', {}, dagNavn(s.day_of_week) || ''))
         tr.appendChild(el('td', {}, s.activity || ''))
-        const conf = s.confidence || 0
-        const confEl = el('td', { class: conf > 0.7 ? 'conf--high' : conf > 0.4 ? 'conf--medium' : 'conf--low' },
-          `${Math.round(conf * 100)}%`)
-        tr.appendChild(confEl)
-        tr.appendChild(el('td', {}, s.warning || ''))
+        const conf = s._confidence || 'low'
+        tr.appendChild(el('td', { class: `conf--${conf}` }, conf === 'high' ? 'Høy' : conf === 'medium' ? 'Middels' : 'Lav'))
+        tr.appendChild(el('td', {}, s._note || ''))
         tbody.appendChild(tr)
       }
       table.appendChild(tbody)
       preview.appendChild(table)
 
-      preview.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+      preview.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:10px', onclick: async () => {
         const toImport = parsed.filter((_, i) => selected.has(i))
         await medLagreOverlay(async () => {
           for (const s of toImport) {
             await sb.from('sessions').insert({
-              class_id: defaultKlasse?.id,
-              subject_id: s.subject_id,
+              class_id: s.class_id || defaultKlasse?.id,
+              subject_id: s.subject_id || null,
               division_id: s.division_id || null,
               week_nr: s.week_nr,
               day_of_week: s.day_of_week,
@@ -2059,7 +2075,7 @@ async function visAIPasteModal(defaultKlasse, onSave) {
       }}, 'Importer valgte'))
     } catch (err) {
       clearEl(preview)
-      preview.appendChild(el('p', { class: 'error' }, `Feil: ${err.message}`))
+      preview.appendChild(el('p', { class: 'feil-tekst' }, `Feil: ${err.message}`))
     }
   }}, 'Analyser med AI'))
 
