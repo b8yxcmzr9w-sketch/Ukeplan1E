@@ -18,7 +18,7 @@
     <div class="spinner" id="overlay-spinner"></div>
     <div class="overlay-ok skjult" id="overlay-ok">✅</div>
     <div class="overlay-tekst" id="overlay-tekst">Sender tanker til skyene…</div>
-    <button class="btn btn-p skjult" id="overlay-retry">Prøv igjen</button>
+    <button type="button" class="btn btn-p skjult" id="overlay-retry">Prøv igjen</button>
   </div>
 </div>
 
@@ -35,19 +35,19 @@
 
   <!-- PC-knapper (skjules på mobil) -->
   <span id="hdr-username" class="hdr-pc-only hdr-username"></span>
-  <button class="hdr-btn skjult hdr-pc-only" id="hdr-admin-toggle">Admin</button>
-  <button class="hdr-btn skjult hdr-pc-only" id="hdr-laerer-btn" onclick="location.hash='#/laerer'">Lærervisning</button>
-  <button class="hdr-btn skjult hdr-pc-only" id="hdr-logout-btn">Logg ut</button>
-  <button class="hdr-btn hdr-pc-only" id="hdr-login-btn" onclick="location.hash='#/login'">Logg inn</button>
+  <button type="button" class="hdr-btn skjult hdr-pc-only" id="hdr-admin-toggle">Admin</button>
+  <button type="button" class="hdr-btn skjult hdr-pc-only" id="hdr-laerer-btn">Lærervisning</button>
+  <button type="button" class="hdr-btn skjult hdr-pc-only" id="hdr-logout-btn">Logg ut</button>
+  <button type="button" class="hdr-btn hdr-pc-only" id="hdr-login-btn">Logg inn</button>
 
   <!-- Hamburger (vises bare på mobil) -->
-  <button class="hdr-btn hdr-hamburger skjult" id="hdr-hamburger" aria-label="Meny">☰</button>
+  <button type="button" class="hdr-btn hdr-hamburger skjult" id="hdr-hamburger" aria-label="Meny">☰</button>
   <div class="hdr-dropdown skjult" id="hdr-dropdown">
     <span class="hdr-dropdown-navn skjult" id="hdr-dropdown-navn"></span>
-    <button class="hdr-dropdown-btn skjult" id="hdr-dd-admin">Admin</button>
-    <button class="hdr-dropdown-btn skjult" id="hdr-dd-laerer" onclick="document.getElementById('hdr-dropdown').classList.add('skjult');location.hash='#/laerer'">Lærervisning</button>
-    <button class="hdr-dropdown-btn skjult" id="hdr-dd-logout">Logg ut</button>
-    <button class="hdr-dropdown-btn" id="hdr-dd-login" onclick="document.getElementById('hdr-dropdown').classList.add('skjult');location.hash='#/login'">Logg inn</button>
+    <button type="button" class="hdr-dropdown-btn skjult" id="hdr-dd-admin">Admin</button>
+    <button type="button" class="hdr-dropdown-btn skjult" id="hdr-dd-laerer">Lærervisning</button>
+    <button type="button" class="hdr-dropdown-btn skjult" id="hdr-dd-logout">Logg ut</button>
+    <button type="button" class="hdr-dropdown-btn" id="hdr-dd-login">Logg inn</button>
   </div>
 </header>
 

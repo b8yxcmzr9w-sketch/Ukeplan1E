@@ -457,7 +457,7 @@ function oppdaterHeader() {
     if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
     if (loginBtn)    loginBtn.classList.add('skjult')
     if (logoutBtn)   { logoutBtn.classList.remove('skjult'); logoutBtn.onclick = logout }
-    if (laererBtn)   laererBtn.classList.toggle('skjult', skjulLaerer)
+    if (laererBtn)   { laererBtn.classList.toggle('skjult', skjulLaerer); laererBtn.onclick = () => navigate('#/laerer') }
     if (adminToggle && visAdmin) {
       adminToggle.classList.remove('skjult')
       adminToggle.textContent = 'Admin'
@@ -470,7 +470,7 @@ function oppdaterHeader() {
     if (ddNavn)   { ddNavn.textContent = APP.profile.full_name; ddNavn.classList.remove('skjult') }
     if (ddLogin)  ddLogin.classList.add('skjult')
     if (ddLogout) { ddLogout.classList.remove('skjult'); ddLogout.onclick = () => { dropdown?.classList.add('skjult'); logout() } }
-    if (ddLaerer) ddLaerer.classList.toggle('skjult', skjulLaerer)
+    if (ddLaerer) { ddLaerer.classList.toggle('skjult', skjulLaerer); ddLaerer.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/laerer') } }
     if (ddAdmin && visAdmin) {
       ddAdmin.classList.remove('skjult')
       ddAdmin.classList.toggle('admin-aktiv', APP.isAdminActive)
@@ -478,7 +478,7 @@ function oppdaterHeader() {
     } else if (ddAdmin) ddAdmin.classList.add('skjult')
   } else {
     if (username)    username.classList.add('skjult')
-    if (loginBtn)    loginBtn.classList.remove('skjult')
+    if (loginBtn)    { loginBtn.classList.remove('skjult'); loginBtn.onclick = () => navigate('#/login') }
     if (logoutBtn)   logoutBtn.classList.add('skjult')
     if (laererBtn)   laererBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
@@ -488,7 +488,7 @@ function oppdaterHeader() {
     if (ddAdmin)  ddAdmin.classList.add('skjult')
     if (ddLaerer) ddLaerer.classList.add('skjult')
     if (ddLogout) ddLogout.classList.add('skjult')
-    if (ddLogin)  ddLogin.classList.remove('skjult')
+    if (ddLogin)  { ddLogin.classList.remove('skjult'); ddLogin.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/login') } }
   }
 
   // Hamburger toggle

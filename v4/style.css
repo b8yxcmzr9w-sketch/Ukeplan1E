@@ -534,8 +534,7 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 /* Seksjonstittel i admin-faner */
 .seksjon-tittel { font-size: 1rem; font-weight: 700; margin: 18px 0 6px; border-top: 1px solid var(--kant); padding-top: 14px; }
 
-/* Dato-gruppe (Fra/Til) – gjenbruker uke-grp men med full dato-bredde */
-.dato-grp input { width: 100%; }
+/* Dato-gruppe (Fra/Til) – se .dato-grp i hjelpeklasser-seksjonen */
 
 /* ── Admin-tabell (skolerute) ────────────────────────────────────── */
 .admin-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
@@ -571,3 +570,21 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 /* ── Skjema-rader ────────────────────────────────────────────────── */
 .skjema .felt { margin-bottom: 14px; }
 
+/* ── Manglende hjelpeklasser ─────────────────────────────────────── */
+.btn-lenke { background: none; border: none; color: var(--primær); cursor: pointer; padding: 0; font-size: inherit; text-decoration: underline; }
+.btn-lenke:hover { opacity: .75; }
+.dato-grp { display: flex; flex-direction: column; gap: 4px; }
+.dato-grp input, .dato-grp select { width: 100%; }
+.day-col--holiday .dag-tittel { color: var(--advarsel); }
+.day-col--holiday .dag-okter { opacity: .5; pointer-events: none; }
+.holiday-label { font-size: .78rem; color: var(--advarsel); font-weight: 600; margin-top: 4px; }
+.info-tekst { font-size: .88rem; color: var(--tekst-svak); line-height: 1.5; }
+.tegnteller { font-size: .78rem; color: var(--tekst-svak); text-align: right; margin-top: 2px; }
+.tekst { font-size: .92rem; line-height: 1.5; }
+.textarea { resize: vertical; min-height: 70px; }
+.textarea-large { resize: vertical; min-height: 140px; }
+.theme-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.theme-swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color .15s; }
+.theme-swatch.aktiv { border-color: var(--tekst); }
+.warning-text { color: var(--advarsel); font-size: .86rem; font-weight: 600; }
+.error { color: var(--fare); font-size: .86rem; }
