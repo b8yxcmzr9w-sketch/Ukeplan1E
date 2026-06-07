@@ -550,7 +550,13 @@ function oppdaterHeader() {
     if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
     if (loginBtn)    loginBtn.classList.add('skjult')
     if (logoutBtn)   { logoutBtn.classList.remove('skjult'); logoutBtn.onclick = logout; logoutBtn.title = 'Logg ut av Ukeplan1e' }
-    if (laererBtn)   { laererBtn.classList.toggle('skjult', skjulLaerer); laererBtn.onclick = () => navigate('#/laerer'); laererBtn.title = 'Gå til lærervisning' }
+    if (laererBtn) {
+      laererBtn.classList.toggle('skjult', skjulLaerer)
+      const erILaerer = APP.currentView === 'laerer'
+      laererBtn.textContent = erILaerer ? 'Elevvisning' : 'Lærervisning'
+      laererBtn.onclick = () => navigate(erILaerer ? '#/' : '#/laerer')
+      laererBtn.title = erILaerer ? 'Bytt til elevvisning' : 'Gå til lærervisning'
+    }
     if (adminToggle && visAdmin) {
       adminToggle.classList.remove('skjult')
       adminToggle.textContent = 'Admin'
@@ -564,7 +570,12 @@ function oppdaterHeader() {
     if (ddNavn)   { ddNavn.textContent = APP.profile.full_name; ddNavn.classList.remove('skjult') }
     if (ddLogin)  ddLogin.classList.add('skjult')
     if (ddLogout) { ddLogout.classList.remove('skjult'); ddLogout.onclick = () => { dropdown?.classList.add('skjult'); logout() } }
-    if (ddLaerer) { ddLaerer.classList.toggle('skjult', skjulLaerer); ddLaerer.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/laerer') } }
+    if (ddLaerer) {
+      ddLaerer.classList.toggle('skjult', skjulLaerer)
+      const erILaerer = APP.currentView === 'laerer'
+      ddLaerer.textContent = erILaerer ? 'Elevvisning' : 'Lærervisning'
+      ddLaerer.onclick = () => { dropdown?.classList.add('skjult'); navigate(erILaerer ? '#/' : '#/laerer') }
+    }
     if (ddAdmin && visAdmin) {
       ddAdmin.classList.remove('skjult')
       ddAdmin.classList.toggle('admin-aktiv', APP.isAdminActive)
@@ -953,25 +964,35 @@ function visICalModal(klasse) {
   const url = klasse
     ? `${baseUrl}?school_id=${schoolId}&klasse=${encodeURIComponent(klasse.name)}`
     : `${baseUrl}?school_id=${schoolId}&laerer=${encodeURIComponent(APP.profile?.full_name ?? '')}`
+
   const modal = el('div', { class: 'modal-bg' })
-  const box = el('div', { class: 'modal' })
+  const box = el('div', { class: 'modal', style: 'max-width:380px;text-align:center' })
   box.appendChild(el('h3', {}, 'iCal-abonnement'))
-  box.appendChild(el('p', {}, 'Kopier lenken under og legg den til i Google Kalender, Apple Kalender eller Outlook:'))
-  const input = el('input', { class: 'felt input', value: url, readonly: 'true' })
-  box.appendChild(input)
-  box.appendChild(el('button', { class: 'btn btn-p', onclick: () => {
-    navigator.clipboard.writeText(url)
-    showToast('Kopiert!', 'success')
-  }}, 'Kopier lenke'))
-  box.appendChild(el('details', {},
-    el('summary', {}, 'Instruksjoner'),
-    el('ul', {},
-      el('li', {}, 'Google Kalender: Gå til "Andre kalendere" → "Fra URL"'),
-      el('li', {}, 'Apple Kalender: Fil → Nytt kalenderabonnement'),
-      el('li', {}, 'Outlook: Legg til kalender → Fra internett')
-    )
-  ))
-  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Lukk'))
+
+  // QR-kode
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`
+  box.appendChild(el('img', { src: qrUrl, alt: 'QR-kode', style: 'display:block;margin:10px auto;border:1px solid var(--kant);border-radius:6px;width:160px;height:160px' }))
+
+  // URL-felt + kopier
+  const urlRad = el('div', { style: 'display:flex;gap:6px;margin:10px 0' })
+  const input = el('input', { class: 'felt input', value: url, readonly: 'true', style: 'flex:1;font-size:.75rem' })
+  urlRad.appendChild(input)
+  urlRad.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier lenke', onclick: () => {
+    navigator.clipboard.writeText(url); showToast('Kopiert!', 'success')
+  }}, 'Kopier'))
+  box.appendChild(urlRad)
+
+  // Direkte kalender-knapper
+  const knRad = el('div', { style: 'display:flex;flex-direction:column;gap:8px;margin:12px 0' })
+  const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(url)}`
+  const appleUrl = url  // webcal:// fungerer ikke alltid; bruk direktelenke
+  const outlookUrl = `https://outlook.live.com/calendar/0/addcalendar?url=${encodeURIComponent(url)}`
+  knRad.appendChild(el('a', { href: googleUrl, target: '_blank', class: 'btn btn-s', style: 'text-decoration:none;text-align:center' }, '📅 Legg til i Google Kalender'))
+  knRad.appendChild(el('a', { href: `webcal://${url.replace(/^https?:\/\//, '')}`, class: 'btn btn-s', style: 'text-decoration:none;text-align:center' }, '🍎 Legg til i Apple Kalender'))
+  knRad.appendChild(el('a', { href: outlookUrl, target: '_blank', class: 'btn btn-s', style: 'text-decoration:none;text-align:center' }, '📧 Legg til i Outlook'))
+  box.appendChild(knRad)
+
+  box.appendChild(el('button', { class: 'btn btn-s', style: 'width:100%', onclick: () => modal.remove() }, 'Lukk'))
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
@@ -1159,7 +1180,18 @@ async function renderMinKlasseTab(container) {
   const nyOktBtn = el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke, valgtSkolear) }, '+ Ny økt')
   topRow.appendChild(nyOktBtn)
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Lim inn ukeplan som tekst og la AI tolke den', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
-  topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier lenke til elevvisning', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
+
+  const delWrapper = el('div', { class: 'del-dropdown-wrapper' })
+  const delBtn = el('button', { class: 'btn btn-s', title: 'Del eller skriv ut' }, '🔗 Del elevlenke ▾')
+  const delMenu = el('div', { class: 'del-dropdown-menu skjult' })
+  delMenu.appendChild(el('button', { class: 'del-dropdown-item', onclick: () => { delMenu.classList.add('skjult'); visElevLenkeModal(aktivKlasse) } }, '🔗 Elevlenke'))
+  delMenu.appendChild(el('button', { class: 'del-dropdown-item', onclick: () => { delMenu.classList.add('skjult'); window.print() } }, '🖨️ Skriv ut'))
+  delMenu.appendChild(el('button', { class: 'del-dropdown-item', onclick: () => { delMenu.classList.add('skjult'); visICalModal(aktivKlasse) } }, '📅 iCal-abonnement'))
+  delBtn.onclick = (e) => { e.stopPropagation(); delMenu.classList.toggle('skjult') }
+  document.addEventListener('click', () => delMenu.classList.add('skjult'), { capture: false })
+  delWrapper.appendChild(delBtn)
+  delWrapper.appendChild(delMenu)
+  topRow.appendChild(delWrapper)
   container.appendChild(topRow)
 
   const weekArea = el('div', { id: 'laerer-week-area' })
@@ -2519,8 +2551,17 @@ async function renderSkoleaarTab(container) {
       if (!/^\d{2}\/\d{2}$/.test(nytt)) {
         showToast('Ugyldig format — bruk ÅÅ/ÅÅ, f.eks. 26/27', 'error'); return
       }
+      // Valider at andre del er første del + 1
+      const [del1, del2] = nytt.split('/').map(Number)
+      if ((del1 + 1) % 100 !== del2) {
+        showToast(`Ugyldig skoleår: ${nytt} — andre årstall må være første + 1 (f.eks. 26/27)`, 'error'); return
+      }
       if (nytt === aktivt) { showToast('Dette er allerede aktivt skoleår', 'info'); return }
-      if (!confirm(`Bytte aktivt skoleår fra ${aktivt} til ${nytt}?\n\nElevenes visning endres umiddelbart. Eksisterende økter beholdes.\n\nTips: Last ned en eksport av ${aktivt} fra eksport-seksjonen nedenfor før du bytter.`)) return
+      // Advarsel hvis nytt år ikke er forventet neste år
+      const forventet = nesteSkolear(aktivt)
+      const advarsel = forventet && nytt !== forventet
+        ? `\n\n⚠️ Advarsel: Forventet neste år er ${forventet}, du valgte ${nytt}.` : ''
+      if (!confirm(`Bytte aktivt skoleår fra ${aktivt} til ${nytt}?${advarsel}\n\nElevenes visning endres umiddelbart. Eksisterende økter beholdes.\n\nTips: Last ned en eksport av ${aktivt} fra eksport-seksjonen nedenfor før du bytter.`)) return
       await medLagreOverlay(async () => {
         const { data: oppdatert, error } = await sb
           .from('schools').update({ active_school_year: nytt }).eq('id', school.id).select().single()
