@@ -681,7 +681,7 @@ async function renderElevView(klasseNavn) {
 
     // Fetch sessions
     const { data: sessions, error: sessionsError } = await sb.from('sessions')
-      .select('*, subjects(name, color_hex, short_code), users(full_name), subject_divisions(name, division_type)')
+      .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
       .eq('class_id', klasse.id)
       .eq('week_nr', weekNr)
       .order('day_of_week')
@@ -1074,7 +1074,7 @@ async function renderMinKlasseTab(container) {
     weekArea.appendChild(navRow)
 
     const { data: sessions, error: sessionsError } = await sb.from('sessions')
-      .select('*, subjects(name, color_hex, short_code), users(full_name), subject_divisions(name, division_type)')
+      .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
       .eq('class_id', aktivKlasse.id)
       .eq('week_nr', currentWeek)
     if (sessionsError) {
@@ -1204,7 +1204,7 @@ async function renderSokTab(container) {
     if (!q) return
 
     const { data } = await sb.from('sessions')
-      .select('*, subjects(name, color_hex), users(full_name), classes(name)')
+      .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
       .or(`activity.ilike.%${q}%,meeting_point.ilike.%${q}%,info.ilike.%${q}%`)
       .eq('teacher_id', APP.profile.id)
 
