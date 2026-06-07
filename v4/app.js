@@ -2711,8 +2711,11 @@ async function renderSkolerute(container) {
         })
         if (error) throw error
         const evs = data.events || []
-        if (!evs.length) { showToast('Ingen hendelser funnet', 'info'); return }
-        if (!confirm(`Importere ${evs.length} hendelse(r)?`)) return
+        const warnings = data.warnings || []
+        if (!evs.length) { showToast('Ingen hendelser funnet – prøv å legge inn teksten mer strukturert', 'info'); return }
+        let msg = `Importere ${evs.length} hendelse(r)?`
+        if (warnings.length) msg += `\n\nAdvarsler:\n${warnings.join('\n')}`
+        if (!confirm(msg)) return
         await medLagreOverlay(async () => {
           for (const e of evs) {
             await sb.from('school_calendar').insert({ ...e, school_id: APP.school.id })
