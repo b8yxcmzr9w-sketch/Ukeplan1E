@@ -716,11 +716,14 @@ async function renderElevView(klasseNavn) {
     if (!weekContainer) main.appendChild(wc)
 
     // Fetch sessions
-    const { data: sessions, error: sessionsError } = await sb.from('sessions')
+    const aktivtSkolear = APP.school?.active_school_year
+    let sesjonQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
       .eq('class_id', klasse.id)
       .eq('week_nr', weekNr)
       .order('day_of_week')
+    if (aktivtSkolear) sesjonQuery = sesjonQuery.eq('school_year', aktivtSkolear)
+    const { data: sessions, error: sessionsError } = await sesjonQuery
     if (sessionsError) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
@@ -1072,12 +1075,42 @@ async function renderMinKlasseTab(container) {
   if (currentWeek < schoolStart) currentWeek = schoolStart
   if (currentWeek > schoolEnd) currentWeek = schoolEnd
 
+  // Hent tilgjengelige skoleår for denne skolen (for skoleår-velger)
+  const aktivtSkolear = APP.school?.active_school_year || null
+  let valgtSkolear = aktivtSkolear
+  let tilgjengeligeSkolear = aktivtSkolear ? [aktivtSkolear] : []
+  try {
+    const { data: aarRows } = await sb.from('sessions')
+      .select('school_year')
+      .eq('school_id', APP.school.id)
+      .not('school_year', 'is', null)
+    const unikeAar = [...new Set((aarRows || []).map(r => r.school_year))].sort().reverse()
+    if (unikeAar.length) {
+      tilgjengeligeSkolear = unikeAar
+      if (!valgtSkolear) valgtSkolear = unikeAar[0]
+    }
+  } catch {}
+
   // Klassevelger i header
   APP.klasseVelger = { klasser, aktivKlasse, onChange: (k) => { aktivKlasse = k; APP.klasseVelger.aktivKlasse = k; renderUke() } }
   oppdaterHeader()
 
   const topRow = el('div', { class: 'laerer-top' })
-  topRow.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt'))
+
+  // Skoleår-velger (vises bare hvis det finnes mer enn ett skoleår)
+  if (tilgjengeligeSkolear.length > 1) {
+    const aarSel = el('select', { class: 'skolear-sel', title: 'Velg skoleår å vise' })
+    for (const aa of tilgjengeligeSkolear) {
+      const opt = el('option', { value: aa }, aa + (aa === aktivtSkolear ? ' (aktivt)' : ''))
+      if (aa === valgtSkolear) opt.selected = true
+      aarSel.appendChild(opt)
+    }
+    aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; renderUke() })
+    topRow.appendChild(aarSel)
+  }
+
+  const nyOktBtn = el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke) }, '+ Ny økt')
+  topRow.appendChild(nyOktBtn)
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Lim inn ukeplan som tekst og la AI tolke den', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
   topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier lenke til elevvisning', onclick: () => visElevLenkeModal(aktivKlasse) }, '🔗 Del elevlenke'))
   container.appendChild(topRow)
@@ -1090,6 +1123,12 @@ async function renderMinKlasseTab(container) {
   async function renderUke() {
     clearEl(weekArea)
     bulkSelected.clear()
+
+    // Skrivebeskyttet for tidligere skoleår
+    const erAktivtAar = !valgtSkolear || valgtSkolear === aktivtSkolear
+
+    // Vis/skjul "+ Ny økt"-knapp basert på aktivt år
+    if (nyOktBtn) nyOktBtn.style.display = erAktivtAar ? '' : 'none'
 
     // Utskrift-hode (vises kun ved print)
     const utskriftHode = document.getElementById('utskrift-hode')
@@ -1131,10 +1170,19 @@ async function renderMinKlasseTab(container) {
     navRow.appendChild(el('button', { class: 'btn btn-s', title: 'Abonner på kalender (iCal)', onclick: () => visICalModal(null) }, '📅'))
     weekArea.appendChild(navRow)
 
-    const { data: sessions, error: sessionsError } = await sb.from('sessions')
+    // Banner: les-modus for tidligere skoleår
+    if (!erAktivtAar) {
+      weekArea.appendChild(el('div', { class: 'tidligare-aar-banner' },
+        `📚 Du leser skoleår ${valgtSkolear}. Du kan kopiere økter, men ikke redigere eller slette.`
+      ))
+    }
+
+    let laererSesjonQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
       .eq('class_id', aktivKlasse.id)
       .eq('week_nr', currentWeek)
+    if (valgtSkolear) laererSesjonQuery = laererSesjonQuery.eq('school_year', valgtSkolear)
+    const { data: sessions, error: sessionsError } = await laererSesjonQuery
     if (sessionsError) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
@@ -1175,7 +1223,7 @@ async function renderMinKlasseTab(container) {
 
         const wrapper = el('div', { class: 'session-wrapper' })
 
-        if (isMine || isKontakt) {
+        if (erAktivtAar && (isMine || isKontakt)) {
           const cb = el('input', { type: 'checkbox', class: 'session-cb' })
           if (isMine) {
             cb.addEventListener('change', () => {
@@ -1190,10 +1238,10 @@ async function renderMinKlasseTab(container) {
         }
 
         const card = renderSessionCard(s, true, {
-          edit: (isMine || isKontakt) ? () => visRedigerOktModal(s, renderUke) : null,
+          edit: erAktivtAar && (isMine || isKontakt) ? () => visRedigerOktModal(s, renderUke) : null,
           copy: () => visKopierOktModal(s, renderUke),
-          del: (isMine || isKontakt) ? () => slettOkt(s.id, renderUke) : null,
-          transfer: isMine ? () => visOverforModal(s, renderUke) : null,
+          del: erAktivtAar && (isMine || isKontakt) ? () => slettOkt(s.id, renderUke) : null,
+          transfer: erAktivtAar && isMine ? () => visOverforModal(s, renderUke) : null,
         })
         wrapper.appendChild(card)
         dayCol.appendChild(wrapper)
@@ -1216,11 +1264,14 @@ async function renderMinKlasseTab(container) {
 }
 
 async function renderAlleOkterTab(container) {
-  const { data: sessions } = await sb.from('sessions')
+  const aktivtSkolear = APP.school?.active_school_year
+  let alleOkterQuery = sb.from('sessions')
     .select('*, subjects(name, color_hex, short_code), classes(name), subject_divisions(name)')
     .eq('teacher_id', APP.profile.id)
     .order('week_nr')
     .order('day_of_week')
+  if (aktivtSkolear) alleOkterQuery = alleOkterQuery.eq('school_year', aktivtSkolear)
+  const { data: sessions } = await alleOkterQuery
 
   if (!sessions || !sessions.length) {
     container.appendChild(el('p', {}, 'Ingen økter funnet.'))
@@ -1261,10 +1312,13 @@ async function renderSokTab(container) {
     clearEl(results)
     if (!q) return
 
-    const { data } = await sb.from('sessions')
+    const aktivtSkolear = APP.school?.active_school_year
+    let sokQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
       .or(`activity.ilike.%${q}%,meeting_point.ilike.%${q}%,info.ilike.%${q}%`)
       .eq('teacher_id', APP.profile.id)
+    if (aktivtSkolear) sokQuery = sokQuery.eq('school_year', aktivtSkolear)
+    const { data } = await sokQuery
 
     // Also search by subject name and teacher name with a join – approximate via client side
     if (!data || !data.length) {

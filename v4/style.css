@@ -412,6 +412,21 @@ tr:hover td { background: var(--primær-svak); }
 }
 .laerer-top label { font-weight: 600; font-size: .9rem; }
 
+/* ── Skoleår-velger i lærervisning ─────────────────────────────── */
+.skolear-sel {
+  background: var(--bg-kort); border: 1px solid var(--kant);
+  border-radius: var(--radius); padding: 5px 10px;
+  font-size: .85rem; font-weight: 600; color: var(--primær);
+  cursor: pointer; outline: none;
+}
+.skolear-sel:focus { border-color: var(--primær-lys); }
+
+/* ── Banner: lese-modus for tidligere skoleår ───────────────────── */
+.tidligare-aar-banner {
+  background: #fff8e1; border: 1px solid #f4c430; border-radius: var(--radius);
+  padding: 10px 14px; font-size: .88rem; color: #7a6000; margin-bottom: 12px;
+}
+
 /* ── Session-wrapper (kort + avkrysning) ─────────────────────────── */
 .session-wrapper { display: flex; align-items: flex-start; gap: 6px; }
 .session-cb { margin-top: 6px; cursor: pointer; flex-shrink: 0; }
