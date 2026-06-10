@@ -5,11 +5,14 @@ Ukeplan v4 er en norsk ukeplantjeneste for Øksnevad videregående skole (Rogala
 Lærere planlegger undervisningsøkter per klasse/uke. Elever ser sin klasses plan.
 Admins administrerer skolen, fag, klasser, brukere og skoleruten.
 
-Produksjon: https://ukeplan1e.ganddal.net/v4/
+Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikling: /v4/.
 
 ## Arbeidsrutiner (VIKTIG)
-- ALT arbeid skjer i `v4/`. Mapper utenfor `v4/` (eldre versjoner) er arkiv
-  og skal ALDRI leses som fasit eller endres.
+- PRODUKSJON I AKTIV BRUK — fryst: rotfilene `index.html`, `CNAME`,
+  `appsscript.gs`, `logo.png` samt mappene `info/` (bruksanvisning, lenket
+  fra produksjonsmenyen) og `dev/` (testmiljø for dagens løsning) er fredet
+  og skal ALDRI endres. Eneste redigerbare områder: `v4/`, `CLAUDE.md`
+  og `PLAN.md`.
 - Ved større oppgaver: skriv plan til `PLAN.md` (med avkrysningsbokser)
   før koding starter, og vent på godkjenning.
 - Etter hvert fullført delsteg: kryss av i `PLAN.md` og oppdater «Neste steg».
