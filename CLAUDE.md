@@ -7,6 +7,16 @@ Admins administrerer skolen, fag, klasser, brukere og skoleruten.
 
 Produksjon: https://ukeplan1e.ganddal.net/v4/
 
+## Arbeidsrutiner (VIKTIG)
+- ALT arbeid skjer i `v4/`. Mapper utenfor `v4/` (eldre versjoner) er arkiv
+  og skal ALDRI leses som fasit eller endres.
+- Ved større oppgaver: skriv plan til `PLAN.md` (med avkrysningsbokser)
+  før koding starter, og vent på godkjenning.
+- Etter hvert fullført delsteg: kryss av i `PLAN.md` og oppdater «Neste steg».
+- Ved JS/CSS-endringer: bump alltid `?v=YYYYMMDDx` i `v4/index.html`.
+- Commit etter hver fullførte deloppgave, med beskrivende melding.
+- Hold deg til oppgavens omfang — ikke endre kode utenfor det som er avtalt.
+
 ## Teknisk stack
 - **Frontend**: Vanilla JS (ingen rammeverk), én fil: `v4/app.js` (~3700 linjer)
 - **CSS**: `v4/style.css`
@@ -16,6 +26,7 @@ Produksjon: https://ukeplan1e.ganddal.net/v4/
 - **AI**: Gemini 1.5 Flash via REST API (nøkkel: `GEMINI_API_KEY` i Supabase Secrets)
 
 ## Filstruktur
+
 ```
 v4/
   app.js                          # All frontend-logikk
@@ -40,6 +51,7 @@ v4/
 ```
 
 ## Router (hash-basert)
+
 ```
 #/                    → elevvisning (velg klasse fra liste)
 #/klasse/:navn        → elevvisning for spesifikk klasse
@@ -51,6 +63,7 @@ v4/
 ```
 
 ## APP-objekt (global state)
+
 ```js
 APP = {
   user: null,              // Supabase auth user
@@ -89,6 +102,29 @@ race conditions ved dobbeltkall til async render-funksjoner.
 - `is_active_admin()` — sjekker `is_admin_active = true`
 - Policies bruker ofte: `is_active_admin() OR role = 'admin'`
 
+## Databaseskjema (referanse)
+UUID som primærnøkkel overalt. Soft-delete via `deleted_at`; cron sletter permanent
+etter 30 dager.
+
+```
+schools          – id, name, logo_url, logo_file_path, school_year_start_week, school_year_end_week, color_theme(standard|lys|mork), active_school_year
+classes          – id, school_id, name, sort_order, deleted_at
+subjects         – id, school_id, name, short_code, color_hex, has_parti, has_gruppe, max_divisions, deleted_at
+subject_divisions– id, subject_id, division_type(parti|gruppe), name, sort_order, deleted_at
+users            – id (auth.uid), school_id, full_name, role(laerer|kontaktlaerer|admin), is_admin_active, deleted_at
+user_classes     – user_id, class_id
+sessions         – id, school_id, class_id, subject_id, division_id, week_nr, day_of_week(1-5), teacher_id, activity, meeting_point, info, school_year, version, deleted_at, ...
+multi_day_events – id, school_id, class_id(null=alle), title, description, start_date, end_date, school_year, deleted_at
+school_calendar  – id, school_id, title, start_date, end_date, type(ferie|helligdag|planleggingsdag|annet)
+audit_log, school_facts, pending_transfers
+```
+
+### Kolonnenavn-feller (PostgREST)
+- `users`-tabellen bruker `full_name` (ikke `name`)
+- `subject_divisions` bruker `division_type` (ikke `type`)
+- Ved embedding via FK: bruk `users!teacher_id(full_name)` — sessions har 4 FK-er til users
+- Feil kolonnenavn gir 400 for hele spørringen → tom side uten feilmelding
+
 ## Skoleår-format
 `'YY/YY'` f.eks. `'25/26'` for 2025–2026. Lagres på `schools.active_school_year`,
 `sessions.school_year`, `multi_day_events.school_year`.
@@ -109,17 +145,25 @@ Miljøvariabler settes under: Edge Functions → velg funksjon → Secrets-fanen
 - `GEMINI_API_KEY` — Google AI Studio API-nøkkel (nytt format: starter med `AQ.`)
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — automatisk injisert
 
+Alle Edge Functions som kalles fra browser MÅ ha CORS-headers og OPTIONS-handler:
+```ts
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  // ...
+  return new Response(JSON.stringify(result), { headers: { ...CORS, 'Content-Type': 'application/json' } })
+})
+```
+
 ## SQL-migrasjoner
 Kjøres manuelt i Supabase Dashboard → SQL Editor. Aldri via CLI fra denne kodebasen.
 
 ## Utviklingsbranch
 Aktiv branch: `claude/bugfix-liste-UGKlC`
 Merge til `main` via PR på GitHub: `b8yxcmzr9w-sketch/Ukeplan1E`
-
-## Kjente pågående issues
-- `GEMINI_API_KEY` i Supabase Secrets er usikker — ny nøkkel fra aistudio.google.com/apikey
-  må settes for at `ai-parse-skolerute`, `ai-parse-sessions` og `generate-facts` skal virke
-- `006_fix_school_facts_rls.sql` — sjekk om denne er kjørt i prod
 
 ## Nøkkelfunksjoner i app.js
 | Funksjon | Beskrivelse |
