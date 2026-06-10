@@ -9,8 +9,10 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 
 ## Arbeidsrutiner (VIKTIG)
 - PRODUKSJON I AKTIV BRUK — fryst: rotfilene `index.html`, `CNAME`,
-  `appsscript.gs`, `logo.png` er dagens løsning som brukes daglig og skal
-  ALDRI endres. Eneste redigerbare områder: `v4/`, `CLAUDE.md` og `PLAN.md`.
+  `appsscript.gs`, `logo.png` samt mappene `info/` (bruksanvisning, lenket
+  fra produksjonsmenyen) og `dev/` (testmiljø for dagens løsning) er fredet
+  og skal ALDRI endres. Eneste redigerbare områder: `v4/`, `CLAUDE.md`
+  og `PLAN.md`.
 - Ved større oppgaver: skriv plan til `PLAN.md` (med avkrysningsbokser)
   før koding starter, og vent på godkjenning.
 - Etter hvert fullført delsteg: kryss av i `PLAN.md` og oppdater «Neste steg».
