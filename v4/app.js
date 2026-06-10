@@ -363,7 +363,7 @@ function renderLoginForm() {
       oppdaterHeader()
       await sjekkVentendeOverforinger()
       showToast(`Velkommen, ${APP.profile.full_name}!`, 'info')
-      const erAdmin = APP.profile.role === 'admin' || APP.isAdminActive
+      const erAdmin = APP.profile?.role === 'admin' || APP.isAdminActive
       if (erAdmin && !(await erFerdigSattOpp())) {
         APP.isAdminActive = true
         navigate('#/admin')
@@ -571,7 +571,7 @@ function oppdaterHeader() {
   const ddLogin     = document.getElementById('hdr-dd-login')
 
   if (APP.user && APP.profile) {
-    const rolle = APP.profile.role
+    const rolle = APP.profile?.role
     const visAdmin = APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)
     const skjulLaerer = rolle === 'admin' && APP.isAdminActive
 
@@ -1037,9 +1037,13 @@ async function renderLaererView() {
   clearEl(main)
   APP.currentView = 'laerer'
   APP.currentKlasse = null
+  if (!APP.profile || !APP.school) {
+    main.appendChild(el('div', { class: 'laster-start' }, 'Laster…'))
+    return
+  }
   oppdaterHeader()
 
-  const isKontakt = APP.profile.role === 'kontaktlaerer' || APP.isAdminActive
+  const isKontakt = APP.profile?.role === 'kontaktlaerer' || APP.isAdminActive
 
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
   const tabSlugs = ['klasse', 'alle', 'sok']
@@ -1228,8 +1232,10 @@ async function renderMinKlasseTab(container) {
   container.appendChild(weekArea)
 
   let bulkSelected = new Set()
+  let ukeRenderToken = 0
 
   async function renderUke() {
+    const myToken = ++ukeRenderToken
     clearEl(weekArea)
     bulkSelected.clear()
 
@@ -1298,6 +1304,7 @@ async function renderMinKlasseTab(container) {
       .eq('week_nr', currentWeek)
     if (valgtSkolear) laererSesjonQuery = laererSesjonQuery.eq('school_year', valgtSkolear)
     const { data: sessions, error: sessionsError } = await laererSesjonQuery
+    if (myToken !== ukeRenderToken) return  // nyere render har startet, avbryt denne
     if (sessionsError) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
@@ -1338,7 +1345,7 @@ async function renderMinKlasseTab(container) {
 
       for (const s of daySessions) {
         const isMine = s.teacher_id === APP.profile.id
-        const isKontakt = APP.profile.role === 'kontaktlaerer' || APP.isAdminActive
+        const isKontakt = APP.profile?.role === 'kontaktlaerer' || APP.isAdminActive
 
         const wrapper = el('div', { class: 'session-wrapper' })
 
@@ -3359,7 +3366,7 @@ async function renderSkolerute(container) {
         const { data, error } = await sb.functions.invoke('ai-parse-skolerute', {
           body: { text: aiText.value, school_id: APP.school.id }
         })
-        if (error) throw error
+        if (error) throw new Error(error.message + (data?.error ? ` – ${data.error}: ${JSON.stringify(data.details ?? data.raw ?? '')}` : ''))
         const evs = data.events || []
         const warnings = data.warnings || []
         if (!evs.length) { showToast('Ingen hendelser funnet – prøv å legge inn teksten mer strukturert', 'info'); return }

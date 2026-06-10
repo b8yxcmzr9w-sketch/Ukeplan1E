@@ -55,6 +55,7 @@ Regler:
 
   if (!gemRes.ok) {
     const err = await gemRes.text()
+    console.error('Gemini feil:', gemRes.status, err)
     return new Response(JSON.stringify({ error: 'Gemini error', details: err }), { status: 502, headers: CORS })
   }
 
