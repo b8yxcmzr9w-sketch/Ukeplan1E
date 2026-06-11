@@ -1,8 +1,8 @@
 # PLAN — Ukeplan1E v4
 
-## Status: oppgave 1–6 fullført og migrasjon 007–010 kjørt 11.06.2026
-## Neste steg: verifiser deploy av `generate-facts` (test «✨ Generer med
-## AI» i Funfacts-fanen), avklar punkt 7 (elevtilgang) og 8 (konflikt-UX)
+## Status: alle oppgaver (1–8) fullført/avklart 11.06.2026
+## Neste steg: verifiser at AI-edge-functions er re-deployet etter
+## Gemini 2.5-oppgraderingen (test «✨ Generer med AI» i Funfacts-fanen)
 
 ## Beslutninger tatt
 - Fellesundervisning (oppgave 6) er løst som «koblede kopier»: én rad
@@ -13,6 +13,12 @@
   redigering av hele gruppen kan bygges senere hvis ønskelig.
 - Fridagsblokkering gjelder typene ferie/helligdag/planleggingsdag.
   Typen «annet» blokkerer ikke (kan være arrangement på vanlig skoledag).
+- Elevtilgang (punkt 7, avklart 11.06.2026): forsiden beholder den åpne
+  klasselisten — planene er ikke sensitive, og åpen liste er enklest for
+  elever og foresatte. Ingen kodeendring.
+- Konflikthåndtering (punkt 8, avklart 11.06.2026): navngitt varsel —
+  «Økten er endret av [navn] ([tidspunkt]) — last inn på nytt før du
+  lagrer». Ingen diff-visning eller sammenslåing i denne omgangen.
 
 ## Oppgaver
 Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
@@ -64,14 +70,13 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       «Felles med»-avkrysning for flere klasser; kortene viser
       «👥 Felles med …» i både elev- og lærervisning.
       Migrasjon `010_fellesokter.sql` kjørt i SQL Editor 11.06.2026.
-- [ ] 7. AVKLARING FØRST: Elevtilgang — skal forsiden slutte å liste alle
-      klasser åpent, slik at elever kun når sin klasse via direktelenke?
-      (Se «Åpne punkter» i FUNKSJONELL-BESKRIVELSE.md.) Bygges etter
-      avklaring.
-- [ ] 8. AVKLARING FØRST: Konflikthåndtering — bestem hva brukeren skal
-      oppleve når noen andre har endret økten i mellomtiden (f.eks.
-      «Økten er endret av [navn]»). Dagens konfliktvarsel finnes, men
-      opplevelsen er ikke avklart.
+- [x] 7. Elevtilgang — avklart 11.06.2026: forsiden beholder den åpne
+      klasselisten (se «Beslutninger tatt»). Punktet utgår — ingen
+      kodeendring. FUNKSJONELL-BESKRIVELSE.md oppdatert tilsvarende.
+- [x] 8. Konflikthåndtering — avklart og bygget 11.06.2026: konflikt-
+      dialogen sier nå «Økten er endret av [navn] ([tidspunkt]) — last
+      inn på nytt før du lagrer» (navn hentes via sporbarheten fra
+      oppgave 1; generisk melding som fallback).
 
 ## Ferdig (arkiv)
 - [x] Sett ny `GEMINI_API_KEY` i Supabase Secrets — satt 11.06.2026.
