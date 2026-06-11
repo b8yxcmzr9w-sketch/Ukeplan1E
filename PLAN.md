@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: GODKJENT 11.06.2026 — Del A fullført
-## Neste steg: Del B (migrasjon 011 + funfacts-FIFO)
+## Status: GODKJENT 11.06.2026 — Del A og B fullført
+## Neste steg: Del C (forbedret AI-import av skolerute)
 
 Forrige runde (oppgave 1–8) er fullført — arkivert nederst.
 Denne planen dekker tre nye deler: AI-overlay (A), funfacts-FIFO (B)
@@ -48,13 +48,13 @@ Del A bygger overlayet som Del C bruker fra start.
 ## Migrasjon 011 (felles for Del B og C)
 
 `v4/supabase/migrations/011_softdelete_facts_kalender.sql`:
-- [ ] `school_facts`: legg til `created_at timestamptz not null
+- [x] `school_facts`: legg til `created_at timestamptz not null
       default now()` og `deleted_at timestamptz` (eksisterende rader
       får created_at = nå; FIFO blant dem avgjøres sekundært av `id`)
-- [ ] `school_calendar`: legg til `deleted_at timestamptz`
-- [ ] Utvid `purge_old_soft_deletes()` med `school_facts` og
+- [x] `school_calendar`: legg til `deleted_at timestamptz`
+- [x] Utvid `purge_old_soft_deletes()` med `school_facts` og
       `school_calendar` (30-dagers permanent sletting, eksisterende cron)
-- [ ] Alle lesinger i app.js filtrerer `deleted_at is null`:
+- [x] Alle lesinger i app.js filtrerer `deleted_at is null`:
       `finnFridag`, elevvisningens kalenderoppslag, `renderSkolerute`,
       `renderFaktaTab`, facts-lasting i `init()`
 
@@ -98,19 +98,20 @@ forutsetter at kolonnene finnes).
 
 ## DEL B: Maks antall funfacts — erstatt de eldste (FIFO)
 
-- [ ] B1. Skriv migrasjon 011 (se over) — `created_at`/`deleted_at`
+- [x] B1. Skriv migrasjon 011 (se over) — `created_at`/`deleted_at`
       på `school_facts` + purge-utvidelse
-- [ ] B2. `renderFaktaTab`-generering: når nye fakta ville overstige
+- [x] B2. `renderFaktaTab`-generering: når nye fakta ville overstige
       100, soft-delete (`deleted_at = nå`) akkurat så mange av de
       ELDSTE (etter `created_at`, sekundært `id`) at alle nye får
       plass; deretter settes alle nye inn. Ingen ekstra dialog før —
       kun informasjon etter: «Maks antall er nådd – de N eldste ble
       erstattet med nye.» (vanlig bekreftelse når ingenting erstattes).
-- [ ] B3. Oppdater `APP.facts` fra databasen etter lagring, slik at
+- [x] B3. Oppdater `APP.facts` fra databasen etter lagring, slik at
       banner og AI-overlay bruker de nye faktaene uten
-      sideoppfriskning.
-- [ ] B4. Alle `school_facts`-lesinger filtrerer `deleted_at is null`
-      og sorterer på `created_at`. Bump `?v=`, commit Del B.
+      sideoppfriskning (refresh() i fanen laster på nytt og setter
+      APP.facts).
+- [x] B4. Alle `school_facts`-lesinger filtrerer `deleted_at is null`
+      og sorterer på `created_at`. Bump `?v=20260611g`, commit Del B.
 
       Merk: manuell sletting av enkeltfakta i fanen beholder hard
       delete (utenfor oppgavens omfang).

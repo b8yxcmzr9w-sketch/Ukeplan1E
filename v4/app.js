@@ -825,6 +825,7 @@ async function finnFridag(weekNr, dayOfWeek, schoolYear) {
   const { data } = await sb.from('school_calendar')
     .select('*')
     .eq('school_id', APP.school.id)
+    .is('deleted_at', null)
     .lte('start_date', dato)
     .gte('end_date', dato)
     .in('type', ['ferie', 'helligdag', 'planleggingsdag'])
@@ -947,6 +948,7 @@ async function renderElevView(klasseNavn) {
 
     const { data: calEvents } = await sb.from('school_calendar')
       .select('*')
+      .is('deleted_at', null)
       .lte('start_date', wEnd)
       .gte('end_date', wStart)
 
@@ -3571,7 +3573,8 @@ async function renderSkolerute(container) {
   async function refresh() {
     clearEl(container)
     const wrap = el('div', { class: 'skjema-smal' })
-    const { data: events } = await sb.from('school_calendar').select('*').order('start_date')
+    const { data: events } = await sb.from('school_calendar').select('*')
+      .is('deleted_at', null).order('start_date')
     wrap.appendChild(el('h3', {}, 'Skolerute'))
 
     // Events list – same admin-rad pattern as rest of admin panel
@@ -3691,7 +3694,9 @@ function visNySkolerute(onSave) {
 async function renderFaktaTab(container) {
   async function refresh() {
     clearEl(container)
-    const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
+    const { data: facts } = await sb.from('school_facts').select('*')
+      .eq('school_id', APP.school.id).is('deleted_at', null)
+      .order('created_at', { ascending: true }).order('id', { ascending: true })
     APP.facts = facts || []
 
     const wrap = el('div', { class: 'skjema-smal' })
@@ -3713,17 +3718,35 @@ async function renderFaktaTab(container) {
         const ny = data?.facts || []
         if (!ny.length) { showToast('Ingen fakta generert', 'info'); return }
 
-        // Respect 100-fact limit
-        const ledigePlasser = Math.max(0, 100 - (facts?.length || 0))
-        if (ledigePlasser === 0) { showToast('Listen er full (maks 100 funfacts). Slett noen først.', 'info'); return }
-        const skalLeggesTil = ny.slice(0, ledigePlasser)
+        // Maks 100: soft-delete de eldste (FIFO) for å gi plass til de nye
+        const MAKS = 100
+        const skalLeggesTil = ny.slice(0, MAKS)
+        const overskytende = Math.max(0, (facts?.length || 0) + skalLeggesTil.length - MAKS)
 
         await medLagreOverlay(async () => {
+          if (overskytende > 0) {
+            const { data: eldste, error: selErr } = await sb.from('school_facts')
+              .select('id')
+              .eq('school_id', APP.school.id)
+              .is('deleted_at', null)
+              .order('created_at', { ascending: true })
+              .order('id', { ascending: true })
+              .limit(overskytende)
+            if (selErr) throw new Error(selErr.message)
+            const { error: delErr } = await sb.from('school_facts')
+              .update({ deleted_at: new Date().toISOString() })
+              .in('id', (eldste || []).map(f => f.id))
+            if (delErr) throw new Error(delErr.message)
+          }
           const rows = skalLeggesTil.map(txt => ({ school_id: APP.school.id, fact_text: txt }))
           const { error: insErr } = await sb.from('school_facts').insert(rows)
           if (insErr) throw new Error(insErr.message)
         })
-        showToast(`${skalLeggesTil.length} funfacts lagt til!`, 'ok')
+        if (overskytende > 0) {
+          showToast(`${skalLeggesTil.length} funfacts lagt til. Maks antall er nådd – de ${overskytende} eldste ble erstattet med nye.`, 'info')
+        } else {
+          showToast(`${skalLeggesTil.length} funfacts lagt til!`, 'ok')
+        }
         refresh()
       } catch (err) {
         showToast(err.message, 'error')
@@ -3886,7 +3909,9 @@ async function init() {
 
   // Load school facts for overlay (background)
   if (APP.school) {
-    const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
+    const { data: facts } = await sb.from('school_facts').select('*')
+      .eq('school_id', APP.school.id).is('deleted_at', null)
+      .order('created_at', { ascending: true }).order('id', { ascending: true })
     APP.facts = facts || []
   }
 }
