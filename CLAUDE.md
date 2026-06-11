@@ -165,8 +165,9 @@ Deno.serve(async (req) => {
 Kjøres manuelt i Supabase Dashboard → SQL Editor. Aldri via CLI fra denne kodebasen.
 
 ## Utviklingsbranch
-Aktiv branch: `claude/bugfix-liste-UGKlC`
-Merge til `main` via PR på GitHub: `b8yxcmzr9w-sketch/Ukeplan1E`
+Hver session jobber på sin egen claude/*-branch.
+Merge til main via PR på GitHub: b8yxcmzr9w-sketch/Ukeplan1E.
+Merget branch kan slettes etterpå — historikken bevares i main.
 
 ## Nøkkelfunksjoner i app.js
 | Funksjon | Beskrivelse |
