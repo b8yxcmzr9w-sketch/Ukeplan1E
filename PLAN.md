@@ -1,7 +1,9 @@
 # PLAN — Ukeplan1E v4
 
-## Status: GODKJENT 11.06.2026 — Del A og B fullført
-## Neste steg: Del C (forbedret AI-import av skolerute)
+## Status: ALLE TRE DELER FULLFØRT 11.06.2026
+## Neste steg (manuelt i Supabase Dashboard):
+##   1. Kjør migrasjon 011 i SQL Editor (FØR frontend tas i bruk)
+##   2. Re-deploy edge-funksjonen ai-parse-skolerute
 
 Forrige runde (oppgave 1–8) er fullført — arkivert nederst.
 Denne planen dekker tre nye deler: AI-overlay (A), funfacts-FIFO (B)
@@ -118,7 +120,7 @@ forutsetter at kolonnene finnes).
 
 ## DEL C: Forbedret AI-import av skolerute
 
-- [ ] C1. Ny prompt i `ai-parse-skolerute`:
+- [x] C1. Ny prompt i `ai-parse-skolerute`:
       - Kun DAGER UTEN UNDERVISNING trekkes ut, klassifisert som
         `ferie` | `helligdag` | `planleggingsdag`. AI får IKKE bruke
         `annet` (typen beholdes i skjemaet, kun for manuelle
@@ -130,7 +132,7 @@ forutsetter at kolonnene finnes).
       - Sikkerhetsnett ETTER AI-svaret i edge-funksjonen: dropp rader
         der tittelen matcher /skoledag|skolestart|skoleslutt/i, uansett
         AI-klassifisering; ukjente typer normaliseres bort fra `annet`.
-- [ ] C2. Skoleår-forankring i `ai-parse-skolerute`:
+- [x] C2. Skoleår-forankring i `ai-parse-skolerute`:
       - Frontend sender `school_year` ('25/26') i body; funksjonen
         beregner gyldig intervall (1. aug 2025 – 31. jul 2026).
       - Prompten instruerer: datoer i august–desember får startåret,
@@ -140,13 +142,13 @@ forutsetter at kolonnene finnes).
         skoleår er 25/26. Bytt skoleår under Skoleår-fanen først,
         eller sjekk teksten du limte inn.» (XX/YY utledes fra
         datoene). Frontend viser meldingen som toast.
-- [ ] C3. Tydelig skoleår i grensesnittet (app.js):
+- [x] C3. Tydelig skoleår i grensesnittet (app.js):
       - Banner øverst i Skolerute-fanen: «Aktivt skoleår: 25/26
         (uke 33 2025 – uke 24 2026)» — uker fra
         `school_year_start_week`/`school_year_end_week`.
       - I lim-inn-seksjonen, rett over tekstfeltet: «Skoleruten du
         limer inn tolkes for skoleåret 25/26».
-- [ ] C4. Forhåndsvisning før lagring (erstatter dagens `confirm()`):
+- [x] C4. Forhåndsvisning før lagring (erstatter dagens `confirm()`):
       - AI-kallet kjøres med `medAIOverlay('AI tolker skoleruten …', …)`.
       - Resultatet vises som redigerbare rader: tittel (input),
         fra/til (date-inputs), type (select), stryk-knapp per rad.
@@ -159,7 +161,11 @@ forutsetter at kolonnene finnes).
         (via `medLagreOverlay`).
       - IKKE rydd opp i eksisterende feilaktige 26/27-oppføringer
         (gjøres manuelt).
-- [ ] C5. Bump `?v=`, commit Del C.
+- [x] C5. Bump `?v=20260611h`, commit Del C.
+
+      Merk: håndterte feil fra edge-funksjonen (validering, Gemini-feil
+      med melding) returneres som 200 + `{ error }` slik at meldingen
+      når brukeren — supabase-js skjuler response-body ved non-2xx.
 
 ---
 

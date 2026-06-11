@@ -1,5 +1,9 @@
 // Ukeplan v4 – AI parse skolerute Edge Function
-// Accepts pasted school calendar text, returns structured calendar events
+// Tar imot limt skolerute-tekst + aktivt skoleår, og returnerer
+// strukturerte fridager: KUN dager uten undervisning (ferie,
+// helligdag, planleggingsdag), forankret i skoleårets datointervall.
+// Milepæler («første skoledag» o.l.) filtreres bort både i prompten
+// og i et sikkerhetsnett etter AI-svaret.
 
 // Portet fra kallGemini_ i appsscript.gs (velprøvd i produksjon).
 // Identisk kopi ligger i generate-facts og ai-parse-sessions,
@@ -51,59 +55,137 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS })
+// Typen «annet» finnes i skjemaet, men er forbeholdt manuelle
+// oppføringer — AI-en får ikke bruke den.
+const GYLDIGE_TYPER = ['ferie', 'helligdag', 'planleggingsdag']
 
-  const { text } = await req.json()
-  if (!text) return new Response('Missing text', { status: 400, headers: CORS })
+// Sikkerhetsnett: milepæler skal aldri inn i skoleruten,
+// uansett hvordan AI-en har klassifisert dem.
+const MILEPAEL = /skoledag|skolestart|skoleslutt/i
 
-  const systemPrompt = `Du er en assistent som hjelper med å legge inn skoleruter.
-Brukeren limer inn tekst med informasjon om ferier, fridager og andre hendelser fra skoleruten.
-Returner KUN gyldig JSON, ingen forklaringer.
+// Håndterte feil returneres som 200 + { error } slik at meldingen
+// når frem til brukeren (supabase-js skjuler body ved non-2xx).
+function svar(obj: unknown, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  })
+}
 
-Returner et objekt med denne strukturen:
+function byggPrompt(text: string, schoolYear: string, aar1: number, aar2: number): string {
+  return `Du er en assistent som legger inn skoleruten for en norsk videregående skole, for skoleåret ${schoolYear} (august ${aar1} – juli ${aar2}).
+Brukeren limer inn tekst (f.eks. fra PDF, nettside eller e-post) med skoleruten.
+
+Trekk ut KUN dager der elevene IKKE har undervisning.
+Returner KUN gyldig JSON, ingen forklaringer:
 {
   "events": [
     {
       "title": "Navn på ferien/fridagen",
       "start_date": "YYYY-MM-DD",
       "end_date": "YYYY-MM-DD",
-      "type": "ferie" | "helligdag" | "planleggingsdag" | "annet"
+      "type": "ferie" | "helligdag" | "planleggingsdag"
     }
   ],
   "warnings": ["eventuell advarsel eller usikkerhet"]
 }
 
-Regler:
-- Bruk norsk skolekalender-konvensjoner
+Typer (bruk nøyaktig én av disse tre — aldri noe annet):
+- "ferie": ferieperioder (høstferie, juleferie, vinterferie, påskeferie, sommerferie) og enkeltstående fridager/klemdager for elevene
+- "helligdag": offisielle norske helligdager på ukedager (1. nyttårsdag, skjærtorsdag, langfredag, 2. påskedag, 1. mai, 17. mai, Kristi himmelfartsdag, 2. pinsedag, 1. og 2. juledag)
+- "planleggingsdag": dager der lærerne jobber, men elevene har fri
+
+ÅRSTALL — skoleåret går fra 1. august ${aar1} til 31. juli ${aar2}:
+- Datoer i august–desember får årstallet ${aar1}
+- Datoer i januar–juli får årstallet ${aar2}
+- Alle datoer skal ligge innenfor dette intervallet
+
+Skal IKKE tas med som egne rader (hoppes over, uansett formulering):
+- Milepæler som «første skoledag», «siste skoledag», «skolestart», «skoleslutt», «skolestart etter jul», «første skoledag etter påske»
+- Eksamensdager, tentamen og heldagsprøver (elevene har oppmøte)
+- Foreldremøter, utviklingssamtaler og andre arrangementer på vanlige skoledager
+- Helger (lørdag/søndag) som egne oppføringer
+
+Milepæler kan likevel brukes til å BEREGNE ferier: står det «siste skoledag før jul 19. desember» og «første skoledag etter jul 5. januar», er juleferien 20. desember ${aar1} – 4. januar ${aar2} (type "ferie", tittel "Juleferie") — men milepælene selv skal ikke bli egne rader.
+
+Andre regler:
 - Enkeltdager: sett start_date = end_date
-- Ferier er perioder med start og slutt
-- Helligdager er offisielle norske helligdager
-- Planleggingsdager er dager lærerne jobber men elevene har fri
-- Dersom du er usikker på en dato, inkluder den i warnings
-- Anta inneværende eller kommende skoleår om årstall mangler`
+- Ferieperioder: sett start_date og end_date til hele perioden
+- Er du usikker på en dato, legg en kort forklaring i warnings
+
+Tekst fra bruker:
+${text}`
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS })
+
+  const { text, school_year } = await req.json()
+  if (!text) return svar({ error: 'Mangler tekst' }, 400)
+  if (!school_year || !/^\d{2}\/\d{2}$/.test(school_year)) {
+    return svar({ error: 'Mangler gyldig skoleår (format YY/YY)' }, 400)
+  }
+
+  const aar1 = 2000 + parseInt(school_year.slice(0, 2), 10)
+  const aar2 = 2000 + parseInt(school_year.slice(3, 5), 10)
+  const fra = `${aar1}-08-01`
+  const til = `${aar2}-07-31`
 
   let rawText: string
   try {
     rawText = await kallGemini(
-      `${systemPrompt}\n\nTekst fra bruker:\n${text}`,
+      byggPrompt(text, school_year, aar1, aar2),
       { temperature: 0.1, responseMimeType: 'application/json' }
     )
   } catch (e) {
     console.error('Gemini feil:', e.message)
-    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: CORS })
+    return svar({ error: e.message }, 502)
   }
 
-  let parsed
+  let parsed: any
   try {
     parsed = JSON.parse(rawText)
   } catch {
-    return new Response(JSON.stringify({ error: 'Could not parse Gemini response', raw: rawText }), { status: 502, headers: CORS })
+    return svar({ error: 'Kunne ikke tolke AI-svaret', raw: rawText }, 502)
   }
 
-  return new Response(JSON.stringify(parsed), {
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  })
-})
+  const warnings: string[] = Array.isArray(parsed.warnings) ? parsed.warnings : []
+  const events: { title: string; start_date: string; end_date: string; type: string }[] = []
+  const utenfor: string[] = []
 
+  for (const e of parsed.events ?? []) {
+    const title = String(e?.title ?? '').trim()
+    const start = String(e?.start_date ?? '').trim()
+    const end = String(e?.end_date ?? e?.start_date ?? '').trim()
+    let type = String(e?.type ?? '').trim()
+
+    if (!title || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+      warnings.push(`Hoppet over rad med manglende tittel eller ugyldig dato: «${title || start || '?'}»`)
+      continue
+    }
+    if (MILEPAEL.test(title)) continue
+    if (!GYLDIGE_TYPER.includes(type)) {
+      warnings.push(`«${title}» hadde ukjent type «${type}» – satt til ferie, sjekk før lagring`)
+      type = 'ferie'
+    }
+    if (start < fra || end > til) {
+      utenfor.push(start < fra ? start : end)
+      continue
+    }
+    events.push({ title, start_date: start, end_date: end, type })
+  }
+
+  // Datoer utenfor aktivt skoleår → avvis hele importen med tydelig melding
+  if (utenfor.length) {
+    const [y, m] = utenfor[0].split('-').map(Number)
+    const gjettAar1 = m >= 8 ? y : y - 1
+    const gjett = `${String(gjettAar1 % 100).padStart(2, '0')}/${String((gjettAar1 + 1) % 100).padStart(2, '0')}`
+    return svar({
+      error: `Dette ser ut som skoleruten for ${gjett}, men aktivt skoleår er ${school_year}. ` +
+        `Bytt skoleår under Skoleår-fanen først, eller sjekk teksten du limte inn.`,
+    })
+  }
+
+  return svar({ events, warnings })
+})
