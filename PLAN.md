@@ -1,88 +1,198 @@
 # PLAN — Ukeplan1E v4
 
-## Status: alle oppgaver (1–8) fullført/avklart 11.06.2026
-## Neste steg: verifiser at AI-edge-functions er re-deployet etter
-## Gemini 2.5-oppgraderingen (test «✨ Generer med AI» i Funfacts-fanen)
+## Status: VENTER PÅ GODKJENNING (plan skrevet 11.06.2026)
+## Neste steg: få godkjenning av planen under, deretter Del A
 
-## Beslutninger tatt
+Forrige runde (oppgave 1–8) er fullført — arkivert nederst.
+Denne planen dekker tre nye deler: AI-overlay (A), funfacts-FIFO (B)
+og forbedret skolerute-import (C). Rekkefølgen A → B → C er bevisst:
+Del A bygger overlayet som Del C bruker fra start.
+
+---
+
+## Kartlegging (gjort før planen)
+
+### Dagens oppførsel — funfacts-maksgrense (Del B)
+- Grensen på **100** håndheves KUN i frontend, i `renderFaktaTab`
+  (app.js ~3640): etter AI-generering beregnes `ledigePlasser =
+  100 − antall`. Er listen full vises toast «Listen er full (maks 100
+  funfacts). Slett noen først.» og ingenting lagres; ellers kuttes de
+  nye faktaene til å passe (`ny.slice(0, ledigePlasser)`).
+- Edge-funksjonen `generate-facts` har INGEN grenselogikk — den
+  genererer ~40 fakta og returnerer dem.
+- `school_facts` har bare `id, school_id, fact_text` — **mangler både
+  `created_at` (trengs for å finne «eldste») og `deleted_at` (trengs
+  for soft-delete)**. Sletting i appen i dag er hard delete.
+  → Del B krever migrasjon 011.
+
+### Dagens oppførsel — skolerute-import (Del C)
+- `ai-parse-skolerute` har en enkel prompt uten skoleår-forankring
+  («Anta inneværende eller kommende skoleår om årstall mangler») og
+  uten regler mot milepæler — derfor kommer «Første skoledag» og feil
+  årstall med.
+- Frontend (`renderSkolerute`, app.js ~3535): AI-svaret vises bare som
+  `confirm()`-tekst, deretter insert rett i `school_calendar`. Ingen
+  redigerbar forhåndsvisning, ingen erstatt-mulighet.
+- `school_calendar` har **ikke `deleted_at`** (og ikke `school_year`)
+  → «erstatt med soft-delete» krever migrasjon 011. Skoleår-tilhørighet
+  avgjøres via datointervall (1. aug år1 – 31. jul år2), ikke ny kolonne.
+- Gammel prompt i fredet `appsscript.gs` (`tolkSkoleruteAction_` — lest,
+  ikke endret) gjenbrukes der den fungerer: eksplisitt årsforankring
+  (uker 30–52 → år1, uker 1–29 → år2, omformuleres til måneder:
+  aug–des → år1, jan–jul → år2) og regelen «'Siste skoledag før jul' /
+  'Første skoledag etter jul/påske' skal IKKE inkluderes som egne
+  rader — brukes kun til å beregne ferieukene».
+
+---
+
+## Migrasjon 011 (felles for Del B og C)
+
+`v4/supabase/migrations/011_softdelete_facts_kalender.sql`:
+- [ ] `school_facts`: legg til `created_at timestamptz not null
+      default now()` og `deleted_at timestamptz` (eksisterende rader
+      får created_at = nå; FIFO blant dem avgjøres sekundært av `id`)
+- [ ] `school_calendar`: legg til `deleted_at timestamptz`
+- [ ] Utvid `purge_old_soft_deletes()` med `school_facts` og
+      `school_calendar` (30-dagers permanent sletting, eksisterende cron)
+- [ ] Alle lesinger i app.js filtrerer `deleted_at is null`:
+      `finnFridag`, elevvisningens kalenderoppslag, `renderSkolerute`,
+      `renderFaktaTab`, facts-lasting i `init()`
+
+KJØRES MANUELT i SQL Editor FØR ny app.js tas i bruk (filtrene
+forutsetter at kolonnene finnes).
+
+---
+
+## DEL A: «AI jobber»-overlay med funfacts
+
+- [ ] A1. Ny hjelpefunksjon `medAIOverlay(tittel, asyncFn)` i app.js
+      (samme mønster som `medLagreOverlay`):
+      - Fullskjerms-overlay vises umiddelbart; `asyncFn` kjøres;
+        overlay fjernes i `finally` (også ved feil). Resultat
+        returneres / feil kastes videre → eksisterende
+        toast-feilhåndtering virker som før.
+      - Kan ikke lukkes av brukeren; blokkerer interaksjon bak.
+      - Innhold: pulserende ✨-animasjon, tittel (parameter),
+        undertekst «Dette kan ta litt tid.», funfact fra `APP.facts`
+        med merkelapp «Mens du venter …».
+      - Fakta byttes hvert 7. sek med myk fade; tilfeldig rekkefølge
+        uten samme fakta to ganger på rad (stokket kø).
+      - →-knapp (min. 44×44 px treffflate) hopper til neste fakta
+        umiddelbart og nullstiller 7-sekunderstimeren.
+      - Tom `APP.facts`: kun animasjon + tittel + undertekst (ingen
+        faktaboks, ingen →-knapp).
+      - Intervall-timer ryddes når overlayet fjernes (ingen lekkasje).
+- [ ] A2. CSS i style.css: `.ai-overlay` m.m., mørk halvgjennomsiktig
+      bakgrunn, skolens temavariabler der naturlig, `z-index: 600`
+      (over `.modal-bg` 200 og `.lagre-overlay` 500), mobilvennlig.
+- [ ] A3. Ta i bruk overlayet rundt AI-kallene:
+      - `visAIPasteModal` → `ai-parse-sessions`:
+        «AI tolker teksten til økter …»
+      - Funfacts-generering → `generate-facts`:
+        «AI lager nye funfacts …»
+      - Skolerute-import → `ai-parse-skolerute`:
+        «AI tolker skoleruten …» (selve flyten bygges om i Del C —
+        overlayet brukes der fra start)
+- [ ] A4. Bump `?v=` i v4/index.html (CSS + JS), commit Del A
+
+## DEL B: Maks antall funfacts — erstatt de eldste (FIFO)
+
+- [ ] B1. Skriv migrasjon 011 (se over) — `created_at`/`deleted_at`
+      på `school_facts` + purge-utvidelse
+- [ ] B2. `renderFaktaTab`-generering: når nye fakta ville overstige
+      100, soft-delete (`deleted_at = nå`) akkurat så mange av de
+      ELDSTE (etter `created_at`, sekundært `id`) at alle nye får
+      plass; deretter settes alle nye inn. Ingen ekstra dialog før —
+      kun informasjon etter: «Maks antall er nådd – de N eldste ble
+      erstattet med nye.» (vanlig bekreftelse når ingenting erstattes).
+- [ ] B3. Oppdater `APP.facts` fra databasen etter lagring, slik at
+      banner og AI-overlay bruker de nye faktaene uten
+      sideoppfriskning.
+- [ ] B4. Alle `school_facts`-lesinger filtrerer `deleted_at is null`
+      og sorterer på `created_at`. Bump `?v=`, commit Del B.
+
+      Merk: manuell sletting av enkeltfakta i fanen beholder hard
+      delete (utenfor oppgavens omfang).
+
+## DEL C: Forbedret AI-import av skolerute
+
+- [ ] C1. Ny prompt i `ai-parse-skolerute`:
+      - Kun DAGER UTEN UNDERVISNING trekkes ut, klassifisert som
+        `ferie` | `helligdag` | `planleggingsdag`. AI får IKKE bruke
+        `annet` (typen beholdes i skjemaet, kun for manuelle
+        oppføringer).
+      - Eksplisitte eksempler i prompten på hva som hoppes over:
+        «første skoledag», «siste skoledag», «skolestart etter
+        jul/påske» — milepæler brukes kun til å utlede ferieperioder
+        (gjenbruk fra gammel prompt).
+      - Sikkerhetsnett ETTER AI-svaret i edge-funksjonen: dropp rader
+        der tittelen matcher /skoledag|skolestart|skoleslutt/i, uansett
+        AI-klassifisering; ukjente typer normaliseres bort fra `annet`.
+- [ ] C2. Skoleår-forankring i `ai-parse-skolerute`:
+      - Frontend sender `school_year` ('25/26') i body; funksjonen
+        beregner gyldig intervall (1. aug 2025 – 31. jul 2026).
+      - Prompten instruerer: datoer i august–desember får startåret,
+        januar–juli sluttåret.
+      - Validering etter tolking: datoer utenfor intervallet → feil
+        med melding «Dette ser ut som skoleruten for XX/YY, men aktivt
+        skoleår er 25/26. Bytt skoleår under Skoleår-fanen først,
+        eller sjekk teksten du limte inn.» (XX/YY utledes fra
+        datoene). Frontend viser meldingen som toast.
+- [ ] C3. Tydelig skoleår i grensesnittet (app.js):
+      - Banner øverst i Skolerute-fanen: «Aktivt skoleår: 25/26
+        (uke 33 2025 – uke 24 2026)» — uker fra
+        `school_year_start_week`/`school_year_end_week`.
+      - I lim-inn-seksjonen, rett over tekstfeltet: «Skoleruten du
+        limer inn tolkes for skoleåret 25/26».
+- [ ] C4. Forhåndsvisning før lagring (erstatter dagens `confirm()`):
+      - AI-kallet kjøres med `medAIOverlay('AI tolker skoleruten …', …)`.
+      - Resultatet vises som redigerbare rader: tittel (input),
+        fra/til (date-inputs), type (select), stryk-knapp per rad.
+        Full dato med årstall vises («5.10.2025»).
+      - Valg: «Erstatt eksisterende skolerute for skoleåret»
+        (standard) eller «Legg til». Erstatt = soft-delete av
+        eksisterende `school_calendar`-rader med start_date i
+        skoleårets datointervall, deretter insert av de nye.
+      - Ingenting lagres før brukeren trykker «Lagre»
+        (via `medLagreOverlay`).
+      - IKKE rydd opp i eksisterende feilaktige 26/27-oppføringer
+        (gjøres manuelt).
+- [ ] C5. Bump `?v=`, commit Del C.
+
+---
+
+## Manuelle steg i Supabase Dashboard (etter koding)
+
+1. **SQL Editor:** kjør `011_softdelete_facts_kalender.sql`
+   (FØR ny frontend tas i bruk).
+2. **Edge Functions → re-deploy:** `ai-parse-skolerute` (eneste
+   edge-funksjon som endres — `generate-facts` og `ai-parse-sessions`
+   røres ikke).
+
+## Avgrensninger
+- Fredede rotfiler, `info/` og `dev/` røres ikke (appsscript.gs er
+  kun lest).
+- `annet`-typen beholdes i den manuelle «Legg til»-dialogen.
+- Ingen opprydding i eksisterende 26/27-rader i skoleruten.
+
+---
+
+## Beslutninger tatt (tidligere runder — gjelder fortsatt)
 - Fellesundervisning (oppgave 6) er løst som «koblede kopier»: én rad
-  per klasse med felles `shared_group_id`, i stedet for å bygge om hele
-  datamodellen til mange-til-mange. Da fungerer elevvisning, RLS,
-  sanntid, iCal og eksport uendret per klasse, og kortene viser
-  «👥 Felles med …». Redigering skjer per klasse-kopi; felles
-  redigering av hele gruppen kan bygges senere hvis ønskelig.
+  per klasse med felles `shared_group_id`. Kortene viser
+  «👥 Felles med …»; redigering skjer per klasse-kopi.
 - Fridagsblokkering gjelder typene ferie/helligdag/planleggingsdag.
   Typen «annet» blokkerer ikke (kan være arrangement på vanlig skoledag).
-- Elevtilgang (punkt 7, avklart 11.06.2026): forsiden beholder den åpne
-  klasselisten — planene er ikke sensitive, og åpen liste er enklest for
-  elever og foresatte. Ingen kodeendring.
-- Konflikthåndtering (punkt 8, avklart 11.06.2026): navngitt varsel —
-  «Økten er endret av [navn] ([tidspunkt]) — last inn på nytt før du
-  lagrer». Ingen diff-visning eller sammenslåing i denne omgangen.
+- Elevtilgang: forsiden beholder den åpne klasselisten. Ingen kodeendring.
+- Konflikthåndtering: navngitt varsel — «Økten er endret av [navn]
+  ([tidspunkt]) — last inn på nytt før du lagrer».
 
-## Oppgaver
-Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
-(juni 2026). Godkjent 11.06.2026:
-
-- [x] 1. Sporbarhet på økter: sørg for at «opprettet av» faktisk lagres
-      når en økt opprettes, og at «sist endret av» lagres ved hver
-      endring. Vis begge i redigeringsvinduet. (Databasefeltene finnes
-      allerede, men fylles ikke ut fra appen.)
-      → Gjort 11.06.2026: alle insert-steder setter nå `school_id` og
-      `created_by`, alle update-steder setter `last_modified_by`, og
-      redigeringsvinduet viser «Opprettet av … · Sist endret av …».
-      Migrasjon `007_sporbarhet.sql` kjørt i SQL Editor 11.06.2026.
-- [x] 2. Skolenøytral funfacts-generering: fjern hardkodet
-      Øksnevad/Jæren/Rogaland fra AI-instruksjonen i `generate-facts`,
-      og bruk skolens navn/sted fra databasen i stedet.
-      → Gjort 11.06.2026: prompten bygges nå fra skolenavnet til
-      innlogget brukers skole; AI-en utleder sted/temaer selv.
-      KREVER MANUELL DEPLOY: `generate-facts` i Supabase Dashboard.
-- [x] 3. Blokkering av økter på fridager: sjekk skoleruten når en økt
-      opprettes, kopieres (enkelt og bulk) eller importeres med AI, og
-      stopp lagring på fridager med en forklarende melding.
-      → Gjort 11.06.2026: ny hjelpefunksjon `finnFridag()` sjekker
-      skoleruten (ferie/helligdag/planleggingsdag — «annet» blokkerer
-      ikke) i ny økt, rediger, kopier, bulk-kopi og AI-import. Bulk og
-      AI hopper over fridagstreff og forklarer hvilke.
-- [x] 4. Kollegahjelp med advarsel: la en lærer redigere en annens økt,
-      men vis en tydelig advarsel først. Krever både endring i
-      grensesnittet og oppmykning av databasereglene (RLS), og bygger på
-      sporbarheten fra oppgave 1 (så man ser hvem som endret).
-      → Gjort 11.06.2026: redigeringsknappen vises nå på alle økter i
-      «Min klasse»; andres økter gir bekreftelsesdialog først
-      (`bekreftKollegahjelp`). Sletting er fortsatt begrenset til egne
-      økter / kontaktlærer / admin.
-      Migrasjon `008_kollegahjelp.sql` kjørt i SQL Editor 11.06.2026.
-- [x] 5. Håndhev rollegrensene i databasen: maks 3 kontaktlærere per
-      klasse og maks 2 admin per skole sjekkes i dag bare i nettleseren —
-      legg samme grense inn i databasen så den ikke kan omgås.
-      → Gjort 11.06.2026: triggere på `users` og `user_classes`.
-      Bonusfunn rettet i samme migrasjon: `is_contact_teacher_for()`
-      slo opp i `class_contact_teachers` som appen aldri skriver til —
-      kontaktlærer-rettighetene i RLS har derfor aldri virket. Den
-      bruker nå `user_classes` + `users.role`.
-      Migrasjon `009_rollegrenser.sql` kjørt i SQL Editor 11.06.2026.
-- [x] 6. Økt for flere klasser (fellesundervisning): utvid datamodellen
-      slik at én økt kan gjelde flere klasser. Største endringen —
-      påvirker visning, redigering, kopiering, AI-import og iCal.
-      → Gjort 11.06.2026 (se «Beslutninger tatt»): «Ny økt» har nå
-      «Felles med»-avkrysning for flere klasser; kortene viser
-      «👥 Felles med …» i både elev- og lærervisning.
-      Migrasjon `010_fellesokter.sql` kjørt i SQL Editor 11.06.2026.
-- [x] 7. Elevtilgang — avklart 11.06.2026: forsiden beholder den åpne
-      klasselisten (se «Beslutninger tatt»). Punktet utgår — ingen
-      kodeendring. FUNKSJONELL-BESKRIVELSE.md oppdatert tilsvarende.
-- [x] 8. Konflikthåndtering — avklart og bygget 11.06.2026: konflikt-
-      dialogen sier nå «Økten er endret av [navn] ([tidspunkt]) — last
-      inn på nytt før du lagrer» (navn hentes via sporbarheten fra
-      oppgave 1; generisk melding som fallback).
-
-## Ferdig (arkiv)
-- [x] Sett ny `GEMINI_API_KEY` i Supabase Secrets — satt 11.06.2026.
-      AI-funksjonene (`ai-parse-skolerute`, `ai-parse-sessions`,
-      `generate-facts`) bør fungere igjen; verifiser gjerne med
-      «✨ Generer med AI» i Funfacts-fanen.
-- [x] Verifiser om `006_fix_school_facts_rls.sql` er kjørt i prod —
-      bekreftet kjørt 11.06.2026 via `pg_policies` i SQL Editor
-      (policyen inneholder rollesjekken). CLAUDE.md oppdatert til `KJØRT`.
+## Arkiv: oppgave 1–8 (fullført 11.06.2026)
+Alle åtte oppgavene fra gjennomgangen av FUNKSJONELL-BESKRIVELSE.md er
+fullført og merget til main: sporbarhet (migrasjon 007), skolenøytrale
+funfacts, fridagsblokkering (`finnFridag`), kollegahjelp (migrasjon
+008), rollegrenser i databasen (migrasjon 009), fellesundervisning
+(migrasjon 010), elevtilgang (avklart, ingen endring) og
+konflikthåndtering med navngitt varsel. Migrasjon 004–010 er kjørt;
+`GEMINI_API_KEY` er satt og `006_fix_school_facts_rls.sql` bekreftet
+kjørt i prod.
