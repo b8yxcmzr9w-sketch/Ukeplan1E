@@ -1,13 +1,43 @@
 # PLAN — Ukeplan1E v4
 
-## Status: fullført
-## Neste steg: ingen åpne oppgaver
+## Status: venter på godkjenning (ingen koding startet)
+## Neste steg: få godkjenning av oppgavelisten under, deretter starte på oppgave 1
 
 ## Beslutninger tatt
 - (ingen ennå — føres her etter hvert)
 
 ## Oppgaver
-- (ingen åpne)
+Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
+(juni 2026). Foreslått rekkefølge — IKKE påbegynt, venter på godkjenning:
+
+- [ ] 1. Sporbarhet på økter: sørg for at «opprettet av» faktisk lagres
+      når en økt opprettes, og at «sist endret av» lagres ved hver
+      endring. Vis begge i redigeringsvinduet. (Databasefeltene finnes
+      allerede, men fylles ikke ut fra appen.)
+- [ ] 2. Skolenøytral funfacts-generering: fjern hardkodet
+      Øksnevad/Jæren/Rogaland fra AI-instruksjonen i `generate-facts`,
+      og bruk skolens navn/sted fra databasen i stedet.
+- [ ] 3. Blokkering av økter på fridager: sjekk skoleruten når en økt
+      opprettes, kopieres (enkelt og bulk) eller importeres med AI, og
+      stopp lagring på fridager med en forklarende melding.
+- [ ] 4. Kollegahjelp med advarsel: la en lærer redigere en annens økt,
+      men vis en tydelig advarsel først. Krever både endring i
+      grensesnittet og oppmykning av databasereglene (RLS), og bygger på
+      sporbarheten fra oppgave 1 (så man ser hvem som endret).
+- [ ] 5. Håndhev rollegrensene i databasen: maks 3 kontaktlærere per
+      klasse og maks 2 admin per skole sjekkes i dag bare i nettleseren —
+      legg samme grense inn i databasen så den ikke kan omgås.
+- [ ] 6. Økt for flere klasser (fellesundervisning): utvid datamodellen
+      slik at én økt kan gjelde flere klasser. Største endringen —
+      påvirker visning, redigering, kopiering, AI-import og iCal.
+- [ ] 7. AVKLARING FØRST: Elevtilgang — skal forsiden slutte å liste alle
+      klasser åpent, slik at elever kun når sin klasse via direktelenke?
+      (Se «Åpne punkter» i FUNKSJONELL-BESKRIVELSE.md.) Bygges etter
+      avklaring.
+- [ ] 8. AVKLARING FØRST: Konflikthåndtering — bestem hva brukeren skal
+      oppleve når noen andre har endret økten i mellomtiden (f.eks.
+      «Økten er endret av [navn]»). Dagens konfliktvarsel finnes, men
+      opplevelsen er ikke avklart.
 
 ## Ferdig (arkiv)
 - [x] Sett ny `GEMINI_API_KEY` i Supabase Secrets — satt 11.06.2026.
