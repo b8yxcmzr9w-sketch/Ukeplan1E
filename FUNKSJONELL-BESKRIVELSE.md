@@ -97,12 +97,34 @@ Skole (flere skoler kan bruke tjenesten, adskilt fra hverandre)
 Disse punktene i beskrivelsen finnes muligens ikke i koden ennå, eller
 fungerer annerledes. Sjekkliste for Claude Code:
 
-- [ ] Rollen Kontaktlærer (maks 3 per klasse) med utvidede rettigheter
-- [ ] Grense på maks 2 admin per skole
+Verifisert mot koden juni 2026:
+
+- [x] Rollen Kontaktlærer (maks 3 per klasse) med utvidede rettigheter
+      — FINNES: rolle i databasen, rettigheter via RLS-policies, maks
+      3-sjekk i admin-grensesnittet. Forbehold: grensen håndheves kun i
+      nettleseren, ikke i databasen.
+- [x] Grense på maks 2 admin per skole
+      — FINNES: sjekk i admin-grensesnittet ved opprettelse og endring av
+      brukere. Samme forbehold: håndheves ikke i databasen.
 - [ ] Advarsel når en lærer redigerer en annens økt
+      — FINNES IKKE: i dag er det motsatt — vanlige lærere er helt
+      blokkert fra å redigere andres økter (både i grensesnittet og i
+      databasen). «Tillatt med advarsel» må bygges.
 - [ ] Merking av økter med opprettet av / sist endret av
+      — FINNES DELVIS: databasen har feltene, men «sist endret av» fylles
+      aldri ut, «opprettet av» sendes ikke fra appen, og ingenting av
+      dette vises til brukeren.
 - [ ] Økt som gjelder flere klasser samtidig
+      — FINNES IKKE: en økt er knyttet til nøyaktig én klasse.
+      (Flerdagshendelser kan gjelde alle klasser, men det er ikke økter.)
 - [ ] Blokkering av økter på fridager (ikke bare visning)
+      — FINNES IKKE: fridager vises i planen, men ingenting hindrer
+      opprettelse av økter på fridager.
 - [ ] Elevvisning begrenset til egen klasse (i dag listes alle klasser
       på forsiden)
+      — FINNES IKKE: forsiden lister alle klasser åpent, og hvem som
+      helst kan se alle klassers planer. → Avhenger av åpent punkt.
 - [ ] Tekst/oppsett som antar Øksnevad spesifikt — skal være skolenøytralt
+      — FINNES DELVIS: selve appen er nøytral (skolenavn hentes fra
+      databasen), men AI-funksjonen for funfacts har Øksnevad, Jæren og
+      Rogaland hardkodet i instruksjonen til AI-en.
