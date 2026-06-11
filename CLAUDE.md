@@ -42,7 +42,7 @@ v4/
       003_cleanup_cron.sql
       004_school_year.sql         # Skoleår-støtte (KJØRT)
       005_test_sessions.sql       # Testdata (KJØRT)
-      006_fix_school_facts_rls.sql # school_facts RLS-fix (KJØRT?)
+      006_fix_school_facts_rls.sql # school_facts RLS-fix (KJØRT)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini
