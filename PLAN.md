@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: venter på godkjenning (ingen koding startet)
-## Neste steg: få godkjenning av oppgavelisten under, deretter starte på oppgave 1
+## Status: godkjent 11.06.2026 — under arbeid
+## Neste steg: oppgave 2 (skolenøytral funfacts)
 
 ## Beslutninger tatt
 - (ingen ennå — føres her etter hvert)
@@ -10,10 +10,15 @@
 Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
 (juni 2026). Foreslått rekkefølge — IKKE påbegynt, venter på godkjenning:
 
-- [ ] 1. Sporbarhet på økter: sørg for at «opprettet av» faktisk lagres
+- [x] 1. Sporbarhet på økter: sørg for at «opprettet av» faktisk lagres
       når en økt opprettes, og at «sist endret av» lagres ved hver
       endring. Vis begge i redigeringsvinduet. (Databasefeltene finnes
       allerede, men fylles ikke ut fra appen.)
+      → Gjort 11.06.2026: alle insert-steder setter nå `school_id` og
+      `created_by`, alle update-steder setter `last_modified_by`, og
+      redigeringsvinduet viser «Opprettet av … · Sist endret av …».
+      KREVER MANUELL KJØRING: `007_sporbarhet.sql` i SQL Editor
+      (trigger som stempler sist endret av + standardverdier).
 - [ ] 2. Skolenøytral funfacts-generering: fjern hardkodet
       Øksnevad/Jæren/Rogaland fra AI-instruksjonen i `generate-facts`,
       og bruk skolens navn/sted fra databasen i stedet.

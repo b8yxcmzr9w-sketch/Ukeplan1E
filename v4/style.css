@@ -453,6 +453,7 @@ tr:hover td { background: var(--primær-svak); }
 
 /* ── Kopi-modal: hint og AI-påminnelse ──────────────────────────── */
 .kopi-hint { font-size: .85rem; color: var(--tekst-svak); margin-bottom: 12px; }
+.sporbarhet-info { font-size: .8rem; color: var(--tekst-svak); margin: -4px 0 12px; }
 .ai-paaminnelse {
   background: var(--primær-svak); border-radius: var(--radius);
   padding: 8px 12px; font-size: .82rem; color: var(--badge-tekst); margin-bottom: 12px;

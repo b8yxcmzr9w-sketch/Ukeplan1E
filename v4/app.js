@@ -701,7 +701,7 @@ async function lagreOkt(id, data, expectedVersion) {
     return false
   }
   const { error: updateError } = await sb.from('sessions')
-    .update({ ...data, version: expectedVersion + 1 })
+    .update({ ...data, last_modified_by: APP.profile.id, version: expectedVersion + 1 })
     .eq('id', id)
   if (updateError) throw updateError
   return true
@@ -1575,6 +1575,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
 
     await medLagreOverlay(async () => {
       const { error } = await sb.from('sessions').insert({
+        school_id: APP.school.id,
         class_id: klassId,
         subject_id: subjId,
         division_id: fd.get('division_id') || null,
@@ -1585,6 +1586,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
         meeting_point: fd.get('meeting_point') || '',
         info: fd.get('info') || '',
         school_year: skoleAar || APP.school?.active_school_year,
+        created_by: APP.profile.id,
         version: 1,
       })
       if (error) throw error
@@ -1677,6 +1679,17 @@ async function visRedigerOktModal(session, onSave) {
   const { data: divisions } = await sb.from('subject_divisions').select('*')
     .eq('subject_id', session.subject_id)
   const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
+
+  // Sporbarhet: hvem opprettet og sist endret økten
+  const brukerNavn = (id) => (teachers || []).find(t => t.id === id)?.full_name || null
+  const sporDeler = []
+  const opprettetAv = brukerNavn(session.created_by)
+  if (opprettetAv) sporDeler.push(`Opprettet av ${opprettetAv}`)
+  const endretAv = brukerNavn(session.last_modified_by)
+  if (endretAv && (session.last_modified_by !== session.created_by || session.version > 1)) {
+    sporDeler.push(`Sist endret av ${endretAv}${session.last_modified_at ? ` ${formatDatoNO(session.last_modified_at)}` : ''}`)
+  }
+  if (sporDeler.length) box.appendChild(el('p', { class: 'sporbarhet-info' }, sporDeler.join(' · ')))
 
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
@@ -1777,6 +1790,7 @@ async function visKopierOktModal(session, onSave) {
     const fd = new FormData(form)
     await medLagreOverlay(async () => {
       const { error } = await sb.from('sessions').insert({
+        school_id: APP.school.id,
         class_id: session.class_id,
         subject_id: fd.get('subject_id'),
         division_id: fd.get('division_id') || null,
@@ -1787,6 +1801,7 @@ async function visKopierOktModal(session, onSave) {
         meeting_point: fd.get('meeting_point') || '',
         info: fd.get('info') || '',
         school_year: aktivtSkolear,
+        created_by: APP.profile.id,
         version: 1,
       })
       if (error) throw error
@@ -1885,7 +1900,7 @@ async function visOverforModal(session, onSave) {
   box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     const targetId = sel.value
     await medLagreOverlay(async () => {
-      await sb.from('sessions').update({ teacher_id: targetId }).eq('id', session.id)
+      await sb.from('sessions').update({ teacher_id: targetId, last_modified_by: APP.profile.id }).eq('id', session.id)
       await sb.from('pending_transfers').insert({
         session_id: session.id,
         from_user: APP.profile.id,
@@ -1931,6 +1946,7 @@ async function visBulkEditModal(ids, onSave) {
     if (infoInput.value) updates.info = infoInput.value
 
     if (!Object.keys(updates).length) { modal.remove(); return }
+    updates.last_modified_by = APP.profile.id
 
     await medLagreOverlay(async () => {
       for (const id of ids) {
@@ -1980,6 +1996,7 @@ async function visBulkKopierModal(valgte, onSave) {
 
     await medLagreOverlay(async () => {
       const rader = valgte.map(s => ({
+        school_id: APP.school.id,
         class_id: s.class_id,
         subject_id: s.subject_id,
         division_id: s.division_id,
@@ -1990,6 +2007,7 @@ async function visBulkKopierModal(valgte, onSave) {
         meeting_point: s.meeting_point || '',
         info: s.info || '',
         school_year: aktivtSkolear,
+        created_by: APP.profile.id,
         version: 1,
       }))
       const { error } = await sb.from('sessions').insert(rader)
@@ -2093,6 +2111,7 @@ async function visAIPasteModal(defaultKlasse, onSave) {
         await medLagreOverlay(async () => {
           for (const s of toImport) {
             await sb.from('sessions').insert({
+              school_id: APP.school.id,
               class_id: s.class_id || defaultKlasse?.id,
               subject_id: s.subject_id || null,
               division_id: s.division_id || null,
@@ -2103,6 +2122,7 @@ async function visAIPasteModal(defaultKlasse, onSave) {
               meeting_point: s.meeting_point || '',
               info: s.info || '',
               school_year: APP.school?.active_school_year,
+              created_by: APP.profile.id,
               version: 1,
             })
           }
@@ -2367,8 +2387,10 @@ async function lastOppSikkerhetskopi(file, klasse) {
     const toImport = sessions.filter((_, i) => selected.has(i))
     await medLagreOverlay(async () => {
       for (const s of toImport) {
-        const { id, ...rest } = s
-        await sb.from('sessions').insert({ ...rest, class_id: klasse.id, school_year: APP.school?.active_school_year, version: 1 })
+        // Fjern sporbarhets- og slettefelter fra kopien – importen er en ny opprettelse
+        const { id, created_by, last_modified_at, last_modified_by, deleted_at, deleted_by, ...rest } = s
+        await sb.from('sessions').insert({ ...rest, school_id: APP.school.id, class_id: klasse.id,
+          school_year: APP.school?.active_school_year, created_by: APP.profile.id, version: 1 })
       }
     })
     modal.remove()
