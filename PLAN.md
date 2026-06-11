@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: godkjent 11.06.2026 — under arbeid
-## Neste steg: oppgave 2 (skolenøytral funfacts)
+## Neste steg: oppgave 3 (fridagsblokkering)
 
 ## Beslutninger tatt
 - (ingen ennå — føres her etter hvert)
@@ -19,9 +19,12 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       redigeringsvinduet viser «Opprettet av … · Sist endret av …».
       KREVER MANUELL KJØRING: `007_sporbarhet.sql` i SQL Editor
       (trigger som stempler sist endret av + standardverdier).
-- [ ] 2. Skolenøytral funfacts-generering: fjern hardkodet
+- [x] 2. Skolenøytral funfacts-generering: fjern hardkodet
       Øksnevad/Jæren/Rogaland fra AI-instruksjonen i `generate-facts`,
       og bruk skolens navn/sted fra databasen i stedet.
+      → Gjort 11.06.2026: prompten bygges nå fra skolenavnet til
+      innlogget brukers skole; AI-en utleder sted/temaer selv.
+      KREVER MANUELL DEPLOY: `generate-facts` i Supabase Dashboard.
 - [ ] 3. Blokkering av økter på fridager: sjekk skoleruten når en økt
       opprettes, kopieres (enkelt og bulk) eller importeres med AI, og
       stopp lagring på fridager med en forklarende melding.
