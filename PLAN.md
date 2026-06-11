@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: godkjent 11.06.2026 — under arbeid
-## Neste steg: oppgave 5 (rollegrenser i databasen)
+## Neste steg: oppgave 6 (økt for flere klasser)
 
 ## Beslutninger tatt
 - (ingen ennå — føres her etter hvert)
@@ -42,9 +42,15 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       økter / kontaktlærer / admin.
       KREVER MANUELL KJØRING: `008_kollegahjelp.sql` i SQL Editor
       (oppdaterings- og opprettelsespolicy for sessions).
-- [ ] 5. Håndhev rollegrensene i databasen: maks 3 kontaktlærere per
+- [x] 5. Håndhev rollegrensene i databasen: maks 3 kontaktlærere per
       klasse og maks 2 admin per skole sjekkes i dag bare i nettleseren —
       legg samme grense inn i databasen så den ikke kan omgås.
+      → Gjort 11.06.2026: triggere på `users` og `user_classes`.
+      Bonusfunn rettet i samme migrasjon: `is_contact_teacher_for()`
+      slo opp i `class_contact_teachers` som appen aldri skriver til —
+      kontaktlærer-rettighetene i RLS har derfor aldri virket. Den
+      bruker nå `user_classes` + `users.role`.
+      KREVER MANUELL KJØRING: `009_rollegrenser.sql` i SQL Editor.
 - [ ] 6. Økt for flere klasser (fellesundervisning): utvid datamodellen
       slik at én økt kan gjelde flere klasser. Største endringen —
       påvirker visning, redigering, kopiering, AI-import og iCal.
