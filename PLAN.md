@@ -1,201 +1,164 @@
 # PLAN — Ukeplan1E v4
 
-## Status: ALLE TRE DELER FULLFØRT 11.06.2026
-## Neste steg (manuelt i Supabase Dashboard):
-##   1. Kjør migrasjon 011 i SQL Editor (FØR frontend tas i bruk)
-##   2. Re-deploy edge-funksjonen ai-parse-skolerute
+## Status: VENTER PÅ GODKJENNING (plan skrevet 11.06.2026)
+## Neste steg: godkjenn planen, deretter kodes Del 1–4 i rekkefølge
 
-Forrige runde (oppgave 1–8) er fullført — arkivert nederst.
-Denne planen dekker tre nye deler: AI-overlay (A), funfacts-FIFO (B)
-og forbedret skolerute-import (C). Rekkefølgen A → B → C er bevisst:
-Del A bygger overlayet som Del C bruker fra start.
+Forrige runde (Del A/B/C: AI-overlay, funfacts-FIFO, skolerute-import)
+er fullført — arkivert nederst.
+
+Denne planen: **uke-først og årsforankring i `ai-parse-skolerute`**.
+Konkret feil som utløste oppgaven: en skolerute for 26/27 uten årstall
+i teksten ble tolket som 2020/21 fordi modellen gjettet år fra gamle
+publiserte skoleruter. Prinsipp fremover: uke er primær tidsenhet,
+datoer beregnes — årstall skal aldri gjettes av AI-modellen.
 
 ---
 
 ## Kartlegging (gjort før planen)
 
-### Dagens oppførsel — funfacts-maksgrense (Del B)
-- Grensen på **100** håndheves KUN i frontend, i `renderFaktaTab`
-  (app.js ~3640): etter AI-generering beregnes `ledigePlasser =
-  100 − antall`. Er listen full vises toast «Listen er full (maks 100
-  funfacts). Slett noen først.» og ingenting lagres; ellers kuttes de
-  nye faktaene til å passe (`ny.slice(0, ledigePlasser)`).
-- Edge-funksjonen `generate-facts` har INGEN grenselogikk — den
-  genererer ~40 fakta og returnerer dem.
-- `school_facts` har bare `id, school_id, fact_text` — **mangler både
-  `created_at` (trengs for å finne «eldste») og `deleted_at` (trengs
-  for soft-delete)**. Sletting i appen i dag er hard delete.
-  → Del B krever migrasjon 011.
+- `ai-parse-skolerute/index.ts` tar ALLEREDE imot `school_year`
+  ('YY/YY') i request-body, validerer formatet, og prompten nevner
+  årsintervallet (aug år1 – jul år2). app.js sender allerede
+  `school_year` i kallet (renderSkolerute, ~linje 3641).
+- MEN: hvis modellen likevel gjetter feil år, avvises i dag HELE
+  importen med «Dette ser ut som skoleruten for XX/YY …» — det var
+  nettopp dette som traff 26/27-ruta. Ingen korrigering skjer i kode.
+- Modellen blir ikke bedt om ukenummer, og ingen uke-til-dato-beregning
+  finnes i funksjonen.
+- Frontend viser allerede `warnings` fra funksjonen øverst i den
+  redigerbare forhåndsvisningen (`visSkoleruteForhandsvisning`) før
+  noe lagres — ny advarselskanal trengs ikke.
+- Forbilde for år-logikk: `skoleaarKalenderaar(schoolYear, weekNr,
+  startWeek)` i app.js (uke ≥ startuke → høstår, ellers vårår).
 
-### Dagens oppførsel — skolerute-import (Del C)
-- `ai-parse-skolerute` har en enkel prompt uten skoleår-forankring
-  («Anta inneværende eller kommende skoleår om årstall mangler») og
-  uten regler mot milepæler — derfor kommer «Første skoledag» og feil
-  årstall med.
-- Frontend (`renderSkolerute`, app.js ~3535): AI-svaret vises bare som
-  `confirm()`-tekst, deretter insert rett i `school_calendar`. Ingen
-  redigerbar forhåndsvisning, ingen erstatt-mulighet.
-- `school_calendar` har **ikke `deleted_at`** (og ikke `school_year`)
-  → «erstatt med soft-delete» krever migrasjon 011. Skoleår-tilhørighet
-  avgjøres via datointervall (1. aug år1 – 31. jul år2), ikke ny kolonne.
-- Gammel prompt i fredet `appsscript.gs` (`tolkSkoleruteAction_` — lest,
-  ikke endret) gjenbrukes der den fungerer: eksplisitt årsforankring
-  (uker 30–52 → år1, uker 1–29 → år2, omformuleres til måneder:
-  aug–des → år1, jan–jul → år2) og regelen «'Siste skoledag før jul' /
-  'Første skoledag etter jul/påske' skal IKKE inkluderes som egne
-  rader — brukes kun til å beregne ferieukene».
+## Valg: skoleår via request-body (som i dag) — IKKE DB-oppslag
+
+Begrunnelse:
+- Mekanismen finnes og virker allerede; DB-oppslag ville krevd
+  auth-håndtering + supabase-klient i en funksjon som i dag er
+  helt stateless (kun Gemini-kall).
+- app.js viser brukeren «Skoleruten du limer inn tolkes for skoleåret
+  XX/YY» fra samme verdi som sendes — bruker og AI ser garantert
+  samme skoleår.
+- Formatvalidering (`YY/YY`) i funksjonen beholdes som vern mot
+  manglende/ugyldig verdi.
 
 ---
 
-## Migrasjon 011 (felles for Del B og C)
+## DEL 1: Skoleåret eksplisitt og uke-først i prompten
 
-`v4/supabase/migrations/011_softdelete_facts_kalender.sql`:
-- [x] `school_facts`: legg til `created_at timestamptz not null
-      default now()` og `deleted_at timestamptz` (eksisterende rader
-      får created_at = nå; FIFO blant dem avgjøres sekundært av `id`)
-- [x] `school_calendar`: legg til `deleted_at timestamptz`
-- [x] Utvid `purge_old_soft_deletes()` med `school_facts` og
-      `school_calendar` (30-dagers permanent sletting, eksisterende cron)
-- [x] Alle lesinger i app.js filtrerer `deleted_at is null`:
-      `finnFridag`, elevvisningens kalenderoppslag, `renderSkolerute`,
-      `renderFaktaTab`, facts-lasting i `init()`
+- [ ] 1.1 Utvid `byggPrompt` med semester-kontekst og forbud mot
+      gjetting, omtrent: «Skoleruta gjelder skoleåret ${sy}.
+      Høstsemesteret (uke 33–52) er i ${aar1}, vårsemesteret
+      (uke 1–24) er i ${aar2}. Hvis teksten mangler årstall, skal du
+      bruke disse årene. Du skal ALDRI gjette andre årstall.»
+- [ ] 1.2 Be modellen returnere `week_nr` (heltall, ellers null) per
+      event når teksten oppgir ukenummer (f.eks. «høstferie uke 41»)
+      og perioden er innenfor én uke. Flerukers perioder (juleferie):
+      `week_nr: null`, kun datoer.
+- [ ] 1.3 Commit Del 1.
 
-KJØRES MANUELT i SQL Editor FØR ny app.js tas i bruk (filtrene
-forutsetter at kolonnene finnes).
+## DEL 2: Valider og korriger i kode (etter AI-svar, før retur)
 
----
+- [ ] 2.1 Hjelpefunksjon `isoWeekToDate(year, week, weekday)` i
+      edge-funksjonen (ISO 8601; weekday 1 = mandag), + motsatt vei
+      `isoWeekOf(dateStr)` for konsistenssjekken.
+- [ ] 2.2 **Uke-først:** har eventet gyldig `week_nr` (1–53), beregnes
+      kalenderår i kode: `week_nr >= 33` → høstår, ellers vårår
+      (samme prinsipp som `skoleaarKalenderaar`). Datoer beregnes fra
+      uka og ERSTATTER modellens:
+      - Ligger modellens datoer (etter årskorrigering, 2.3) i samme
+        ISO-uke, beholdes ukedagsspennet derfra (dekker f.eks.
+        «planleggingsdag onsdag uke 41»).
+      - Ellers settes mandag–fredag i uka, med advarsel om at dato og
+        ukenummer i teksten ikke stemte overens.
+- [ ] 2.3 **Årskorrigering (uten week_nr):** riktig dag/måned, feil år
+      → korriger året i kode: måned aug–des → høstår, jan–jul → vårår
+      (måned er ukenummer-ekvivalenten for rene datoer). Korrigering
+      gir advarsel: «Årstall korrigert fra YYYY til YYYY for
+      '[tittel]' — kontroller at riktig skolerute er limt inn.»
+      Dagens harde avvisning («Dette ser ut som skoleruten for
+      XX/YY …») UTGÅR — erstattet av korrigering + advarsel, siden
+      brukeren uansett kontrollerer alt i forhåndsvisningen.
+- [ ] 2.4 **Konsistenssjekk:** etter korrigering sjekkes at
+      start_date ≤ end_date og at korrigerte datoer faktisk ligger i
+      skoleårsintervallet (1. aug høstår – 31. jul vårår; ugyldige
+      dag/måned-kombinasjoner kan fortsatt falle utenfor → da droppes
+      raden med advarsel, som i dag). Avvik mellom oppgitt ukedag og
+      beregnet dato (2.2) gir advarsel — aldri stille feil.
+      CORS-headers og OPTIONS-handler beholdes uendret.
+- [ ] 2.5 Commit Del 2.
 
-## DEL A: «AI jobber»-overlay med funfacts
+## DEL 3: Frontend — INGEN endring nødvendig
 
-- [x] A1. Ny hjelpefunksjon `medAIOverlay(tittel, asyncFn)` i app.js
-      (samme mønster som `medLagreOverlay`):
-      - Fullskjerms-overlay vises umiddelbart; `asyncFn` kjøres;
-        overlay fjernes i `finally` (også ved feil). Resultat
-        returneres / feil kastes videre → eksisterende
-        toast-feilhåndtering virker som før.
-      - Kan ikke lukkes av brukeren; blokkerer interaksjon bak.
-      - Innhold: pulserende ✨-animasjon, tittel (parameter),
-        undertekst «Dette kan ta litt tid.», funfact fra `APP.facts`
-        med merkelapp «Mens du venter …».
-      - Fakta byttes hvert 7. sek med myk fade; tilfeldig rekkefølge
-        uten samme fakta to ganger på rad (stokket kø).
-      - →-knapp (min. 44×44 px treffflate) hopper til neste fakta
-        umiddelbart og nullstiller 7-sekunderstimeren.
-      - Tom `APP.facts`: kun animasjon + tittel + undertekst (ingen
-        faktaboks, ingen →-knapp).
-      - Intervall-timer ryddes når overlayet fjernes (ingen lekkasje).
-- [x] A2. CSS i style.css: `.ai-overlay` m.m., mørk halvgjennomsiktig
-      bakgrunn, skolens temavariabler der naturlig, `z-index: 600`
-      (over `.modal-bg` 200 og `.lagre-overlay` 500), mobilvennlig.
-- [x] A3. Ta i bruk overlayet rundt AI-kallene (alle tre koblet på;
-      skolerute-flyten bygges videre om i Del C):
-      - `visAIPasteModal` → `ai-parse-sessions`:
-        «AI tolker teksten til økter …»
-      - Funfacts-generering → `generate-facts`:
-        «AI lager nye funfacts …»
-      - Skolerute-import → `ai-parse-skolerute`:
-        «AI tolker skoleruten …» (selve flyten bygges om i Del C —
-        overlayet brukes der fra start)
-- [x] A4. Bump `?v=20260611f` i v4/index.html (CSS + JS), commit Del A
+- app.js sender allerede `school_year` i body (ingen nye felter
+  trengs), og advarsler vises allerede i forhåndsvisningen før
+  lagring. Ingen JS/CSS-endring → ingen `?v=`-bump.
+- [ ] 3.1 Verifiser ved gjennomlesing at responsformatet
+      (`{ events, warnings }`) er uendret sett fra app.js.
 
-## DEL B: Maks antall funfacts — erstatt de eldste (FIFO)
+## DEL 4: Dokumentasjon
 
-- [x] B1. Skriv migrasjon 011 (se over) — `created_at`/`deleted_at`
-      på `school_facts` + purge-utvidelse
-- [x] B2. `renderFaktaTab`-generering: når nye fakta ville overstige
-      100, soft-delete (`deleted_at = nå`) akkurat så mange av de
-      ELDSTE (etter `created_at`, sekundært `id`) at alle nye får
-      plass; deretter settes alle nye inn. Ingen ekstra dialog før —
-      kun informasjon etter: «Maks antall er nådd – de N eldste ble
-      erstattet med nye.» (vanlig bekreftelse når ingenting erstattes).
-- [x] B3. Oppdater `APP.facts` fra databasen etter lagring, slik at
-      banner og AI-overlay bruker de nye faktaene uten
-      sideoppfriskning (refresh() i fanen laster på nytt og setter
-      APP.facts).
-- [x] B4. Alle `school_facts`-lesinger filtrerer `deleted_at is null`
-      og sorterer på `created_at`. Bump `?v=20260611g`, commit Del B.
-
-      Merk: manuell sletting av enkeltfakta i fanen beholder hard
-      delete (utenfor oppgavens omfang).
-
-## DEL C: Forbedret AI-import av skolerute
-
-- [x] C1. Ny prompt i `ai-parse-skolerute`:
-      - Kun DAGER UTEN UNDERVISNING trekkes ut, klassifisert som
-        `ferie` | `helligdag` | `planleggingsdag`. AI får IKKE bruke
-        `annet` (typen beholdes i skjemaet, kun for manuelle
-        oppføringer).
-      - Eksplisitte eksempler i prompten på hva som hoppes over:
-        «første skoledag», «siste skoledag», «skolestart etter
-        jul/påske» — milepæler brukes kun til å utlede ferieperioder
-        (gjenbruk fra gammel prompt).
-      - Sikkerhetsnett ETTER AI-svaret i edge-funksjonen: dropp rader
-        der tittelen matcher /skoledag|skolestart|skoleslutt/i, uansett
-        AI-klassifisering; ukjente typer normaliseres bort fra `annet`.
-- [x] C2. Skoleår-forankring i `ai-parse-skolerute`:
-      - Frontend sender `school_year` ('25/26') i body; funksjonen
-        beregner gyldig intervall (1. aug 2025 – 31. jul 2026).
-      - Prompten instruerer: datoer i august–desember får startåret,
-        januar–juli sluttåret.
-      - Validering etter tolking: datoer utenfor intervallet → feil
-        med melding «Dette ser ut som skoleruten for XX/YY, men aktivt
-        skoleår er 25/26. Bytt skoleår under Skoleår-fanen først,
-        eller sjekk teksten du limte inn.» (XX/YY utledes fra
-        datoene). Frontend viser meldingen som toast.
-- [x] C3. Tydelig skoleår i grensesnittet (app.js):
-      - Banner øverst i Skolerute-fanen: «Aktivt skoleår: 25/26
-        (uke 33 2025 – uke 24 2026)» — uker fra
-        `school_year_start_week`/`school_year_end_week`.
-      - I lim-inn-seksjonen, rett over tekstfeltet: «Skoleruten du
-        limer inn tolkes for skoleåret 25/26».
-- [x] C4. Forhåndsvisning før lagring (erstatter dagens `confirm()`):
-      - AI-kallet kjøres med `medAIOverlay('AI tolker skoleruten …', …)`.
-      - Resultatet vises som redigerbare rader: tittel (input),
-        fra/til (date-inputs), type (select), stryk-knapp per rad.
-        Full dato med årstall vises («5.10.2025»).
-      - Valg: «Erstatt eksisterende skolerute for skoleåret»
-        (standard) eller «Legg til». Erstatt = soft-delete av
-        eksisterende `school_calendar`-rader med start_date i
-        skoleårets datointervall, deretter insert av de nye.
-      - Ingenting lagres før brukeren trykker «Lagre»
-        (via `medLagreOverlay`).
-      - IKKE rydd opp i eksisterende feilaktige 26/27-oppføringer
-        (gjøres manuelt).
-- [x] C5. Bump `?v=20260611h`, commit Del C.
-
-      Merk: håndterte feil fra edge-funksjonen (validering, Gemini-feil
-      med melding) returneres som 200 + `{ error }` slik at meldingen
-      når brukeren — supabase-js skjuler response-body ved non-2xx.
-
----
+- [ ] 4.1 FUNKSJONELL-BESKRIVELSE.md, under «Regler og prinsipper»:
+      nytt punkt **«Uke er primær tidsenhet»** (tekst fra oppgaven:
+      ukenummer/ukedag er det lærere og elever forholder seg til,
+      datoer beregnes fra uke + skoleår, skoleåret sendes alltid som
+      kontekst ved AI-tolkning, årstall gjettes aldri av modellen).
+- [ ] 4.2 Samme fil, sjekklisten «Avvik mellom ønsket og dagens kode»:
+      to nye punkter (sender skoleår i prompt + validerer intervall;
+      uke-først der teksten oppgir ukenummer) — krysses av når Del 1–2
+      er ferdig.
+- [ ] 4.3 Commit Del 4, oppdater denne planens status/«Neste steg».
 
 ## Manuelle steg i Supabase Dashboard (etter koding)
 
-1. **SQL Editor:** kjør `011_softdelete_facts_kalender.sql`
-   (FØR ny frontend tas i bruk).
-2. **Edge Functions → re-deploy:** `ai-parse-skolerute` (eneste
-   edge-funksjon som endres — `generate-facts` og `ai-parse-sessions`
-   røres ikke).
+1. **Edge Functions → ai-parse-skolerute:** lim inn ny kode → Deploy
+   (eneste funksjon som endres).
+2. `GEMINI_API_KEY` må være satt (Secrets-fanen) for å teste.
+
+## Testcase (skolerute 26/27, uten årstall i teksten)
+
+Lim inn tekst med: første skoledag man 17. aug, høstferie uke 41,
+vinterferie uke 7, påske uke 12 (påskedag 28. mars 2027). Forventet:
+- Høstferie = man 5.10.2026 – fre 9.10.2026 (uke 41, høstår 2026)
+- Vinterferie = man 15.2.2027 – fre 19.2.2027 (uke 7, vårår 2027)
+- Påskeferie i uke 12/2027; helligdagene rundt påskedag 28.3.2027
+  (skjærtorsdag 25.3, langfredag 26.3, 2. påskedag 29.3) i 2027
+- «Første skoledag» blir IKKE egen rad (milepæl-filter, som før)
+- Ingen datoer i 2020/21 — uansett hva modellen gjetter
 
 ## Avgrensninger
-- Fredede rotfiler, `info/` og `dev/` røres ikke (appsscript.gs er
-  kun lest).
-- `annet`-typen beholdes i den manuelle «Legg til»-dialogen.
-- Ingen opprydding i eksisterende 26/27-rader i skoleruten.
+
+- Fredede rotfiler, `info/` og `dev/` røres ikke.
+- `generate-facts` og `ai-parse-sessions` røres ikke (uke-først for
+  økt-import kan tas i egen runde).
+- Ingen endring i databaseskjema — ingen ny migrasjon.
 
 ---
 
 ## Beslutninger tatt (tidligere runder — gjelder fortsatt)
-- Fellesundervisning (oppgave 6) er løst som «koblede kopier»: én rad
-  per klasse med felles `shared_group_id`. Kortene viser
-  «👥 Felles med …»; redigering skjer per klasse-kopi.
+- Fellesundervisning er løst som «koblede kopier»: én rad per klasse
+  med felles `shared_group_id`. Kortene viser «👥 Felles med …».
 - Fridagsblokkering gjelder typene ferie/helligdag/planleggingsdag.
-  Typen «annet» blokkerer ikke (kan være arrangement på vanlig skoledag).
-- Elevtilgang: forsiden beholder den åpne klasselisten. Ingen kodeendring.
+  Typen «annet» blokkerer ikke.
+- Elevtilgang: forsiden beholder den åpne klasselisten.
 - Konflikthåndtering: navngitt varsel — «Økten er endret av [navn]
   ([tidspunkt]) — last inn på nytt før du lagrer».
+- Skolerute-import: håndterte feil returneres som 200 + `{ error }`
+  slik at meldingen når brukeren (supabase-js skjuler body ved
+  non-2xx). AI får kun bruke typene ferie/helligdag/planleggingsdag;
+  milepæler filtreres i prompt + sikkerhetsnett.
 
-## Arkiv: oppgave 1–8 (fullført 11.06.2026)
+## Arkiv: fullførte runder
+
+### Del A/B/C (fullført 11.06.2026)
+AI-overlay med funfacts (`medAIOverlay`), funfacts-FIFO med maks 100
+og soft-delete av eldste (migrasjon 011), og forbedret skolerute-
+import med skoleår-forankring, redigerbar forhåndsvisning og
+erstatt/legg til-valg. Manuelle steg den gangen: migrasjon 011 i SQL
+Editor + re-deploy av `ai-parse-skolerute`.
+
+### Oppgave 1–8 (fullført 11.06.2026)
 Alle åtte oppgavene fra gjennomgangen av FUNKSJONELL-BESKRIVELSE.md er
 fullført og merget til main: sporbarhet (migrasjon 007), skolenøytrale
 funfacts, fridagsblokkering (`finnFridag`), kollegahjelp (migrasjon
