@@ -1,14 +1,23 @@
 # PLAN — Ukeplan1E v4
 
-## Status: godkjent 11.06.2026 — under arbeid
-## Neste steg: oppgave 6 (økt for flere klasser)
+## Status: oppgave 1–6 fullført 11.06.2026 — venter på manuell kjøring av
+## migrasjon 007–010 + deploy av generate-facts, og avklaring av punkt 7–8
+## Neste steg: kjør migrasjonene 007–010 i SQL Editor, deploy
+## `generate-facts`, avklar punkt 7 (elevtilgang) og 8 (konflikt-UX)
 
 ## Beslutninger tatt
-- (ingen ennå — føres her etter hvert)
+- Fellesundervisning (oppgave 6) er løst som «koblede kopier»: én rad
+  per klasse med felles `shared_group_id`, i stedet for å bygge om hele
+  datamodellen til mange-til-mange. Da fungerer elevvisning, RLS,
+  sanntid, iCal og eksport uendret per klasse, og kortene viser
+  «👥 Felles med …». Redigering skjer per klasse-kopi; felles
+  redigering av hele gruppen kan bygges senere hvis ønskelig.
+- Fridagsblokkering gjelder typene ferie/helligdag/planleggingsdag.
+  Typen «annet» blokkerer ikke (kan være arrangement på vanlig skoledag).
 
 ## Oppgaver
 Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
-(juni 2026). Foreslått rekkefølge — IKKE påbegynt, venter på godkjenning:
+(juni 2026). Godkjent 11.06.2026:
 
 - [x] 1. Sporbarhet på økter: sørg for at «opprettet av» faktisk lagres
       når en økt opprettes, og at «sist endret av» lagres ved hver
@@ -51,9 +60,13 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       kontaktlærer-rettighetene i RLS har derfor aldri virket. Den
       bruker nå `user_classes` + `users.role`.
       KREVER MANUELL KJØRING: `009_rollegrenser.sql` i SQL Editor.
-- [ ] 6. Økt for flere klasser (fellesundervisning): utvid datamodellen
+- [x] 6. Økt for flere klasser (fellesundervisning): utvid datamodellen
       slik at én økt kan gjelde flere klasser. Største endringen —
       påvirker visning, redigering, kopiering, AI-import og iCal.
+      → Gjort 11.06.2026 (se «Beslutninger tatt»): «Ny økt» har nå
+      «Felles med»-avkrysning for flere klasser; kortene viser
+      «👥 Felles med …» i både elev- og lærervisning.
+      KREVER MANUELL KJØRING: `010_fellesokter.sql` i SQL Editor.
 - [ ] 7. AVKLARING FØRST: Elevtilgang — skal forsiden slutte å liste alle
       klasser åpent, slik at elever kun når sin klasse via direktelenke?
       (Se «Åpne punkter» i FUNKSJONELL-BESKRIVELSE.md.) Bygges etter

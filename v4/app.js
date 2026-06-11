@@ -714,6 +714,30 @@ function bekreftKollegahjelp(s) {
   return confirm(`⚠️ Denne økten tilhører ${eier}.\n\nDu kan endre den som kollegahjelp, men gjør det helst etter avtale. Vil du fortsette?`)
 }
 
+// Fellesundervisning: merk økter som deles med andre klasser.
+// Slår opp søsken-rader med samme shared_group_id og legger
+// klassenavnene på s._fellesMed (brukes av renderSessionCard).
+async function merkFellesOkter(sessions) {
+  const gids = [...new Set((sessions || []).filter(s => s.shared_group_id).map(s => s.shared_group_id))]
+  if (!gids.length) return
+  const { data: sosken } = await sb.from('sessions')
+    .select('shared_group_id, class_id, classes(name)')
+    .in('shared_group_id', gids)
+    .is('deleted_at', null)
+  const perGruppe = {}
+  for (const r of sosken || []) {
+    (perGruppe[r.shared_group_id] = perGruppe[r.shared_group_id] || []).push(r)
+  }
+  for (const s of sessions || []) {
+    if (!s.shared_group_id) continue
+    const andre = (perGruppe[s.shared_group_id] || [])
+      .filter(r => r.class_id !== s.class_id)
+      .map(r => r.classes?.name)
+      .filter(Boolean)
+    if (andre.length) s._fellesMed = [...new Set(andre)].sort((a, b) => a.localeCompare(b, 'nb'))
+  }
+}
+
 // Skolerute-oppslag: returnerer fridag-oppføringen (ferie/helligdag/
 // planleggingsdag) som treffer gitt uke+dag i skoleåret, ellers null.
 // Type 'annet' blokkerer ikke – det kan være arrangement på vanlig skoledag.
@@ -827,6 +851,7 @@ async function renderElevView(klasseNavn) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
     }
+    await merkFellesOkter(sessions)
 
     // Fetch calendar events for the week (kalenderår utledet fra skoleåret)
     const visKalenderaar = skoleaarKalenderaar(aktivtSkolear, weekNr, APP.school?.school_year_start_week)
@@ -991,6 +1016,9 @@ function renderSessionCard(s, showActions, actions = {}) {
   if (s.users) card.appendChild(el('div', { class: 'session-card__teacher' }, s.users.full_name))
   if (s.subject_divisions) {
     card.appendChild(el('div', { class: 'div-badge' }, s.subject_divisions.name))
+  }
+  if (s._fellesMed?.length) {
+    card.appendChild(el('div', { class: 'felles-badge', title: 'Fellesundervisning' }, `👥 Felles med ${s._fellesMed.join(', ')}`))
   }
 
   if (showActions) {
@@ -1333,6 +1361,8 @@ async function renderMinKlasseTab(container) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
     }
+    await merkFellesOkter(sessions)
+    if (myToken !== ukeRenderToken) return
 
     // Bulk edit bar
     const bulkBar = el('div', { class: 'bulk-bar', style: 'display:none' })
@@ -1608,10 +1638,16 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
       return
     }
 
+    // Fellesundervisning: én rad per valgt klasse, koblet med shared_group_id
+    const ekstraKlasser = [...form.querySelectorAll('[name=felles_klasse]:checked')]
+      .map(c => c.value).filter(id => id !== klassId)
+    const alleKlasseIds = [klassId, ...ekstraKlasser]
+    const gruppeId = alleKlasseIds.length > 1 ? crypto.randomUUID() : null
+
     await medLagreOverlay(async () => {
-      const { error } = await sb.from('sessions').insert({
+      const rader = alleKlasseIds.map(cid => ({
         school_id: APP.school.id,
-        class_id: klassId,
+        class_id: cid,
         subject_id: subjId,
         division_id: fd.get('division_id') || null,
         week_nr: weekNr,
@@ -1622,8 +1658,10 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
         info: fd.get('info') || '',
         school_year: skoleAar || APP.school?.active_school_year,
         created_by: APP.profile.id,
+        shared_group_id: gruppeId,
         version: 1,
-      })
+      }))
+      const { error } = await sb.from('sessions').insert(rader)
       if (error) throw error
     })
     modal.remove()
@@ -1640,6 +1678,28 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
     klasseSel.appendChild(opt)
   }
   form.appendChild(lagFormRad('Klasse', klasseSel))
+
+  // Fellesundervisning: kryss av for flere klasser som skal ha samme økt
+  if ((klasser || []).length > 1) {
+    const fellesWrap = el('div', { class: 'felles-velger' })
+    for (const k of klasser || []) {
+      const lbl = el('label', { class: 'felles-velger__valg', 'data-class-id': k.id })
+      lbl.appendChild(el('input', { type: 'checkbox', name: 'felles_klasse', value: k.id }))
+      lbl.appendChild(document.createTextNode(` ${k.name}`))
+      fellesWrap.appendChild(lbl)
+    }
+    // Skjul valgt hovedklasse i listen (den er alltid med)
+    const oppdaterFellesValg = () => {
+      for (const lbl of fellesWrap.querySelectorAll('.felles-velger__valg')) {
+        const erHoved = lbl.getAttribute('data-class-id') === klasseSel.value
+        lbl.style.display = erHoved ? 'none' : ''
+        if (erHoved) lbl.querySelector('input').checked = false
+      }
+    }
+    klasseSel.addEventListener('change', oppdaterFellesValg)
+    oppdaterFellesValg()
+    form.appendChild(lagFormRad('Felles med', fellesWrap))
+  }
 
   // Subject
   const fagSel = el('select', { name: 'subject_id', class: 'felt select', required: 'true', onchange: async (e) => {
@@ -2466,8 +2526,8 @@ async function lastOppSikkerhetskopi(file, klasse) {
     const toImport = sessions.filter((_, i) => selected.has(i))
     await medLagreOverlay(async () => {
       for (const s of toImport) {
-        // Fjern sporbarhets- og slettefelter fra kopien – importen er en ny opprettelse
-        const { id, created_by, last_modified_at, last_modified_by, deleted_at, deleted_by, ...rest } = s
+        // Fjern sporbarhets-, slette- og fellesfelter fra kopien – importen er en ny opprettelse
+        const { id, created_by, last_modified_at, last_modified_by, deleted_at, deleted_by, shared_group_id, ...rest } = s
         await sb.from('sessions').insert({ ...rest, school_id: APP.school.id, class_id: klasse.id,
           school_year: APP.school?.active_school_year, created_by: APP.profile.id, version: 1 })
       }

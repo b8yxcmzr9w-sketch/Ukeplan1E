@@ -233,6 +233,9 @@ header .spacer { flex: 1; }
   font-size: .74rem; padding: 2px 8px; border-radius: 20px;
   background: #e9ecef; color: var(--tekst-svak); white-space: nowrap;
 }
+.felles-badge { font-size: .74rem; color: var(--tekst-svak); }
+.felles-velger { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.felles-velger__valg { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: .9rem; }
 .aktivitet { font-weight: 500; line-height: 1.4; font-size: .9rem; }
 .okt-meta { font-size: .78rem; color: var(--tekst-svak); margin-top: 3px; }
 .okt-handlinger { position: absolute; top: 7px; right: 7px; display: flex; gap: 4px; }
