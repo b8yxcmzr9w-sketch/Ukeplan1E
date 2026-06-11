@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: godkjent 11.06.2026 — under arbeid
-## Neste steg: oppgave 4 (kollegahjelp med advarsel)
+## Neste steg: oppgave 5 (rollegrenser i databasen)
 
 ## Beslutninger tatt
 - (ingen ennå — føres her etter hvert)
@@ -32,10 +32,16 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       skoleruten (ferie/helligdag/planleggingsdag — «annet» blokkerer
       ikke) i ny økt, rediger, kopier, bulk-kopi og AI-import. Bulk og
       AI hopper over fridagstreff og forklarer hvilke.
-- [ ] 4. Kollegahjelp med advarsel: la en lærer redigere en annens økt,
+- [x] 4. Kollegahjelp med advarsel: la en lærer redigere en annens økt,
       men vis en tydelig advarsel først. Krever både endring i
       grensesnittet og oppmykning av databasereglene (RLS), og bygger på
       sporbarheten fra oppgave 1 (så man ser hvem som endret).
+      → Gjort 11.06.2026: redigeringsknappen vises nå på alle økter i
+      «Min klasse»; andres økter gir bekreftelsesdialog først
+      (`bekreftKollegahjelp`). Sletting er fortsatt begrenset til egne
+      økter / kontaktlærer / admin.
+      KREVER MANUELL KJØRING: `008_kollegahjelp.sql` i SQL Editor
+      (oppdaterings- og opprettelsespolicy for sessions).
 - [ ] 5. Håndhev rollegrensene i databasen: maks 3 kontaktlærere per
       klasse og maks 2 admin per skole sjekkes i dag bare i nettleseren —
       legg samme grense inn i databasen så den ikke kan omgås.

@@ -707,6 +707,13 @@ async function lagreOkt(id, data, expectedVersion) {
   return true
 }
 
+// Kollegahjelp: tydelig advarsel før en lærer endrer en annens økt.
+// Endringen er tillatt, men skal være et bevisst valg.
+function bekreftKollegahjelp(s) {
+  const eier = s.users?.full_name || 'en annen lærer'
+  return confirm(`⚠️ Denne økten tilhører ${eier}.\n\nDu kan endre den som kollegahjelp, men gjør det helst etter avtale. Vil du fortsette?`)
+}
+
 // Skolerute-oppslag: returnerer fridag-oppføringen (ferie/helligdag/
 // planleggingsdag) som treffer gitt uke+dag i skoleåret, ellers null.
 // Type 'annet' blokkerer ikke – det kan være arrangement på vanlig skoledag.
@@ -1381,7 +1388,11 @@ async function renderMinKlasseTab(container) {
         }
 
         const card = renderSessionCard(s, true, {
-          edit: erAktivtAar && (isMine || isKontakt) ? () => visRedigerOktModal(s, renderUke) : null,
+          // Kollegahjelp: alle lærere kan redigere, men andres økter krever bekreftelse
+          edit: erAktivtAar ? () => {
+            if (!isMine && !isKontakt && !bekreftKollegahjelp(s)) return
+            visRedigerOktModal(s, renderUke)
+          } : null,
           copy: () => visKopierOktModal(s, renderUke),
           del: erAktivtAar && (isMine || isKontakt) ? () => slettOkt(s.id, renderUke) : null,
           transfer: erAktivtAar && isMine ? () => visOverforModal(s, renderUke) : null,
