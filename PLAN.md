@@ -1,7 +1,10 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER PÅ GODKJENNING (plan skrevet 11.06.2026)
-## Neste steg: godkjenn planen, deretter kodes Del 1–4 i rekkefølge
+## Status: ALLE FIRE DELER FULLFØRT 11.06.2026
+## Neste steg (manuelt i Supabase Dashboard):
+##   1. Re-deploy edge-funksjonen ai-parse-skolerute
+##      (Edge Functions → ai-parse-skolerute → lim inn ny kode → Deploy)
+##   2. Verifiser at GEMINI_API_KEY er satt før testing
 
 Forrige runde (Del A/B/C: AI-overlay, funfacts-FIFO, skolerute-import)
 er fullført — arkivert nederst.
@@ -47,23 +50,23 @@ Begrunnelse:
 
 ## DEL 1: Skoleåret eksplisitt og uke-først i prompten
 
-- [ ] 1.1 Utvid `byggPrompt` med semester-kontekst og forbud mot
+- [x] 1.1 Utvid `byggPrompt` med semester-kontekst og forbud mot
       gjetting, omtrent: «Skoleruta gjelder skoleåret ${sy}.
       Høstsemesteret (uke 33–52) er i ${aar1}, vårsemesteret
       (uke 1–24) er i ${aar2}. Hvis teksten mangler årstall, skal du
       bruke disse årene. Du skal ALDRI gjette andre årstall.»
-- [ ] 1.2 Be modellen returnere `week_nr` (heltall, ellers null) per
+- [x] 1.2 Be modellen returnere `week_nr` (heltall, ellers null) per
       event når teksten oppgir ukenummer (f.eks. «høstferie uke 41»)
       og perioden er innenfor én uke. Flerukers perioder (juleferie):
       `week_nr: null`, kun datoer.
-- [ ] 1.3 Commit Del 1.
+- [x] 1.3 Commit Del 1.
 
 ## DEL 2: Valider og korriger i kode (etter AI-svar, før retur)
 
-- [ ] 2.1 Hjelpefunksjon `isoWeekToDate(year, week, weekday)` i
+- [x] 2.1 Hjelpefunksjon `isoWeekToDate(year, week, weekday)` i
       edge-funksjonen (ISO 8601; weekday 1 = mandag), + motsatt vei
       `isoWeekOf(dateStr)` for konsistenssjekken.
-- [ ] 2.2 **Uke-først:** har eventet gyldig `week_nr` (1–53), beregnes
+- [x] 2.2 **Uke-først:** har eventet gyldig `week_nr` (1–53), beregnes
       kalenderår i kode: `week_nr >= 33` → høstår, ellers vårår
       (samme prinsipp som `skoleaarKalenderaar`). Datoer beregnes fra
       uka og ERSTATTER modellens:
@@ -72,7 +75,7 @@ Begrunnelse:
         «planleggingsdag onsdag uke 41»).
       - Ellers settes mandag–fredag i uka, med advarsel om at dato og
         ukenummer i teksten ikke stemte overens.
-- [ ] 2.3 **Årskorrigering (uten week_nr):** riktig dag/måned, feil år
+- [x] 2.3 **Årskorrigering (uten week_nr):** riktig dag/måned, feil år
       → korriger året i kode: måned aug–des → høstår, jan–jul → vårår
       (måned er ukenummer-ekvivalenten for rene datoer). Korrigering
       gir advarsel: «Årstall korrigert fra YYYY til YYYY for
@@ -80,35 +83,35 @@ Begrunnelse:
       Dagens harde avvisning («Dette ser ut som skoleruten for
       XX/YY …») UTGÅR — erstattet av korrigering + advarsel, siden
       brukeren uansett kontrollerer alt i forhåndsvisningen.
-- [ ] 2.4 **Konsistenssjekk:** etter korrigering sjekkes at
+- [x] 2.4 **Konsistenssjekk:** etter korrigering sjekkes at
       start_date ≤ end_date og at korrigerte datoer faktisk ligger i
       skoleårsintervallet (1. aug høstår – 31. jul vårår; ugyldige
       dag/måned-kombinasjoner kan fortsatt falle utenfor → da droppes
       raden med advarsel, som i dag). Avvik mellom oppgitt ukedag og
       beregnet dato (2.2) gir advarsel — aldri stille feil.
       CORS-headers og OPTIONS-handler beholdes uendret.
-- [ ] 2.5 Commit Del 2.
+- [x] 2.5 Commit Del 2.
 
 ## DEL 3: Frontend — INGEN endring nødvendig
 
 - app.js sender allerede `school_year` i body (ingen nye felter
   trengs), og advarsler vises allerede i forhåndsvisningen før
   lagring. Ingen JS/CSS-endring → ingen `?v=`-bump.
-- [ ] 3.1 Verifiser ved gjennomlesing at responsformatet
+- [x] 3.1 Verifiser ved gjennomlesing at responsformatet
       (`{ events, warnings }`) er uendret sett fra app.js.
 
 ## DEL 4: Dokumentasjon
 
-- [ ] 4.1 FUNKSJONELL-BESKRIVELSE.md, under «Regler og prinsipper»:
+- [x] 4.1 FUNKSJONELL-BESKRIVELSE.md, under «Regler og prinsipper»:
       nytt punkt **«Uke er primær tidsenhet»** (tekst fra oppgaven:
       ukenummer/ukedag er det lærere og elever forholder seg til,
       datoer beregnes fra uke + skoleår, skoleåret sendes alltid som
       kontekst ved AI-tolkning, årstall gjettes aldri av modellen).
-- [ ] 4.2 Samme fil, sjekklisten «Avvik mellom ønsket og dagens kode»:
+- [x] 4.2 Samme fil, sjekklisten «Avvik mellom ønsket og dagens kode»:
       to nye punkter (sender skoleår i prompt + validerer intervall;
       uke-først der teksten oppgir ukenummer) — krysses av når Del 1–2
       er ferdig.
-- [ ] 4.3 Commit Del 4, oppdater denne planens status/«Neste steg».
+- [x] 4.3 Commit Del 4, oppdater denne planens status/«Neste steg».
 
 ## Manuelle steg i Supabase Dashboard (etter koding)
 
