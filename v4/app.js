@@ -159,6 +159,15 @@ function skoleaarKalenderaar(schoolYear, weekNr, startWeek) {
   return weekNr >= (startWeek || 1) ? foersteAar : andreAar
 }
 
+// Datointervallet et skoleår dekker: 1. aug år1 – 31. jul år2.
+// Eksempel: '25/26' → { aar1: 2025, aar2: 2026, fra: '2025-08-01', til: '2026-07-31' }
+function skoleaarIntervall(sy) {
+  if (!sy || !/^\d{2}\/\d{2}$/.test(sy)) return null
+  const aar1 = 2000 + parseInt(sy.slice(0, 2), 10)
+  const aar2 = 2000 + parseInt(sy.slice(3, 5), 10)
+  return { aar1, aar2, fra: `${aar1}-08-01`, til: `${aar2}-07-31` }
+}
+
 function truncate(s, n = 60) {
   if (!s) return ''
   return s.length > n ? s.slice(0, n) + '…' : s
@@ -255,6 +264,80 @@ async function medLagreOverlay(asyncFn) {
     box.appendChild(el('p', { class: 'feil-tekst' }, `Feil: ${err.message}`))
     box.appendChild(el('button', { class: 'btn btn-s', onclick: () => overlay.remove() }, 'Lukk'))
     throw err
+  }
+}
+
+// «AI jobber»-overlay: fullskjerm med animasjon, tittel og roterende
+// funfacts fra APP.facts. Fjernes alltid i finally; feil kastes videre
+// slik at kallerens feilhåndtering (toast) virker som før.
+async function medAIOverlay(tittel, asyncFn) {
+  const overlay = el('div', { class: 'ai-overlay' })
+  const boks = el('div', { class: 'ai-overlay-boks' })
+  boks.appendChild(el('div', { class: 'ai-overlay-ikon' }, '✨'))
+  boks.appendChild(el('h3', { class: 'ai-overlay-tittel' }, tittel))
+  boks.appendChild(el('p', { class: 'ai-overlay-under' }, 'Dette kan ta litt tid.'))
+
+  let intervall = null
+  let fadeTimer = null
+
+  if (APP.facts.length) {
+    const tekstEl = el('p', { class: 'ai-overlay-fakta-tekst' }, '')
+
+    // Stokket kø; fylles på nytt når den er tom, uten samme fakta to ganger på rad
+    let koe = []
+    let forrige = null
+    function nesteFakta() {
+      if (!koe.length) {
+        koe = APP.facts.map(f => f.fact_text)
+        for (let i = koe.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[koe[i], koe[j]] = [koe[j], koe[i]]
+        }
+        if (koe.length > 1 && koe[koe.length - 1] === forrige) {
+          ;[koe[koe.length - 1], koe[0]] = [koe[0], koe[koe.length - 1]]
+        }
+      }
+      forrige = koe.pop()
+      return forrige
+    }
+    function visNeste(medFade) {
+      if (!medFade) { tekstEl.textContent = nesteFakta(); return }
+      tekstEl.classList.add('fade-ut')
+      fadeTimer = setTimeout(() => {
+        tekstEl.textContent = nesteFakta()
+        tekstEl.classList.remove('fade-ut')
+      }, 300)
+    }
+    function startIntervall() {
+      clearInterval(intervall)
+      intervall = setInterval(() => visNeste(true), 7000)
+    }
+
+    const fakta = el('div', { class: 'ai-overlay-fakta' })
+    const tekstWrap = el('div', { class: 'ai-overlay-fakta-innhold' })
+    tekstWrap.appendChild(el('span', { class: 'ai-overlay-fakta-label' }, 'Mens du venter …'))
+    tekstWrap.appendChild(tekstEl)
+    fakta.appendChild(tekstWrap)
+    fakta.appendChild(el('button', {
+      type: 'button', class: 'ai-overlay-neste', title: 'Neste fakta',
+      'aria-label': 'Neste fakta',
+      onclick: () => { clearTimeout(fadeTimer); visNeste(true); startIntervall() },
+    }, '→'))
+    boks.appendChild(fakta)
+
+    visNeste(false)
+    startIntervall()
+  }
+
+  overlay.appendChild(boks)
+  document.body.appendChild(overlay)
+
+  try {
+    return await asyncFn()
+  } finally {
+    clearInterval(intervall)
+    clearTimeout(fadeTimer)
+    overlay.remove()
   }
 }
 
@@ -751,6 +834,7 @@ async function finnFridag(weekNr, dayOfWeek, schoolYear) {
   const { data } = await sb.from('school_calendar')
     .select('*')
     .eq('school_id', APP.school.id)
+    .is('deleted_at', null)
     .lte('start_date', dato)
     .gte('end_date', dato)
     .in('type', ['ferie', 'helligdag', 'planleggingsdag'])
@@ -873,6 +957,7 @@ async function renderElevView(klasseNavn) {
 
     const { data: calEvents } = await sb.from('school_calendar')
       .select('*')
+      .is('deleted_at', null)
       .lte('start_date', wEnd)
       .gte('end_date', wStart)
 
@@ -2173,7 +2258,6 @@ async function visAIPasteModal(defaultKlasse, onSave) {
   box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     if (!textarea.value.trim()) return
     clearEl(preview)
-    preview.appendChild(el('p', {}, 'Analyserer…'))
 
     try {
       // Hent kontekstdata for AI-en
@@ -2184,12 +2268,13 @@ async function visAIPasteModal(defaultKlasse, onSave) {
         sb.from('divisions').select('id, name, subject_id, division_type').eq('school_id', APP.school.id),
       ])
 
-      const { data, error } = await sb.functions.invoke('ai-parse-sessions', {
-        body: {
-          text: textarea.value,
-          context: { subjects: subjects || [], classes: klasser || [], teachers: teachers || [], divisions: divisions || [] },
-        }
-      })
+      const { data, error } = await medAIOverlay('AI tolker teksten til økter …', () =>
+        sb.functions.invoke('ai-parse-sessions', {
+          body: {
+            text: textarea.value,
+            context: { subjects: subjects || [], classes: klasser || [], teachers: teachers || [], divisions: divisions || [] },
+          }
+        }))
       if (error) throw error
 
       clearEl(preview)
@@ -3497,8 +3582,19 @@ async function renderSkolerute(container) {
   async function refresh() {
     clearEl(container)
     const wrap = el('div', { class: 'skjema-smal' })
-    const { data: events } = await sb.from('school_calendar').select('*').order('start_date')
+    const { data: events } = await sb.from('school_calendar').select('*')
+      .is('deleted_at', null).order('start_date')
     wrap.appendChild(el('h3', {}, 'Skolerute'))
+
+    // Tydelig hvilket skoleår skoleruten gjelder
+    const sy = APP.school?.active_school_year
+    const intervall = skoleaarIntervall(sy)
+    if (intervall) {
+      const startWeek = APP.school?.school_year_start_week || 33
+      const endWeek = APP.school?.school_year_end_week || 24
+      wrap.appendChild(el('p', { class: 'skolear-banner' },
+        `Aktivt skoleår: ${sy} (uke ${startWeek} ${intervall.aar1} – uke ${endWeek} ${intervall.aar2})`))
+    }
 
     // Events list – same admin-rad pattern as rest of admin panel
     for (const e of events || []) {
@@ -3530,27 +3626,25 @@ async function renderSkolerute(container) {
       aiToggleBtn.textContent = aiInnhold.classList.contains('skjult') ? '📋 Importer med AI' : '▲ Skjul AI-import'
     }}, '📋 Importer med AI')
     const aiInnhold = el('div', { class: 'skjult' })
+    if (sy) {
+      aiInnhold.appendChild(el('p', { class: 'tekst-svak', style: 'margin:0 0 6px; font-size:.9rem' },
+        `Skoleruten du limer inn tolkes for skoleåret ${sy}.`))
+    }
     const aiText = el('textarea', { class: 'felt textarea ai-tekstfelt', placeholder: 'Lim inn skoleruten som tekst (f.eks. fra PDF eller e-post)…', rows: 8 })
     aiInnhold.appendChild(aiText)
-    aiInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-p', title: 'Send tekst til AI for tolking av datoer og hendelser', onclick: async () => {
+    aiInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-p', title: 'Send tekst til AI for tolking av fridager og ferier', onclick: async () => {
       if (!aiText.value.trim()) return
+      if (!intervall) { showToast('Aktivt skoleår mangler – sett det under Skoleår-fanen først', 'error'); return }
       try {
-        const { data, error } = await sb.functions.invoke('ai-parse-skolerute', {
-          body: { text: aiText.value, school_id: APP.school.id }
-        })
-        if (error) throw new Error(error.message + (data?.error ? ` – ${data.error}: ${JSON.stringify(data.details ?? data.raw ?? '')}` : ''))
+        const { data, error } = await medAIOverlay('AI tolker skoleruten …', () =>
+          sb.functions.invoke('ai-parse-skolerute', {
+            body: { text: aiText.value, school_id: APP.school.id, school_year: sy }
+          }))
+        if (error) throw new Error(error.message)
+        if (data?.error) throw new Error(data.error)
         const evs = data.events || []
-        const warnings = data.warnings || []
-        if (!evs.length) { showToast('Ingen hendelser funnet – prøv å legge inn teksten mer strukturert', 'info'); return }
-        let msg = `Importere ${evs.length} hendelse(r)?`
-        if (warnings.length) msg += `\n\nAdvarsler:\n${warnings.join('\n')}`
-        if (!confirm(msg)) return
-        await medLagreOverlay(async () => {
-          for (const e of evs) {
-            await sb.from('school_calendar').insert({ ...e, school_id: APP.school.id })
-          }
-        })
-        refresh()
+        if (!evs.length) { showToast('Ingen fridager funnet – prøv å legge inn teksten mer strukturert', 'info'); return }
+        visSkoleruteForhandsvisning(evs, data.warnings || [], () => { aiText.value = ''; refresh() })
       } catch (err) {
         showToast(err.message, 'error')
       }
@@ -3613,10 +3707,103 @@ function visNySkolerute(onSave) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
+// Forhåndsvisning av AI-tolket skolerute: redigerbare rader som kan
+// strykes, og valg mellom å erstatte skoleårets eksisterende skolerute
+// (soft-delete) eller legge til. Ingenting lagres før «Lagre».
+function visSkoleruteForhandsvisning(events, warnings, onSave) {
+  const sy = APP.school?.active_school_year
+  const intervall = skoleaarIntervall(sy)
+  const modal = el('div', { class: 'modal-bg' })
+  const box = el('div', { class: 'modal modal-xl' })
+  box.appendChild(el('h3', {}, `Forhåndsvisning – skolerute ${sy}`))
+  box.appendChild(el('p', { class: 'tekst-svak', style: 'margin:-8px 0 14px; font-size:.9rem' },
+    'Kontroller og juster radene før du lagrer. Ingenting lagres før du trykker «Lagre».'))
+  if (warnings.length) {
+    box.appendChild(el('p', { class: 'advarsel-tekst' }, `⚠️ ${warnings.join(' | ')}`))
+  }
+
+  const rader = []
+  const liste = el('div')
+  liste.appendChild(el('div', { class: 'skolerute-prev-rad skolerute-prev-hode' },
+    el('span', {}, 'Tittel'), el('span', {}, 'Fra'), el('span', {}, 'Til'),
+    el('span', {}, 'Type'), el('span', {}, '')))
+  for (const ev of events) {
+    const rad = { fjernet: false }
+    rad.tittel = el('input', { type: 'text', class: 'felt input', maxlength: 30, value: ev.title })
+    rad.fra = el('input', { type: 'date', class: 'felt input', value: ev.start_date })
+    rad.til = el('input', { type: 'date', class: 'felt input', value: ev.end_date })
+    rad.type = el('select', { class: 'felt select' })
+    for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
+      rad.type.appendChild(el('option', { value: t, ...(t === ev.type ? { selected: 'true' } : {}) }, t))
+    rad.el = el('div', { class: 'skolerute-prev-rad' }, rad.tittel, rad.fra, rad.til, rad.type,
+      el('button', { type: 'button', class: 'btn btn-ikon btn-f', title: 'Stryk denne raden',
+        onclick: () => { rad.fjernet = true; rad.el.remove() } }, '🗑️'))
+    rader.push(rad)
+    liste.appendChild(rad.el)
+  }
+  box.appendChild(liste)
+
+  const erstattRadio = el('input', { type: 'radio', name: 'skolerute-modus', checked: 'true' })
+  const leggTilRadio = el('input', { type: 'radio', name: 'skolerute-modus' })
+  const modusBoks = el('div', { class: 'skolerute-prev-modus' })
+  modusBoks.appendChild(el('label', {}, erstattRadio,
+    `Erstatt eksisterende skolerute for skoleåret ${sy}`))
+  modusBoks.appendChild(el('label', {}, leggTilRadio, 'Legg til i eksisterende skolerute'))
+  box.appendChild(modusBoks)
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  bunn.appendChild(el('button', { type: 'button', class: 'btn btn-p', onclick: async () => {
+    const aktive = rader.filter(r => !r.fjernet)
+    if (!aktive.length) { showToast('Ingen rader igjen å lagre', 'info'); return }
+    for (const r of aktive) {
+      if (!r.tittel.value.trim() || !r.fra.value || !r.til.value) {
+        showToast('Alle rader må ha tittel, fra- og til-dato', 'error'); return
+      }
+      if (r.til.value < r.fra.value) {
+        showToast(`«${r.tittel.value.trim()}»: til-dato er før fra-dato`, 'error'); return
+      }
+    }
+    try {
+      await medLagreOverlay(async () => {
+        if (erstattRadio.checked && intervall) {
+          const { error } = await sb.from('school_calendar')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('school_id', APP.school.id)
+            .is('deleted_at', null)
+            .gte('start_date', intervall.fra)
+            .lte('start_date', intervall.til)
+          if (error) throw error
+        }
+        for (const r of aktive) {
+          const { error } = await sb.from('school_calendar').insert({
+            school_id: APP.school.id,
+            title: r.tittel.value.trim(),
+            start_date: r.fra.value,
+            end_date: r.til.value,
+            type: r.type.value,
+          })
+          if (error) throw error
+        }
+      })
+      modal.remove()
+      if (onSave) onSave()
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
+  }}, 'Lagre'))
+  box.appendChild(bunn)
+
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+}
+
 async function renderFaktaTab(container) {
   async function refresh() {
     clearEl(container)
-    const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
+    const { data: facts } = await sb.from('school_facts').select('*')
+      .eq('school_id', APP.school.id).is('deleted_at', null)
+      .order('created_at', { ascending: true }).order('id', { ascending: true })
     APP.facts = facts || []
 
     const wrap = el('div', { class: 'skjema-smal' })
@@ -3632,22 +3819,41 @@ async function renderFaktaTab(container) {
       if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
       aiBtn.disabled = true; aiBtn.textContent = 'Genererer…'
       try {
-        const { data, error } = await sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } })
+        const { data, error } = await medAIOverlay('AI lager nye funfacts …', () =>
+          sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } }))
         if (error) throw new Error(error.message || JSON.stringify(error))
         const ny = data?.facts || []
         if (!ny.length) { showToast('Ingen fakta generert', 'info'); return }
 
-        // Respect 100-fact limit
-        const ledigePlasser = Math.max(0, 100 - (facts?.length || 0))
-        if (ledigePlasser === 0) { showToast('Listen er full (maks 100 funfacts). Slett noen først.', 'info'); return }
-        const skalLeggesTil = ny.slice(0, ledigePlasser)
+        // Maks 100: soft-delete de eldste (FIFO) for å gi plass til de nye
+        const MAKS = 100
+        const skalLeggesTil = ny.slice(0, MAKS)
+        const overskytende = Math.max(0, (facts?.length || 0) + skalLeggesTil.length - MAKS)
 
         await medLagreOverlay(async () => {
+          if (overskytende > 0) {
+            const { data: eldste, error: selErr } = await sb.from('school_facts')
+              .select('id')
+              .eq('school_id', APP.school.id)
+              .is('deleted_at', null)
+              .order('created_at', { ascending: true })
+              .order('id', { ascending: true })
+              .limit(overskytende)
+            if (selErr) throw new Error(selErr.message)
+            const { error: delErr } = await sb.from('school_facts')
+              .update({ deleted_at: new Date().toISOString() })
+              .in('id', (eldste || []).map(f => f.id))
+            if (delErr) throw new Error(delErr.message)
+          }
           const rows = skalLeggesTil.map(txt => ({ school_id: APP.school.id, fact_text: txt }))
           const { error: insErr } = await sb.from('school_facts').insert(rows)
           if (insErr) throw new Error(insErr.message)
         })
-        showToast(`${skalLeggesTil.length} funfacts lagt til!`, 'ok')
+        if (overskytende > 0) {
+          showToast(`${skalLeggesTil.length} funfacts lagt til. Maks antall er nådd – de ${overskytende} eldste ble erstattet med nye.`, 'info')
+        } else {
+          showToast(`${skalLeggesTil.length} funfacts lagt til!`, 'ok')
+        }
         refresh()
       } catch (err) {
         showToast(err.message, 'error')
@@ -3810,7 +4016,9 @@ async function init() {
 
   // Load school facts for overlay (background)
   if (APP.school) {
-    const { data: facts } = await sb.from('school_facts').select('*').eq('school_id', APP.school.id)
+    const { data: facts } = await sb.from('school_facts').select('*')
+      .eq('school_id', APP.school.id).is('deleted_at', null)
+      .order('created_at', { ascending: true }).order('id', { ascending: true })
     APP.facts = facts || []
   }
 }

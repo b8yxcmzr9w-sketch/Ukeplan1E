@@ -379,6 +379,85 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── AI-overlay («AI jobber» med funfacts) ──────────────────────── */
+.ai-overlay {
+  position: fixed; inset: 0;
+  background: rgba(10, 18, 14, .82);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 600; /* over .modal-bg (200) og .lagre-overlay (500) */
+  padding: 24px;
+}
+.ai-overlay-boks {
+  text-align: center; color: #fff;
+  width: 100%; max-width: 460px;
+}
+.ai-overlay-ikon {
+  font-size: 3rem; line-height: 1;
+  animation: ai-puls 1.6s ease-in-out infinite;
+}
+@keyframes ai-puls {
+  0%, 100% { transform: scale(1);    opacity: .7; }
+  50%      { transform: scale(1.18); opacity: 1; }
+}
+.ai-overlay-tittel { margin-top: 16px; font-size: 1.15rem; font-weight: 600; }
+.ai-overlay-under  { margin-top: 6px; font-size: .9rem; opacity: .65; }
+.ai-overlay-fakta {
+  margin-top: 28px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: var(--radius);
+  padding: 14px 8px 14px 16px;
+  display: flex; align-items: center; gap: 6px;
+  text-align: left;
+}
+.ai-overlay-fakta-innhold { flex: 1; min-width: 0; }
+.ai-overlay-fakta-label {
+  display: block; font-size: .72rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--primær-svak); opacity: .9; margin-bottom: 4px;
+}
+.ai-overlay-fakta-tekst {
+  font-size: .95rem; line-height: 1.4; min-height: 2.8em;
+  opacity: 1; transition: opacity .3s ease;
+}
+.ai-overlay-fakta-tekst.fade-ut { opacity: 0; }
+.ai-overlay-neste {
+  flex: none; min-width: 44px; min-height: 44px;
+  background: none; border: none; border-radius: var(--radius);
+  color: #fff; font-size: 1.4rem; cursor: pointer; opacity: .8;
+}
+.ai-overlay-neste:hover, .ai-overlay-neste:focus-visible {
+  opacity: 1; background: rgba(255,255,255,.12);
+}
+
+/* ── Skolerute: skoleår-banner og AI-forhåndsvisning ────────────── */
+.skolear-banner {
+  background: var(--badge-bg); color: var(--badge-tekst);
+  border-radius: var(--radius); padding: 10px 14px;
+  font-weight: 600; font-size: .95rem; margin: 0 0 14px;
+}
+.skolerute-prev-rad {
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr .9fr 44px;
+  gap: 6px; align-items: center; margin-bottom: 6px;
+}
+.skolerute-prev-hode {
+  font-size: .78rem; font-weight: 600; color: var(--tekst-svak);
+  margin-bottom: 2px;
+}
+.skolerute-prev-modus {
+  display: flex; flex-direction: column; gap: 8px; margin-top: 18px;
+}
+.skolerute-prev-modus label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .95rem; cursor: pointer;
+}
+@media (max-width: 640px) {
+  .skolerute-prev-rad { grid-template-columns: 1fr 1fr; }
+  .skolerute-prev-hode { display: none; }
+  .skolerute-prev-rad input[type="text"] { grid-column: 1 / -1; }
+  .skolerute-prev-rad { border-bottom: 1px solid var(--kant); padding-bottom: 8px; margin-bottom: 10px; }
+}
+
 /* ── Bulk-valg ──────────────────────────────────────────────────── */
 .bulk-bar {
   background: var(--primær-svak); border: 1px solid var(--primær-lys);
@@ -551,7 +630,7 @@ tr:hover td { background: var(--primær-svak); }
   @page { size: A4 landscape; margin: 12mm 10mm; }
   header, .nav-bar, .filter-bar, .bulk-bar,
   .hdr-btn, .btn, .okt-handlinger, .okt-checkbox,
-  .modal-bg, .lagre-overlay, #lastelinje,
+  .modal-bg, .lagre-overlay, .ai-overlay, #lastelinje,
   footer, .uno-footer { display: none !important; }
 
   body { background: white; color: black; }
