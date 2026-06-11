@@ -707,6 +707,23 @@ async function lagreOkt(id, data, expectedVersion) {
   return true
 }
 
+// Skolerute-oppslag: returnerer fridag-oppføringen (ferie/helligdag/
+// planleggingsdag) som treffer gitt uke+dag i skoleåret, ellers null.
+// Type 'annet' blokkerer ikke – det kan være arrangement på vanlig skoledag.
+async function finnFridag(weekNr, dayOfWeek, schoolYear) {
+  const sy = schoolYear || APP.school?.active_school_year
+  const startWeek = APP.school?.school_year_start_week || 33
+  const aar = skoleaarKalenderaar(sy, weekNr, startWeek)
+  const dato = isoWeekToDate(aar, weekNr, dayOfWeek).toISOString().slice(0, 10)
+  const { data } = await sb.from('school_calendar')
+    .select('*')
+    .eq('school_id', APP.school.id)
+    .lte('start_date', dato)
+    .gte('end_date', dato)
+    .in('type', ['ferie', 'helligdag', 'planleggingsdag'])
+  return (data && data[0]) || null
+}
+
 function showConflictWarning() {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
@@ -1573,6 +1590,13 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
       if (!confirm('Du har allerede en økt denne dagen. Fortsette likevel?')) return
     }
 
+    // Fridagssjekk – skoleruten blokkerer økter på fridager
+    const fridag = await finnFridag(weekNr, dagOfWeek, skoleAar || APP.school?.active_school_year)
+    if (fridag) {
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      return
+    }
+
     await medLagreOverlay(async () => {
       const { error } = await sb.from('sessions').insert({
         school_id: APP.school.id,
@@ -1704,6 +1728,12 @@ async function visRedigerOktModal(session, onSave) {
       meeting_point: fd.get('meeting_point') || null,
       info: fd.get('info') || null,
     }
+    // Fridagssjekk – gjelder også flytting av økt til annen uke/dag
+    const fridag = await finnFridag(data.week_nr, data.day_of_week, session.school_year)
+    if (fridag) {
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      return
+    }
     await medLagreOverlay(async () => {
       const ok = await lagreOkt(session.id, data, session.version)
       if (!ok) throw new Error('Konfliktvarsling – prøv igjen')
@@ -1788,6 +1818,12 @@ async function visKopierOktModal(session, onSave) {
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
+    // Fridagssjekk – skoleruten blokkerer økter på fridager
+    const fridag = await finnFridag(parseInt(fd.get('week_nr')), parseInt(fd.get('day_of_week')), aktivtSkolear)
+    if (fridag) {
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      return
+    }
     await medLagreOverlay(async () => {
       const { error } = await sb.from('sessions').insert({
         school_id: APP.school.id,
@@ -1994,8 +2030,21 @@ async function visBulkKopierModal(valgte, onSave) {
     const malUke = parseInt(weekInput.value)
     if (!malUke || malUke < 1 || malUke > 53) { showToast('Ugyldig ukenummer', 'error'); return }
 
+    // Fridagssjekk i mål-uken: hopp over økter som lander på fridag
+    const kopierbare = []
+    const hoppetOver = []
+    for (const s of valgte) {
+      const fridag = await finnFridag(malUke, s.day_of_week, aktivtSkolear)
+      if (fridag) hoppetOver.push(`${dagNavn(s.day_of_week)} (${fridag.title})`)
+      else kopierbare.push(s)
+    }
+    if (!kopierbare.length) {
+      showToast(`Ingen økter kopiert – alle treffer fridag i uke ${malUke}: ${[...new Set(hoppetOver)].join(', ')}`, 'error')
+      return
+    }
+
     await medLagreOverlay(async () => {
-      const rader = valgte.map(s => ({
+      const rader = kopierbare.map(s => ({
         school_id: APP.school.id,
         class_id: s.class_id,
         subject_id: s.subject_id,
@@ -2013,7 +2062,11 @@ async function visBulkKopierModal(valgte, onSave) {
       const { error } = await sb.from('sessions').insert(rader)
       if (error) throw error
     })
-    showToast(`${valgte.length} økt(er) kopiert til uke ${malUke}`, 'success')
+    if (hoppetOver.length) {
+      showToast(`${kopierbare.length} økt(er) kopiert til uke ${malUke}. ${hoppetOver.length} hoppet over pga. fridag: ${[...new Set(hoppetOver)].join(', ')}`, 'info')
+    } else {
+      showToast(`${kopierbare.length} økt(er) kopiert til uke ${malUke}`, 'success')
+    }
     modal.remove()
     if (onSave) onSave()
   }}, 'Kopier'))
@@ -2107,7 +2160,19 @@ async function visAIPasteModal(defaultKlasse, onSave) {
       preview.appendChild(table)
 
       preview.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:10px', onclick: async () => {
-        const toImport = parsed.filter((_, i) => selected.has(i))
+        const valgteOkter = parsed.filter((_, i) => selected.has(i))
+        // Fridagssjekk: hopp over økter som lander på fridag i skoleruten
+        const toImport = []
+        const hoppetOver = []
+        for (const s of valgteOkter) {
+          const fridag = await finnFridag(s.week_nr, s.day_of_week, APP.school?.active_school_year)
+          if (fridag) hoppetOver.push(`uke ${s.week_nr} ${dagNavn(s.day_of_week)} (${fridag.title})`)
+          else toImport.push(s)
+        }
+        if (!toImport.length) {
+          showToast(`Ingen økter importert – alle treffer fridag: ${[...new Set(hoppetOver)].join(', ')}`, 'error')
+          return
+        }
         await medLagreOverlay(async () => {
           for (const s of toImport) {
             await sb.from('sessions').insert({
@@ -2127,6 +2192,9 @@ async function visAIPasteModal(defaultKlasse, onSave) {
             })
           }
         })
+        if (hoppetOver.length) {
+          showToast(`${toImport.length} økt(er) importert. ${hoppetOver.length} hoppet over pga. fridag: ${[...new Set(hoppetOver)].join(', ')}`, 'info')
+        }
         modal.remove()
         if (onSave) onSave()
       }}, 'Importer valgte'))

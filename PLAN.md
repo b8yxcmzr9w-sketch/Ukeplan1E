@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: godkjent 11.06.2026 — under arbeid
-## Neste steg: oppgave 3 (fridagsblokkering)
+## Neste steg: oppgave 4 (kollegahjelp med advarsel)
 
 ## Beslutninger tatt
 - (ingen ennå — føres her etter hvert)
@@ -25,9 +25,13 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       → Gjort 11.06.2026: prompten bygges nå fra skolenavnet til
       innlogget brukers skole; AI-en utleder sted/temaer selv.
       KREVER MANUELL DEPLOY: `generate-facts` i Supabase Dashboard.
-- [ ] 3. Blokkering av økter på fridager: sjekk skoleruten når en økt
+- [x] 3. Blokkering av økter på fridager: sjekk skoleruten når en økt
       opprettes, kopieres (enkelt og bulk) eller importeres med AI, og
       stopp lagring på fridager med en forklarende melding.
+      → Gjort 11.06.2026: ny hjelpefunksjon `finnFridag()` sjekker
+      skoleruten (ferie/helligdag/planleggingsdag — «annet» blokkerer
+      ikke) i ny økt, rediger, kopier, bulk-kopi og AI-import. Bulk og
+      AI hopper over fridagstreff og forklarer hvilke.
 - [ ] 4. Kollegahjelp med advarsel: la en lærer redigere en annens økt,
       men vis en tydelig advarsel først. Krever både endring i
       grensesnittet og oppmykning av databasereglene (RLS), og bygger på
