@@ -95,14 +95,45 @@ Skole (flere skoler kan bruke tjenesten, adskilt fra hverandre)
 ## Avvik mellom ønsket og dagens kode (må verifiseres)
 
 Disse punktene i beskrivelsen finnes muligens ikke i koden ennå, eller
-fungerer annerledes. Sjekkliste for Claude Code:
+fungerer annerledes. Sjekkliste for Claude Code — verifisert mot koden
+11.06.2026 (avkrysset = finnes og fungerer som beskrevet):
 
-- [ ] Rollen Kontaktlærer (maks 3 per klasse) med utvidede rettigheter
-- [ ] Grense på maks 2 admin per skole
+- [x] Rollen Kontaktlærer (maks 3 per klasse) med utvidede rettigheter
+  — **FINNES.** Rolle i `001_initial_schema.sql` (user_role_enum),
+  utvidede rettigheter i `002_rls.sql` (sessions_update_kontaktlaerer
+  m.fl.), maks 3-sjekk i `app.js` (visNyBrukerModal /
+  visRedigerBrukerModal). Merk: maks-grensen sjekkes kun i nettleseren,
+  ikke i databasen.
+- [x] Grense på maks 2 admin per skole
+  — **FINNES.** Sjekk i `app.js` (visNyBrukerModal /
+  visRedigerBrukerModal). Samme forbehold: kun klientside, ikke
+  håndhevet i databasen.
 - [ ] Advarsel når en lærer redigerer en annens økt
+  — **FINNES IKKE.** I dag er det motsatt av ønsket: vanlig lærer får
+  ikke redigere andres økter i det hele tatt (rediger-knappen skjules i
+  renderMinKlasseTab, og `002_rls.sql` sessions_update_own blokkerer på
+  databasenivå). Krever både RLS-endring og advarsel i UI.
 - [ ] Merking av økter med opprettet av / sist endret av
+  — **FINNES DELVIS.** Databasen har kolonnene `created_by`,
+  `last_modified_at` og `last_modified_by` (001_initial_schema.sql), og
+  en trigger setter `last_modified_at`. Men `last_modified_by` settes
+  aldri, og ingen av delene vises i grensesnittet.
 - [ ] Økt som gjelder flere klasser samtidig
+  — **FINNES IKKE.** `sessions.class_id` peker på én klasse.
+  (`multi_day_events` kan gjelde alle klasser, men det er hendelser,
+  ikke undervisningsøkter.)
 - [ ] Blokkering av økter på fridager (ikke bare visning)
+  — **FINNES IKKE.** Fridager vises kun i elevvisningen
+  (renderElevView); lærervisningen viser dem ikke, og visNyOktModal /
+  kopiering har ingen fridag-sjekk (kun duplikat- og kollisjonssjekk).
 - [ ] Elevvisning begrenset til egen klasse (i dag listes alle klasser
   på forsiden)
+  — **FINNES IKKE.** Forsiden lister alle klasser åpent (renderElevView,
+  velkomstsiden), og RLS tillater lesing av alle klasser/økter uten
+  innlogging (sessions_read_any). Henger sammen med «Åpne punkter» —
+  må avklares før bygging.
 - [ ] Tekst/oppsett som antar Øksnevad spesifikt — skal være skolenøytralt
+  — **FINNES DELVIS** (delvis nøytralt). Appen henter skolenavn, logo og
+  tema fra databasen, men `generate-facts`-funksjonen har Øksnevad,
+  Jæren og Rogaland hardkodet i AI-prompten, og tittelen «Ukeplan1e» /
+  README er knyttet til én skole.
