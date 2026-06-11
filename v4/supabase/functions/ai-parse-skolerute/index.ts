@@ -73,7 +73,8 @@ function svar(obj: unknown, status = 200) {
 }
 
 function byggPrompt(text: string, schoolYear: string, aar1: number, aar2: number): string {
-  return `Du er en assistent som legger inn skoleruten for en norsk videregående skole, for skoleåret ${schoolYear} (august ${aar1} – juli ${aar2}).
+  return `Du er en assistent som legger inn skoleruten for en norsk videregående skole.
+Skoleruta gjelder skoleåret ${schoolYear}. Høstsemesteret (uke 33–52) er i ${aar1}, vårsemesteret (uke 1–24) er i ${aar2}.
 Brukeren limer inn tekst (f.eks. fra PDF, nettside eller e-post) med skoleruten.
 
 Trekk ut KUN dager der elevene IKKE har undervisning.
@@ -84,6 +85,7 @@ Returner KUN gyldig JSON, ingen forklaringer:
       "title": "Navn på ferien/fridagen",
       "start_date": "YYYY-MM-DD",
       "end_date": "YYYY-MM-DD",
+      "week_nr": 41,
       "type": "ferie" | "helligdag" | "planleggingsdag"
     }
   ],
@@ -96,9 +98,14 @@ Typer (bruk nøyaktig én av disse tre — aldri noe annet):
 - "planleggingsdag": dager der lærerne jobber, men elevene har fri
 
 ÅRSTALL — skoleåret går fra 1. august ${aar1} til 31. juli ${aar2}:
-- Datoer i august–desember får årstallet ${aar1}
-- Datoer i januar–juli får årstallet ${aar2}
+- Hvis teksten mangler årstall, skal du bruke disse årene: august–desember får ${aar1}, januar–juli får ${aar2}
+- Du skal ALDRI gjette andre årstall — heller ikke fra skoleruter du kjenner fra før
 - Alle datoer skal ligge innenfor dette intervallet
+
+UKENUMMER — uke er primær tidsenhet:
+- Der teksten oppgir ukenummer (f.eks. «høstferie uke 41»), returner ukenummeret i "week_nr" i tillegg til datoene
+- "week_nr" brukes KUN når hele perioden ligger innenfor én uke; flerukers perioder (f.eks. juleferie) får "week_nr": null
+- Uke 33–52 ligger i ${aar1}, uke 1–24 i ${aar2}
 
 Skal IKKE tas med som egne rader (hoppes over, uansett formulering):
 - Milepæler som «første skoledag», «siste skoledag», «skolestart», «skoleslutt», «skolestart etter jul», «første skoledag etter påske»
