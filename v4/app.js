@@ -694,10 +694,12 @@ function subscribeSessions(classId, weekNr, callback) {
 }
 
 async function lagreOkt(id, data, expectedVersion) {
-  const { data: current, error } = await sb.from('sessions').select('version').eq('id', id).single()
+  const { data: current, error } = await sb.from('sessions')
+    .select('version, last_modified_at, users!last_modified_by(full_name)')
+    .eq('id', id).single()
   if (error) throw error
   if (current.version !== expectedVersion) {
-    showConflictWarning()
+    showConflictWarning(current)
     return false
   }
   const { error: updateError } = await sb.from('sessions')
@@ -755,11 +757,20 @@ async function finnFridag(weekNr, dayOfWeek, schoolYear) {
   return (data && data[0]) || null
 }
 
-function showConflictWarning() {
+// Konfliktvarsel ved samtidig redigering. Sier hvem som endret økten
+// og når (fra sporbarheten), så ingen endringer går tapt i stillhet.
+function showConflictWarning(konflikt) {
+  const navn = konflikt?.users?.full_name
+  const tid = konflikt?.last_modified_at
+    ? new Date(konflikt.last_modified_at).toLocaleString('nb-NO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : ''
+  const melding = navn
+    ? `Økten er endret av ${navn}${tid ? ` (${tid})` : ''} — last inn på nytt før du lagrer, så ingen endringer går tapt.`
+    : 'Noen andre har endret denne økten. Last siden på nytt for å se siste versjon.'
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
-  box.appendChild(el('h3', {}, 'Konflikt!'))
-  box.appendChild(el('p', {}, 'Noen andre har endret denne økten. Last siden på nytt for å se siste versjon.'))
+  box.appendChild(el('h3', {}, 'Økten er endret'))
+  box.appendChild(el('p', {}, melding))
   box.appendChild(el('button', { class: 'btn btn-p', onclick: () => { modal.remove(); window.location.reload() } }, 'Last på nytt'))
   box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
   modal.appendChild(box)

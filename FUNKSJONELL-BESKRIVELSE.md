@@ -18,7 +18,7 @@ Produksjon: https://ukeplan1e.ganddal.net/v4/
 
 | Rolle | Antall | Hva de kan |
 |---|---|---|
-| Elev/foresatt | ubegrenset | Se planen for sin klasse (ikke andre klasser). Ingen redigering. |
+| Elev/foresatt | ubegrenset | Se klasseplaner uten innlogging (forsiden lister alle klasser — bevisst valg, se «Avklarte punkter»). Ingen redigering. |
 | Lærer | ubegrenset | Opprette og redigere egne økter. Kan hjelpe til med andres økter, men får da en tydelig advarsel før endring. |
 | Kontaktlærer | maks 3 per klasse | Alt en lærer kan, pluss: redigere alle økter for sin klasse. |
 | Admin | maks 2 per skole | Redigere alt. Administrerer skoleinfo, skoleår, fag, klasser, brukere, skolerute og funfacts. |
@@ -29,9 +29,11 @@ som sist redigerte den.
 ## Elev-/foresattvisning
 
 - Åpen, uten innlogging. Elever og foresatte kommer til klassens plan via
-  direktelenke (delt av lærer som QR-kode eller kopiert lenke).
-- De skal primært ha tilgang til sin egen klasses plan, ikke bla fritt i
-  andre klassers planer.
+  direktelenke (delt av lærer som QR-kode eller kopiert lenke), eller ved å
+  velge klassen fra listen på forsiden.
+- Forsiden lister alle klasser åpent. Dette er et bevisst valg (avklart
+  11.06.2026): planene er ikke sensitive, og åpen liste er enklest for
+  elever og foresatte.
 - Kan abonnere på planen i egen kalender via iCal.
 - Skolerutens fridager vises i planen.
 - Et rullende banner viser funfacts.
@@ -74,23 +76,22 @@ Skole (flere skoler kan bruke tjenesten, adskilt fra hverandre)
 ## Regler og prinsipper
 
 - **Samtidig redigering:** To brukere skal ikke kunne overskrive hverandres
-  endringer uten å vite det. Dagens mekanisme (versjonskontroll ved lagring)
-  hindrer stille overskriving, men brukeropplevelsen ved konflikt er ikke
-  avklart. → Se «Åpne punkter».
+  endringer uten å vite det. Versjonskontroll ved lagring hindrer stille
+  overskriving, og ved konflikt får brukeren beskjed om hvem som endret
+  økten og når («Økten er endret av [navn] — last inn på nytt før du
+  lagrer»), slik at ingen endringer går tapt i stillhet.
 - **Sanntid:** Endringer dukker opp automatisk hos andre uten å laste siden
   på nytt.
 - **Skoleskille:** Brukere ser og endrer kun data for sin egen skole.
 - **Utskrift:** Ukeplanen kan skrives ut med eget utskriftshode.
 
-## Åpne punkter (må diskuteres/avklares)
+## Avklarte punkter (besluttet 11.06.2026)
 
-- **Konflikthåndtering:** Hva skal brukeren oppleve hvis noen andre har
-  endret økten i mellomtiden? Forslag til diskusjon: vis melding «Økten er
-  endret av [navn] — last inn på nytt før du lagrer», slik at ingen endringer
-  går tapt i stillhet.
-- **Elevtilgang i praksis:** Uten innlogging kan tilgangen til «kun sin
-  klasse» bare håndheves via direktelenker (den som har lenken, ser planen).
-  Er det godt nok, eller skal forsiden slutte å liste alle klasser åpent?
+- **Konflikthåndtering:** Ved konflikt vises «Økten er endret av [navn]
+  ([tidspunkt]) — last inn på nytt før du lagrer». Bygget 11.06.2026.
+- **Elevtilgang:** Forsiden beholder den åpne klasselisten. Planene er
+  ikke sensitive, og åpen liste er enklest for elever og foresatte.
+  Direktelenke/QR fra lærer er fortsatt primærveien inn.
 
 ## Avvik mellom ønsket og dagens kode (må verifiseres)
 
@@ -123,9 +124,11 @@ Verifisert mot koden juni 2026; punktene under er deretter bygget
 - [x] Blokkering av økter på fridager (ikke bare visning)
       — BYGGET: skoleruten (ferie/helligdag/planleggingsdag) blokkerer
       nå lagring i ny økt, rediger, kopier, bulk-kopi og AI-import.
-- [ ] Elevvisning begrenset til egen klasse (i dag listes alle klasser
+- [x] Elevvisning begrenset til egen klasse (i dag listes alle klasser
       på forsiden)
-      — IKKE BYGGET: avventer avklaring av åpent punkt om elevtilgang.
+      — AVKLART 11.06.2026: forsiden beholder den åpne klasselisten
+      (bevisst valg, se «Avklarte punkter»). Punktet utgår — ingen
+      kodeendring.
 - [x] Tekst/oppsett som antar Øksnevad spesifikt — skal være skolenøytralt
       — BYGGET: funfacts-AI-en bruker nå skolens navn fra databasen i
       stedet for hardkodet Øksnevad/Jæren/Rogaland. Krever re-deploy av
