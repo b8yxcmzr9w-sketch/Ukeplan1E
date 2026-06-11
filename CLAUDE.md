@@ -1,5 +1,7 @@
 # Ukeplan1E – Prosjektbeskrivelse for Claude
 
+Se FUNKSJONELL-BESKRIVELSE.md for hva tjenesten skal gjøre funksjonelt.
+
 ## Hva er dette?
 Ukeplan v4 er en norsk ukeplantjeneste for Øksnevad videregående skole (Rogaland).
 Lærere planlegger undervisningsøkter per klasse/uke. Elever ser sin klasses plan.
