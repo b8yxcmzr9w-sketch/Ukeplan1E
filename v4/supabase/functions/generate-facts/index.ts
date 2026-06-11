@@ -6,6 +6,51 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Portet fra kallGemini_ i appsscript.gs (velprøvd i produksjon).
+// Identisk kopi ligger i ai-parse-sessions og ai-parse-skolerute,
+// siden hver Edge Function deployes som én fil i Supabase Dashboard.
+const GEMINI_MODEL = 'gemini-2.5-flash'
+
+async function kallGemini(prompt: string, generationConfig?: Record<string, unknown>): Promise<string> {
+  const key = Deno.env.get('GEMINI_API_KEY')
+  if (!key) throw new Error('GEMINI_API_KEY ikke satt')
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`
+  const payload = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }] }],
+    ...(generationConfig ? { generationConfig } : {}),
+  })
+  let sisteFeil = ''
+  for (let forsok = 0; forsok < 3; forsok++) {
+    if (forsok > 0) await new Promise((r) => setTimeout(r, 3000))
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+    })
+    const raw = await res.text()
+    let json: any = null
+    try { json = JSON.parse(raw) } catch { /* ikke-JSON-svar håndteres under */ }
+    if (res.status === 503 || res.status === 429 ||
+        (json?.error && (json.error.code === 503 || json.error.code === 429))) {
+      sisteFeil = json?.error?.message?.slice(0, 100) ?? `Overbelastet (${res.status})`
+      continue
+    }
+    if (!json?.candidates?.[0]?.content) {
+      sisteFeil = json?.error?.message?.slice(0, 100) ?? raw.slice(0, 100)
+      break
+    }
+    const parts = json.candidates[0].content.parts ?? []
+    const tekst = parts
+      .filter((p: any) => !p.thought && p.text)
+      .map((p: any) => p.text)
+      .join('\n').trim()
+    if (tekst) return tekst
+    sisteFeil = 'Tomt svar'
+    break
+  }
+  throw new Error(`Gemini-feil: ${sisteFeil}`)
+}
+
 // Prompten bygges per skole – tjenesten er skolenøytral.
 function byggPrompt(skoleNavn: string): string {
   return `Lag 40 korte og underholdende funfacts på norsk. Faktasetningene skal være sanne, enkle å forstå og passe for ungdom på videregående skole.
@@ -54,22 +99,9 @@ serve(async (req) => {
     const { data: school } = await adminClient.from('schools').select('name').eq('id', profile.school_id).single()
     if (!school?.name) throw new Error('Fant ikke skolen til brukeren')
 
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-    if (!geminiKey) throw new Error('GEMINI_API_KEY ikke satt')
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: byggPrompt(school.name) }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 2048 },
-        }),
-      }
-    )
-    const json = await res.json()
-    const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    // maxOutputTokens er fjernet: gemini-2.5-flash bruker tenke-tokens som
+    // teller mot grensen, og 2048 ville kuttet svaret før alle faktaene kom.
+    const raw = await kallGemini(byggPrompt(school.name), { temperature: 0.9 })
     const facts = raw.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 5)
 
     return new Response(JSON.stringify({ facts }), {

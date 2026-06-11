@@ -29,7 +29,10 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 - **HTML**: `v4/index.html` (cache-busting via `?v=YYYYMMDDx` — bump ved hver endring)
 - **Backend**: Supabase (PostgreSQL + Auth + Realtime + Edge Functions)
 - **Edge Functions**: Deno/TypeScript i `v4/supabase/functions/`
-- **AI**: Gemini 1.5 Flash via REST API (nøkkel: `GEMINI_API_KEY` i Supabase Secrets)
+- **AI**: Gemini 2.5 Flash via REST API (nøkkel: `GEMINI_API_KEY` i Supabase Secrets).
+  Kallmønsteret (retry ved 503/429, thought-filtrering, feilhåndtering) er portet fra
+  `kallGemini_` i appsscript.gs og ligger som identisk `kallGemini`-hjelpefunksjon i
+  alle tre AI-edge-functions (én fil per funksjon pga. manuell deploy i Dashboard).
 
 ## Filstruktur
 
