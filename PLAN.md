@@ -1,9 +1,8 @@
 # PLAN — Ukeplan1E v4
 
-## Status: oppgave 1–6 fullført 11.06.2026 — venter på manuell kjøring av
-## migrasjon 007–010 + deploy av generate-facts, og avklaring av punkt 7–8
-## Neste steg: kjør migrasjonene 007–010 i SQL Editor, deploy
-## `generate-facts`, avklar punkt 7 (elevtilgang) og 8 (konflikt-UX)
+## Status: oppgave 1–6 fullført og migrasjon 007–010 kjørt 11.06.2026
+## Neste steg: verifiser deploy av `generate-facts` (test «✨ Generer med
+## AI» i Funfacts-fanen), avklar punkt 7 (elevtilgang) og 8 (konflikt-UX)
 
 ## Beslutninger tatt
 - Fellesundervisning (oppgave 6) er løst som «koblede kopier»: én rad
@@ -26,8 +25,7 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       → Gjort 11.06.2026: alle insert-steder setter nå `school_id` og
       `created_by`, alle update-steder setter `last_modified_by`, og
       redigeringsvinduet viser «Opprettet av … · Sist endret av …».
-      KREVER MANUELL KJØRING: `007_sporbarhet.sql` i SQL Editor
-      (trigger som stempler sist endret av + standardverdier).
+      Migrasjon `007_sporbarhet.sql` kjørt i SQL Editor 11.06.2026.
 - [x] 2. Skolenøytral funfacts-generering: fjern hardkodet
       Øksnevad/Jæren/Rogaland fra AI-instruksjonen i `generate-facts`,
       og bruk skolens navn/sted fra databasen i stedet.
@@ -49,8 +47,7 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       «Min klasse»; andres økter gir bekreftelsesdialog først
       (`bekreftKollegahjelp`). Sletting er fortsatt begrenset til egne
       økter / kontaktlærer / admin.
-      KREVER MANUELL KJØRING: `008_kollegahjelp.sql` i SQL Editor
-      (oppdaterings- og opprettelsespolicy for sessions).
+      Migrasjon `008_kollegahjelp.sql` kjørt i SQL Editor 11.06.2026.
 - [x] 5. Håndhev rollegrensene i databasen: maks 3 kontaktlærere per
       klasse og maks 2 admin per skole sjekkes i dag bare i nettleseren —
       legg samme grense inn i databasen så den ikke kan omgås.
@@ -59,14 +56,14 @@ Basert på gjennomgangen av sjekklisten i FUNKSJONELL-BESKRIVELSE.md
       slo opp i `class_contact_teachers` som appen aldri skriver til —
       kontaktlærer-rettighetene i RLS har derfor aldri virket. Den
       bruker nå `user_classes` + `users.role`.
-      KREVER MANUELL KJØRING: `009_rollegrenser.sql` i SQL Editor.
+      Migrasjon `009_rollegrenser.sql` kjørt i SQL Editor 11.06.2026.
 - [x] 6. Økt for flere klasser (fellesundervisning): utvid datamodellen
       slik at én økt kan gjelde flere klasser. Største endringen —
       påvirker visning, redigering, kopiering, AI-import og iCal.
       → Gjort 11.06.2026 (se «Beslutninger tatt»): «Ny økt» har nå
       «Felles med»-avkrysning for flere klasser; kortene viser
       «👥 Felles med …» i både elev- og lærervisning.
-      KREVER MANUELL KJØRING: `010_fellesokter.sql` i SQL Editor.
+      Migrasjon `010_fellesokter.sql` kjørt i SQL Editor 11.06.2026.
 - [ ] 7. AVKLARING FØRST: Elevtilgang — skal forsiden slutte å liste alle
       klasser åpent, slik at elever kun når sin klasse via direktelenke?
       (Se «Åpne punkter» i FUNKSJONELL-BESKRIVELSE.md.) Bygges etter

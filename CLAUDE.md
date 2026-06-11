@@ -3,7 +3,8 @@
 Se FUNKSJONELL-BESKRIVELSE.md for hva tjenesten skal gjøre funksjonelt.
 
 ## Hva er dette?
-Ukeplan v4 er en norsk ukeplantjeneste for Øksnevad videregående skole (Rogaland).
+Ukeplan v4 er en norsk ukeplantjeneste, skolenøytral og åpen for flere skoler
+(hver skole adskilt). Første skole i bruk: Øksnevad videregående skole (Rogaland).
 Lærere planlegger undervisningsøkter per klasse/uke. Elever ser sin klasses plan.
 Admins administrerer skolen, fag, klasser, brukere og skoleruten.
 
@@ -45,6 +46,10 @@ v4/
       004_school_year.sql         # Skoleår-støtte (KJØRT)
       005_test_sessions.sql       # Testdata (KJØRT)
       006_fix_school_facts_rls.sql # school_facts RLS-fix (KJØRT)
+      007_sporbarhet.sql          # created_by/last_modified_by (KJØRT)
+      008_kollegahjelp.sql        # Lærer kan endre andres økter (KJØRT)
+      009_rollegrenser.sql        # Maks 2 admin / 3 kontaktlærere + RLS-fix (KJØRT)
+      010_fellesokter.sql         # shared_group_id for fellesundervisning (KJØRT)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini
@@ -105,7 +110,13 @@ race conditions ved dobbeltkall til async render-funksjoner.
 ### RLS-funksjoner i SQL
 - `auth_school_id()` — returnerer school_id for innlogget bruker
 - `is_active_admin()` — sjekker `is_admin_active = true`
+- `is_contact_teacher_for(class_id)` — fra migrasjon 009: slår opp i
+  `user_classes` + `users.role` (IKKE `class_contact_teachers`, som
+  appen aldri skriver til)
 - Policies bruker ofte: `is_active_admin() OR role = 'admin'`
+- Fra migrasjon 008: alle innloggede ved samme skole kan oppdatere
+  sessions (kollegahjelp — UI viser advarsel); sletting er fortsatt
+  begrenset til egne økter / kontaktlærer / admin
 
 ## Databaseskjema (referanse)
 UUID som primærnøkkel overalt. Soft-delete via `deleted_at`; cron sletter permanent
@@ -118,7 +129,7 @@ subjects         – id, school_id, name, short_code, color_hex, has_parti, has_
 subject_divisions– id, subject_id, division_type(parti|gruppe), name, sort_order, deleted_at
 users            – id (auth.uid), school_id, full_name, role(laerer|kontaktlaerer|admin), is_admin_active, deleted_at
 user_classes     – user_id, class_id
-sessions         – id, school_id, class_id, subject_id, division_id, week_nr, day_of_week(1-5), teacher_id, activity, meeting_point, info, school_year, version, deleted_at, ...
+sessions         – id, school_id, class_id, subject_id, division_id, week_nr, day_of_week(1-5), teacher_id, activity, meeting_point, info, school_year, version, created_by, last_modified_at, last_modified_by, shared_group_id (fellesundervisning, migrasjon 010), deleted_at, ...
 multi_day_events – id, school_id, class_id(null=alle), title, description, start_date, end_date, school_year, deleted_at
 school_calendar  – id, school_id, title, start_date, end_date, type(ferie|helligdag|planleggingsdag|annet)
 audit_log, school_facts, pending_transfers
@@ -191,6 +202,9 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `lagreOkt(id, data, version)` | Optimistisk versjonskontroll |
 | `slettOkt(id, onSave)` | Slett økt |
 | `eksporterSkolear(school, skolear, format)` | Eksport JSON/CSV/PDF |
+| `finnFridag(weekNr, dayOfWeek, schoolYear)` | Skolerute-oppslag; blokkerer økter på fridager |
+| `bekreftKollegahjelp(s)` | Advarsel før redigering av annens økt |
+| `merkFellesOkter(sessions)` | Setter `_fellesMed` (klassenavn) på fellesøkter |
 | `showToast(msg, type)` | Toast-melding |
 | `medLagreOverlay(fn)` | Vis lagre-overlay under async operasjon |
 | `el(tag, attrs, ...children)` | DOM-hjelpefunksjon |
