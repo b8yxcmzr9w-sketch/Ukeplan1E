@@ -9,8 +9,50 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY')!
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+// Portet fra kallGemini_ i appsscript.gs (velprøvd i produksjon).
+// Identisk kopi ligger i generate-facts og ai-parse-skolerute,
+// siden hver Edge Function deployes som én fil i Supabase Dashboard.
+const GEMINI_MODEL = 'gemini-2.5-flash'
+
+async function kallGemini(prompt: string, generationConfig?: Record<string, unknown>): Promise<string> {
+  const key = Deno.env.get('GEMINI_API_KEY')
+  if (!key) throw new Error('GEMINI_API_KEY ikke satt')
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`
+  const payload = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }] }],
+    ...(generationConfig ? { generationConfig } : {}),
+  })
+  let sisteFeil = ''
+  for (let forsok = 0; forsok < 3; forsok++) {
+    if (forsok > 0) await new Promise((r) => setTimeout(r, 3000))
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+    })
+    const raw = await res.text()
+    let json: any = null
+    try { json = JSON.parse(raw) } catch { /* ikke-JSON-svar håndteres under */ }
+    if (res.status === 503 || res.status === 429 ||
+        (json?.error && (json.error.code === 503 || json.error.code === 429))) {
+      sisteFeil = json?.error?.message?.slice(0, 100) ?? `Overbelastet (${res.status})`
+      continue
+    }
+    if (!json?.candidates?.[0]?.content) {
+      sisteFeil = json?.error?.message?.slice(0, 100) ?? raw.slice(0, 100)
+      break
+    }
+    const parts = json.candidates[0].content.parts ?? []
+    const tekst = parts
+      .filter((p: any) => !p.thought && p.text)
+      .map((p: any) => p.text)
+      .join('\n').trim()
+    if (tekst) return tekst
+    sisteFeil = 'Tomt svar'
+    break
+  }
+  throw new Error(`Gemini-feil: ${sisteFeil}`)
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -56,24 +98,15 @@ Hvert økt-objekt skal ha disse feltene:
 Dersom du ikke kan fastslå et felt med rimelig sikkerhet, sett det til null.
 Returner et objekt: { "sessions": [...], "warnings": ["eventuell advarsel"] }`
 
-  const body = {
-    contents: [{ parts: [{ text: `${systemPrompt}\n\nTekst fra bruker:\n${text}` }] }],
-    generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
+  let rawText: string
+  try {
+    rawText = await kallGemini(
+      `${systemPrompt}\n\nTekst fra bruker:\n${text}`,
+      { temperature: 0.1, responseMimeType: 'application/json' }
+    )
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders })
   }
-
-  const gemRes = await fetch(`${GEMINI_URL}?key=${GEMINI_KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-
-  if (!gemRes.ok) {
-    const err = await gemRes.text()
-    return new Response(JSON.stringify({ error: 'Gemini error', details: err }), { status: 502, headers: corsHeaders })
-  }
-
-  const gemData = await gemRes.json()
-  const rawText = gemData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}'
 
   let parsed
   try {
