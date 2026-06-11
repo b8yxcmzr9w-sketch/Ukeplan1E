@@ -98,8 +98,9 @@ Disse punktene i beskrivelsen finnes muligens ikke i koden ennå, eller
 fungerer annerledes. Sjekkliste for Claude Code:
 
 Verifisert mot koden juni 2026; punktene under er deretter bygget
-11.06.2026 (se PLAN.md). Merk: migrasjon 007–010 må kjøres manuelt i
-SQL Editor og `generate-facts` må re-deployes før alt virker i prod.
+11.06.2026 (se PLAN.md). Migrasjon 007–010 er kjørt i SQL Editor
+11.06.2026. Gjenstår: re-deploy av `generate-facts` (verifiser med
+«✨ Generer med AI» i Funfacts-fanen).
 
 - [x] Rollen Kontaktlærer (maks 3 per klasse) med utvidede rettigheter
       — FINNES: rolle, RLS-policies og maks 3-sjekk. Grensen håndheves
@@ -110,16 +111,15 @@ SQL Editor og `generate-facts` må re-deployes før alt virker i prod.
       håndhevet i databasen.
 - [x] Advarsel når en lærer redigerer en annens økt
       — BYGGET: alle lærere kan nå redigere andres økter, men får en
-      tydelig bekreftelsesdialog først (kollegahjelp). Krever
-      migrasjon 008.
+      tydelig bekreftelsesdialog først (kollegahjelp). Migrasjon 008 kjørt.
 - [x] Merking av økter med opprettet av / sist endret av
       — BYGGET: appen lagrer begge ved opprettelse/endring, og
       redigeringsvinduet viser «Opprettet av … · Sist endret av …».
-      Krever migrasjon 007.
+      Migrasjon 007 kjørt.
 - [x] Økt som gjelder flere klasser samtidig
       — BYGGET: «Ny økt» kan krysses av for flere klasser; det lagres
       én rad per klasse koblet med felles gruppe-id, og kortene viser
-      «👥 Felles med …». Krever migrasjon 010.
+      «👥 Felles med …». Migrasjon 010 kjørt.
 - [x] Blokkering av økter på fridager (ikke bare visning)
       — BYGGET: skoleruten (ferie/helligdag/planleggingsdag) blokkerer
       nå lagring i ny økt, rediger, kopier, bulk-kopi og AI-import.

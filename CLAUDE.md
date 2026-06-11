@@ -46,10 +46,10 @@ v4/
       004_school_year.sql         # Skoleår-støtte (KJØRT)
       005_test_sessions.sql       # Testdata (KJØRT)
       006_fix_school_facts_rls.sql # school_facts RLS-fix (KJØRT)
-      007_sporbarhet.sql          # created_by/last_modified_by (IKKE KJØRT)
-      008_kollegahjelp.sql        # Lærer kan endre andres økter (IKKE KJØRT)
-      009_rollegrenser.sql        # Maks 2 admin / 3 kontaktlærere + RLS-fix (IKKE KJØRT)
-      010_fellesokter.sql         # shared_group_id for fellesundervisning (IKKE KJØRT)
+      007_sporbarhet.sql          # created_by/last_modified_by (KJØRT)
+      008_kollegahjelp.sql        # Lærer kan endre andres økter (KJØRT)
+      009_rollegrenser.sql        # Maks 2 admin / 3 kontaktlærere + RLS-fix (KJØRT)
+      010_fellesokter.sql         # shared_group_id for fellesundervisning (KJØRT)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini
