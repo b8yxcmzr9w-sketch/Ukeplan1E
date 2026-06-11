@@ -701,10 +701,58 @@ async function lagreOkt(id, data, expectedVersion) {
     return false
   }
   const { error: updateError } = await sb.from('sessions')
-    .update({ ...data, version: expectedVersion + 1 })
+    .update({ ...data, last_modified_by: APP.profile.id, version: expectedVersion + 1 })
     .eq('id', id)
   if (updateError) throw updateError
   return true
+}
+
+// Kollegahjelp: tydelig advarsel før en lærer endrer en annens økt.
+// Endringen er tillatt, men skal være et bevisst valg.
+function bekreftKollegahjelp(s) {
+  const eier = s.users?.full_name || 'en annen lærer'
+  return confirm(`⚠️ Denne økten tilhører ${eier}.\n\nDu kan endre den som kollegahjelp, men gjør det helst etter avtale. Vil du fortsette?`)
+}
+
+// Fellesundervisning: merk økter som deles med andre klasser.
+// Slår opp søsken-rader med samme shared_group_id og legger
+// klassenavnene på s._fellesMed (brukes av renderSessionCard).
+async function merkFellesOkter(sessions) {
+  const gids = [...new Set((sessions || []).filter(s => s.shared_group_id).map(s => s.shared_group_id))]
+  if (!gids.length) return
+  const { data: sosken } = await sb.from('sessions')
+    .select('shared_group_id, class_id, classes(name)')
+    .in('shared_group_id', gids)
+    .is('deleted_at', null)
+  const perGruppe = {}
+  for (const r of sosken || []) {
+    (perGruppe[r.shared_group_id] = perGruppe[r.shared_group_id] || []).push(r)
+  }
+  for (const s of sessions || []) {
+    if (!s.shared_group_id) continue
+    const andre = (perGruppe[s.shared_group_id] || [])
+      .filter(r => r.class_id !== s.class_id)
+      .map(r => r.classes?.name)
+      .filter(Boolean)
+    if (andre.length) s._fellesMed = [...new Set(andre)].sort((a, b) => a.localeCompare(b, 'nb'))
+  }
+}
+
+// Skolerute-oppslag: returnerer fridag-oppføringen (ferie/helligdag/
+// planleggingsdag) som treffer gitt uke+dag i skoleåret, ellers null.
+// Type 'annet' blokkerer ikke – det kan være arrangement på vanlig skoledag.
+async function finnFridag(weekNr, dayOfWeek, schoolYear) {
+  const sy = schoolYear || APP.school?.active_school_year
+  const startWeek = APP.school?.school_year_start_week || 33
+  const aar = skoleaarKalenderaar(sy, weekNr, startWeek)
+  const dato = isoWeekToDate(aar, weekNr, dayOfWeek).toISOString().slice(0, 10)
+  const { data } = await sb.from('school_calendar')
+    .select('*')
+    .eq('school_id', APP.school.id)
+    .lte('start_date', dato)
+    .gte('end_date', dato)
+    .in('type', ['ferie', 'helligdag', 'planleggingsdag'])
+  return (data && data[0]) || null
 }
 
 function showConflictWarning() {
@@ -803,6 +851,7 @@ async function renderElevView(klasseNavn) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
     }
+    await merkFellesOkter(sessions)
 
     // Fetch calendar events for the week (kalenderår utledet fra skoleåret)
     const visKalenderaar = skoleaarKalenderaar(aktivtSkolear, weekNr, APP.school?.school_year_start_week)
@@ -967,6 +1016,9 @@ function renderSessionCard(s, showActions, actions = {}) {
   if (s.users) card.appendChild(el('div', { class: 'session-card__teacher' }, s.users.full_name))
   if (s.subject_divisions) {
     card.appendChild(el('div', { class: 'div-badge' }, s.subject_divisions.name))
+  }
+  if (s._fellesMed?.length) {
+    card.appendChild(el('div', { class: 'felles-badge', title: 'Fellesundervisning' }, `👥 Felles med ${s._fellesMed.join(', ')}`))
   }
 
   if (showActions) {
@@ -1309,6 +1361,8 @@ async function renderMinKlasseTab(container) {
       console.error('Feil ved henting av økter:', sessionsError)
       showToast(`Kunne ikke hente ukeplanen: ${sessionsError.message}`, 'error')
     }
+    await merkFellesOkter(sessions)
+    if (myToken !== ukeRenderToken) return
 
     // Bulk edit bar
     const bulkBar = el('div', { class: 'bulk-bar', style: 'display:none' })
@@ -1364,7 +1418,11 @@ async function renderMinKlasseTab(container) {
         }
 
         const card = renderSessionCard(s, true, {
-          edit: erAktivtAar && (isMine || isKontakt) ? () => visRedigerOktModal(s, renderUke) : null,
+          // Kollegahjelp: alle lærere kan redigere, men andres økter krever bekreftelse
+          edit: erAktivtAar ? () => {
+            if (!isMine && !isKontakt && !bekreftKollegahjelp(s)) return
+            visRedigerOktModal(s, renderUke)
+          } : null,
           copy: () => visKopierOktModal(s, renderUke),
           del: erAktivtAar && (isMine || isKontakt) ? () => slettOkt(s.id, renderUke) : null,
           transfer: erAktivtAar && isMine ? () => visOverforModal(s, renderUke) : null,
@@ -1573,9 +1631,23 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
       if (!confirm('Du har allerede en økt denne dagen. Fortsette likevel?')) return
     }
 
+    // Fridagssjekk – skoleruten blokkerer økter på fridager
+    const fridag = await finnFridag(weekNr, dagOfWeek, skoleAar || APP.school?.active_school_year)
+    if (fridag) {
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      return
+    }
+
+    // Fellesundervisning: én rad per valgt klasse, koblet med shared_group_id
+    const ekstraKlasser = [...form.querySelectorAll('[name=felles_klasse]:checked')]
+      .map(c => c.value).filter(id => id !== klassId)
+    const alleKlasseIds = [klassId, ...ekstraKlasser]
+    const gruppeId = alleKlasseIds.length > 1 ? crypto.randomUUID() : null
+
     await medLagreOverlay(async () => {
-      const { error } = await sb.from('sessions').insert({
-        class_id: klassId,
+      const rader = alleKlasseIds.map(cid => ({
+        school_id: APP.school.id,
+        class_id: cid,
         subject_id: subjId,
         division_id: fd.get('division_id') || null,
         week_nr: weekNr,
@@ -1585,8 +1657,11 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
         meeting_point: fd.get('meeting_point') || '',
         info: fd.get('info') || '',
         school_year: skoleAar || APP.school?.active_school_year,
+        created_by: APP.profile.id,
+        shared_group_id: gruppeId,
         version: 1,
-      })
+      }))
+      const { error } = await sb.from('sessions').insert(rader)
       if (error) throw error
     })
     modal.remove()
@@ -1603,6 +1678,28 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
     klasseSel.appendChild(opt)
   }
   form.appendChild(lagFormRad('Klasse', klasseSel))
+
+  // Fellesundervisning: kryss av for flere klasser som skal ha samme økt
+  if ((klasser || []).length > 1) {
+    const fellesWrap = el('div', { class: 'felles-velger' })
+    for (const k of klasser || []) {
+      const lbl = el('label', { class: 'felles-velger__valg', 'data-class-id': k.id })
+      lbl.appendChild(el('input', { type: 'checkbox', name: 'felles_klasse', value: k.id }))
+      lbl.appendChild(document.createTextNode(` ${k.name}`))
+      fellesWrap.appendChild(lbl)
+    }
+    // Skjul valgt hovedklasse i listen (den er alltid med)
+    const oppdaterFellesValg = () => {
+      for (const lbl of fellesWrap.querySelectorAll('.felles-velger__valg')) {
+        const erHoved = lbl.getAttribute('data-class-id') === klasseSel.value
+        lbl.style.display = erHoved ? 'none' : ''
+        if (erHoved) lbl.querySelector('input').checked = false
+      }
+    }
+    klasseSel.addEventListener('change', oppdaterFellesValg)
+    oppdaterFellesValg()
+    form.appendChild(lagFormRad('Felles med', fellesWrap))
+  }
 
   // Subject
   const fagSel = el('select', { name: 'subject_id', class: 'felt select', required: 'true', onchange: async (e) => {
@@ -1678,6 +1775,17 @@ async function visRedigerOktModal(session, onSave) {
     .eq('subject_id', session.subject_id)
   const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
 
+  // Sporbarhet: hvem opprettet og sist endret økten
+  const brukerNavn = (id) => (teachers || []).find(t => t.id === id)?.full_name || null
+  const sporDeler = []
+  const opprettetAv = brukerNavn(session.created_by)
+  if (opprettetAv) sporDeler.push(`Opprettet av ${opprettetAv}`)
+  const endretAv = brukerNavn(session.last_modified_by)
+  if (endretAv && (session.last_modified_by !== session.created_by || session.version > 1)) {
+    sporDeler.push(`Sist endret av ${endretAv}${session.last_modified_at ? ` ${formatDatoNO(session.last_modified_at)}` : ''}`)
+  }
+  if (sporDeler.length) box.appendChild(el('p', { class: 'sporbarhet-info' }, sporDeler.join(' · ')))
+
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
@@ -1690,6 +1798,12 @@ async function visRedigerOktModal(session, onSave) {
       activity: fd.get('activity') || null,
       meeting_point: fd.get('meeting_point') || null,
       info: fd.get('info') || null,
+    }
+    // Fridagssjekk – gjelder også flytting av økt til annen uke/dag
+    const fridag = await finnFridag(data.week_nr, data.day_of_week, session.school_year)
+    if (fridag) {
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      return
     }
     await medLagreOverlay(async () => {
       const ok = await lagreOkt(session.id, data, session.version)
@@ -1775,8 +1889,15 @@ async function visKopierOktModal(session, onSave) {
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
+    // Fridagssjekk – skoleruten blokkerer økter på fridager
+    const fridag = await finnFridag(parseInt(fd.get('week_nr')), parseInt(fd.get('day_of_week')), aktivtSkolear)
+    if (fridag) {
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      return
+    }
     await medLagreOverlay(async () => {
       const { error } = await sb.from('sessions').insert({
+        school_id: APP.school.id,
         class_id: session.class_id,
         subject_id: fd.get('subject_id'),
         division_id: fd.get('division_id') || null,
@@ -1787,6 +1908,7 @@ async function visKopierOktModal(session, onSave) {
         meeting_point: fd.get('meeting_point') || '',
         info: fd.get('info') || '',
         school_year: aktivtSkolear,
+        created_by: APP.profile.id,
         version: 1,
       })
       if (error) throw error
@@ -1885,7 +2007,7 @@ async function visOverforModal(session, onSave) {
   box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     const targetId = sel.value
     await medLagreOverlay(async () => {
-      await sb.from('sessions').update({ teacher_id: targetId }).eq('id', session.id)
+      await sb.from('sessions').update({ teacher_id: targetId, last_modified_by: APP.profile.id }).eq('id', session.id)
       await sb.from('pending_transfers').insert({
         session_id: session.id,
         from_user: APP.profile.id,
@@ -1931,6 +2053,7 @@ async function visBulkEditModal(ids, onSave) {
     if (infoInput.value) updates.info = infoInput.value
 
     if (!Object.keys(updates).length) { modal.remove(); return }
+    updates.last_modified_by = APP.profile.id
 
     await medLagreOverlay(async () => {
       for (const id of ids) {
@@ -1978,8 +2101,22 @@ async function visBulkKopierModal(valgte, onSave) {
     const malUke = parseInt(weekInput.value)
     if (!malUke || malUke < 1 || malUke > 53) { showToast('Ugyldig ukenummer', 'error'); return }
 
+    // Fridagssjekk i mål-uken: hopp over økter som lander på fridag
+    const kopierbare = []
+    const hoppetOver = []
+    for (const s of valgte) {
+      const fridag = await finnFridag(malUke, s.day_of_week, aktivtSkolear)
+      if (fridag) hoppetOver.push(`${dagNavn(s.day_of_week)} (${fridag.title})`)
+      else kopierbare.push(s)
+    }
+    if (!kopierbare.length) {
+      showToast(`Ingen økter kopiert – alle treffer fridag i uke ${malUke}: ${[...new Set(hoppetOver)].join(', ')}`, 'error')
+      return
+    }
+
     await medLagreOverlay(async () => {
-      const rader = valgte.map(s => ({
+      const rader = kopierbare.map(s => ({
+        school_id: APP.school.id,
         class_id: s.class_id,
         subject_id: s.subject_id,
         division_id: s.division_id,
@@ -1990,12 +2127,17 @@ async function visBulkKopierModal(valgte, onSave) {
         meeting_point: s.meeting_point || '',
         info: s.info || '',
         school_year: aktivtSkolear,
+        created_by: APP.profile.id,
         version: 1,
       }))
       const { error } = await sb.from('sessions').insert(rader)
       if (error) throw error
     })
-    showToast(`${valgte.length} økt(er) kopiert til uke ${malUke}`, 'success')
+    if (hoppetOver.length) {
+      showToast(`${kopierbare.length} økt(er) kopiert til uke ${malUke}. ${hoppetOver.length} hoppet over pga. fridag: ${[...new Set(hoppetOver)].join(', ')}`, 'info')
+    } else {
+      showToast(`${kopierbare.length} økt(er) kopiert til uke ${malUke}`, 'success')
+    }
     modal.remove()
     if (onSave) onSave()
   }}, 'Kopier'))
@@ -2089,10 +2231,23 @@ async function visAIPasteModal(defaultKlasse, onSave) {
       preview.appendChild(table)
 
       preview.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:10px', onclick: async () => {
-        const toImport = parsed.filter((_, i) => selected.has(i))
+        const valgteOkter = parsed.filter((_, i) => selected.has(i))
+        // Fridagssjekk: hopp over økter som lander på fridag i skoleruten
+        const toImport = []
+        const hoppetOver = []
+        for (const s of valgteOkter) {
+          const fridag = await finnFridag(s.week_nr, s.day_of_week, APP.school?.active_school_year)
+          if (fridag) hoppetOver.push(`uke ${s.week_nr} ${dagNavn(s.day_of_week)} (${fridag.title})`)
+          else toImport.push(s)
+        }
+        if (!toImport.length) {
+          showToast(`Ingen økter importert – alle treffer fridag: ${[...new Set(hoppetOver)].join(', ')}`, 'error')
+          return
+        }
         await medLagreOverlay(async () => {
           for (const s of toImport) {
             await sb.from('sessions').insert({
+              school_id: APP.school.id,
               class_id: s.class_id || defaultKlasse?.id,
               subject_id: s.subject_id || null,
               division_id: s.division_id || null,
@@ -2103,10 +2258,14 @@ async function visAIPasteModal(defaultKlasse, onSave) {
               meeting_point: s.meeting_point || '',
               info: s.info || '',
               school_year: APP.school?.active_school_year,
+              created_by: APP.profile.id,
               version: 1,
             })
           }
         })
+        if (hoppetOver.length) {
+          showToast(`${toImport.length} økt(er) importert. ${hoppetOver.length} hoppet over pga. fridag: ${[...new Set(hoppetOver)].join(', ')}`, 'info')
+        }
         modal.remove()
         if (onSave) onSave()
       }}, 'Importer valgte'))
@@ -2367,8 +2526,10 @@ async function lastOppSikkerhetskopi(file, klasse) {
     const toImport = sessions.filter((_, i) => selected.has(i))
     await medLagreOverlay(async () => {
       for (const s of toImport) {
-        const { id, ...rest } = s
-        await sb.from('sessions').insert({ ...rest, class_id: klasse.id, school_year: APP.school?.active_school_year, version: 1 })
+        // Fjern sporbarhets-, slette- og fellesfelter fra kopien – importen er en ny opprettelse
+        const { id, created_by, last_modified_at, last_modified_by, deleted_at, deleted_by, shared_group_id, ...rest } = s
+        await sb.from('sessions').insert({ ...rest, school_id: APP.school.id, class_id: klasse.id,
+          school_year: APP.school?.active_school_year, created_by: APP.profile.id, version: 1 })
       }
     })
     modal.remove()

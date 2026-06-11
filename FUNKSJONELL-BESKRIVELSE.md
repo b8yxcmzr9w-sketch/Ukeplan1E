@@ -97,34 +97,36 @@ Skole (flere skoler kan bruke tjenesten, adskilt fra hverandre)
 Disse punktene i beskrivelsen finnes muligens ikke i koden ennå, eller
 fungerer annerledes. Sjekkliste for Claude Code:
 
-Verifisert mot koden juni 2026:
+Verifisert mot koden juni 2026; punktene under er deretter bygget
+11.06.2026 (se PLAN.md). Merk: migrasjon 007–010 må kjøres manuelt i
+SQL Editor og `generate-facts` må re-deployes før alt virker i prod.
 
 - [x] Rollen Kontaktlærer (maks 3 per klasse) med utvidede rettigheter
-      — FINNES: rolle i databasen, rettigheter via RLS-policies, maks
-      3-sjekk i admin-grensesnittet. Forbehold: grensen håndheves kun i
-      nettleseren, ikke i databasen.
+      — FINNES: rolle, RLS-policies og maks 3-sjekk. Grensen håndheves
+      nå også i databasen (migrasjon 009), og en feil som gjorde at
+      kontaktlærer-rettighetene i RLS aldri virket, er rettet samme sted.
 - [x] Grense på maks 2 admin per skole
-      — FINNES: sjekk i admin-grensesnittet ved opprettelse og endring av
-      brukere. Samme forbehold: håndheves ikke i databasen.
-- [ ] Advarsel når en lærer redigerer en annens økt
-      — FINNES IKKE: i dag er det motsatt — vanlige lærere er helt
-      blokkert fra å redigere andres økter (både i grensesnittet og i
-      databasen). «Tillatt med advarsel» må bygges.
-- [ ] Merking av økter med opprettet av / sist endret av
-      — FINNES DELVIS: databasen har feltene, men «sist endret av» fylles
-      aldri ut, «opprettet av» sendes ikke fra appen, og ingenting av
-      dette vises til brukeren.
-- [ ] Økt som gjelder flere klasser samtidig
-      — FINNES IKKE: en økt er knyttet til nøyaktig én klasse.
-      (Flerdagshendelser kan gjelde alle klasser, men det er ikke økter.)
-- [ ] Blokkering av økter på fridager (ikke bare visning)
-      — FINNES IKKE: fridager vises i planen, men ingenting hindrer
-      opprettelse av økter på fridager.
+      — FINNES: sjekk i admin-grensesnittet, og fra migrasjon 009 også
+      håndhevet i databasen.
+- [x] Advarsel når en lærer redigerer en annens økt
+      — BYGGET: alle lærere kan nå redigere andres økter, men får en
+      tydelig bekreftelsesdialog først (kollegahjelp). Krever
+      migrasjon 008.
+- [x] Merking av økter med opprettet av / sist endret av
+      — BYGGET: appen lagrer begge ved opprettelse/endring, og
+      redigeringsvinduet viser «Opprettet av … · Sist endret av …».
+      Krever migrasjon 007.
+- [x] Økt som gjelder flere klasser samtidig
+      — BYGGET: «Ny økt» kan krysses av for flere klasser; det lagres
+      én rad per klasse koblet med felles gruppe-id, og kortene viser
+      «👥 Felles med …». Krever migrasjon 010.
+- [x] Blokkering av økter på fridager (ikke bare visning)
+      — BYGGET: skoleruten (ferie/helligdag/planleggingsdag) blokkerer
+      nå lagring i ny økt, rediger, kopier, bulk-kopi og AI-import.
 - [ ] Elevvisning begrenset til egen klasse (i dag listes alle klasser
       på forsiden)
-      — FINNES IKKE: forsiden lister alle klasser åpent, og hvem som
-      helst kan se alle klassers planer. → Avhenger av åpent punkt.
-- [ ] Tekst/oppsett som antar Øksnevad spesifikt — skal være skolenøytralt
-      — FINNES DELVIS: selve appen er nøytral (skolenavn hentes fra
-      databasen), men AI-funksjonen for funfacts har Øksnevad, Jæren og
-      Rogaland hardkodet i instruksjonen til AI-en.
+      — IKKE BYGGET: avventer avklaring av åpent punkt om elevtilgang.
+- [x] Tekst/oppsett som antar Øksnevad spesifikt — skal være skolenøytralt
+      — BYGGET: funfacts-AI-en bruker nå skolens navn fra databasen i
+      stedet for hardkodet Øksnevad/Jæren/Rogaland. Krever re-deploy av
+      `generate-facts`.
