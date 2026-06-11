@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER PÅ GODKJENNING (plan skrevet 11.06.2026)
-## Neste steg: få godkjenning av planen under, deretter Del A
+## Status: GODKJENT 11.06.2026 — Del A fullført
+## Neste steg: Del B (migrasjon 011 + funfacts-FIFO)
 
 Forrige runde (oppgave 1–8) er fullført — arkivert nederst.
 Denne planen dekker tre nye deler: AI-overlay (A), funfacts-FIFO (B)
@@ -65,7 +65,7 @@ forutsetter at kolonnene finnes).
 
 ## DEL A: «AI jobber»-overlay med funfacts
 
-- [ ] A1. Ny hjelpefunksjon `medAIOverlay(tittel, asyncFn)` i app.js
+- [x] A1. Ny hjelpefunksjon `medAIOverlay(tittel, asyncFn)` i app.js
       (samme mønster som `medLagreOverlay`):
       - Fullskjerms-overlay vises umiddelbart; `asyncFn` kjøres;
         overlay fjernes i `finally` (også ved feil). Resultat
@@ -82,10 +82,11 @@ forutsetter at kolonnene finnes).
       - Tom `APP.facts`: kun animasjon + tittel + undertekst (ingen
         faktaboks, ingen →-knapp).
       - Intervall-timer ryddes når overlayet fjernes (ingen lekkasje).
-- [ ] A2. CSS i style.css: `.ai-overlay` m.m., mørk halvgjennomsiktig
+- [x] A2. CSS i style.css: `.ai-overlay` m.m., mørk halvgjennomsiktig
       bakgrunn, skolens temavariabler der naturlig, `z-index: 600`
       (over `.modal-bg` 200 og `.lagre-overlay` 500), mobilvennlig.
-- [ ] A3. Ta i bruk overlayet rundt AI-kallene:
+- [x] A3. Ta i bruk overlayet rundt AI-kallene (alle tre koblet på;
+      skolerute-flyten bygges videre om i Del C):
       - `visAIPasteModal` → `ai-parse-sessions`:
         «AI tolker teksten til økter …»
       - Funfacts-generering → `generate-facts`:
@@ -93,7 +94,7 @@ forutsetter at kolonnene finnes).
       - Skolerute-import → `ai-parse-skolerute`:
         «AI tolker skoleruten …» (selve flyten bygges om i Del C —
         overlayet brukes der fra start)
-- [ ] A4. Bump `?v=` i v4/index.html (CSS + JS), commit Del A
+- [x] A4. Bump `?v=20260611f` i v4/index.html (CSS + JS), commit Del A
 
 ## DEL B: Maks antall funfacts — erstatt de eldste (FIFO)
 

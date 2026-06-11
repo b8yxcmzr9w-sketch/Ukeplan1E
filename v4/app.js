@@ -258,6 +258,80 @@ async function medLagreOverlay(asyncFn) {
   }
 }
 
+// «AI jobber»-overlay: fullskjerm med animasjon, tittel og roterende
+// funfacts fra APP.facts. Fjernes alltid i finally; feil kastes videre
+// slik at kallerens feilhåndtering (toast) virker som før.
+async function medAIOverlay(tittel, asyncFn) {
+  const overlay = el('div', { class: 'ai-overlay' })
+  const boks = el('div', { class: 'ai-overlay-boks' })
+  boks.appendChild(el('div', { class: 'ai-overlay-ikon' }, '✨'))
+  boks.appendChild(el('h3', { class: 'ai-overlay-tittel' }, tittel))
+  boks.appendChild(el('p', { class: 'ai-overlay-under' }, 'Dette kan ta litt tid.'))
+
+  let intervall = null
+  let fadeTimer = null
+
+  if (APP.facts.length) {
+    const tekstEl = el('p', { class: 'ai-overlay-fakta-tekst' }, '')
+
+    // Stokket kø; fylles på nytt når den er tom, uten samme fakta to ganger på rad
+    let koe = []
+    let forrige = null
+    function nesteFakta() {
+      if (!koe.length) {
+        koe = APP.facts.map(f => f.fact_text)
+        for (let i = koe.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[koe[i], koe[j]] = [koe[j], koe[i]]
+        }
+        if (koe.length > 1 && koe[koe.length - 1] === forrige) {
+          ;[koe[koe.length - 1], koe[0]] = [koe[0], koe[koe.length - 1]]
+        }
+      }
+      forrige = koe.pop()
+      return forrige
+    }
+    function visNeste(medFade) {
+      if (!medFade) { tekstEl.textContent = nesteFakta(); return }
+      tekstEl.classList.add('fade-ut')
+      fadeTimer = setTimeout(() => {
+        tekstEl.textContent = nesteFakta()
+        tekstEl.classList.remove('fade-ut')
+      }, 300)
+    }
+    function startIntervall() {
+      clearInterval(intervall)
+      intervall = setInterval(() => visNeste(true), 7000)
+    }
+
+    const fakta = el('div', { class: 'ai-overlay-fakta' })
+    const tekstWrap = el('div', { class: 'ai-overlay-fakta-innhold' })
+    tekstWrap.appendChild(el('span', { class: 'ai-overlay-fakta-label' }, 'Mens du venter …'))
+    tekstWrap.appendChild(tekstEl)
+    fakta.appendChild(tekstWrap)
+    fakta.appendChild(el('button', {
+      type: 'button', class: 'ai-overlay-neste', title: 'Neste fakta',
+      'aria-label': 'Neste fakta',
+      onclick: () => { clearTimeout(fadeTimer); visNeste(true); startIntervall() },
+    }, '→'))
+    boks.appendChild(fakta)
+
+    visNeste(false)
+    startIntervall()
+  }
+
+  overlay.appendChild(boks)
+  document.body.appendChild(overlay)
+
+  try {
+    return await asyncFn()
+  } finally {
+    clearInterval(intervall)
+    clearTimeout(fadeTimer)
+    overlay.remove()
+  }
+}
+
 // ─────────────────────────────────────────
 // AUTH
 // ─────────────────────────────────────────
@@ -2173,7 +2247,6 @@ async function visAIPasteModal(defaultKlasse, onSave) {
   box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     if (!textarea.value.trim()) return
     clearEl(preview)
-    preview.appendChild(el('p', {}, 'Analyserer…'))
 
     try {
       // Hent kontekstdata for AI-en
@@ -2184,12 +2257,13 @@ async function visAIPasteModal(defaultKlasse, onSave) {
         sb.from('divisions').select('id, name, subject_id, division_type').eq('school_id', APP.school.id),
       ])
 
-      const { data, error } = await sb.functions.invoke('ai-parse-sessions', {
-        body: {
-          text: textarea.value,
-          context: { subjects: subjects || [], classes: klasser || [], teachers: teachers || [], divisions: divisions || [] },
-        }
-      })
+      const { data, error } = await medAIOverlay('AI tolker teksten til økter …', () =>
+        sb.functions.invoke('ai-parse-sessions', {
+          body: {
+            text: textarea.value,
+            context: { subjects: subjects || [], classes: klasser || [], teachers: teachers || [], divisions: divisions || [] },
+          }
+        }))
       if (error) throw error
 
       clearEl(preview)
@@ -3535,9 +3609,10 @@ async function renderSkolerute(container) {
     aiInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-p', title: 'Send tekst til AI for tolking av datoer og hendelser', onclick: async () => {
       if (!aiText.value.trim()) return
       try {
-        const { data, error } = await sb.functions.invoke('ai-parse-skolerute', {
-          body: { text: aiText.value, school_id: APP.school.id }
-        })
+        const { data, error } = await medAIOverlay('AI tolker skoleruten …', () =>
+          sb.functions.invoke('ai-parse-skolerute', {
+            body: { text: aiText.value, school_id: APP.school.id }
+          }))
         if (error) throw new Error(error.message + (data?.error ? ` – ${data.error}: ${JSON.stringify(data.details ?? data.raw ?? '')}` : ''))
         const evs = data.events || []
         const warnings = data.warnings || []
@@ -3632,7 +3707,8 @@ async function renderFaktaTab(container) {
       if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
       aiBtn.disabled = true; aiBtn.textContent = 'Genererer…'
       try {
-        const { data, error } = await sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } })
+        const { data, error } = await medAIOverlay('AI lager nye funfacts …', () =>
+          sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } }))
         if (error) throw new Error(error.message || JSON.stringify(error))
         const ny = data?.facts || []
         if (!ny.length) { showToast('Ingen fakta generert', 'info'); return }
