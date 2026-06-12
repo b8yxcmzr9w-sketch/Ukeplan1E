@@ -20,9 +20,9 @@ main via PR #77 — arkivert under.
   med felles `shared_group_id`. Kortene viser «👥 Felles med …».
 - Fridagsblokkering gjelder typene ferie/helligdag/planleggingsdag.
   Typen «annet» blokkerer ikke.
-- Elevtilgang: forsiden beholder den åpne klasselisten.
-- Konflikthåndtering: navngitt varsel — «Økten er endret av [navn]
-  ([tidspunkt]) — last inn på nytt før du lagrer».
+- Konflikt: enkel melding med navn/tidspunkt (som bygget 11.06).
+  Ingen endringsvisning, fletting eller kopiering.
+- Elevtilgang: åpen klasseliste beholdes.
 - Skolerute-import: håndterte feil returneres som 200 + `{ error }`
   slik at meldingen når brukeren (supabase-js skjuler body ved
   non-2xx). AI får kun bruke typene ferie/helligdag/planleggingsdag;

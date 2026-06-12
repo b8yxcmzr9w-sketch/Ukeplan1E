@@ -18,7 +18,7 @@ Produksjon: https://ukeplan1e.ganddal.net/v4/
 
 | Rolle | Antall | Hva de kan |
 |---|---|---|
-| Elev/foresatt | ubegrenset | Se klasseplaner uten innlogging (forsiden lister alle klasser — bevisst valg, se «Avklarte punkter»). Ingen redigering. |
+| Elev/foresatt | ubegrenset | Se klasseplaner uten innlogging (forsiden lister alle klasser — bevisst valg, se «Avklarte beslutninger»). Ingen redigering. |
 | Lærer | ubegrenset | Opprette og redigere egne økter. Kan hjelpe til med andres økter, men får da en tydelig advarsel før endring. |
 | Kontaktlærer | maks 3 per klasse | Alt en lærer kan, pluss: redigere alle økter for sin klasse. |
 | Admin | maks 2 per skole | Redigere alt. Administrerer skoleinfo, skoleår, fag, klasser, brukere, skolerute og funfacts. |
@@ -90,21 +90,13 @@ Skole (flere skoler kan bruke tjenesten, adskilt fra hverandre)
   skolerute og økter skal skoleåret alltid sendes med som kontekst, og
   årstall skal aldri gjettes av modellen.
 
-## Avklarte punkter (besluttet 11.06.2026)
-
-- **Konflikthåndtering:** Ved konflikt vises «Økten er endret av [navn]
-  ([tidspunkt]) — last inn på nytt før du lagrer». Bygget 11.06.2026.
-- **Elevtilgang:** Forsiden beholder den åpne klasselisten. Planene er
-  ikke sensitive, og åpen liste er enklest for elever og foresatte.
-  Direktelenke/QR fra lærer er fortsatt primærveien inn.
-
 ## Avklarte beslutninger (juni 2026)
 
-1. **Konflikthåndtering:** Ved versjonskonflikt vises en melding:
-   «Økten er endret av [navn] — last inn på nytt før du lagrer.»
-   Meldingen viser hva den andre har endret. Ingen endringer skal
-   noensinne overskrives i stillhet. Bevisst forenkling: ingen
-   fletting eller kopier-funksjon — konflikter er sjeldne, og
+1. **Konflikthåndtering:** Ved versjonskonflikt vises en melding med
+   hvem som endret økten og når: «Økten er endret av [navn] — last inn
+   på nytt før du lagrer.» Ingen endringer overskrives i stillhet.
+   Bevisst forenkling: ingen visning av den andres endringer, ingen
+   fletting og ingen kopier-funksjon — konflikter er sjeldne, og
    brukeren skriver heller inn på nytt.
 2. **Elevtilgang:** Direktelenke er godt nok. Forsiden beholder
    klasselisten — åpen visning er et bevisst valg.
@@ -143,7 +135,7 @@ Verifisert mot koden juni 2026; punktene under er deretter bygget
 - [x] Elevvisning begrenset til egen klasse (i dag listes alle klasser
       på forsiden)
       — AVKLART 11.06.2026: forsiden beholder den åpne klasselisten
-      (bevisst valg, se «Avklarte punkter»). Punktet utgår — ingen
+      (bevisst valg, se «Avklarte beslutninger»). Punktet utgår — ingen
       kodeendring.
 - [x] Tekst/oppsett som antar Øksnevad spesifikt — skal være skolenøytralt
       — BYGGET: funfacts-AI-en bruker nå skolens navn fra databasen i
