@@ -54,6 +54,7 @@ v4/
       009_rollegrenser.sql        # Maks 2 admin / 3 kontaktlærere + RLS-fix (KJØRT)
       010_fellesokter.sql         # shared_group_id for fellesundervisning (KJØRT)
       011_softdelete_facts_kalender.sql # created_at/deleted_at på school_facts, deleted_at på school_calendar, purge-utvidelse (KJØRT)
+      012_testdata_2526.sql       # Testdata: komplett skoleår 25/26 (skolerute, fag m/parti+gruppe, økter uke 33–24) — idempotent
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini
