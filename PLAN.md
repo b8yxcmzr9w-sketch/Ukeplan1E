@@ -1,7 +1,25 @@
 # PLAN — Ukeplan1E v4
 
-## Status: INGEN PÅGÅENDE OPPGAVE
-## Neste steg: avvent neste oppgave
+## Status: PÅGÅENDE — testdata for skoleåret 25/26
+## Neste steg: kjør migrasjon 012 i Supabase SQL Editor
+
+Mål: gi v4 et fullt datasett å jobbe med for 25/26. Ekte data fra
+produksjonen (Google Sheets via Apps Script) kunne ikke hentes fra
+skymiljøet (nettverkspolicyen blokkerer script.google.com), så runden
+leverer realistisk seed-data i stedet. Bruker leverer ev. ekte
+`hentAlle`-JSON senere — da konverteres den i en egen runde.
+
+- [x] Seed-migrasjon `012_testdata_2526.sql`: skolerute 25/26
+      (riktige datoer for ferier/høytider), fag NPT (parti P1/P2),
+      NNA, YFF (gruppe 1/2) + fellesfag, økter for hele skoleåret
+      (uke 33–24, hopper over fridager), flerdagshendelser og
+      funfacts. Idempotent — kan kjøres flere ganger.
+- [x] CLAUDE.md: migrasjonsliste oppdatert med 012.
+- [ ] MANUELT: kjør 012 i Supabase SQL Editor (krever minst én
+      eksisterende bruker/lærer på skolen — økter trenger teacher_id).
+- [ ] (Venter på bruker) Ekte data: kjør
+      `curl -sL -X POST '<SCRIPT_URL>' -d '{"action":"hentAlle"}'`
+      lokalt og legg JSON-en i repoet — så konverteres den til SQL.
 
 Forrige runde (fire små UI/prompt-justeringer: «høytid», ukenummer og
 kompakt AI-forhåndsvisning, funfacts-overlay) er fullført og merget til
