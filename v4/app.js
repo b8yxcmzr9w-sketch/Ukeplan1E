@@ -3713,6 +3713,12 @@ function visNySkolerute(onSave) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
+// Sikkerhetsnett: AI-varsler skal være i klarspråk (styrt av prompten),
+// men fjern setninger med interne feltnavn hvis modellen likevel tar dem med
+function rensVarsel(tekst) {
+  return tekst.replace(/(^|[.!?])[^.!?]*\bweek_nr\b[^.!?]*[.!?]?/g, '$1').replace(/\s+/g, ' ').trim()
+}
+
 // Forhåndsvisning av AI-tolket skolerute: redigerbare rader som kan
 // strykes, og valg mellom å erstatte skoleårets eksisterende skolerute
 // (soft-delete) eller legge til. Ingenting lagres før «Lagre».
@@ -3724,8 +3730,9 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
   box.appendChild(el('h3', {}, `Forhåndsvisning – skolerute ${sy}`))
   box.appendChild(el('p', { class: 'tekst-svak', style: 'margin:-8px 0 14px; font-size:.9rem' },
     'Kontroller og juster radene før du lagrer. Ingenting lagres før du trykker «Lagre».'))
-  if (warnings.length) {
-    box.appendChild(el('p', { class: 'advarsel-tekst' }, `⚠️ ${warnings.join(' | ')}`))
+  const rensedeVarsler = warnings.map(rensVarsel).filter(Boolean)
+  if (rensedeVarsler.length) {
+    box.appendChild(el('p', { class: 'advarsel-tekst' }, `⚠️ ${rensedeVarsler.join(' | ')}`))
   }
 
   // ISO-ukenummer for en hendelse: «uke 41», eller «uke 51–1» over flere uker.
