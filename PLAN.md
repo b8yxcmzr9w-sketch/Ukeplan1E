@@ -61,6 +61,13 @@ Begrunnelse:
       `week_nr: null`, kun datoer.
 - [x] 1.3 Commit Del 1.
 
+- [x] 1.4 Etterjustering (godkjent muntlig 12.06.2026): milepæler
+      tolkes retningsbestemt i prompten — «første skoledag etter
+      [ferie]» betyr at dagene/uka FØR var ferien (ukesferier:
+      man–fre + week_nr), «siste skoledag før [ferie]» betyr at
+      ferien starter dagen ETTER (alene: uka etter, man–fre +
+      week_nr); finnes begge, spenner ferien mellom dem.
+
 ## DEL 2: Valider og korriger i kode (etter AI-svar, før retur)
 
 - [x] 2.1 Hjelpefunksjon `isoWeekToDate(year, week, weekday)` i

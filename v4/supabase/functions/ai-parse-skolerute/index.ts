@@ -155,7 +155,12 @@ Skal IKKE tas med som egne rader (hoppes over, uansett formulering):
 - Foreldremøter, utviklingssamtaler og andre arrangementer på vanlige skoledager
 - Helger (lørdag/søndag) som egne oppføringer
 
-Milepæler kan likevel brukes til å BEREGNE ferier: står det «siste skoledag før jul 19. desember» og «første skoledag etter jul 5. januar», er juleferien 20. desember ${aar1} – 4. januar ${aar2} (type "ferie", tittel "Juleferie") — men milepælene selv skal ikke bli egne rader.
+Milepæler kan likevel brukes til å BEREGNE ferier — men milepælene selv skal aldri bli egne rader:
+- «Siste skoledag før [ferie]» betyr at ferien starter DAGEN ETTER milepælen
+- «Første skoledag etter [ferie]» betyr at ferien sluttet DAGEN FØR milepælen — dagene/uka før denne dagen var ferien
+- Finnes begge milepælene, spenner ferien mellom dem: står det «siste skoledag før jul 19. desember» og «første skoledag etter jul 5. januar», er juleferien 20. desember ${aar1} – 4. januar ${aar2} (type "ferie", tittel "Juleferie")
+- Finnes bare «første skoledag etter [ferie]» (typisk en mandag), og ferien er en vanlig ukesferie (høstferie, vinterferie), var ferien hele uka før: mandag–fredag, med "week_nr" for den uka
+- Finnes bare «siste skoledag før [ferie]» (typisk en fredag), er ferien hele uka etter: mandag–fredag, med "week_nr" for den uka
 
 Andre regler:
 - Enkeltdager: sett start_date = end_date
