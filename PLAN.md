@@ -1,7 +1,8 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PÅGÅENDE — fire små UI/prompt-justeringer (12.06.2026)
-## Neste steg: bump ?v= i v4/index.html
+## Status: KODING FERDIG — fire små UI/prompt-justeringer (12.06.2026)
+## Neste steg: manuelt — re-deploy ai-parse-skolerute i Supabase Dashboard
+##   (prompten er endret i oppgave 1: juleferie/påskeferie → helligdag)
 
 ## Pågående runde: fire små UI/prompt-justeringer
 
@@ -21,7 +22,7 @@
 - [x] **Oppgave 4 — funfacts-overlay**
       Mindre transparent boks (mer dekkende bakgrunn) og 10 s
       visningstid per setning (var 7 s).
-- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (JS og CSS er endret)
+- [x] Bump `?v=YYYYMMDDx` i `v4/index.html` (JS og CSS er endret) — `20260612a`
 
 ### Manuelt steg etter runden (Supabase Dashboard)
 
