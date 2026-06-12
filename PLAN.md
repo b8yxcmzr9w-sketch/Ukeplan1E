@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PÅGÅENDE — import av ekte produksjonsdata 25/26
-## Neste steg: kjør 014, 015 og 016 i Supabase SQL Editor
+## Status: PÅGÅENDE — import av ekte produksjonsdata 25/26 (NPT/NNA/Naturfag i basen)
+## Neste steg: Plan_YFF limes inn → migrasjon 017
 
 Bruker limer inn ark for ark fra dagens løsning; hvert ark blir en
 import-migrasjon som soft-sletter de syntetiske øktene for faget og
@@ -21,7 +21,8 @@ info, og re-kjøring etter brukeroppretting mapper riktig.
       økter eies av brukerens egen konto (fallback), lærernavn
       bevares i info som «[Lærer: X]». Re-kjøring mapper riktig om
       brukere opprettes senere.
-- [ ] MANUELT: kjør 014, 015 og 016 i SQL Editor.
+- [x] MANUELT: 014, 015 og 016 kjørt i SQL Editor (bekreftet av
+      bruker 12.06.2026).
 - [ ] (Venter på bruker) Plan_YFF — limes inn på samme måte og blir
       migrasjon 017. Syntetiske fag uten ekte motpart (norsk, matte,
       engelsk, kroppsøving + ev. YFF) beholdes inntil videre.
