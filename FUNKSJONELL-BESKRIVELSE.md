@@ -98,6 +98,17 @@ Skole (flere skoler kan bruke tjenesten, adskilt fra hverandre)
   ikke sensitive, og åpen liste er enklest for elever og foresatte.
   Direktelenke/QR fra lærer er fortsatt primærveien inn.
 
+## Avklarte beslutninger (juni 2026)
+
+1. **Konflikthåndtering:** Ved versjonskonflikt vises en melding:
+   «Økten er endret av [navn] — last inn på nytt før du lagrer.»
+   Meldingen viser hva den andre har endret. Ingen endringer skal
+   noensinne overskrives i stillhet. Bevisst forenkling: ingen
+   fletting eller kopier-funksjon — konflikter er sjeldne, og
+   brukeren skriver heller inn på nytt.
+2. **Elevtilgang:** Direktelenke er godt nok. Forsiden beholder
+   klasselisten — åpen visning er et bevisst valg.
+
 ## Avvik mellom ønsket og dagens kode (må verifiseres)
 
 Disse punktene i beskrivelsen finnes muligens ikke i koden ennå, eller
