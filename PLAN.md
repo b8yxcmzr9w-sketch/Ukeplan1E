@@ -1,29 +1,34 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: INGEN PÅGÅENDE OPPGAVE
-## Neste steg: merge branch claude/blissful-ride-pxspuy til main via PR
-##   (uke-først-runden er ferdig kodet; bruker meldte «Ferdig» 12.06.2026
-##   etter manuell re-deploy av ai-parse-skolerute)
+## Neste steg: merge branch claude/clever-dirac-nyoyud til main via PR
+##   (fire UI/prompt-justeringer ferdig; ai-parse-skolerute
+##   re-deployet manuelt 12.06.2026)
 
-## Gjenstående manuelle steg (ubekreftede — fra tidligere runder)
+## Pågående runde: fire små UI/prompt-justeringer
 
-- [ ] Migrasjon 011 (`011_softdelete_facts_kalender.sql`) kjørt i
-      SQL Editor? Kreves FØR frontend fra Del A/B/C brukes —
-      `deleted_at`-filtrene forutsetter at kolonnene finnes.
-- [ ] Edge-funksjonen `generate-facts` re-deployet? (Skolenøytral
-      funfacts-generering fra oppgave 1–8; verifiser med
-      «✨ Generer med AI» i Funfacts-fanen.)
+- [x] **Oppgave 1 — «helligdag» vises som «høytid» (kun visningstekst)**
+      DB-verdien `helligdag` beholdes (ingen migrasjon). Visningstekst
+      «høytid» alle steder typen vises: nedtrekksmeny i
+      skolerute-redigering, AI-forhåndsvisningen og type-badgen i
+      skolerute-listen. I prompten i `ai-parse-skolerute`: juleferie og
+      påskeferie klassifiseres som `helligdag` (minimalt tillegg —
+      ikke omskriv uke-først-logikken).
+- [x] **Oppgave 2 — ukenummer i AI-forhåndsvisningen av skoleruten**
+      Vis ISO-ukenummer per hendelse («uke 41»), intervall ved
+      flerukers hendelser («uke 51–1»). Gjenbruk `getISOWeek`.
+- [x] **Oppgave 3 — kompaktere forhåndsvisningsmodal**
+      Mindre luft / smalere felt i radene; bunnlinjen med
+      Avbryt/Lagre + erstatt/legg til-valget alltid synlig (sticky).
+- [x] **Oppgave 4 — funfacts-overlay**
+      Mindre transparent boks (mer dekkende bakgrunn) og 10 s
+      visningstid per setning (var 7 s).
+- [x] Bump `?v=YYYYMMDDx` i `v4/index.html` (JS og CSS er endret) — `20260612a`
 
-Kryss av / stryk når de er bekreftet utført i Supabase Dashboard.
+### Manuelt steg etter runden (Supabase Dashboard)
 
-## Opprydding: foreldede brancher på origin
-
-Branchene `claude/favicon-fix`, `claude/margins-layout`,
-`claude/remember-tab` og `claude/snapshot-radio-fix` ligger uemerget
-med gamle commits (refererer bl.a. til PROMPT.md, som er erstattet av
-CLAUDE.md) — trolig fra før historikken ble bygget om. Innholdet
-finnes i main i ny form. Anbefaling: slett dem på GitHub etter en
-rask visuell sjekk.
+- [x] Re-deploy `ai-parse-skolerute` (prompten er endret i oppgave 1) —
+      bekreftet utført 12.06.2026
 
 Forrige runde (uke-først og årsforankring i `ai-parse-skolerute`,
 inkl. retningsbestemt milepæl-tolkning) er fullført — arkivert under.
@@ -50,6 +55,18 @@ inkl. retningsbestemt milepæl-tolkning) er fullført — arkivert under.
   milepæler filtreres i prompt + sikkerhetsnett.
 
 ## Arkiv: fullførte runder
+
+### Manuelle steg og opprydding bekreftet (12.06.2026)
+- [x] Migrasjon 011 (`011_softdelete_facts_kalender.sql`) bekreftet
+      kjørt — verifisert med spørring mot information_schema
+      (`deleted_at` finnes på både school_facts og school_calendar).
+- [x] Edge-funksjonen `generate-facts` re-deployet og testet OK med
+      «✨ Generer med AI».
+- [x] PR #76 (uke-først-runden, branch claude/blissful-ride-pxspuy)
+      merget til main.
+- [x] Foreldede brancher slettet på GitHub (`claude/favicon-fix`,
+      `claude/margins-layout`, `claude/remember-tab`,
+      `claude/snapshot-radio-fix`).
 
 ### Uke-først og årsforankring i ai-parse-skolerute (fullført 12.06.2026)
 Bakgrunn: en skolerute for 26/27 uten årstall ble tolket som 2020/21

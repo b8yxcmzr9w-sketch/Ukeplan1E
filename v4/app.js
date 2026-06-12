@@ -134,6 +134,12 @@ function dagNavn(n) {
   return ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'][n - 1]
 }
 
+// Visningstekst for school_calendar.type — databaseverdien «helligdag»
+// beholdes, men vises for brukeren som «høytid».
+function kalenderTypeNavn(t) {
+  return t === 'helligdag' ? 'høytid' : t
+}
+
 // Returnerer neste skoleår som 'YY/YY', f.eks. '25/26' → '26/27'.
 function nesteSkolear(sy) {
   if (!sy || !/^\d{2}\/\d{2}$/.test(sy)) return null
@@ -310,7 +316,7 @@ async function medAIOverlay(tittel, asyncFn) {
     }
     function startIntervall() {
       clearInterval(intervall)
-      intervall = setInterval(() => visNeste(true), 7000)
+      intervall = setInterval(() => visNeste(true), 10000)
     }
 
     const fakta = el('div', { class: 'ai-overlay-fakta' })
@@ -3604,7 +3610,7 @@ async function renderSkolerute(container) {
       info.appendChild(el('span', { class: 'tekst-svak', style: 'font-size:.85rem; white-space:nowrap' },
         `${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)}`))
       row.appendChild(info)
-      row.appendChild(el('span', { class: 'div-badge' }, e.type || ''))
+      row.appendChild(el('span', { class: 'div-badge' }, e.type ? kalenderTypeNavn(e.type) : ''))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett denne hendelsen fra skoleruten', onclick: async () => {
         await medLagreOverlay(() => sb.from('school_calendar').delete().eq('id', e.id))
         refresh()
@@ -3694,7 +3700,7 @@ function visNySkolerute(onSave) {
 
   const typeSel = el('select', { name: 'type', class: 'felt select' })
   for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
-    typeSel.appendChild(el('option', { value: t }, t))
+    typeSel.appendChild(el('option', { value: t }, kalenderTypeNavn(t)))
   form.appendChild(lagFormRad('Type', typeSel))
 
   const rad = el('div', { class: 'modal-bunn' })
@@ -3714,7 +3720,7 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
   const sy = APP.school?.active_school_year
   const intervall = skoleaarIntervall(sy)
   const modal = el('div', { class: 'modal-bg' })
-  const box = el('div', { class: 'modal modal-xl' })
+  const box = el('div', { class: 'modal modal-xl skolerute-prev-modal' })
   box.appendChild(el('h3', {}, `Forhåndsvisning – skolerute ${sy}`))
   box.appendChild(el('p', { class: 'tekst-svak', style: 'margin:-8px 0 14px; font-size:.9rem' },
     'Kontroller og juster radene før du lagrer. Ingenting lagres før du trykker «Lagre».'))
@@ -3722,20 +3728,33 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
     box.appendChild(el('p', { class: 'advarsel-tekst' }, `⚠️ ${warnings.join(' | ')}`))
   }
 
+  // ISO-ukenummer for en hendelse: «uke 41», eller «uke 51–1» over flere uker.
+  // Datoer parses som lokale (ikke new Date(str) = UTC) så uka ikke tipper feil.
+  function ukeTekst(fra, til) {
+    if (!fra) return ''
+    const lokal = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
+    const u1 = getISOWeek(lokal(fra))
+    const u2 = til ? getISOWeek(lokal(til)) : u1
+    return u1 === u2 ? `uke ${u1}` : `uke ${u1}–${u2}`
+  }
+
   const rader = []
-  const liste = el('div')
+  const liste = el('div', { class: 'skolerute-prev-liste' })
   liste.appendChild(el('div', { class: 'skolerute-prev-rad skolerute-prev-hode' },
     el('span', {}, 'Tittel'), el('span', {}, 'Fra'), el('span', {}, 'Til'),
-    el('span', {}, 'Type'), el('span', {}, '')))
+    el('span', {}, 'Uke'), el('span', {}, 'Type'), el('span', {}, '')))
   for (const ev of events) {
     const rad = { fjernet: false }
     rad.tittel = el('input', { type: 'text', class: 'felt input', maxlength: 30, value: ev.title })
-    rad.fra = el('input', { type: 'date', class: 'felt input', value: ev.start_date })
-    rad.til = el('input', { type: 'date', class: 'felt input', value: ev.end_date })
+    rad.fra = el('input', { type: 'date', class: 'felt input', value: ev.start_date, onchange: () => visUke() })
+    rad.til = el('input', { type: 'date', class: 'felt input', value: ev.end_date, onchange: () => visUke() })
+    rad.uke = el('span', { class: 'skolerute-prev-uke' })
+    const visUke = () => { rad.uke.textContent = ukeTekst(rad.fra.value, rad.til.value) }
+    visUke()
     rad.type = el('select', { class: 'felt select' })
     for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
-      rad.type.appendChild(el('option', { value: t, ...(t === ev.type ? { selected: 'true' } : {}) }, t))
-    rad.el = el('div', { class: 'skolerute-prev-rad' }, rad.tittel, rad.fra, rad.til, rad.type,
+      rad.type.appendChild(el('option', { value: t, ...(t === ev.type ? { selected: 'true' } : {}) }, kalenderTypeNavn(t)))
+    rad.el = el('div', { class: 'skolerute-prev-rad' }, rad.tittel, rad.fra, rad.til, rad.uke, rad.type,
       el('button', { type: 'button', class: 'btn btn-ikon btn-f', title: 'Stryk denne raden',
         onclick: () => { rad.fjernet = true; rad.el.remove() } }, '🗑️'))
     rader.push(rad)
@@ -3749,7 +3768,6 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
   modusBoks.appendChild(el('label', {}, erstattRadio,
     `Erstatt eksisterende skolerute for skoleåret ${sy}`))
   modusBoks.appendChild(el('label', {}, leggTilRadio, 'Legg til i eksisterende skolerute'))
-  box.appendChild(modusBoks)
 
   const bunn = el('div', { class: 'modal-bunn' })
   bunn.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
@@ -3792,7 +3810,12 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
       showToast(err.message, 'error')
     }
   }}, 'Lagre'))
-  box.appendChild(bunn)
+
+  // Modus + knapper i fast bunnfelt utenfor scrollelisten — alltid synlig
+  const bunnWrap = el('div', { class: 'skolerute-prev-bunn' })
+  bunnWrap.appendChild(modusBoks)
+  bunnWrap.appendChild(bunn)
+  box.appendChild(bunnWrap)
 
   modal.appendChild(box)
   document.body.appendChild(modal)
