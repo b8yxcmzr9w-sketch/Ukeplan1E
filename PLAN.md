@@ -1,37 +1,11 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: INGEN PÅGÅENDE OPPGAVE
-## Neste steg: merge branch claude/clever-dirac-nyoyud til main via PR
-##   (fire UI/prompt-justeringer ferdig; ai-parse-skolerute
-##   re-deployet manuelt 12.06.2026)
+## Neste steg: avvent neste oppgave
 
-## Pågående runde: fire små UI/prompt-justeringer
-
-- [x] **Oppgave 1 — «helligdag» vises som «høytid» (kun visningstekst)**
-      DB-verdien `helligdag` beholdes (ingen migrasjon). Visningstekst
-      «høytid» alle steder typen vises: nedtrekksmeny i
-      skolerute-redigering, AI-forhåndsvisningen og type-badgen i
-      skolerute-listen. I prompten i `ai-parse-skolerute`: juleferie og
-      påskeferie klassifiseres som `helligdag` (minimalt tillegg —
-      ikke omskriv uke-først-logikken).
-- [x] **Oppgave 2 — ukenummer i AI-forhåndsvisningen av skoleruten**
-      Vis ISO-ukenummer per hendelse («uke 41»), intervall ved
-      flerukers hendelser («uke 51–1»). Gjenbruk `getISOWeek`.
-- [x] **Oppgave 3 — kompaktere forhåndsvisningsmodal**
-      Mindre luft / smalere felt i radene; bunnlinjen med
-      Avbryt/Lagre + erstatt/legg til-valget alltid synlig (sticky).
-- [x] **Oppgave 4 — funfacts-overlay**
-      Mindre transparent boks (mer dekkende bakgrunn) og 10 s
-      visningstid per setning (var 7 s).
-- [x] Bump `?v=YYYYMMDDx` i `v4/index.html` (JS og CSS er endret) — `20260612a`
-
-### Manuelt steg etter runden (Supabase Dashboard)
-
-- [x] Re-deploy `ai-parse-skolerute` (prompten er endret i oppgave 1) —
-      bekreftet utført 12.06.2026
-
-Forrige runde (uke-først og årsforankring i `ai-parse-skolerute`,
-inkl. retningsbestemt milepæl-tolkning) er fullført — arkivert under.
+Forrige runde (fire små UI/prompt-justeringer: «høytid», ukenummer og
+kompakt AI-forhåndsvisning, funfacts-overlay) er fullført og merget til
+main via PR #77 — arkivert under.
 
 ---
 
@@ -55,6 +29,26 @@ inkl. retningsbestemt milepæl-tolkning) er fullført — arkivert under.
   milepæler filtreres i prompt + sikkerhetsnett.
 
 ## Arkiv: fullførte runder
+
+### Fire små UI/prompt-justeringer (fullført 12.06.2026, PR #77)
+- **«Helligdag» vises som «høytid»** — kun visningstekst via ny
+  `kalenderTypeNavn()` (type-badge i skolerute-listen, nedtrekksmenyer
+  i skolerute-redigering og AI-forhåndsvisning); DB-verdien
+  `helligdag` er uendret, ingen migrasjon. Prompten i
+  `ai-parse-skolerute` klassifiserer nå juleferie/påskeferie som
+  `helligdag` (minimalt tillegg, uke-først-logikken urørt).
+  Blokkeringslogikken upåvirket.
+- **Ukenummer i AI-forhåndsvisningen** — ny «Uke»-kolonne per hendelse
+  («uke 41», «uke 51–1» over flere uker) via `getISOWeek` med lokal
+  datoparsing; oppdateres live ved datoredigering.
+- **Kompaktere forhåndsvisningsmodal** — nullet arvet bunnmarg og
+  mindre padding/skrift i radene; modalen er flex-kolonne der bare
+  listen scroller, mens erstatt/legg til-valget og Avbryt/Lagre ligger
+  i fast bunnfelt (alltid synlig).
+- **Funfacts-overlay** — nesten dekkende mørk bakgrunn på faktaboksen
+  og 10 s visningstid per setning (var 7 s).
+- Cache-busting bumpet til `20260612a`. Manuelt steg utført:
+  `ai-parse-skolerute` re-deployet i Supabase Dashboard 12.06.2026.
 
 ### Manuelle steg og opprydding bekreftet (12.06.2026)
 - [x] Migrasjon 011 (`011_softdelete_facts_kalender.sql`) bekreftet
