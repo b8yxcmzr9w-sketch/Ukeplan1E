@@ -1,8 +1,9 @@
 # PLAN — Ukeplan1E v4
 
-## Status: KODING FERDIG — fire små UI/prompt-justeringer (12.06.2026)
-## Neste steg: manuelt — re-deploy ai-parse-skolerute i Supabase Dashboard
-##   (prompten er endret i oppgave 1: juleferie/påskeferie → helligdag)
+## Status: INGEN PÅGÅENDE OPPGAVE
+## Neste steg: merge branch claude/clever-dirac-nyoyud til main via PR
+##   (fire UI/prompt-justeringer ferdig; ai-parse-skolerute
+##   re-deployet manuelt 12.06.2026)
 
 ## Pågående runde: fire små UI/prompt-justeringer
 
@@ -26,7 +27,8 @@
 
 ### Manuelt steg etter runden (Supabase Dashboard)
 
-- [ ] Re-deploy `ai-parse-skolerute` (prompten er endret i oppgave 1)
+- [x] Re-deploy `ai-parse-skolerute` (prompten er endret i oppgave 1) —
+      bekreftet utført 12.06.2026
 
 Forrige runde (uke-først og årsforankring i `ai-parse-skolerute`,
 inkl. retningsbestemt milepæl-tolkning) er fullført — arkivert under.
