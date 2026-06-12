@@ -24,7 +24,7 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 - Hold deg til oppgavens omfang — ikke endre kode utenfor det som er avtalt.
 
 ## Teknisk stack
-- **Frontend**: Vanilla JS (ingen rammeverk), én fil: `v4/app.js` (~3700 linjer)
+- **Frontend**: Vanilla JS (ingen rammeverk), én fil: `v4/app.js` (~4000 linjer)
 - **CSS**: `v4/style.css`
 - **HTML**: `v4/index.html` (cache-busting via `?v=YYYYMMDDx` — bump ved hver endring)
 - **Backend**: Supabase (PostgreSQL + Auth + Realtime + Edge Functions)
@@ -53,6 +53,7 @@ v4/
       008_kollegahjelp.sql        # Lærer kan endre andres økter (KJØRT)
       009_rollegrenser.sql        # Maks 2 admin / 3 kontaktlærere + RLS-fix (KJØRT)
       010_fellesokter.sql         # shared_group_id for fellesundervisning (KJØRT)
+      011_softdelete_facts_kalender.sql # created_at/deleted_at på school_facts, deleted_at på school_calendar, purge-utvidelse (IKKE bekreftet kjørt — se PLAN.md)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini
@@ -110,6 +111,20 @@ Safari cacher hardt. Bruk hard refresh (Cmd+Shift+R) for å verifisere.
 Brukes i `renderElevView` og `renderMinKlasseTab` (via `ukeRenderToken`) for å unngå
 race conditions ved dobbeltkall til async render-funksjoner.
 
+### Uke er primær tidsenhet — AI gjetter aldri årstall
+Lærere og elever forholder seg til ukenummer/ukedag; datoer beregnes fra
+uke + skoleår. Mønster for alle AI-edge-functions (bygget i
+`ai-parse-skolerute`, skal følges ved fremtidige AI-funksjoner):
+- Aktivt skoleår sendes i request-body fra app.js og inn i prompten
+  (semesterkontekst: uke 33–52 = høstår, uke 1–24 = vårår), med
+  eksplisitt forbud mot å gjette andre årstall.
+- Har modellen oppgitt ukenummer, beregnes datoene i KODE fra ISO-uke +
+  riktig kalenderår (`isoWeekToDate`/`isoWeekOf`/`korrigerAar` i
+  edge-funksjonen); uten ukenummer korrigeres feil årstall ut fra
+  måneden (aug–des → høstår, jan–jul → vårår).
+- Alle korrigeringer og uoverensstemmelser returneres som `warnings`
+  (vises i forhåndsvisningen) — aldri stille feil, aldri hard avvisning.
+
 ### RLS-funksjoner i SQL
 - `auth_school_id()` — returnerer school_id for innlogget bruker
 - `is_active_admin()` — sjekker `is_admin_active = true`
@@ -134,8 +149,9 @@ users            – id (auth.uid), school_id, full_name, role(laerer|kontaktlae
 user_classes     – user_id, class_id
 sessions         – id, school_id, class_id, subject_id, division_id, week_nr, day_of_week(1-5), teacher_id, activity, meeting_point, info, school_year, version, created_by, last_modified_at, last_modified_by, shared_group_id (fellesundervisning, migrasjon 010), deleted_at, ...
 multi_day_events – id, school_id, class_id(null=alle), title, description, start_date, end_date, school_year, deleted_at
-school_calendar  – id, school_id, title, start_date, end_date, type(ferie|helligdag|planleggingsdag|annet)
-audit_log, school_facts, pending_transfers
+school_calendar  – id, school_id, title, start_date, end_date, type(ferie|helligdag|planleggingsdag|annet), deleted_at (migrasjon 011)
+school_facts     – id, school_id, fact_text, created_at, deleted_at (created_at/deleted_at fra migrasjon 011)
+audit_log, pending_transfers
 ```
 
 ### Kolonnenavn-feller (PostgREST)
@@ -208,8 +224,11 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `finnFridag(weekNr, dayOfWeek, schoolYear)` | Skolerute-oppslag; blokkerer økter på fridager |
 | `bekreftKollegahjelp(s)` | Advarsel før redigering av annens økt |
 | `merkFellesOkter(sessions)` | Setter `_fellesMed` (klassenavn) på fellesøkter |
+| `visSkoleruteForhandsvisning(events, warnings, onSave)` | Redigerbar forhåndsvisning av AI-tolket skolerute før lagring |
+| `skoleaarIntervall(sy)` | Datointervallet et skoleår dekker (1. aug år1 – 31. jul år2) |
 | `showToast(msg, type)` | Toast-melding |
 | `medLagreOverlay(fn)` | Vis lagre-overlay under async operasjon |
+| `medAIOverlay(tittel, fn)` | «AI jobber»-overlay med roterende funfacts under AI-kall |
 | `el(tag, attrs, ...children)` | DOM-hjelpefunksjon |
 
 ## Header-struktur

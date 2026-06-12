@@ -84,6 +84,11 @@ Skole (flere skoler kan bruke tjenesten, adskilt fra hverandre)
   på nytt.
 - **Skoleskille:** Brukere ser og endrer kun data for sin egen skole.
 - **Utskrift:** Ukeplanen kan skrives ut med eget utskriftshode.
+- **Uke er primær tidsenhet.** Lærere og elever forholder seg til
+  ukenummer og ukedag («uke 9, onsdag»), ikke datoer. Datoer vises som
+  hjelpeinformasjon og beregnes fra uke + skoleår. Ved AI-tolkning av
+  skolerute og økter skal skoleåret alltid sendes med som kontekst, og
+  årstall skal aldri gjettes av modellen.
 
 ## Avklarte punkter (besluttet 11.06.2026)
 
@@ -133,3 +138,13 @@ Verifisert mot koden juni 2026; punktene under er deretter bygget
       — BYGGET: funfacts-AI-en bruker nå skolens navn fra databasen i
       stedet for hardkodet Øksnevad/Jæren/Rogaland. Krever re-deploy av
       `generate-facts`.
+- [x] `ai-parse-skolerute` sender med aktivt skoleår i prompten og
+      validerer at alle datoer ligger innenfor skoleåret
+      — BYGGET 11.06.2026: prompten forankres i skoleåret (høst-/vårår
+      eksplisitt, forbud mot å gjette årstall), og feil årstall
+      korrigeres i kode med advarsel i forhåndsvisningen. Krever
+      re-deploy av `ai-parse-skolerute`.
+- [x] Skolerute lagres/tolkes uke-først der teksten oppgir ukenummer
+      — BYGGET 11.06.2026: modellen returnerer ukenummer som eget felt,
+      og datoene beregnes i kode fra ISO-uke + riktig kalenderår
+      (`isoWeekToDate`). Avvik mellom dato og ukenummer gir advarsel.
