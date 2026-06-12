@@ -1,11 +1,11 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: PÅGÅENDE — fire små UI/prompt-justeringer (12.06.2026)
-## Neste steg: oppgave 1 («helligdag» vises som «høytid»)
+## Neste steg: oppgave 2 (ukenummer i AI-forhåndsvisningen)
 
 ## Pågående runde: fire små UI/prompt-justeringer
 
-- [ ] **Oppgave 1 — «helligdag» vises som «høytid» (kun visningstekst)**
+- [x] **Oppgave 1 — «helligdag» vises som «høytid» (kun visningstekst)**
       DB-verdien `helligdag` beholdes (ingen migrasjon). Visningstekst
       «høytid» alle steder typen vises: nedtrekksmeny i
       skolerute-redigering, AI-forhåndsvisningen og type-badgen i

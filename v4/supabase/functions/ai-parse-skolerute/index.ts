@@ -135,8 +135,8 @@ Returner KUN gyldig JSON, ingen forklaringer:
 }
 
 Typer (bruk nøyaktig én av disse tre — aldri noe annet):
-- "ferie": ferieperioder (høstferie, juleferie, vinterferie, påskeferie, sommerferie) og enkeltstående fridager/klemdager for elevene
-- "helligdag": offisielle norske helligdager på ukedager (1. nyttårsdag, skjærtorsdag, langfredag, 2. påskedag, 1. mai, 17. mai, Kristi himmelfartsdag, 2. pinsedag, 1. og 2. juledag)
+- "ferie": ferieperioder (høstferie, vinterferie, sommerferie) og enkeltstående fridager/klemdager for elevene
+- "helligdag": juleferie og påskeferie (hele perioden) samt offisielle norske helligdager på ukedager (1. nyttårsdag, skjærtorsdag, langfredag, 2. påskedag, 1. mai, 17. mai, Kristi himmelfartsdag, 2. pinsedag, 1. og 2. juledag)
 - "planleggingsdag": dager der lærerne jobber, men elevene har fri
 
 ÅRSTALL — skoleåret går fra 1. august ${aar1} til 31. juli ${aar2}:
@@ -158,7 +158,7 @@ Skal IKKE tas med som egne rader (hoppes over, uansett formulering):
 Milepæler kan likevel brukes til å BEREGNE ferier — men milepælene selv skal aldri bli egne rader:
 - «Siste skoledag før [ferie]» betyr at ferien starter DAGEN ETTER milepælen
 - «Første skoledag etter [ferie]» betyr at ferien sluttet DAGEN FØR milepælen — dagene/uka før denne dagen var ferien
-- Finnes begge milepælene, spenner ferien mellom dem: står det «siste skoledag før jul 19. desember» og «første skoledag etter jul 5. januar», er juleferien 20. desember ${aar1} – 4. januar ${aar2} (type "ferie", tittel "Juleferie")
+- Finnes begge milepælene, spenner ferien mellom dem: står det «siste skoledag før jul 19. desember» og «første skoledag etter jul 5. januar», er juleferien 20. desember ${aar1} – 4. januar ${aar2} (type "helligdag", tittel "Juleferie")
 - Finnes bare «første skoledag etter [ferie]» (typisk en mandag), og ferien er en vanlig ukesferie (høstferie, vinterferie), var ferien hele uka før: mandag–fredag, med "week_nr" for den uka
 - Finnes bare «siste skoledag før [ferie]» (typisk en fredag), er ferien hele uka etter: mandag–fredag, med "week_nr" for den uka
 

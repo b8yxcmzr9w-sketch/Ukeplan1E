@@ -134,6 +134,12 @@ function dagNavn(n) {
   return ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'][n - 1]
 }
 
+// Visningstekst for school_calendar.type — databaseverdien «helligdag»
+// beholdes, men vises for brukeren som «høytid».
+function kalenderTypeNavn(t) {
+  return t === 'helligdag' ? 'høytid' : t
+}
+
 // Returnerer neste skoleår som 'YY/YY', f.eks. '25/26' → '26/27'.
 function nesteSkolear(sy) {
   if (!sy || !/^\d{2}\/\d{2}$/.test(sy)) return null
@@ -3604,7 +3610,7 @@ async function renderSkolerute(container) {
       info.appendChild(el('span', { class: 'tekst-svak', style: 'font-size:.85rem; white-space:nowrap' },
         `${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)}`))
       row.appendChild(info)
-      row.appendChild(el('span', { class: 'div-badge' }, e.type || ''))
+      row.appendChild(el('span', { class: 'div-badge' }, e.type ? kalenderTypeNavn(e.type) : ''))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett denne hendelsen fra skoleruten', onclick: async () => {
         await medLagreOverlay(() => sb.from('school_calendar').delete().eq('id', e.id))
         refresh()
@@ -3694,7 +3700,7 @@ function visNySkolerute(onSave) {
 
   const typeSel = el('select', { name: 'type', class: 'felt select' })
   for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
-    typeSel.appendChild(el('option', { value: t }, t))
+    typeSel.appendChild(el('option', { value: t }, kalenderTypeNavn(t)))
   form.appendChild(lagFormRad('Type', typeSel))
 
   const rad = el('div', { class: 'modal-bunn' })
@@ -3734,7 +3740,7 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
     rad.til = el('input', { type: 'date', class: 'felt input', value: ev.end_date })
     rad.type = el('select', { class: 'felt select' })
     for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
-      rad.type.appendChild(el('option', { value: t, ...(t === ev.type ? { selected: 'true' } : {}) }, t))
+      rad.type.appendChild(el('option', { value: t, ...(t === ev.type ? { selected: 'true' } : {}) }, kalenderTypeNavn(t)))
     rad.el = el('div', { class: 'skolerute-prev-rad' }, rad.tittel, rad.fra, rad.til, rad.type,
       el('button', { type: 'button', class: 'btn btn-ikon btn-f', title: 'Stryk denne raden',
         onclick: () => { rad.fjernet = true; rad.el.remove() } }, '🗑️'))
