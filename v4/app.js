@@ -3720,7 +3720,7 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
   const sy = APP.school?.active_school_year
   const intervall = skoleaarIntervall(sy)
   const modal = el('div', { class: 'modal-bg' })
-  const box = el('div', { class: 'modal modal-xl' })
+  const box = el('div', { class: 'modal modal-xl skolerute-prev-modal' })
   box.appendChild(el('h3', {}, `Forhåndsvisning – skolerute ${sy}`))
   box.appendChild(el('p', { class: 'tekst-svak', style: 'margin:-8px 0 14px; font-size:.9rem' },
     'Kontroller og juster radene før du lagrer. Ingenting lagres før du trykker «Lagre».'))
@@ -3739,7 +3739,7 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
   }
 
   const rader = []
-  const liste = el('div')
+  const liste = el('div', { class: 'skolerute-prev-liste' })
   liste.appendChild(el('div', { class: 'skolerute-prev-rad skolerute-prev-hode' },
     el('span', {}, 'Tittel'), el('span', {}, 'Fra'), el('span', {}, 'Til'),
     el('span', {}, 'Uke'), el('span', {}, 'Type'), el('span', {}, '')))
@@ -3768,7 +3768,6 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
   modusBoks.appendChild(el('label', {}, erstattRadio,
     `Erstatt eksisterende skolerute for skoleåret ${sy}`))
   modusBoks.appendChild(el('label', {}, leggTilRadio, 'Legg til i eksisterende skolerute'))
-  box.appendChild(modusBoks)
 
   const bunn = el('div', { class: 'modal-bunn' })
   bunn.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
@@ -3811,7 +3810,12 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
       showToast(err.message, 'error')
     }
   }}, 'Lagre'))
-  box.appendChild(bunn)
+
+  // Modus + knapper i fast bunnfelt utenfor scrollelisten — alltid synlig
+  const bunnWrap = el('div', { class: 'skolerute-prev-bunn' })
+  bunnWrap.appendChild(modusBoks)
+  bunnWrap.appendChild(bunn)
+  box.appendChild(bunnWrap)
 
   modal.appendChild(box)
   document.body.appendChild(modal)

@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: PÅGÅENDE — fire små UI/prompt-justeringer (12.06.2026)
-## Neste steg: oppgave 3 (kompaktere forhåndsvisningsmodal)
+## Neste steg: oppgave 4 (funfacts-overlay)
 
 ## Pågående runde: fire små UI/prompt-justeringer
 
@@ -15,7 +15,7 @@
 - [x] **Oppgave 2 — ukenummer i AI-forhåndsvisningen av skoleruten**
       Vis ISO-ukenummer per hendelse («uke 41»), intervall ved
       flerukers hendelser («uke 51–1»). Gjenbruk `getISOWeek`.
-- [ ] **Oppgave 3 — kompaktere forhåndsvisningsmodal**
+- [x] **Oppgave 3 — kompaktere forhåndsvisningsmodal**
       Mindre luft / smalere felt i radene; bunnlinjen med
       Avbryt/Lagre + erstatt/legg til-valget alltid synlig (sticky).
 - [ ] **Oppgave 4 — funfacts-overlay**

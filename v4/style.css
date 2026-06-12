@@ -436,10 +436,16 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
   border-radius: var(--radius); padding: 10px 14px;
   font-weight: 600; font-size: .95rem; margin: 0 0 14px;
 }
+/* Modalen er en flex-kolonne: listen scroller for seg, mens bunnfeltet
+   (erstatt/legg til + Avbryt/Lagre) alltid er synlig. */
+.skolerute-prev-modal { display: flex; flex-direction: column; overflow: hidden; }
+.skolerute-prev-liste { overflow-y: auto; flex: 1 1 auto; min-height: 0; }
 .skolerute-prev-rad {
-  display: grid; grid-template-columns: 1.4fr 1fr 1fr .55fr .9fr 44px;
-  gap: 6px; align-items: center; margin-bottom: 6px;
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr .55fr .9fr 38px;
+  gap: 6px; align-items: center; margin-bottom: 4px;
 }
+.skolerute-prev-rad .felt { margin-bottom: 0; padding: 4px 7px; font-size: .85rem; }
+.skolerute-prev-rad .btn-ikon { padding: 3px 5px; }
 .skolerute-prev-uke {
   font-size: .82rem; color: var(--tekst-svak); white-space: nowrap;
 }
@@ -447,8 +453,12 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
   font-size: .78rem; font-weight: 600; color: var(--tekst-svak);
   margin-bottom: 2px;
 }
+.skolerute-prev-bunn {
+  flex: none; border-top: 1px solid var(--kant); margin-top: 12px;
+}
+.skolerute-prev-bunn .modal-bunn { margin-top: 12px; }
 .skolerute-prev-modus {
-  display: flex; flex-direction: column; gap: 8px; margin-top: 18px;
+  display: flex; flex-direction: column; gap: 5px; margin-top: 10px;
 }
 .skolerute-prev-modus label {
   display: flex; align-items: center; gap: 8px;
