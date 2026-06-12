@@ -56,6 +56,8 @@ v4/
       011_softdelete_facts_kalender.sql # created_at/deleted_at på school_facts, deleted_at på school_calendar, purge-utvidelse (KJØRT)
       012_kalendertyper.sql       # calendar_type_enum → ferie|helligdag|planleggingsdag|annet ('fridag'-rader blir 'helligdag')
       013_testdata_2526.sql       # Testdata: komplett skoleår 25/26 (skolerute, fag m/parti+gruppe, økter uke 33–24) — idempotent, krever 012
+      014_import_npt_2526.sql     # Ekte NPT-plan 25/26 fra prod (erstatter syntetiske NPT-økter; lærermapping på fornavn)
+      015_import_nna_2526.sql     # Ekte NNA-plan 25/26 fra prod (samme mønster som 014)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini

@@ -1,7 +1,25 @@
 # PLAN — Ukeplan1E v4
 
-## Status: FULLFØRT — testdata for skoleåret 25/26 ligger i basen
-## Neste steg: verifiser i appen; ev. konverter ekte hentAlle-JSON når den foreligger
+## Status: PÅGÅENDE — import av ekte produksjonsdata 25/26
+## Neste steg: opprett lærerbrukere i adminpanelet, kjør så 014 og 015
+
+Bruker limer inn ark for ark fra dagens løsning; hvert ark blir en
+import-migrasjon som soft-sletter de syntetiske øktene for faget og
+setter inn de ekte radene. Lærermapping på fornavn mot
+users.full_name; umatchede navn får fallback-eier + «[Lærer: X]» i
+info, og re-kjøring etter brukeroppretting mapper riktig.
+
+- [x] `014_import_npt_2526.sql` — Plan_NPT (111 økter, parti p1/p2,
+      lærere Mari/Cathrine/Olav/Torill/Geir/Alle).
+- [x] `015_import_nna_2526.sql` — Plan_NNA (40 økter, torsdager,
+      lærer Oddvar; uke 25-raden er utenfor visningen uke 33–24).
+- [x] Verifisert lokalt mot PostgreSQL 16: mapping, fallback,
+      re-kjøring etter brukeroppretting, soft-delete av syntetiske.
+- [ ] MANUELT: opprett lærerne (Mari, Cathrine, Olav, Torill, Geir,
+      Oddvar) i adminpanelet → Brukere (krever auth-konto — kan ikke
+      seedes i SQL), kjør deretter 014 og 015 i SQL Editor.
+- [ ] (Venter på bruker) Plan_YFF og Plan_Fag — limes inn på samme
+      måte og blir migrasjon 016/017.
 
 Mål: gi v4 et fullt datasett å jobbe med for 25/26. Ekte data fra
 produksjonen (Google Sheets via Apps Script) kunne ikke hentes fra
