@@ -81,6 +81,17 @@ main via PR #77 — arkivert under.
 
 ## Arkiv: fullførte runder
 
+### Brukervennlige AI-varsler i skolerute-import (fullført 12.06.2026)
+- Prompten i `ai-parse-skolerute` fikk egen VARSLER-seksjon: varsler
+  skrives i klarspråk for lærere — kun hva som ble observert i
+  teksten, aldri feltnavn (week_nr o.l.), JSON, null eller «reglene»
+  (riktig/galt-eksempel ligger i prompten).
+- Sikkerhetsnett i app.js: `rensVarsel()` fjerner setninger som nevner
+  `week_nr` før visning i skolerute-forhåndsvisningen (AI-output er
+  ikke garantert). Dekker bevisst kun `week_nr` inntil videre.
+- Cache-busting bumpet til `20260612b`. Manuelt steg utført:
+  `ai-parse-skolerute` re-deployet i Supabase Dashboard 12.06.2026.
+
 ### Fire små UI/prompt-justeringer (fullført 12.06.2026, PR #77)
 - **«Helligdag» vises som «høytid»** — kun visningstekst via ny
   `kalenderTypeNavn()` (type-badge i skolerute-listen, nedtrekksmenyer

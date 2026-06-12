@@ -167,6 +167,12 @@ Andre regler:
 - Ferieperioder: sett start_date og end_date til hele perioden
 - Er du usikker på en dato, legg en kort forklaring i warnings
 
+VARSLER (warnings) — leses av vanlige brukere (lærere), ikke utviklere:
+- Beskriv KUN hva du observerte i teksten, i klarspråk
+- ALDRI nevn feltnavn (week_nr, start_date osv.), JSON, null, «reglene» eller hvilke tekniske valg du gjorde
+- Riktig: «Påskeferie er oppgitt som 'uke 14', men datoene 30. mars – 6. april strekker seg over to uker (uke 14 og 15).»
+- Galt: å legge til «'week_nr' er satt til null i henhold til reglene.»
+
 Tekst fra bruker:
 ${text}`
 }
