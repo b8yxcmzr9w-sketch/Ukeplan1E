@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: PÅGÅENDE — import av ekte produksjonsdata 25/26
-## Neste steg: opprett lærerbrukere i adminpanelet, kjør så 014 og 015
+## Neste steg: kjør 014, 015 og 016 i Supabase SQL Editor
 
 Bruker limer inn ark for ark fra dagens løsning; hvert ark blir en
 import-migrasjon som soft-sletter de syntetiske øktene for faget og
