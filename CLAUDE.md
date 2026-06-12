@@ -129,6 +129,11 @@ uke + skoleår. Mønster for alle AI-edge-functions (bygget i
   måneden (aug–des → høstår, jan–jul → vårår).
 - Alle korrigeringer og uoverensstemmelser returneres som `warnings`
   (vises i forhåndsvisningen) — aldri stille feil, aldri hard avvisning.
+- Varsler skrives i klarspråk for vanlige brukere: kun hva som ble
+  observert i teksten — aldri feltnavn (`week_nr` o.l.), JSON, null
+  eller referanser til prompt-reglene (egen VARSLER-seksjon i prompten
+  med riktig/galt-eksempel). Frontend renser i tillegg setninger som
+  nevner `week_nr` via `rensVarsel` som sikkerhetsnett.
 - Prompten klassifiserer juleferie og påskeferie som type `helligdag`
   (vises som «høytid» i UI), ikke `ferie`.
 
@@ -233,6 +238,7 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `bekreftKollegahjelp(s)` | Advarsel før redigering av annens økt |
 | `merkFellesOkter(sessions)` | Setter `_fellesMed` (klassenavn) på fellesøkter |
 | `visSkoleruteForhandsvisning(events, warnings, onSave)` | Redigerbar forhåndsvisning av AI-tolket skolerute før lagring |
+| `rensVarsel(tekst)` | Sikkerhetsnett: fjerner setninger med `week_nr` fra AI-varsler |
 | `skoleaarIntervall(sy)` | Datointervallet et skoleår dekker (1. aug år1 – 31. jul år2) |
 | `showToast(msg, type)` | Toast-melding |
 | `medLagreOverlay(fn)` | Vis lagre-overlay under async operasjon |
