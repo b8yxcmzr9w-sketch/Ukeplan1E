@@ -316,7 +316,7 @@ async function medAIOverlay(tittel, asyncFn) {
     }
     function startIntervall() {
       clearInterval(intervall)
-      intervall = setInterval(() => visNeste(true), 7000)
+      intervall = setInterval(() => visNeste(true), 10000)
     }
 
     const fakta = el('div', { class: 'ai-overlay-fakta' })
