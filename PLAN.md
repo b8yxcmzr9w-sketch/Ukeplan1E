@@ -13,13 +13,18 @@ info, og re-kjøring etter brukeroppretting mapper riktig.
       lærere Mari/Cathrine/Olav/Torill/Geir/Alle).
 - [x] `015_import_nna_2526.sql` — Plan_NNA (40 økter, torsdager,
       lærer Oddvar; uke 25-raden er utenfor visningen uke 33–24).
+- [x] `016_import_fag_2526.sql` — Plan_Fag (34 Naturfag-økter,
+      tirsdager, lærer Willy; fag-kolonnen mappes mot subjects).
 - [x] Verifisert lokalt mot PostgreSQL 16: mapping, fallback,
       re-kjøring etter brukeroppretting, soft-delete av syntetiske.
-- [ ] MANUELT: opprett lærerne (Mari, Cathrine, Olav, Torill, Geir,
-      Oddvar) i adminpanelet → Brukere (krever auth-konto — kan ikke
-      seedes i SQL), kjør deretter 014 og 015 i SQL Editor.
-- [ ] (Venter på bruker) Plan_YFF og Plan_Fag — limes inn på samme
-      måte og blir migrasjon 016/017.
+- [x] Avklart med bruker: ingen lærerbrukere opprettes — alle ekte
+      økter eies av brukerens egen konto (fallback), lærernavn
+      bevares i info som «[Lærer: X]». Re-kjøring mapper riktig om
+      brukere opprettes senere.
+- [ ] MANUELT: kjør 014, 015 og 016 i SQL Editor.
+- [ ] (Venter på bruker) Plan_YFF — limes inn på samme måte og blir
+      migrasjon 017. Syntetiske fag uten ekte motpart (norsk, matte,
+      engelsk, kroppsøving + ev. YFF) beholdes inntil videre.
 
 Mål: gi v4 et fullt datasett å jobbe med for 25/26. Ekte data fra
 produksjonen (Google Sheets via Apps Script) kunne ikke hentes fra
