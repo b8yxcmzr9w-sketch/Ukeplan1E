@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: PÅGÅENDE — fire små UI/prompt-justeringer (12.06.2026)
-## Neste steg: oppgave 2 (ukenummer i AI-forhåndsvisningen)
+## Neste steg: oppgave 3 (kompaktere forhåndsvisningsmodal)
 
 ## Pågående runde: fire små UI/prompt-justeringer
 
@@ -12,7 +12,7 @@
       skolerute-listen. I prompten i `ai-parse-skolerute`: juleferie og
       påskeferie klassifiseres som `helligdag` (minimalt tillegg —
       ikke omskriv uke-først-logikken).
-- [ ] **Oppgave 2 — ukenummer i AI-forhåndsvisningen av skoleruten**
+- [x] **Oppgave 2 — ukenummer i AI-forhåndsvisningen av skoleruten**
       Vis ISO-ukenummer per hendelse («uke 41»), intervall ved
       flerukers hendelser («uke 51–1»). Gjenbruk `getISOWeek`.
 - [ ] **Oppgave 3 — kompaktere forhåndsvisningsmodal**

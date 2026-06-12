@@ -3728,20 +3728,33 @@ function visSkoleruteForhandsvisning(events, warnings, onSave) {
     box.appendChild(el('p', { class: 'advarsel-tekst' }, `⚠️ ${warnings.join(' | ')}`))
   }
 
+  // ISO-ukenummer for en hendelse: «uke 41», eller «uke 51–1» over flere uker.
+  // Datoer parses som lokale (ikke new Date(str) = UTC) så uka ikke tipper feil.
+  function ukeTekst(fra, til) {
+    if (!fra) return ''
+    const lokal = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
+    const u1 = getISOWeek(lokal(fra))
+    const u2 = til ? getISOWeek(lokal(til)) : u1
+    return u1 === u2 ? `uke ${u1}` : `uke ${u1}–${u2}`
+  }
+
   const rader = []
   const liste = el('div')
   liste.appendChild(el('div', { class: 'skolerute-prev-rad skolerute-prev-hode' },
     el('span', {}, 'Tittel'), el('span', {}, 'Fra'), el('span', {}, 'Til'),
-    el('span', {}, 'Type'), el('span', {}, '')))
+    el('span', {}, 'Uke'), el('span', {}, 'Type'), el('span', {}, '')))
   for (const ev of events) {
     const rad = { fjernet: false }
     rad.tittel = el('input', { type: 'text', class: 'felt input', maxlength: 30, value: ev.title })
-    rad.fra = el('input', { type: 'date', class: 'felt input', value: ev.start_date })
-    rad.til = el('input', { type: 'date', class: 'felt input', value: ev.end_date })
+    rad.fra = el('input', { type: 'date', class: 'felt input', value: ev.start_date, onchange: () => visUke() })
+    rad.til = el('input', { type: 'date', class: 'felt input', value: ev.end_date, onchange: () => visUke() })
+    rad.uke = el('span', { class: 'skolerute-prev-uke' })
+    const visUke = () => { rad.uke.textContent = ukeTekst(rad.fra.value, rad.til.value) }
+    visUke()
     rad.type = el('select', { class: 'felt select' })
     for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
       rad.type.appendChild(el('option', { value: t, ...(t === ev.type ? { selected: 'true' } : {}) }, kalenderTypeNavn(t)))
-    rad.el = el('div', { class: 'skolerute-prev-rad' }, rad.tittel, rad.fra, rad.til, rad.type,
+    rad.el = el('div', { class: 'skolerute-prev-rad' }, rad.tittel, rad.fra, rad.til, rad.uke, rad.type,
       el('button', { type: 'button', class: 'btn btn-ikon btn-f', title: 'Stryk denne raden',
         onclick: () => { rad.fjernet = true; rad.el.remove() } }, '🗑️'))
     rader.push(rad)
