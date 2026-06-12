@@ -3,8 +3,11 @@
 -- Kjør i Supabase SQL Editor — slår opp ID-er dynamisk og er
 -- idempotent (kan kjøres flere ganger uten duplikater).
 --
--- Forutsetning: minst én bruker (lærer) finnes på skolen — økter
--- krever teacher_id som peker på auth.users og kan ikke seedes her.
+-- Forutsetninger:
+--   • Migrasjon 012 (kalendertyper) er kjørt — skoleruten bruker
+--     typene helligdag/planleggingsdag.
+--   • Minst én bruker (lærer) finnes på skolen — økter krever
+--     teacher_id som peker på auth.users og kan ikke seedes her.
 --
 -- Innhold:
 --   • Skolerute 25/26 (Rogaland-datoer: høstferie uke 41, juleferie,

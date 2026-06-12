@@ -9,14 +9,24 @@ skymiljøet (nettverkspolicyen blokkerer script.google.com), så runden
 leverer realistisk seed-data i stedet. Bruker leverer ev. ekte
 `hentAlle`-JSON senere — da konverteres den i en egen runde.
 
-- [x] Seed-migrasjon `012_testdata_2526.sql`: skolerute 25/26
+- [x] Migrasjon `012_kalendertyper.sql`: live-enumen hadde fortsatt
+      001-verdiene (ferie|fridag|annet) — oppdaget ved at 013 feilet i
+      SQL Editor. Gjenskaper calendar_type_enum med
+      ferie|helligdag|planleggingsdag|annet ('fridag'-rader →
+      'helligdag'); rename→create→konverter→drop fordi ADD VALUE ikke
+      kan tas i bruk i samme transaksjon.
+- [x] Seed-migrasjon `013_testdata_2526.sql`: skolerute 25/26
       (riktige datoer for ferier/høytider), fag NPT (parti P1/P2),
       NNA, YFF (gruppe 1/2) + fellesfag, økter for hele skoleåret
       (uke 33–24, hopper over fridager), flerdagshendelser og
       funfacts. Idempotent — kan kjøres flere ganger.
-- [x] CLAUDE.md: migrasjonsliste oppdatert med 012.
-- [ ] MANUELT: kjør 012 i Supabase SQL Editor (krever minst én
-      eksisterende bruker/lærer på skolen — økter trenger teacher_id).
+- [x] CLAUDE.md: migrasjonsliste oppdatert med 012 og 013.
+- [x] Begge migrasjoner verifisert lokalt mot PostgreSQL 16 med
+      live-speilet skjema (gammel enum), kjørt i én transaksjon som
+      SQL Editor gjør.
+- [ ] MANUELT: kjør 012, deretter 013, i Supabase SQL Editor (013
+      krever minst én eksisterende bruker/lærer på skolen — økter
+      trenger teacher_id).
 - [ ] (Venter på bruker) Ekte data: kjør
       `curl -sL -X POST '<SCRIPT_URL>' -d '{"action":"hentAlle"}'`
       lokalt og legg JSON-en i repoet — så konverteres den til SQL.
