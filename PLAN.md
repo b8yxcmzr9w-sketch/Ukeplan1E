@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PÅGÅENDE — testdata for skoleåret 25/26
-## Neste steg: kjør migrasjon 012 i Supabase SQL Editor
+## Status: FULLFØRT — testdata for skoleåret 25/26 ligger i basen
+## Neste steg: verifiser i appen; ev. konverter ekte hentAlle-JSON når den foreligger
 
 Mål: gi v4 et fullt datasett å jobbe med for 25/26. Ekte data fra
 produksjonen (Google Sheets via Apps Script) kunne ikke hentes fra
@@ -24,9 +24,8 @@ leverer realistisk seed-data i stedet. Bruker leverer ev. ekte
 - [x] Begge migrasjoner verifisert lokalt mot PostgreSQL 16 med
       live-speilet skjema (gammel enum), kjørt i én transaksjon som
       SQL Editor gjør.
-- [ ] MANUELT: kjør 012, deretter 013, i Supabase SQL Editor (013
-      krever minst én eksisterende bruker/lærer på skolen — økter
-      trenger teacher_id).
+- [x] MANUELT: 012 og 013 kjørt i Supabase SQL Editor (bekreftet av
+      bruker 12.06.2026).
 - [ ] (Venter på bruker) Ekte data: kjør
       `curl -sL -X POST '<SCRIPT_URL>' -d '{"action":"hentAlle"}'`
       lokalt og legg JSON-en i repoet — så konverteres den til SQL.
