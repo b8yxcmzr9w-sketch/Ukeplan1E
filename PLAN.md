@@ -5,6 +5,26 @@
 ##   (uke-først-runden er ferdig kodet; bruker meldte «Ferdig» 12.06.2026
 ##   etter manuell re-deploy av ai-parse-skolerute)
 
+## Gjenstående manuelle steg (ubekreftede — fra tidligere runder)
+
+- [ ] Migrasjon 011 (`011_softdelete_facts_kalender.sql`) kjørt i
+      SQL Editor? Kreves FØR frontend fra Del A/B/C brukes —
+      `deleted_at`-filtrene forutsetter at kolonnene finnes.
+- [ ] Edge-funksjonen `generate-facts` re-deployet? (Skolenøytral
+      funfacts-generering fra oppgave 1–8; verifiser med
+      «✨ Generer med AI» i Funfacts-fanen.)
+
+Kryss av / stryk når de er bekreftet utført i Supabase Dashboard.
+
+## Opprydding: foreldede brancher på origin
+
+Branchene `claude/favicon-fix`, `claude/margins-layout`,
+`claude/remember-tab` og `claude/snapshot-radio-fix` ligger uemerget
+med gamle commits (refererer bl.a. til PROMPT.md, som er erstattet av
+CLAUDE.md) — trolig fra før historikken ble bygget om. Innholdet
+finnes i main i ny form. Anbefaling: slett dem på GitHub etter en
+rask visuell sjekk.
+
 Forrige runde (uke-først og årsforankring i `ai-parse-skolerute`,
 inkl. retningsbestemt milepæl-tolkning) er fullført — arkivert under.
 
@@ -74,6 +94,10 @@ fullført og merget til main: sporbarhet (migrasjon 007), skolenøytrale
 funfacts, fridagsblokkering (`finnFridag`), kollegahjelp (migrasjon
 008), rollegrenser i databasen (migrasjon 009), fellesundervisning
 (migrasjon 010), elevtilgang (avklart, ingen endring) og
-konflikthåndtering med navngitt varsel. Migrasjon 004–010 er kjørt;
+konflikthåndtering med navngitt varsel. I samme runde ble
+kallGemini-mønsteret fra appsscript.gs (retry ved 503/429,
+thought-filtrering, feilhåndtering) portet som identisk hjelpefunksjon
+til alle tre AI-edge-functions (generate-facts, ai-parse-sessions,
+ai-parse-skolerute). Migrasjon 004–010 er kjørt;
 `GEMINI_API_KEY` er satt og `006_fix_school_facts_rls.sql` bekreftet
 kjørt i prod.
