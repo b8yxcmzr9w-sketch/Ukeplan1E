@@ -1,7 +1,39 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PÅGÅENDE — import av ekte produksjonsdata 25/26 (NPT/NNA/Naturfag i basen)
-## Neste steg: Plan_YFF limes inn → migrasjon 017
+## Status: PÅGÅENDE — fridager/flerdagshendelser i ukenettet (UI-runde)
+## Neste steg: Godkjenn planen nedenfor, så starter implementasjonen
+
+### Runde: Ny visning av skolerute og flerdagshendelser i ukenettet
+
+**Scope:** Kun frontend — `v4/app.js` og `v4/style.css`. Ingen DB-endringer.
+
+**Delsteg 1 — Fjern topbannerne** [x]
+- Fjernet blokk i `renderElevView` (linje ~1027–1043) som rendret
+  `ferie-banner` og `fdag-banner` over ukenettet.
+
+**Delsteg 2 — Bedre fridagsfarge (style.css)** [x]
+- `--fridag-bg: #FAEEDA` og `--fridag-tekst: #633806` lagt til i `:root`.
+- `.day-col--holiday` får nå `background: var(--fridag-bg)`.
+- `.dag-tittel` og `.holiday-label` bruker `var(--fridag-tekst)`.
+
+**Delsteg 3 — Flerdagsbjelke-rad øverst i ukenettet** [x]
+- Ny CSS: `.fdag-bjelke-rad` (5-kol grid, mobilfallback: flex-col)
+  og `.fdag-bjelke` med fridag-farger og `grid-column: X / Y`.
+- Ny hjelpefunksjon `renderFlerdagsBjelkeRad` beregner kolonne-span
+  og returnerer DOM-element (null om tom).
+- `renderElevView`: query fikset med `or(class_id.eq.X,class_id.is.null)` +
+  `school_id`/`deleted_at`-filter; bjelke-rad satt inn over grid.
+- `renderMinKlasseTab`: lagt til henting av calEvents og multiDayEventsL,
+  datoer vist i dag-tittel, holiday-labels i kolonner, bjelke-rad over grid.
+
+**Delsteg 4 — Bump `?v=`, commit og push** [x]
+- Bumped til `?v=20260614b` i `v4/index.html`.
+- Commit og push til `claude/modest-clarke-dukmy0`.
+
+---
+
+## Status: VENTER — import av ekte produksjonsdata 25/26 (NPT/NNA/Naturfag i basen)
+## Neste steg (etter UI-runden): Plan_YFF limes inn → migrasjon 017
 
 Bruker limer inn ark for ark fra dagens løsning; hvert ark blir en
 import-migrasjon som soft-sletter de syntetiske øktene for faget og
