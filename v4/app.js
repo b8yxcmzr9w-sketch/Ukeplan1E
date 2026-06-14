@@ -974,7 +974,9 @@ async function renderElevView(klasseNavn) {
 
     const { data: multiDayEvents } = await sb.from('multi_day_events')
       .select('*')
-      .eq('class_id', klasse.id)
+      .is('deleted_at', null)
+      .eq('school_id', APP.school.id)
+      .or(`class_id.eq.${klasse.id},class_id.is.null`)
       .lte('start_date', wEnd)
       .gte('end_date', wStart)
 
@@ -1024,24 +1026,6 @@ async function renderElevView(klasseNavn) {
     navRow.appendChild(icalBtn)
     wc.appendChild(navRow)
 
-    // Holiday banners
-    if (calEvents) {
-      for (const evt of calEvents) {
-        const banner = el('div', { class: 'ferie-banner' },
-          `${evt.title} (${formatDatoNO(evt.start_date)} – ${formatDatoNO(evt.end_date)})`)
-        wc.appendChild(banner)
-      }
-    }
-
-    // Multi-day event banners
-    if (multiDayEvents) {
-      for (const mde of multiDayEvents) {
-        const banner = el('div', { class: 'fdag-banner' },
-          `${mde.title}: ${truncate(mde.description || '', 80)} (${formatDatoNO(mde.start_date)} – ${formatDatoNO(mde.end_date)})`)
-        wc.appendChild(banner)
-      }
-    }
-
     // Filter bar
     const { data: divisions } = await sb.from('subject_divisions')
       .select('*, subjects!inner(class_id)')
@@ -1063,6 +1047,11 @@ async function renderElevView(klasseNavn) {
       filterBar.appendChild(filterSel)
       wc.appendChild(filterBar)
     }
+
+    // Flerdagsbjelke-rad
+    const weekDates = Array.from({length: 5}, (_, i) => isoWeekToDate(visKalenderaar, weekNr, i + 1).toISOString().slice(0, 10))
+    const bjelkeRad = renderFlerdagsBjelkeRad(weekDates, multiDayEvents)
+    if (bjelkeRad) wc.appendChild(bjelkeRad)
 
     // Week grid
     const grid = el('div', { class: 'uke-grid' })
@@ -1109,6 +1098,32 @@ async function renderElevView(klasseNavn) {
   }
 
   await renderUke(currentWeek)
+}
+
+// Bygg "all-day"-rad med horisontale bjelker for flerdagshendelser.
+// weekDates: array med 5 dato-strenger ['2026-02-23', ..., '2026-02-27'] (man→fre).
+// Returnerer et DOM-element, eller null om ingen hendelser.
+function renderFlerdagsBjelkeRad(weekDates, multiDayEvents) {
+  if (!multiDayEvents || !multiDayEvents.length) return null
+  const rad = el('div', { class: 'fdag-bjelke-rad' })
+  for (const mde of multiDayEvents) {
+    // Finn første synlige dag (startkolonne 1–5)
+    let startCol = 1
+    for (let i = 0; i < 5; i++) {
+      if (mde.start_date <= weekDates[i]) { startCol = i + 1; break }
+    }
+    // Finn siste synlige dag (endkolonne 2–6, eksklusiv)
+    let endCol = 6
+    for (let i = 4; i >= 0; i--) {
+      if (mde.end_date >= weekDates[i]) { endCol = i + 2; break }
+    }
+    rad.appendChild(el('div', {
+      class: 'fdag-bjelke',
+      style: `grid-column: ${startCol} / ${endCol}`,
+      title: mde.title
+    }, mde.title))
+  }
+  return rad.children.length ? rad : null
 }
 
 function renderSessionCard(s, showActions, actions = {}) {
@@ -1472,6 +1487,21 @@ async function renderMinKlasseTab(container) {
     await merkFellesOkter(sessions)
     if (myToken !== ukeRenderToken) return
 
+    // Hent skolerute og flerdagshendelser for uka
+    const visKalenderaarL = skoleaarKalenderaar(valgtSkolear, currentWeek, APP.school?.school_year_start_week)
+    const weekStartL = isoWeekToDate(visKalenderaarL, currentWeek, 1).toISOString().slice(0, 10)
+    const weekEndL = isoWeekToDate(visKalenderaarL, currentWeek, 5).toISOString().slice(0, 10)
+    const [{ data: calEvents }, { data: multiDayEventsL }] = await Promise.all([
+      sb.from('school_calendar').select('*').is('deleted_at', null)
+        .eq('school_id', APP.school.id)
+        .lte('start_date', weekEndL).gte('end_date', weekStartL),
+      sb.from('multi_day_events').select('*').is('deleted_at', null)
+        .eq('school_id', APP.school.id)
+        .or(`class_id.eq.${aktivKlasse.id},class_id.is.null`)
+        .lte('start_date', weekEndL).gte('end_date', weekStartL)
+    ])
+    if (myToken !== ukeRenderToken) return
+
     // Bulk edit bar
     const bulkBar = el('div', { class: 'bulk-bar', style: 'display:none' })
     const bulkCount = el('span', {}, '0 valgt')
@@ -1500,7 +1530,18 @@ async function renderMinKlasseTab(container) {
     const grid = el('div', { class: 'uke-grid' })
     for (let dag = 1; dag <= 5; dag++) {
       const dayCol = el('div', { class: 'dag-kol' })
-      dayCol.appendChild(el('div', { class: 'dag-tittel' }, dagNavn(dag)))
+      const dateForDayL = isoWeekToDate(visKalenderaarL, currentWeek, dag)
+      const dayStrL = dateForDayL.toISOString().slice(0, 10)
+      const dayHeader = el('div', { class: 'dag-tittel' })
+      dayHeader.appendChild(document.createTextNode(dagNavn(dag)))
+      dayHeader.appendChild(el('span', { class: 'dag-dato' }, ` ${formatDatoNO(dayStrL)}`))
+      dayCol.appendChild(dayHeader)
+
+      const dayHoliday = (calEvents || []).find(e => e.start_date <= dayStrL && e.end_date >= dayStrL && e.type === 'helligdag')
+      if (dayHoliday) {
+        dayCol.classList.add('day-col--holiday')
+        dayCol.appendChild(el('div', { class: 'holiday-label' }, dayHoliday.title))
+      }
 
       let daySessions = (sessions || []).filter(s => s.day_of_week === dag)
       daySessions.sort((a, b) => (a.subjects?.name || '').localeCompare(b.subjects?.name || '', 'nb'))
@@ -1541,6 +1582,10 @@ async function renderMinKlasseTab(container) {
 
       grid.appendChild(dayCol)
     }
+
+    const weekDatesL = Array.from({length: 5}, (_, i) => isoWeekToDate(visKalenderaarL, currentWeek, i + 1).toISOString().slice(0, 10))
+    const bjelkeRadL = renderFlerdagsBjelkeRad(weekDatesL, multiDayEventsL)
+    if (bjelkeRadL) weekArea.appendChild(bjelkeRadL)
     weekArea.appendChild(grid)
 
     if (APP.realtimeChannel) sb.removeChannel(APP.realtimeChannel)

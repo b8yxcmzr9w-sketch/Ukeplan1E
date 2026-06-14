@@ -31,6 +31,8 @@ main { flex: 1; overflow-x: hidden; }
   --økt-kant:     var(--primær-lys);
   --badge-bg:     var(--primær-svak);
   --badge-tekst:  var(--primær);
+  --fridag-bg:    #FAEEDA;
+  --fridag-tekst: #633806;
 }
 
 /* ── Tema: lys (blå-teal) ───────────────────────────────────────── */
@@ -184,6 +186,26 @@ header .spacer { flex: 1; }
   padding: 7px 10px; border: 1px solid var(--kant);
   border-radius: var(--radius); font-size: .9rem;
   background: var(--bg-kort); color: var(--tekst); cursor: pointer;
+}
+
+/* ── Flerdagsbjelke-rad (over ukenettet) ────────────────────────── */
+.fdag-bjelke-rad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  padding: 8px 20px 0;
+}
+.fdag-bjelke {
+  background: var(--fridag-bg);
+  color: var(--fridag-tekst);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font-size: .82rem;
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* ── Uke-rutenett ───────────────────────────────────────────────── */
@@ -629,6 +651,8 @@ tr:hover td { background: var(--primær-svak); }
   .nav-bar    { padding: 10px 12px 0; }
   .bulk-bar   { margin: 0 12px 10px; }
   .fdag-banner, .ferie-banner { margin: 8px 12px; }
+  .fdag-bjelke-rad { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 0; }
+  .fdag-bjelke { white-space: normal; }
   .side-wrap  { padding: 16px 16px 40px; }
   .kort       { padding: 14px; }
   .login-kort { padding: 20px; }
@@ -727,9 +751,10 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 .btn-lenke:hover { opacity: .75; }
 .dato-grp { display: flex; flex-direction: column; gap: 4px; }
 .dato-grp input, .dato-grp select { width: 100%; }
-.day-col--holiday .dag-tittel { color: var(--advarsel); }
+.day-col--holiday { background: var(--fridag-bg); }
+.day-col--holiday .dag-tittel { color: var(--fridag-tekst); }
 .day-col--holiday .dag-okter { opacity: .5; pointer-events: none; }
-.holiday-label { font-size: .78rem; color: var(--advarsel); font-weight: 600; margin-top: 4px; }
+.holiday-label { font-size: .78rem; color: var(--fridag-tekst); font-weight: 600; margin-top: 4px; }
 .info-tekst { font-size: .88rem; color: var(--tekst-svak); line-height: 1.5; }
 .tegnteller { font-size: .78rem; color: var(--tekst-svak); text-align: right; margin-top: 2px; }
 .tekst { font-size: .92rem; line-height: 1.5; }

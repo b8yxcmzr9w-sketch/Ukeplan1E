@@ -7,42 +7,28 @@
 
 **Scope:** Kun frontend — `v4/app.js` og `v4/style.css`. Ingen DB-endringer.
 
-**Delsteg 1 — Fjern topbannerne** [ ]
-- I `renderElevView` (app.js linje ~1027–1043): fjern blokken som rendrer
+**Delsteg 1 — Fjern topbannerne** [x]
+- Fjernet blokk i `renderElevView` (linje ~1027–1043) som rendret
   `ferie-banner` og `fdag-banner` over ukenettet.
-- `.ferie-banner` og `.fdag-banner` i style.css beholdes midlertidig
-  (kan fjernes i en cleanup-runde).
 
-**Delsteg 2 — Bedre fridagsfarge (style.css)** [ ]
-- Legg til CSS-variabler øverst i `:root`-blokken:
-  `--fridag-bg: #FAEEDA` og `--fridag-tekst: #633806`
-- Oppdater `.day-col--holiday`: legg til `background: var(--fridag-bg)`
-- Oppdater `.day-col--holiday .dag-tittel`: bytt fra `var(--advarsel)`
-  til `var(--fridag-tekst)`
-- Oppdater `.holiday-label`: bytt fra `var(--advarsel)` til
-  `var(--fridag-tekst)`
+**Delsteg 2 — Bedre fridagsfarge (style.css)** [x]
+- `--fridag-bg: #FAEEDA` og `--fridag-tekst: #633806` lagt til i `:root`.
+- `.day-col--holiday` får nå `background: var(--fridag-bg)`.
+- `.dag-tittel` og `.holiday-label` bruker `var(--fridag-tekst)`.
 
-**Delsteg 3 — Flerdagsbjelke-rad øverst i ukenettet** [ ]
-- Ny CSS-klasse `.fdag-bjelke-rad` (CSS grid, 5 kolonner, skjult når tom)
-  og `.fdag-bjelke` (horisontal bjelke med `--fridag-bg`/`--fridag-tekst`,
-  `grid-column: X / Y`).
-- Ny hjelpefunksjon `renderFlerdagsBjelkeRad(weekDates, multiDayEvents)`
-  i app.js som:
-  - Beregner grid-kolonne-span for hvert event (klipper til man–fre)
-  - Returnerer et ferdig DOM-element (eller null om ingen events)
-- `renderElevView`:
-  - Fix multiDayEvents-query: `or('class_id.eq.' + klasse.id + ',class_id.is.null')`
-    slik at skoleomfattende (NULL) events inkluderes
-  - Kall `renderFlerdagsBjelkeRad` rett FØR `.uke-grid`, sett inn i DOM
-- `renderMinKlasseTab` / `renderUke`:
-  - Legg til henting av `calEvents` og `multiDayEvents` (samme queries
-    som i renderElevView, inkl. NULL-fix)
-  - Legg til holiday labels i dag-kolonner (slik renderElevView gjør det)
-  - Kall `renderFlerdagsBjelkeRad` rett FØR `.uke-grid`
+**Delsteg 3 — Flerdagsbjelke-rad øverst i ukenettet** [x]
+- Ny CSS: `.fdag-bjelke-rad` (5-kol grid, mobilfallback: flex-col)
+  og `.fdag-bjelke` med fridag-farger og `grid-column: X / Y`.
+- Ny hjelpefunksjon `renderFlerdagsBjelkeRad` beregner kolonne-span
+  og returnerer DOM-element (null om tom).
+- `renderElevView`: query fikset med `or(class_id.eq.X,class_id.is.null)` +
+  `school_id`/`deleted_at`-filter; bjelke-rad satt inn over grid.
+- `renderMinKlasseTab`: lagt til henting av calEvents og multiDayEventsL,
+  datoer vist i dag-tittel, holiday-labels i kolonner, bjelke-rad over grid.
 
-**Delsteg 4 — Bump `?v=`, commit og push** [ ]
-- Bump `?v=20260614a` i `v4/index.html` (CSS og JS)
-- Commit per delsteg, push til `claude/modest-clarke-dukmy0`
+**Delsteg 4 — Bump `?v=`, commit og push** [x]
+- Bumped til `?v=20260614b` i `v4/index.html`.
+- Commit og push til `claude/modest-clarke-dukmy0`.
 
 ---
 
