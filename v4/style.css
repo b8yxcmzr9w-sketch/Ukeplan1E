@@ -579,6 +579,7 @@ tr:hover td { background: var(--primær-svak); }
 
 /* ── Session-wrapper (kort + avkrysning) ─────────────────────────── */
 .session-wrapper { display: flex; align-items: flex-start; gap: 6px; }
+.session-wrapper .okt-kort { flex: 1; min-width: 0; }
 .session-cb { margin-top: 6px; cursor: pointer; flex-shrink: 0; }
 
 /* ── Økt-kort sub-elementer ──────────────────────────────────────── */
