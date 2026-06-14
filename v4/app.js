@@ -130,6 +130,11 @@ function getCurrentISOWeek() {
   return getISOWeek(now)
 }
 
+// Lineær posisjon i skoleåret (33→52→1→24). Brukes for grensesjekk på uke-navigasjon.
+function ukePosisjon(uke, startWeek = 33) {
+  return uke >= startWeek ? uke - startWeek : uke + (52 - startWeek)
+}
+
 function dagNavn(n) {
   return ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'][n - 1]
 }
@@ -983,23 +988,24 @@ async function renderElevView(klasseNavn) {
     // Week navigation
     const navRow = el('div', { class: 'nav-bar' })
     const prevBtn = el('button', { class: 'btn btn-s', title: 'Gå til forrige uke', onclick: () => {
-      if (weekNr > schoolStart) { currentWeek = weekNr - 1; renderUke(currentWeek) }
+      if (ukePosisjon(weekNr, schoolStart) > 0) { currentWeek = weekNr === 1 ? 52 : weekNr - 1; renderUke(currentWeek) }
     }}, '← Forrige uke')
-    if (weekNr <= schoolStart) prevBtn.setAttribute('disabled', 'true')
+    if (ukePosisjon(weekNr, schoolStart) === 0) prevBtn.setAttribute('disabled', 'true')
 
     const weekInput = el('input', { type: 'number', class: 'uke-nr-input', value: weekNr,
       title: 'Skriv inn ukenummer og trykk Enter',
-      min: schoolStart, max: schoolEnd,
+      min: 1, max: 52,
       onchange: (e) => {
         const v = parseInt(e.target.value)
-        if (v >= schoolStart && v <= schoolEnd) { currentWeek = v; renderUke(currentWeek) }
+        const p = ukePosisjon(v, schoolStart)
+        if (p >= 0 && p <= ukePosisjon(schoolEnd, schoolStart)) { currentWeek = v; renderUke(currentWeek) }
       }
     })
 
     const nextBtn = el('button', { class: 'btn btn-s', title: 'Gå til neste uke', onclick: () => {
-      if (weekNr < schoolEnd) { currentWeek = weekNr + 1; renderUke(currentWeek) }
+      if (ukePosisjon(weekNr, schoolStart) < ukePosisjon(schoolEnd, schoolStart)) { currentWeek = weekNr === 52 ? 1 : weekNr + 1; renderUke(currentWeek) }
     }}, 'Neste uke →')
-    if (weekNr >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
+    if (ukePosisjon(weekNr, schoolStart) >= ukePosisjon(schoolEnd, schoolStart)) nextBtn.setAttribute('disabled', 'true')
 
     const naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)
     const naaBtn = el('button', { class: 'btn btn-s', title: 'Gå til gjeldende uke', onclick: () => {
@@ -1409,14 +1415,14 @@ async function renderMinKlasseTab(container) {
 
     const navRow = el('div', { class: 'nav-bar' })
     const prevBtn = el('button', { class: 'btn btn-s', title: 'Gå til forrige uke', onclick: () => {
-      if (currentWeek > schoolStart) { currentWeek--; renderUke() }
+      if (ukePosisjon(currentWeek, schoolStart) > 0) { currentWeek = currentWeek === 1 ? 52 : currentWeek - 1; renderUke() }
     }}, '← Forrige')
-    if (currentWeek <= schoolStart) prevBtn.setAttribute('disabled', 'true')
+    if (ukePosisjon(currentWeek, schoolStart) === 0) prevBtn.setAttribute('disabled', 'true')
 
     const nextBtn = el('button', { class: 'btn btn-s', title: 'Gå til neste uke', onclick: () => {
-      if (currentWeek < schoolEnd) { currentWeek++; renderUke() }
+      if (ukePosisjon(currentWeek, schoolStart) < ukePosisjon(schoolEnd, schoolStart)) { currentWeek = currentWeek === 52 ? 1 : currentWeek + 1; renderUke() }
     }}, 'Neste →')
-    if (currentWeek >= schoolEnd) nextBtn.setAttribute('disabled', 'true')
+    if (ukePosisjon(currentWeek, schoolStart) >= ukePosisjon(schoolEnd, schoolStart)) nextBtn.setAttribute('disabled', 'true')
 
     const weekInput = el('input', { type: 'number', class: 'uke-nr-input', value: currentWeek,
       title: 'Skriv inn ukenummer og trykk Enter',
