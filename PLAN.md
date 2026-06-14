@@ -21,18 +21,36 @@ Ingen DB-endringer (verifisert: `division_id` finnes allerede på `sessions`).
 ---
 
 **Delsteg 1 — Filter-UI i elevvisningen** [ ]
+
+_Layout-beslutninger (godkjent):_
+- **Badge** i nav-baren etter «Nå»: viser `● Filtrert: P1` (eller lignende) når
+  filter er aktivt; nøytral/skjult ellers. Klikk åpner/lukker filterpanelet.
+- **Filterpanelet** som egen rad rett under nav-baren; **kollapset som standard**.
+  Åpnes/lukkes av badge-knappen. Tar ingen plass når ubrukt.
+- **`[...]`-knapp** i nav-baren (etter badge) erstatter frittstående
+  «Skriv ut»- og «iCal»-knapper. Åpner liten dropdown med to valg:
+  «🖨️ Skriv ut» og «📅 iCal-abonnement». Lukkes ved klikk utenfor.
+  Begrunnelse: print/iCal er sjeldne engangshendelser; badge er hyppig →
+  badge beholder linje 1 på alle skjermstørrelser.
+
+_Implementasjon:_
 - Hev `aktivtSkolear` ut av `renderUke` og inn i `renderElevView`-scope.
 - Etter at `klasse` er bekreftet: hent distinkte `subject_divisions` som faktisk
   forekommer i klassens sessions (aktiv skoleår, `division_id IS NOT NULL`).
   Grupper per fag (`subjects.name`).
 - Hent filter fra localStorage, nøkkel `ukeplan_elevfilter_<klassenavn>`.
   Format: JSON-array av valgte division-UUIDs, tom array = vis alt.
-- Opprett `#elev-filter`-div (utenfor `#week-container`) og render filterpanel:
-  - Kun synlig dersom klassen faktisk har delte fag.
-  - Avkrysningsbokser gruppert per fag: «NPT: ☑ P1 ☑ P2».
-  - Aktivt-indikator (`.elev-filter-aktiv`-badge) + «Vis alt»-knapp.
+- Opprett `#elev-filter`-container (utenfor `#week-container`), inneholder:
+  - Skjult filterpanel (`.elev-filter-panel`, `display:none` som standard).
+  - Panelet vises kun dersom klassen faktisk har delte fag.
+  - Sjekkbokser gruppert per fag: «NPT: ☑ P1 ☑ P2   NNA: ☐ G1 ☐ G2».
+  - «Vis alt»-knapp i panelet som nullstiller alle valg.
   - Endring lagrer til localStorage og kaller `renderUke(currentWeek)`.
-- Fjern gammel defekt `filter-bar` / `filterSel` fra `renderUke`.
+- **Fjern** gammel defekt `filter-bar`/`filterSel` fra `renderUke` (linje
+  1030–1049) — slettes helt, ingen videreføring.
+- Legg badge-knapp og `[...]`-knapp inn i nav-baren i `renderUke` (etter Nå).
+  `[...]`-dropdown: absolutt-posisjonert under knappen, to lenker/knapper,
+  lukkes ved `click`-event utenfor.
 - Endre filterlogikk i `renderUke`:
   ```js
   if (valgteDivisjoner.size > 0) {
@@ -40,8 +58,10 @@ Ingen DB-endringer (verifisert: `division_id` finnes allerede på `sessions`).
       s.division_id === null || valgteDivisjoner.has(s.division_id))
   }
   ```
-- `style.css`: legg til `.elev-filter-panel` (flex-wrap, kompakt), `.elev-filter-aktiv`
-  (liten badge), og legg `.elev-filter-panel` i print-skjullisten.
+- `style.css`: legg til `.elev-filter-panel` (flex, flex-wrap, kompakt padding),
+  `.elev-filter-badge` (liten farget badge), `.elev-overflow-menu`
+  (absolutt-posisjonert dropdown); legg `.elev-filter-panel` og
+  `.elev-overflow-menu` i print-skjullisten.
 
 **Delsteg 2 — Utskrift** [ ]
 - Filtrering skjer i DOM (sessions som ikke rendres, finnes ikke i DOM) →
