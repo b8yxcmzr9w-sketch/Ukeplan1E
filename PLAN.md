@@ -113,8 +113,8 @@ main via PR #77 — arkivert under.
 
 ---
 
-## Status: PLAN KLAR — Skolerute per skoleår i admin-fanen
-## Neste steg: Godkjenn planen nedenfor, så starter implementasjonen
+## Status: FULLFØRT — Skolerute per skoleår i admin-fanen
+## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
 
 ### Runde: Skolerute per skoleår (velger + filtrering + AI + erstatt)
 
@@ -123,7 +123,7 @@ main via PR #77 — arkivert under.
 **Verifisert:** `ai-parse-skolerute` tar allerede imot `school_year` i request-body
 (linje 184: `const { text, school_year } = await req.json()`). Ingen redeploy nødvendig.
 
-**Delsteg 1 — Årvelger i `renderSkolerute`** [ ]
+**Delsteg 1 — Årvelger i `renderSkolerute`** [x]
 - Legg til `let valgtSkolear = APP.school?.active_school_year` utenfor `refresh`-funksjonen
   (beholdes mellom re-renders).
 - Legg en `<select>`-velger med to options øverst i `wrap`: aktivt år (forvalgt) og neste år
@@ -131,32 +131,32 @@ main via PR #77 — arkivert under.
 - `onchange` på velgeren setter `valgtSkolear` og kaller `refresh()`.
 - Bannerteksten viser `valgtSkolear` (ikke hardkodet aktivt år).
 
-**Delsteg 2 — Filtrert liste** [ ]
+**Delsteg 2 — Filtrert liste** [x]
 - DB-spørringen i `refresh()` filtreres til valgt årsintervall:
   `.gte('start_date', intervall.fra).lte('start_date', intervall.til)`,
   der `intervall = skoleaarIntervall(valgtSkolear)`.
 - Ingen endring i DB — kun klientsidefiltrering via spørringsparameter.
 
-**Delsteg 3 — AI-import sender valgt år** [ ]
+**Delsteg 3 — AI-import sender valgt år** [x]
 - I `sb.functions.invoke('ai-parse-skolerute', ...)`: bytt `school_year: sy`
   til `school_year: valgtSkolear` (ca. linje 3698 i nåværende kode).
 - Feiltekst «Aktivt skoleår mangler» erstattes med «Skoleår mangler».
 
-**Delsteg 4 — `visSkoleruteForhandsvisning` tar valgt år som parameter** [ ]
+**Delsteg 4 — `visSkoleruteForhandsvisning` tar valgt år som parameter** [x]
 - Endre signatur til `visSkoleruteForhandsvisning(events, warnings, onSave, skolear)`.
 - `const sy = skolear || APP.school?.active_school_year` — bakoverkompatibel.
 - Tittel (`Forhåndsvisning – skolerute ${sy}`), erstatt-tekst og erstatt-intervall
   bruker nå `sy` (valgt år i stedet for alltid aktivt).
 - Kallet i `renderSkolerute` oppdateres med `valgtSkolear` som fjerde argument.
 
-**Delsteg 5 — `visNySkolerute` tar valgt år + advarsel utenfor intervall** [ ]
+**Delsteg 5 — `visNySkolerute` tar valgt år + advarsel utenfor intervall** [x]
 - Endre signatur til `visNySkolerute(onSave, skolear)`.
 - Live-advarsel (ikke hard blokkering) under dato-radene dersom fra-dato er
   utenfor `skoleaarIntervall(skolear)`: «NB: Datoen er utenfor skoleåret XX/YY».
 - Advarsel oppdateres på `onchange` på fra-dato-feltet.
 - Kallet i `renderSkolerute` oppdateres til `visNySkolerute(refresh, valgtSkolear)`.
 
-**Delsteg 6 — Bump `?v=`, commit og push** [ ]
+**Delsteg 6 — Bump `?v=`, commit og push** [x]
 - Bump cache-busting til `?v=20260614c` (eller høyere) i `v4/index.html`.
 - Commit per delsteg etter hvert som de fullføres.
 - Push til `claude/brave-ptolemy-mshpbz`.

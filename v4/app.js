@@ -3636,22 +3636,43 @@ async function visSlettBrukerModal(user, onSave) {
 }
 
 async function renderSkolerute(container) {
+  let valgtSkolear = APP.school?.active_school_year
+
   async function refresh() {
     clearEl(container)
     const wrap = el('div', { class: 'skjema-smal' })
-    const { data: events } = await sb.from('school_calendar').select('*')
-      .is('deleted_at', null).order('start_date')
     wrap.appendChild(el('h3', {}, 'Skolerute'))
 
-    // Tydelig hvilket skoleår skoleruten gjelder
-    const sy = APP.school?.active_school_year
-    const intervall = skoleaarIntervall(sy)
+    // Skoleår-velger (aktivt år + neste år, alltid synlig)
+    const aktivtSy = APP.school?.active_school_year
+    const nesteSy = nesteSkolear(aktivtSy)
+    const velgerRad = el('div', { style: 'display:flex; align-items:center; gap:8px; margin-bottom:10px' })
+    const velger = el('select', { class: 'felt select', style: 'width:auto', onchange: (e) => {
+      valgtSkolear = e.target.value
+      refresh()
+    }})
+    for (const sy of [aktivtSy, nesteSy].filter(Boolean)) {
+      const opt = el('option', { value: sy }, sy === aktivtSy ? `${sy} (aktivt)` : sy)
+      if (sy === valgtSkolear) opt.selected = true
+      velger.appendChild(opt)
+    }
+    velgerRad.appendChild(el('label', { class: 'tekst-svak', style: 'font-size:.9rem' }, 'Skoleår:'))
+    velgerRad.appendChild(velger)
+    wrap.appendChild(velgerRad)
+
+    const intervall = skoleaarIntervall(valgtSkolear)
     if (intervall) {
       const startWeek = APP.school?.school_year_start_week || 33
       const endWeek = APP.school?.school_year_end_week || 24
       wrap.appendChild(el('p', { class: 'skolear-banner' },
-        `Aktivt skoleår: ${sy} (uke ${startWeek} ${intervall.aar1} – uke ${endWeek} ${intervall.aar2})`))
+        `Skoleår ${valgtSkolear} (uke ${startWeek} ${intervall.aar1} – uke ${endWeek} ${intervall.aar2})`))
     }
+
+    const { data: events } = await sb.from('school_calendar').select('*')
+      .is('deleted_at', null)
+      .gte('start_date', intervall?.fra ?? '1900-01-01')
+      .lte('start_date', intervall?.til ?? '2099-12-31')
+      .order('start_date')
 
     // Events list – same admin-rad pattern as rest of admin panel
     for (const e of events || []) {
@@ -3669,7 +3690,7 @@ async function renderSkolerute(container) {
       wrap.appendChild(row)
     }
 
-    wrap.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:14px', title: 'Legg til ny hendelse i skoleruten', onclick: () => visNySkolerute(refresh) }, '+ Legg til'))
+    wrap.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:14px', title: 'Legg til ny hendelse i skoleruten', onclick: () => visNySkolerute(refresh, valgtSkolear) }, '+ Legg til'))
 
     // AI import – hidden by default, tip shown when calendar is empty
     const aiWrap = el('div', { class: 'ai-import-seksjon' })
@@ -3683,25 +3704,25 @@ async function renderSkolerute(container) {
       aiToggleBtn.textContent = aiInnhold.classList.contains('skjult') ? '📋 Importer med AI' : '▲ Skjul AI-import'
     }}, '📋 Importer med AI')
     const aiInnhold = el('div', { class: 'skjult' })
-    if (sy) {
+    if (valgtSkolear) {
       aiInnhold.appendChild(el('p', { class: 'tekst-svak', style: 'margin:0 0 6px; font-size:.9rem' },
-        `Skoleruten du limer inn tolkes for skoleåret ${sy}.`))
+        `Skoleruten du limer inn tolkes for skoleåret ${valgtSkolear}.`))
     }
     const aiText = el('textarea', { class: 'felt textarea ai-tekstfelt', placeholder: 'Lim inn skoleruten som tekst (f.eks. fra PDF eller e-post)…', rows: 8 })
     aiInnhold.appendChild(aiText)
     aiInnhold.appendChild(el('button', { type: 'button', class: 'btn btn-p', title: 'Send tekst til AI for tolking av fridager og ferier', onclick: async () => {
       if (!aiText.value.trim()) return
-      if (!intervall) { showToast('Aktivt skoleår mangler – sett det under Skoleår-fanen først', 'error'); return }
+      if (!intervall) { showToast('Skoleår mangler – sett det under Skoleår-fanen først', 'error'); return }
       try {
         const { data, error } = await medAIOverlay('AI tolker skoleruten …', () =>
           sb.functions.invoke('ai-parse-skolerute', {
-            body: { text: aiText.value, school_id: APP.school.id, school_year: sy }
+            body: { text: aiText.value, school_id: APP.school.id, school_year: valgtSkolear }
           }))
         if (error) throw new Error(error.message)
         if (data?.error) throw new Error(data.error)
         const evs = data.events || []
         if (!evs.length) { showToast('Ingen fridager funnet – prøv å legge inn teksten mer strukturert', 'info'); return }
-        visSkoleruteForhandsvisning(evs, data.warnings || [], () => { aiText.value = ''; refresh() })
+        visSkoleruteForhandsvisning(evs, data.warnings || [], () => { aiText.value = ''; refresh() }, valgtSkolear)
       } catch (err) {
         showToast(err.message, 'error')
       }
@@ -3714,10 +3735,11 @@ async function renderSkolerute(container) {
   await refresh()
 }
 
-function visNySkolerute(onSave) {
+function visNySkolerute(onSave, skolear) {
   const modal = el('div', { class: 'modal-bg' })
   const box   = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Legg til hendelse'))
+  const syIntervall = skoleaarIntervall(skolear)
 
   const form = el('form', { class: 'skjema', onsubmit: async (ev) => {
     ev.preventDefault()
@@ -3749,6 +3771,18 @@ function visNySkolerute(onSave) {
   datoRad.appendChild(fraGrp); datoRad.appendChild(tilGrp)
   form.appendChild(lagFormRad('Dato', datoRad))
 
+  const datoAdvarsel = el('p', { class: 'advarsel-tekst skjult', style: 'margin:4px 0 0; font-size:.9rem' })
+  form.appendChild(datoAdvarsel)
+  if (syIntervall) {
+    const sjekkDato = () => {
+      if (!fraIn.value) { datoAdvarsel.classList.add('skjult'); return }
+      const utenfor = fraIn.value < syIntervall.fra || fraIn.value > syIntervall.til
+      datoAdvarsel.textContent = `NB: Datoen er utenfor skoleåret ${skolear}`
+      datoAdvarsel.classList.toggle('skjult', !utenfor)
+    }
+    fraIn.addEventListener('change', sjekkDato)
+  }
+
   const typeSel = el('select', { name: 'type', class: 'felt select' })
   for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
     typeSel.appendChild(el('option', { value: t }, kalenderTypeNavn(t)))
@@ -3773,8 +3807,8 @@ function rensVarsel(tekst) {
 // Forhåndsvisning av AI-tolket skolerute: redigerbare rader som kan
 // strykes, og valg mellom å erstatte skoleårets eksisterende skolerute
 // (soft-delete) eller legge til. Ingenting lagres før «Lagre».
-function visSkoleruteForhandsvisning(events, warnings, onSave) {
-  const sy = APP.school?.active_school_year
+function visSkoleruteForhandsvisning(events, warnings, onSave, skolear) {
+  const sy = skolear || APP.school?.active_school_year
   const intervall = skoleaarIntervall(sy)
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal modal-xl skolerute-prev-modal' })
