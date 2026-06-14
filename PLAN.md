@@ -1,7 +1,78 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PÅGÅENDE — fridager/flerdagshendelser i ukenettet (UI-runde)
+## Status: VENTER PÅ GODKJENNING — Elevfilter for parti og grupper
 ## Neste steg: Godkjenn planen nedenfor, så starter implementasjonen
+
+### Runde: Elevfilter for parti og grupper
+
+**Scope:** `v4/app.js`, `v4/style.css`, `v4/supabase/functions/ical/index.ts`.
+Ingen DB-endringer (verifisert: `division_id` finnes allerede på `sessions`).
+
+**Funn under kodegjennomgang:**
+- Det finnes allerede en enkel dropdown-filter i `renderElevView` (linje 1030–1049),
+  men den er defekt: bruker `.eq('subjects.class_id', klasse.id)` — `subjects` har
+  ingen `class_id`-kolonne, så panelet vises aldri. Den fjernes og erstattes.
+- Filterlogikken skjuler feil: `division_id === aktivFilter` skjuler NULL-sessions.
+  Riktig regel er: NULL = alltid vis; divisjon = vis kun valgte.
+- iCal-funksjonen mangler CORS-headere og OPTIONS-handler — legges til i deloppgave 3.
+- Print-CSS: `.filter-bar` er allerede skjult ved print. Nytt panel får eget navn
+  (`.elev-filter-panel`) og legges i print-utlisten.
+
+---
+
+**Delsteg 1 — Filter-UI i elevvisningen** [ ]
+- Hev `aktivtSkolear` ut av `renderUke` og inn i `renderElevView`-scope.
+- Etter at `klasse` er bekreftet: hent distinkte `subject_divisions` som faktisk
+  forekommer i klassens sessions (aktiv skoleår, `division_id IS NOT NULL`).
+  Grupper per fag (`subjects.name`).
+- Hent filter fra localStorage, nøkkel `ukeplan_elevfilter_<klassenavn>`.
+  Format: JSON-array av valgte division-UUIDs, tom array = vis alt.
+- Opprett `#elev-filter`-div (utenfor `#week-container`) og render filterpanel:
+  - Kun synlig dersom klassen faktisk har delte fag.
+  - Avkrysningsbokser gruppert per fag: «NPT: ☑ P1 ☑ P2».
+  - Aktivt-indikator (`.elev-filter-aktiv`-badge) + «Vis alt»-knapp.
+  - Endring lagrer til localStorage og kaller `renderUke(currentWeek)`.
+- Fjern gammel defekt `filter-bar` / `filterSel` fra `renderUke`.
+- Endre filterlogikk i `renderUke`:
+  ```js
+  if (valgteDivisjoner.size > 0) {
+    daySessions = daySessions.filter(s =>
+      s.division_id === null || valgteDivisjoner.has(s.division_id))
+  }
+  ```
+- `style.css`: legg til `.elev-filter-panel` (flex-wrap, kompakt), `.elev-filter-aktiv`
+  (liten badge), og legg `.elev-filter-panel` i print-skjullisten.
+
+**Delsteg 2 — Utskrift** [ ]
+- Filtrering skjer i DOM (sessions som ikke rendres, finnes ikke i DOM) →
+  print viser automatisk kun filtrerte sessions.
+- Oppdater `utskrift-hode`-teksten med «(filtrert)» når filter er aktivt.
+- Verifiser at print-CSS ikke synliggjør skjulte kort.
+
+**Delsteg 3 — iCal (filtrert lenke)** [ ]
+- `visICalModal(klasse)`:
+  - Les filter fra localStorage for klassen.
+  - Legg til `&divisions=<id1>,<id2>,...` i iCal-URL når filter er aktivt.
+  - Vis informasjonstekst: «Lenken er filtrert til dine parti/grupper. Hent ny
+    lenke her hvis du endrer filteret.»
+  - Fjern teksten (og `&divisions`-parameteren) når ingen filter er satt.
+- `ical/index.ts`:
+  - Legg til CORS-konstant og OPTIONS-handler (mangler i dag).
+  - Legg til `division_id` i sessions-select.
+  - Les ny `divisions`-param (kommaseparerte UUIDs).
+  - Filterlogikk: `divisions` tom → vis alt; ellers NULL = alltid med,
+    ellers kun der `division_id` er blant valgte.
+  - Bakoverkompatibel: gamle `parti`/`gruppe`-params beholdes uendret.
+
+**Delsteg 4 — Bump, commit og push** [ ]
+- Bump `?v=20260614e` i `v4/index.html`.
+- Commit per delsteg, push til `claude/adoring-darwin-8qet33`.
+- **Manuelt steg (ikke automatisert):** iCal edge-funksjon må deployes
+  manuelt i Supabase Dashboard → Edge Functions → ical → Code → Deploy.
+
+---
+
+## Status: FULLFØRT — fridager/flerdagshendelser i ukenettet (UI-runde)
 
 ### Runde: Ny visning av skolerute og flerdagshendelser i ukenettet
 
