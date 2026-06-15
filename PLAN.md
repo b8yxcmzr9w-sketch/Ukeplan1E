@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER PÅ GODKJENNING — Elevfilter for parti og grupper
-## Neste steg: Godkjenn planen nedenfor, så starter implementasjonen
+## Status: FULLFØRT — Elevfilter for parti og grupper
+## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
 
 ### Runde: Elevfilter for parti og grupper
 
@@ -20,7 +20,7 @@ Ingen DB-endringer (verifisert: `division_id` finnes allerede på `sessions`).
 
 ---
 
-**Delsteg 1 — Filter-UI i elevvisningen** [ ]
+**Delsteg 1 — Filter-UI i elevvisningen** [x]
 
 _Layout-beslutninger (godkjent):_
 - **Badge** i nav-baren etter «Nå»: viser `● Filtrert: P1` (eller lignende) når
@@ -63,13 +63,13 @@ _Implementasjon:_
   (absolutt-posisjonert dropdown); legg `.elev-filter-panel` og
   `.elev-overflow-menu` i print-skjullisten.
 
-**Delsteg 2 — Utskrift** [ ]
+**Delsteg 2 — Utskrift** [x]
 - Filtrering skjer i DOM (sessions som ikke rendres, finnes ikke i DOM) →
   print viser automatisk kun filtrerte sessions.
 - Oppdater `utskrift-hode`-teksten med «(filtrert)» når filter er aktivt.
 - Verifiser at print-CSS ikke synliggjør skjulte kort.
 
-**Delsteg 3 — iCal (filtrert lenke)** [ ]
+**Delsteg 3 — iCal (filtrert lenke)** [x]
 - `visICalModal(klasse)`:
   - Les filter fra localStorage for klassen.
   - Legg til `&divisions=<id1>,<id2>,...` i iCal-URL når filter er aktivt.
@@ -84,7 +84,7 @@ _Implementasjon:_
     ellers kun der `division_id` er blant valgte.
   - Bakoverkompatibel: gamle `parti`/`gruppe`-params beholdes uendret.
 
-**Delsteg 4 — Bump, commit og push** [ ]
+**Delsteg 4 — Bump, commit og push** [x]
 - Bump `?v=20260614e` i `v4/index.html`.
 - Commit per delsteg, push til `claude/adoring-darwin-8qet33`.
 - **Manuelt steg (ikke automatisert):** iCal edge-funksjon må deployes

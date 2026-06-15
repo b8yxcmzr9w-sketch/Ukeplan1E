@@ -178,7 +178,7 @@ header .spacer { flex: 1; }
 .uke-nr-input::-webkit-inner-spin-button,
 .uke-nr-input::-webkit-outer-spin-button { -webkit-appearance: none; }
 
-/* ── Filter-bar ─────────────────────────────────────────────────── */
+/* ── Filter-bar (gammel, beholdes for lærer-visning) ─────────────── */
 .filter-bar {
   display: flex; gap: 10px; padding: 10px 20px; flex-wrap: wrap; align-items: center;
 }
@@ -187,6 +187,42 @@ header .spacer { flex: 1; }
   border-radius: var(--radius); font-size: .9rem;
   background: var(--bg-kort); color: var(--tekst); cursor: pointer;
 }
+
+/* ── Elevfilter (parti/gruppe) ───────────────────────────────────── */
+.elev-filter-panel {
+  display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center;
+  padding: 10px 20px; border-bottom: 1px solid var(--kant);
+  background: var(--bg-kort);
+}
+.elev-filter-fag {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center;
+}
+.elev-filter-fagnavn {
+  font-size: .82rem; font-weight: 600; color: var(--tekst-svak); white-space: nowrap;
+}
+.elev-filter-lbl {
+  display: flex; align-items: center; gap: 4px;
+  font-size: .88rem; cursor: pointer; white-space: nowrap;
+}
+.elev-filter-badge--aktiv {
+  background: var(--farge-hoved, #2a7ae2); color: #fff;
+  border-color: var(--farge-hoved, #2a7ae2);
+}
+
+/* ── Overflow-meny (•••) – print og iCal ────────────────────────── */
+.elev-overflow-wrap { position: relative; display: inline-block; }
+.elev-overflow-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 200;
+  background: var(--bg-kort); border: 1px solid var(--kant);
+  border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  min-width: 180px; padding: 4px 0;
+}
+.elev-overflow-item {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 14px; font-size: .9rem;
+  background: none; border: none; cursor: pointer; color: var(--tekst);
+}
+.elev-overflow-item:hover { background: var(--hover, #f0f0f0); }
 
 /* ── Flerdagsbjelke-rad (over ukenettet) ────────────────────────── */
 .fdag-bjelke-rad {
@@ -669,6 +705,7 @@ tr:hover td { background: var(--primær-svak); }
   header, .nav-bar, .filter-bar, .bulk-bar,
   .hdr-btn, .btn, .okt-handlinger, .okt-checkbox,
   .modal-bg, .lagre-overlay, .ai-overlay, #lastelinje,
+  .elev-filter-panel, .elev-overflow-wrap,
   footer, .uno-footer { display: none !important; }
 
   body { background: white; color: black; }
