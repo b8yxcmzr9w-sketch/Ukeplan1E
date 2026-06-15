@@ -879,6 +879,8 @@ function showConflictWarning(konflikt) {
 async function renderElevView(klasseNavn) {
   const myToken = ++APP.renderToken
   const main = document.getElementById('app-main')
+  // Rydd opp overflow-lytter fra forrige elevvisning
+  if (APP._closeOverflowFn) { document.removeEventListener('click', APP._closeOverflowFn); APP._closeOverflowFn = null }
   clearEl(main)
   APP.currentView = 'elev'
   APP.klasseVelger = null
@@ -935,8 +937,76 @@ async function renderElevView(klasseNavn) {
   if (currentWeek < schoolStart) currentWeek = schoolStart
   if (currentWeek > schoolEnd) currentWeek = schoolEnd
 
-  // Filter state
-  let aktivFilter = null
+  const aktivtSkolear = APP.school?.active_school_year
+
+  // Filter state – leses fra localStorage, lagres som JSON-array av division-UUIDs
+  const filterKey = `ukeplan_elevfilter_${klasse.name}`
+  const savedFilter = localStorage.getItem(filterKey)
+  const valgteDivisjoner = new Set(savedFilter ? JSON.parse(savedFilter) : [])
+
+  // Hent distinkte subject_divisions som faktisk forekommer i klassens sessions
+  const fagGrupper = []
+  {
+    let divQ = sb.from('sessions')
+      .select('division_id, subjects(id, name), subject_divisions(id, name, division_type)')
+      .eq('class_id', klasse.id)
+      .not('division_id', 'is', null)
+      .is('deleted_at', null)
+    if (aktivtSkolear) divQ = divQ.eq('school_year', aktivtSkolear)
+    const { data: divSessions } = await divQ
+    const seenIds = new Set()
+    for (const s of divSessions || []) {
+      if (!s.division_id || seenIds.has(s.division_id)) continue
+      seenIds.add(s.division_id)
+      const fagNavn = s.subjects?.name || 'Ukjent'
+      const fagId = s.subjects?.id || fagNavn
+      let fag = fagGrupper.find(f => f.fagId === fagId)
+      if (!fag) { fag = { fagId, fagNavn, divisjoner: [] }; fagGrupper.push(fag) }
+      fag.divisjoner.push({ id: s.division_id, name: s.subject_divisions?.name || '', division_type: s.subject_divisions?.division_type || 'gruppe' })
+    }
+    fagGrupper.sort((a, b) => a.fagNavn.localeCompare(b.fagNavn, 'nb'))
+    for (const f of fagGrupper) f.divisjoner.sort((a, b) => a.name.localeCompare(b.name, 'nb'))
+    // Fjern eventuelle lagrede valg som ikke lenger finnes i klassens sessions
+    const alleDivIds = new Set(fagGrupper.flatMap(f => f.divisjoner.map(d => d.id)))
+    for (const id of [...valgteDivisjoner]) { if (!alleDivIds.has(id)) valgteDivisjoner.delete(id) }
+  }
+
+  // Filterpanel-container – utenfor #week-container, overlever ukenavigering
+  const filterContainer = el('div', { id: 'elev-filter' })
+  main.appendChild(filterContainer)
+
+  let filterPanel = null
+  if (fagGrupper.length > 0) {
+    filterPanel = el('div', { class: 'elev-filter-panel', style: 'display:none' })
+    for (const fag of fagGrupper) {
+      const fagDiv = el('div', { class: 'elev-filter-fag' })
+      fagDiv.appendChild(el('span', { class: 'elev-filter-fagnavn' }, fag.fagNavn + ':'))
+      for (const div of fag.divisjoner) {
+        const lbl = el('label', { class: 'elev-filter-lbl' })
+        const cb = el('input', { type: 'checkbox' })
+        if (valgteDivisjoner.has(div.id)) cb.checked = true
+        cb.addEventListener('change', () => {
+          if (cb.checked) valgteDivisjoner.add(div.id)
+          else valgteDivisjoner.delete(div.id)
+          localStorage.setItem(filterKey, JSON.stringify([...valgteDivisjoner]))
+          renderUke(currentWeek)
+        })
+        lbl.appendChild(cb)
+        lbl.appendChild(document.createTextNode(div.name))
+        fagDiv.appendChild(lbl)
+      }
+      filterPanel.appendChild(fagDiv)
+    }
+    filterPanel.appendChild(el('button', { class: 'btn btn-s', style: 'margin-left:auto', onclick: () => {
+      valgteDivisjoner.clear()
+      localStorage.setItem(filterKey, JSON.stringify([]))
+      filterPanel.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false })
+      renderUke(currentWeek)
+    }}, 'Vis alt'))
+    filterContainer.appendChild(filterPanel)
+  }
+
+  let closeOverflowFn = null
 
   async function renderUke(weekNr) {
     const weekContainer = document.getElementById('week-container')
@@ -945,7 +1015,6 @@ async function renderElevView(klasseNavn) {
     if (!weekContainer) main.appendChild(wc)
 
     // Fetch sessions
-    const aktivtSkolear = APP.school?.active_school_year
     let sesjonQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
       .eq('class_id', klasse.id)
@@ -983,8 +1052,8 @@ async function renderElevView(klasseNavn) {
     // Utskrift-hode (vises kun ved print)
     const utskriftHode = document.getElementById('utskrift-hode')
     if (utskriftHode) {
-      const sy = APP.school?.active_school_year
-      utskriftHode.textContent = `${sy ? sy + ' ' : ''}${APP.school?.name || 'Ukeplan1e'}, klasse ${klasse.name} – Uke ${weekNr}`
+      const filtrertTekst = valgteDivisjoner.size > 0 ? ' (filtrert)' : ''
+      utskriftHode.textContent = `${aktivtSkolear ? aktivtSkolear + ' ' : ''}${APP.school?.name || 'Ukeplan1e'}, klasse ${klasse.name} – Uke ${weekNr}${filtrertTekst}`
     }
 
     // Week navigation
@@ -1020,33 +1089,37 @@ async function renderElevView(klasseNavn) {
     navRow.appendChild(nextBtn)
     navRow.appendChild(naaBtn)
 
-    const printBtn = el('button', { class: 'btn btn-s', title: 'Skriv ut ukeplanen', onclick: () => window.print() }, '🖨️ Skriv ut')
-    const icalBtn = el('button', { class: 'btn btn-s', title: 'Abonner på kalender (iCal)', onclick: () => visICalModal(klasse) }, '📅 iCal-abonnement')
-    navRow.appendChild(printBtn)
-    navRow.appendChild(icalBtn)
-    wc.appendChild(navRow)
-
-    // Filter bar
-    const { data: divisions } = await sb.from('subject_divisions')
-      .select('*, subjects!inner(class_id)')
-      .eq('subjects.class_id', klasse.id)
-
-    if (divisions && divisions.length > 0) {
-      const filterBar = el('div', { class: 'filter-bar' })
-      filterBar.appendChild(el('label', {}, 'Filtrer: '))
-      const filterSel = el('select', { class: 'felt select', onchange: (e) => {
-        aktivFilter = e.target.value || null
-        renderUke(weekNr)
-      }})
-      filterSel.appendChild(el('option', { value: '' }, 'Alle'))
-      for (const d of divisions) {
-        const opt = el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`)
-        if (aktivFilter === d.id) opt.setAttribute('selected', 'true')
-        filterSel.appendChild(opt)
-      }
-      filterBar.appendChild(filterSel)
-      wc.appendChild(filterBar)
+    // Filter-badge – åpner/lukker filterpanelet; vises kun om klassen har delte fag
+    if (fagGrupper.length > 0) {
+      const aktiveDivNavn = fagGrupper.flatMap(f => f.divisjoner).filter(d => valgteDivisjoner.has(d.id)).map(d => d.name)
+      const badgeTekst = aktiveDivNavn.length > 0 ? `● ${aktiveDivNavn.join(', ')}` : 'Filter'
+      const filterBadge = el('button', {
+        class: 'btn btn-s elev-filter-badge' + (aktiveDivNavn.length > 0 ? ' elev-filter-badge--aktiv' : ''),
+        title: 'Åpne/lukk filter for parti og grupper',
+        onclick: (e) => {
+          if (filterPanel) filterPanel.style.display = filterPanel.style.display === 'none' ? '' : 'none'
+          e.stopPropagation()
+        }
+      }, badgeTekst)
+      navRow.appendChild(filterBadge)
     }
+
+    // [•••] overflow-meny for print og iCal
+    const overflowWrap = el('div', { class: 'elev-overflow-wrap' })
+    const overflowMenu = el('div', { class: 'elev-overflow-menu skjult' })
+    overflowMenu.appendChild(el('button', { class: 'elev-overflow-item', onclick: () => { window.print(); overflowMenu.classList.add('skjult') }}, '🖨️ Skriv ut'))
+    overflowMenu.appendChild(el('button', { class: 'elev-overflow-item', onclick: () => { visICalModal(klasse); overflowMenu.classList.add('skjult') }}, '📅 iCal-abonnement'))
+    overflowWrap.appendChild(el('button', { class: 'btn btn-s', title: 'Skriv ut / iCal', onclick: (e) => { overflowMenu.classList.toggle('skjult'); e.stopPropagation() }}, '•••'))
+    overflowWrap.appendChild(overflowMenu)
+    navRow.appendChild(overflowWrap)
+
+    // Lukk overflow-meny ved klikk utenfor
+    if (closeOverflowFn) document.removeEventListener('click', closeOverflowFn)
+    closeOverflowFn = (e) => { if (!overflowWrap.contains(e.target)) overflowMenu.classList.add('skjult') }
+    document.addEventListener('click', closeOverflowFn)
+    APP._closeOverflowFn = closeOverflowFn
+
+    wc.appendChild(navRow)
 
     // Flerdagsbjelke-rad
     const weekDates = Array.from({length: 5}, (_, i) => isoWeekToDate(visKalenderaar, weekNr, i + 1).toISOString().slice(0, 10))
@@ -1064,9 +1137,9 @@ async function renderElevView(klasseNavn) {
       dayCol.appendChild(dayHeader)
 
       let daySessions = (sessions || []).filter(s => s.day_of_week === dag)
-      // Apply filter
-      if (aktivFilter) {
-        daySessions = daySessions.filter(s => s.division_id === aktivFilter)
+      // Vis økt hvis division_id er null (udelt fag) ELLER er blant de valgte
+      if (valgteDivisjoner.size > 0) {
+        daySessions = daySessions.filter(s => s.division_id === null || valgteDivisjoner.has(s.division_id))
       }
       // Sort alphabetically by subject name
       daySessions.sort((a, b) => (a.subjects?.name || '').localeCompare(b.subjects?.name || '', 'nb'))
@@ -1166,8 +1239,21 @@ function renderSessionCard(s, showActions, actions = {}) {
 function visICalModal(klasse) {
   const baseUrl = `${SUPABASE_URL}/functions/v1/ical`
   const schoolId = APP.school?.id ?? ''
+
+  // Les elevens filter fra localStorage om dette gjelder en klasse
+  let divisionParam = ''
+  let erFiltrert = false
+  if (klasse) {
+    const savedFilter = localStorage.getItem(`ukeplan_elevfilter_${klasse.name}`)
+    const valgte = savedFilter ? JSON.parse(savedFilter) : []
+    if (Array.isArray(valgte) && valgte.length > 0) {
+      divisionParam = `&divisions=${valgte.join(',')}`
+      erFiltrert = true
+    }
+  }
+
   const url = klasse
-    ? `${baseUrl}?school_id=${schoolId}&klasse=${encodeURIComponent(klasse.name)}`
+    ? `${baseUrl}?school_id=${schoolId}&klasse=${encodeURIComponent(klasse.name)}${divisionParam}`
     : `${baseUrl}?school_id=${schoolId}&laerer=${encodeURIComponent(APP.profile?.full_name ?? '')}`
 
   const modal = el('div', { class: 'modal-bg' })
@@ -1197,6 +1283,10 @@ function visICalModal(klasse) {
   knRad.appendChild(el('a', { href: outlookUrl, target: '_blank', class: 'btn btn-s', style: 'text-decoration:none;text-align:center' }, '📧 Legg til i Outlook'))
   box.appendChild(knRad)
 
+  if (erFiltrert) {
+    box.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.82rem;margin:10px 0 6px;text-align:left' },
+      '🔍 Lenken er filtrert til dine valgte parti/grupper. Hent ny lenke her hvis du endrer filteret.'))
+  }
   box.appendChild(el('button', { class: 'btn btn-s', style: 'width:100%', onclick: () => modal.remove() }, 'Lukk'))
   modal.appendChild(box)
   document.body.appendChild(modal)
