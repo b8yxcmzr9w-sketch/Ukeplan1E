@@ -1,22 +1,34 @@
 // Ukeplan v4 – iCal Edge Function
 // Returns a text/calendar feed for a class (elev) or teacher (laerer)
-// Query params: klasse, laerer, parti, gruppe, school_id
+// Query params: klasse, laerer, school_id, divisions (kommaseparerte division-UUIDs)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+
   const url = new URL(req.url)
-  const schoolId  = url.searchParams.get('school_id') ?? ''
-  const klasse    = url.searchParams.get('klasse')    ?? ''
-  const laerer    = url.searchParams.get('laerer')    ?? ''
-  const parti     = url.searchParams.get('parti')     ?? ''
-  const gruppe    = url.searchParams.get('gruppe')    ?? ''
+  const schoolId   = url.searchParams.get('school_id') ?? ''
+  const klasse     = url.searchParams.get('klasse')    ?? ''
+  const laerer     = url.searchParams.get('laerer')    ?? ''
+  // Ny param: kommaseparerte division-UUIDs for elev-filter
+  const divisionsParam = url.searchParams.get('divisions') ?? ''
+  const divisionIds = divisionsParam ? divisionsParam.split(',').filter(Boolean) : []
+
+  // Behold bakoverkompatibilitet med gamle parti/gruppe-params (filtrering på navn)
+  const parti  = url.searchParams.get('parti')  ?? ''
+  const gruppe = url.searchParams.get('gruppe') ?? ''
 
   if (!schoolId) {
-    return new Response('Missing school_id', { status: 400 })
+    return new Response('Missing school_id', { status: 400, headers: CORS })
   }
 
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -28,7 +40,7 @@ Deno.serve(async (req) => {
     .eq('id', schoolId)
     .single()
 
-  if (!school) return new Response('School not found', { status: 404 })
+  if (!school) return new Response('School not found', { status: 404, headers: CORS })
 
   const activeYear: string | null = school.active_school_year ?? null
 
@@ -36,7 +48,7 @@ Deno.serve(async (req) => {
   let query = sb
     .from('sessions')
     .select(`
-      id, week_nr, day_of_week, activity, meeting_point, info, school_year, version,
+      id, week_nr, day_of_week, activity, meeting_point, info, school_year, version, division_id,
       subjects!inner(name, short_code),
       classes!inner(name),
       users!teacher_id(full_name),
@@ -60,10 +72,15 @@ Deno.serve(async (req) => {
 
   const { data: sessions } = await query
 
-  if (!sessions) return new Response('No sessions found', { status: 404 })
+  if (!sessions) return new Response('No sessions found', { status: 404, headers: CORS })
 
-  // Filter by parti/gruppe client-side (after fetch)
+  // Filtrer på division – ny logikk (UUID-basert) har prioritet over gammel (navn-basert)
   const filtered = sessions.filter((s: any) => {
+    if (divisionIds.length > 0) {
+      // Ny filterregel: NULL division_id = alltid med; ellers kun valgte
+      return s.division_id === null || divisionIds.includes(s.division_id)
+    }
+    // Bakoverkompatibel: gammel parti/gruppe-filtrering på navn
     if (!s.subject_divisions) return true
     const div = s.subject_divisions
     if (parti  && div?.division_type === 'parti'  && div.name !== parti)  return false
@@ -115,6 +132,7 @@ Deno.serve(async (req) => {
 
   return new Response(lines.join('\r\n'), {
     headers: {
+      ...CORS,
       'Content-Type': 'text/calendar; charset=utf-8',
       'Content-Disposition': `attachment; filename="ukeplan.ics"`,
     },
