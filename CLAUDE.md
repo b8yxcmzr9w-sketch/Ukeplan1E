@@ -188,6 +188,17 @@ Uke 33–24 (august–juni). `schoolStart = 33`, `schoolEnd = 24`.
 Alle funksjoner deployes manuelt via Supabase Dashboard:
 Edge Functions → velg funksjon → Code-fanen → lim inn kode → Deploy.
 
+Direkte lenker til kildekode på GitHub (kopier herfra ved deploy):
+- [ical/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/ical/index.ts)
+- [generate-facts/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/generate-facts/index.ts)
+- [ai-parse-sessions/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/ai-parse-sessions/index.ts)
+- [ai-parse-skolerute/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/ai-parse-skolerute/index.ts)
+- [create-user/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/create-user/index.ts)
+- [admin-user/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/admin-user/index.ts)
+- [cleanup/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/cleanup/index.ts)
+
+Merk: bruk `/blob/main/`-lenker (direkte til fil), ikke `/tree/`-lenker (mappelisting).
+
 Miljøvariabler settes under: Edge Functions → velg funksjon → Secrets-fanen.
 - `GEMINI_API_KEY` — Google AI Studio API-nøkkel (nytt format: starter med `AQ.`)
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — automatisk injisert
