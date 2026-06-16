@@ -38,6 +38,7 @@ ALTER TABLE subject_divisions
 
 ALTER TABLE subject_divisions
   ADD CONSTRAINT chk_parti_har_klasse CHECK (
+    deleted_at IS NOT NULL OR
     (division_type = 'gruppe' AND class_id IS NULL) OR
     (division_type = 'parti'  AND class_id IS NOT NULL)
   );
