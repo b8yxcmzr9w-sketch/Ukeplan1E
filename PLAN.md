@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER PÅ GODKJENNING — Parti/gruppe-styring (frontend)
-## Neste steg: Godkjenn plan nedenfor, så starter koding
+## Status: FULLFØRT — Parti/gruppe-styring (frontend)
+## Neste steg: Avventer
 
 ---
 
@@ -19,7 +19,7 @@ men utfases gradvis — session_divisions er ny primærkilde.
 
 ---
 
-**Delsteg 1 — Admin fag-panel: vis kun grupper** [ ]
+**Delsteg 1 — Admin fag-panel: vis kun grupper** [x]
 
 `renderKlasseAdminInnhold()` henter i dag alle divisjoner for et fag.
 Etter 017 finnes det to typer:
@@ -35,7 +35,7 @@ Endringer:
 
 ---
 
-**Delsteg 2 — Kontaktlærer: administrer partier i klasse-admin-fanen** [ ]
+**Delsteg 2 — Kontaktlærer: administrer partier i klasse-admin-fanen** [x]
 
 Ny seksjon i `renderKlasseAdminTab` (lærervisning → klasse-admin):
 - Vises kun for fag der `has_parti = true` og kontaktlærer har `is_contact_teacher_for(klasse.id)`
@@ -48,7 +48,7 @@ Ny seksjon i `renderKlasseAdminTab` (lærervisning → klasse-admin):
 
 ---
 
-**Delsteg 3 — Session-modaler: flervalg av divisjoner** [ ]
+**Delsteg 3 — Session-modaler: flervalg av divisjoner** [x]
 
 `visNyOktModal`, `visRedigerOktModal`, `visKopierOktModal`:
 
@@ -70,7 +70,7 @@ Ny seksjon i `renderKlasseAdminTab` (lærervisning → klasse-admin):
 
 ---
 
-**Delsteg 4 — Session-spørringer og visning: bruk session_divisions** [ ]
+**Delsteg 4 — Session-spørringer og visning: bruk session_divisions** [x]
 
 Berører: `renderElevView`, `renderMinKlasseTab`, `renderAlleOkterTab`,
 `eksporterSkolear`.
@@ -97,7 +97,7 @@ daySessions = daySessions.filter(s =>
 
 ---
 
-**Delsteg 5 — Bump, commit og push** [ ]
+**Delsteg 5 — Bump, commit og push** [x]
 - Bump `?v=20260616a` i `v4/index.html`
 - Commit per delsteg
 - Push til `claude/sweet-fermi-1l3uqy`

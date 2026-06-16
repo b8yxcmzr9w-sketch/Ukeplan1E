@@ -652,6 +652,10 @@ tr:hover td { background: var(--primær-svak); }
 .div-list { margin-top: 10px; border-top: 1px solid var(--kant); padding-top: 8px; }
 .div-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .input-sm { width: 180px !important; }
+.div-checkboxes { display: flex; flex-direction: column; gap: 6px; min-height: 1.2rem; }
+.div-check-lbl { display: flex; align-items: center; gap: 6px; font-size: .9rem; cursor: pointer; }
+.admin-fag-blokk { margin-bottom: 6px; }
+.admin-grupper-rad { padding: 8px 0 4px 18px; border-left: 3px solid var(--kant); margin-left: 6px; margin-top: 4px; }
 
 /* ── Sikkerhetskopi ──────────────────────────────────────────────── */
 .backup-list {
