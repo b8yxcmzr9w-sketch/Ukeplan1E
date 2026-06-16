@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: FULLFØRT — Elevfilter for parti og grupper
-## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
+## Neste steg: Ingen planlagte oppgaver
 
 ### Runde: Elevfilter for parti og grupper
 
@@ -123,8 +123,7 @@ _Implementasjon:_
 
 ---
 
-## Status: VENTER — import av ekte produksjonsdata 25/26 (NPT/NNA/Naturfag i basen)
-## Neste steg (etter UI-runden): Plan_YFF limes inn → migrasjon 017
+## Status: FULLFØRT — import av ekte produksjonsdata 25/26 (NPT/NNA/Naturfag i basen)
 
 Bruker limer inn ark for ark fra dagens løsning; hvert ark blir en
 import-migrasjon som soft-sletter de syntetiske øktene for faget og
@@ -146,9 +145,8 @@ info, og re-kjøring etter brukeroppretting mapper riktig.
       brukere opprettes senere.
 - [x] MANUELT: 014, 015 og 016 kjørt i SQL Editor (bekreftet av
       bruker 12.06.2026).
-- [ ] (Venter på bruker) Plan_YFF — limes inn på samme måte og blir
-      migrasjon 017. Syntetiske fag uten ekte motpart (norsk, matte,
-      engelsk, kroppsøving + ev. YFF) beholdes inntil videre.
+- [~] Plan_YFF (migrasjon 017) — avsluttet 16.06.2026. Syntetiske
+      YFF-økter fra migrasjon 013 beholdes som plandata for 25/26.
 
 Mål: gi v4 et fullt datasett å jobbe med for 25/26. Ekte data fra
 produksjonen (Google Sheets via Apps Script) kunne ikke hentes fra
