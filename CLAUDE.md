@@ -1,5 +1,7 @@
 # Ukeplan1E – Prosjektbeskrivelse for Claude
 
+Se README.md for oversikt, docs/DECISIONS.md for beslutningslogg.
+
 Se FUNKSJONELL-BESKRIVELSE.md for hva tjenesten skal gjøre funksjonelt.
 
 ## Hva er dette?
