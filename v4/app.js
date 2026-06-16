@@ -944,25 +944,28 @@ async function renderElevView(klasseNavn) {
   const savedFilter = localStorage.getItem(filterKey)
   const valgteDivisjoner = new Set(savedFilter ? JSON.parse(savedFilter) : [])
 
-  // Hent distinkte subject_divisions som faktisk forekommer i klassens sessions
+  // Hent distinkte divisjoner som faktisk forekommer i klassens sessions (via session_divisions)
   const fagGrupper = []
   {
     let divQ = sb.from('sessions')
-      .select('division_id, subjects(id, name), subject_divisions(id, name, division_type)')
+      .select('subjects(id, name), session_divisions(division_id, subject_divisions(name, division_type))')
       .eq('class_id', klasse.id)
-      .not('division_id', 'is', null)
       .is('deleted_at', null)
     if (aktivtSkolear) divQ = divQ.eq('school_year', aktivtSkolear)
     const { data: divSessions } = await divQ
     const seenIds = new Set()
     for (const s of divSessions || []) {
-      if (!s.division_id || seenIds.has(s.division_id)) continue
-      seenIds.add(s.division_id)
       const fagNavn = s.subjects?.name || 'Ukjent'
       const fagId = s.subjects?.id || fagNavn
-      let fag = fagGrupper.find(f => f.fagId === fagId)
-      if (!fag) { fag = { fagId, fagNavn, divisjoner: [] }; fagGrupper.push(fag) }
-      fag.divisjoner.push({ id: s.division_id, name: s.subject_divisions?.name || '', division_type: s.subject_divisions?.division_type || 'gruppe' })
+      for (const sd of s.session_divisions || []) {
+        if (!sd.division_id || seenIds.has(sd.division_id)) continue
+        seenIds.add(sd.division_id)
+        const div = sd.subject_divisions
+        if (!div) continue
+        let fag = fagGrupper.find(f => f.fagId === fagId)
+        if (!fag) { fag = { fagId, fagNavn, divisjoner: [] }; fagGrupper.push(fag) }
+        fag.divisjoner.push({ id: sd.division_id, name: div.name || '', division_type: div.division_type || 'gruppe' })
+      }
     }
     fagGrupper.sort((a, b) => a.fagNavn.localeCompare(b.fagNavn, 'nb'))
     for (const f of fagGrupper) f.divisjoner.sort((a, b) => a.name.localeCompare(b.name, 'nb'))
@@ -1016,7 +1019,7 @@ async function renderElevView(klasseNavn) {
 
     // Fetch sessions
     let sesjonQuery = sb.from('sessions')
-      .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
+      .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), session_divisions(division_id, subject_divisions(name, division_type))')
       .eq('class_id', klasse.id)
       .eq('week_nr', weekNr)
       .order('day_of_week')
@@ -1137,9 +1140,12 @@ async function renderElevView(klasseNavn) {
       dayCol.appendChild(dayHeader)
 
       let daySessions = (sessions || []).filter(s => s.day_of_week === dag)
-      // Vis økt hvis division_id er null (udelt fag) ELLER er blant de valgte
+      // Vis økt hvis ingen divisjon (udelt fag) ELLER minst én valgt divisjon er blant øktens divisjoner
       if (valgteDivisjoner.size > 0) {
-        daySessions = daySessions.filter(s => s.division_id === null || valgteDivisjoner.has(s.division_id))
+        daySessions = daySessions.filter(s => {
+          const sdIds = (s.session_divisions || []).map(sd => sd.division_id)
+          return sdIds.length === 0 || sdIds.some(id => valgteDivisjoner.has(id))
+        })
       }
       // Sort alphabetically by subject name
       daySessions.sort((a, b) => (a.subjects?.name || '').localeCompare(b.subjects?.name || '', 'nb'))
@@ -1210,8 +1216,10 @@ function renderSessionCard(s, showActions, actions = {}) {
   if (s.meeting_point) card.appendChild(el('div', { class: 'session-card__meeting' }, `📍 ${s.meeting_point}`))
   if (s.info) card.appendChild(el('div', { class: 'session-card__info' }, truncate(s.info)))
   if (s.users) card.appendChild(el('div', { class: 'session-card__teacher' }, s.users.full_name))
-  if (s.subject_divisions) {
-    card.appendChild(el('div', { class: 'div-badge' }, s.subject_divisions.name))
+  for (const sd of s.session_divisions || []) {
+    if (sd.subject_divisions) {
+      card.appendChild(el('div', { class: 'div-badge' }, sd.subject_divisions.name))
+    }
   }
   if (s._fellesMed?.length) {
     card.appendChild(el('div', { class: 'felles-badge', title: 'Fellesundervisning' }, `👥 Felles med ${s._fellesMed.join(', ')}`))
@@ -1564,7 +1572,7 @@ async function renderMinKlasseTab(container) {
     }
 
     let laererSesjonQuery = sb.from('sessions')
-      .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), subject_divisions(name, division_type)')
+      .select('*, subjects(name, color_hex, short_code), users!teacher_id(full_name), session_divisions(division_id, subject_divisions(name, division_type))')
       .eq('class_id', aktivKlasse.id)
       .eq('week_nr', currentWeek)
     if (valgtSkolear) laererSesjonQuery = laererSesjonQuery.eq('school_year', valgtSkolear)
@@ -1693,7 +1701,7 @@ async function renderMinKlasseTab(container) {
 async function renderAlleOkterTab(container) {
   const aktivtSkolear = APP.school?.active_school_year
   let alleOkterQuery = sb.from('sessions')
-    .select('*, subjects(name, color_hex, short_code), classes(name), subject_divisions(name)')
+    .select('*, subjects(name, color_hex, short_code), classes(name), session_divisions(division_id, subject_divisions(name, division_type))')
     .eq('teacher_id', APP.profile.id)
     .order('week_nr')
     .order('day_of_week')
@@ -1887,12 +1895,13 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
     const alleKlasseIds = [klassId, ...ekstraKlasser]
     const gruppeId = alleKlasseIds.length > 1 ? crypto.randomUUID() : null
 
+    const valteDivIder = [...form.querySelectorAll('[name=selected_divisions]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
       const rader = alleKlasseIds.map(cid => ({
         school_id: APP.school.id,
         class_id: cid,
         subject_id: subjId,
-        division_id: fd.get('division_id') || null,
+        division_id: null,
         week_nr: weekNr,
         day_of_week: dagOfWeek,
         teacher_id: fd.get('teacher_id'),
@@ -1904,8 +1913,13 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
         shared_group_id: gruppeId,
         version: 1,
       }))
-      const { error } = await sb.from('sessions').insert(rader)
+      const { data: inserted, error } = await sb.from('sessions').insert(rader).select('id')
       if (error) throw error
+      if (valteDivIder.length && inserted?.length) {
+        const sdRader = inserted.flatMap(s => valteDivIder.map(did => ({ session_id: s.id, division_id: did })))
+        const { error: sdErr } = await sb.from('session_divisions').insert(sdRader)
+        if (sdErr) throw sdErr
+      }
     })
     modal.remove()
     if (onSave) onSave()
@@ -1914,6 +1928,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   // Class
   const klasseSel = el('select', { name: 'class_id', class: 'felt select', required: 'true', onchange: async (e) => {
     await oppdaterFagSel(e.target.value)
+    // oppdaterFagSel kaller oppdaterDivisionCheckboxes med ny classId
   }})
   for (const k of klasser || []) {
     const opt = el('option', { value: k.id }, k.name)
@@ -1946,14 +1961,13 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
 
   // Subject
   const fagSel = el('select', { name: 'subject_id', class: 'felt select', required: 'true', onchange: async (e) => {
-    await oppdaterDivisionSel(e.target.value)
+    await oppdaterDivisionCheckboxes(e.target.value, klasseSel.value)
   }})
   form.appendChild(lagFormRad('Fag', fagSel))
 
-  // Division
-  const divSel = el('select', { name: 'division_id', class: 'felt select' })
-  divSel.appendChild(el('option', { value: '' }, '(ingen)'))
-  form.appendChild(lagFormRad('Parti/gruppe', divSel))
+  // Division – checkboxes (partier for valgt klasse + grupper for skolen)
+  const divContainer = el('div', { class: 'div-checkboxes' })
+  form.appendChild(lagFormRad('Parti/gruppe', divContainer))
 
   async function oppdaterFagSel(classId) {
     clearEl(fagSel)
@@ -1961,15 +1975,24 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
     for (const s of subj || []) {
       fagSel.appendChild(el('option', { value: s.id }, s.name))
     }
-    if (fagSel.options.length) await oppdaterDivisionSel(fagSel.value)
+    if (fagSel.options.length) await oppdaterDivisionCheckboxes(fagSel.value, classId)
   }
 
-  async function oppdaterDivisionSel(subjectId) {
-    clearEl(divSel)
-    divSel.appendChild(el('option', { value: '' }, '(ingen)'))
-    const { data: divs } = await sb.from('subject_divisions').select('*').eq('subject_id', subjectId)
-    for (const d of divs || []) {
-      divSel.appendChild(el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`))
+  async function oppdaterDivisionCheckboxes(subjectId, classId) {
+    clearEl(divContainer)
+    if (!subjectId || !classId) return
+    const { data: divs } = await sb.from('subject_divisions')
+      .select('*')
+      .eq('subject_id', subjectId)
+      .or(`class_id.is.null,class_id.eq.${classId}`)
+      .is('deleted_at', null)
+      .order('sort_order')
+    if (!(divs || []).length) return
+    for (const d of divs) {
+      const lbl = el('label', { class: 'div-check-lbl' })
+      lbl.appendChild(el('input', { type: 'checkbox', name: 'selected_divisions', value: d.id }))
+      lbl.appendChild(document.createTextNode(` ${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`))
+      divContainer.appendChild(lbl)
     }
   }
 
@@ -2012,11 +2035,17 @@ async function visRedigerOktModal(session, onSave) {
   const box = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Rediger økt'))
 
-  const { data: subjects } = await sb.from('subjects').select('*')
-    .eq('school_id', APP.school.id).order('name')
-  const { data: divisions } = await sb.from('subject_divisions').select('*')
-    .eq('subject_id', session.subject_id)
-  const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
+  const [{ data: subjects }, { data: divisions }, { data: teachers }, { data: currentSd }] = await Promise.all([
+    sb.from('subjects').select('*').eq('school_id', APP.school.id).order('name'),
+    sb.from('subject_divisions').select('*')
+      .eq('subject_id', session.subject_id)
+      .or(`class_id.is.null,class_id.eq.${session.class_id}`)
+      .is('deleted_at', null)
+      .order('sort_order'),
+    sb.from('users').select('*').eq('school_id', APP.school.id),
+    sb.from('session_divisions').select('division_id').eq('session_id', session.id),
+  ])
+  const currentDivIds = new Set((currentSd || []).map(r => r.division_id))
 
   // Sporbarhet: hvem opprettet og sist endret økten
   const brukerNavn = (id) => (teachers || []).find(t => t.id === id)?.full_name || null
@@ -2032,9 +2061,10 @@ async function visRedigerOktModal(session, onSave) {
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
+    const valteDivIder = [...form.querySelectorAll('[name=selected_divisions]:checked')].map(c => c.value)
     const data = {
       subject_id: fd.get('subject_id'),
-      division_id: fd.get('division_id') || null,
+      division_id: null,
       week_nr: parseInt(fd.get('week_nr')),
       day_of_week: parseInt(fd.get('day_of_week')),
       teacher_id: fd.get('teacher_id'),
@@ -2051,6 +2081,12 @@ async function visRedigerOktModal(session, onSave) {
     await medLagreOverlay(async () => {
       const ok = await lagreOkt(session.id, data, session.version)
       if (!ok) throw new Error('Konfliktvarsling – prøv igjen')
+      await sb.from('session_divisions').delete().eq('session_id', session.id)
+      if (valteDivIder.length) {
+        const { error: sdErr } = await sb.from('session_divisions')
+          .insert(valteDivIder.map(did => ({ session_id: session.id, division_id: did })))
+        if (sdErr) throw sdErr
+      }
     })
     modal.remove()
     if (onSave) onSave()
@@ -2064,14 +2100,16 @@ async function visRedigerOktModal(session, onSave) {
   }
   form.appendChild(lagFormRad('Fag', fagSel))
 
-  const divSel = el('select', { name: 'division_id', class: 'felt select' })
-  divSel.appendChild(el('option', { value: '' }, '(ingen)'))
+  const divContainer = el('div', { class: 'div-checkboxes' })
   for (const d of divisions || []) {
-    const opt = el('option', { value: d.id }, d.name)
-    if (d.id === session.division_id) opt.setAttribute('selected', 'true')
-    divSel.appendChild(opt)
+    const lbl = el('label', { class: 'div-check-lbl' })
+    const cb = el('input', { type: 'checkbox', name: 'selected_divisions', value: d.id })
+    if (currentDivIds.has(d.id)) cb.checked = true
+    lbl.appendChild(cb)
+    lbl.appendChild(document.createTextNode(` ${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`))
+    divContainer.appendChild(lbl)
   }
-  form.appendChild(lagFormRad('Parti/gruppe', divSel))
+  form.appendChild(lagFormRad('Parti/gruppe', divContainer))
 
   const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'felt input',
     value: session.week_nr, min: 1, max: 53 })
@@ -2125,13 +2163,17 @@ async function visKopierOktModal(session, onSave) {
     box.appendChild(el('p', { class: 'kopi-hint' }, 'Endre detaljene før du lagrer kopien:'))
   }
 
-  const { data: subjects } = await sb.from('subjects').select('*')
-    .eq('school_id', APP.school.id).order('name')
-  const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
+  const [{ data: subjects }, { data: teachers }, { data: kildeSd }] = await Promise.all([
+    sb.from('subjects').select('*').eq('school_id', APP.school.id).order('name'),
+    sb.from('users').select('*').eq('school_id', APP.school.id),
+    sb.from('session_divisions').select('division_id').eq('session_id', session.id),
+  ])
+  const kildeDivIds = new Set((kildeSd || []).map(r => r.division_id))
 
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
+    const valteDivIder = [...form.querySelectorAll('[name=selected_divisions]:checked')].map(c => c.value)
     // Fridagssjekk – skoleruten blokkerer økter på fridager
     const fridag = await finnFridag(parseInt(fd.get('week_nr')), parseInt(fd.get('day_of_week')), aktivtSkolear)
     if (fridag) {
@@ -2139,11 +2181,11 @@ async function visKopierOktModal(session, onSave) {
       return
     }
     await medLagreOverlay(async () => {
-      const { error } = await sb.from('sessions').insert({
+      const { data: inserted, error } = await sb.from('sessions').insert({
         school_id: APP.school.id,
         class_id: session.class_id,
         subject_id: fd.get('subject_id'),
-        division_id: fd.get('division_id') || null,
+        division_id: null,
         week_nr: parseInt(fd.get('week_nr')),
         day_of_week: parseInt(fd.get('day_of_week')),
         teacher_id: fd.get('teacher_id'),
@@ -2153,8 +2195,13 @@ async function visKopierOktModal(session, onSave) {
         school_year: aktivtSkolear,
         created_by: APP.profile.id,
         version: 1,
-      })
+      }).select('id')
       if (error) throw error
+      if (valteDivIder.length && inserted?.length) {
+        const { error: sdErr } = await sb.from('session_divisions')
+          .insert(valteDivIder.map(did => ({ session_id: inserted[0].id, division_id: did })))
+        if (sdErr) throw sdErr
+      }
     })
     modal.remove()
     if (onSave) onSave()
@@ -2162,7 +2209,7 @@ async function visKopierOktModal(session, onSave) {
 
   // Fag
   const fagSel = el('select', { name: 'subject_id', class: 'felt select', required: 'true',
-    onchange: (e) => oppdaterDivisionSel(e.target.value) })
+    onchange: async (e) => oppdaterDivisionCheckboxes(e.target.value) })
   for (const s of subjects || []) {
     const opt = el('option', { value: s.id }, s.name)
     if (s.id === session.subject_id) opt.setAttribute('selected', 'true')
@@ -2170,21 +2217,30 @@ async function visKopierOktModal(session, onSave) {
   }
   form.appendChild(lagFormRad('Fag', fagSel))
 
-  // Parti/gruppe
-  const divSel = el('select', { name: 'division_id', class: 'felt select' })
-  form.appendChild(lagFormRad('Parti/gruppe', divSel))
+  // Parti/gruppe – checkboxes, kildeøktens valg forhåndsmerket
+  const divContainer = el('div', { class: 'div-checkboxes' })
+  form.appendChild(lagFormRad('Parti/gruppe', divContainer))
 
-  async function oppdaterDivisionSel(subjectId) {
-    clearEl(divSel)
-    divSel.appendChild(el('option', { value: '' }, '(ingen)'))
-    const { data: divs } = await sb.from('subject_divisions').select('*').eq('subject_id', subjectId)
-    for (const d of divs || []) {
-      const opt = el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`)
-      if (d.id === session.division_id) opt.setAttribute('selected', 'true')
-      divSel.appendChild(opt)
+  async function oppdaterDivisionCheckboxes(subjectId) {
+    clearEl(divContainer)
+    if (!subjectId) return
+    const { data: divs } = await sb.from('subject_divisions')
+      .select('*')
+      .eq('subject_id', subjectId)
+      .or(`class_id.is.null,class_id.eq.${session.class_id}`)
+      .is('deleted_at', null)
+      .order('sort_order')
+    if (!(divs || []).length) return
+    for (const d of divs) {
+      const lbl = el('label', { class: 'div-check-lbl' })
+      const cb = el('input', { type: 'checkbox', name: 'selected_divisions', value: d.id })
+      if (kildeDivIds.has(d.id)) cb.checked = true
+      lbl.appendChild(cb)
+      lbl.appendChild(document.createTextNode(` ${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`))
+      divContainer.appendChild(lbl)
     }
   }
-  await oppdaterDivisionSel(session.subject_id)
+  await oppdaterDivisionCheckboxes(session.subject_id)
 
   // Uke
   const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'felt input',
@@ -2573,64 +2629,60 @@ async function renderKlasseAdminTab(container) {
     }
     innhold.appendChild(el('button', { class: 'btn btn-s', title: 'Legg til flerdagsarrangement', onclick: () => visNyMDEModal(aktivKlasse.id, renderKlasseAdminInnhold) }, '+ Nytt arrangement'))
 
-    // Subject config
-    innhold.appendChild(el('h3', {}, 'Faginnstillinger'))
-    const { data: subjects } = await sb.from('subjects').select('*').eq('class_id', aktivKlasse.id).order('name')
+    // Partier for denne klassen (kun fag med has_parti = true)
+    const { data: fagMedParti } = await sb.from('subjects').select('*')
+      .eq('school_id', APP.school.id)
+      .eq('has_parti', true)
+      .is('deleted_at', null)
+      .order('name')
 
-    for (const subj of subjects || []) {
-      const subjBox = el('div', { class: 'subj-config-box' })
-      subjBox.appendChild(el('strong', {}, subj.name))
+    if ((fagMedParti || []).length > 0) {
+      innhold.appendChild(el('h3', {}, 'Partier'))
+      for (const subj of fagMedParti) {
+        const subjBox = el('div', { class: 'subj-config-box' })
+        subjBox.appendChild(el('strong', {}, subj.name))
 
-      // Preferred days
-      const daysRow = el('div', { class: 'days-row' })
-      const prefDays = subj.preferred_days || []
-      for (let d = 1; d <= 5; d++) {
-        const cb = el('input', { type: 'checkbox', id: `pd-${subj.id}-${d}` })
-        cb.checked = prefDays.includes(d)
-        cb.addEventListener('change', async () => {
-          const current = subj.preferred_days || []
-          const updated = cb.checked
-            ? [...current, d].sort()
-            : current.filter(x => x !== d)
-          await sb.from('class_subject_config').upsert({ class_id: APP.currentClass, subject_id: subj.id, preferred_days: updated })
-        })
-        daysRow.appendChild(cb)
-        daysRow.appendChild(el('label', { for: `pd-${subj.id}-${d}` }, dagNavn(d).slice(0, 2)))
-      }
-      subjBox.appendChild(el('label', {}, 'Foretrukne dager: '))
-      subjBox.appendChild(daysRow)
+        const { data: partier } = await sb.from('subject_divisions').select('*')
+          .eq('subject_id', subj.id)
+          .eq('division_type', 'parti')
+          .eq('class_id', aktivKlasse.id)
+          .is('deleted_at', null)
+          .order('sort_order')
 
-      // Divisions
-      const { data: divs } = await sb.from('subject_divisions').select('*').eq('subject_id', subj.id)
-      const divList = el('div', { class: 'div-list' })
-      for (const d of divs || []) {
-        const divRow = el('div', { class: 'div-row' })
-        const nameInput = el('input', { type: 'text', class: 'felt input input-sm', value: d.name })
-        divRow.appendChild(nameInput)
-        divRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Lagre navn på inndeling', onclick: async () => {
-          await medLagreOverlay(() => sb.from('subject_divisions').update({ name: nameInput.value }).eq('id', d.id))
-          showToast('Lagret', 'success')
-        }}, '💾'))
-        divRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett inndeling', onclick: async () => {
-          if (!confirm('Slette?')) return
-          await medLagreOverlay(() => sb.from('subject_divisions').delete().eq('id', d.id))
-          renderKlasseAdminInnhold()
-        }}, '🗑️'))
-        divList.appendChild(divRow)
+        const divList = el('div', { class: 'div-list' })
+        for (const p of partier || []) {
+          const divRow = el('div', { class: 'div-row' })
+          const nameInput = el('input', { type: 'text', class: 'felt input input-sm', value: p.name })
+          divRow.appendChild(nameInput)
+          divRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Lagre navn på parti', onclick: async () => {
+            await medLagreOverlay(() => sb.from('subject_divisions').update({ name: nameInput.value }).eq('id', p.id))
+            showToast('Lagret', 'success')
+          }}, '💾'))
+          divRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett parti', onclick: async () => {
+            if (!confirm(`Slette partiet «${p.name}»?`)) return
+            await medLagreOverlay(() => sb.from('subject_divisions')
+              .update({ deleted_at: new Date().toISOString() }).eq('id', p.id))
+            renderKlasseAdminInnhold()
+          }}, '🗑️'))
+          divList.appendChild(divRow)
+        }
+        if ((partier || []).length < 8) {
+          divList.appendChild(el('button', { class: 'btn btn-sm', title: 'Legg til parti', onclick: async () => {
+            const navn = prompt(`Navn på nytt parti for ${subj.name}:`)
+            if (!navn) return
+            await medLagreOverlay(() => sb.from('subject_divisions').insert({
+              subject_id: subj.id,
+              division_type: 'parti',
+              class_id: aktivKlasse.id,
+              name: navn,
+              sort_order: (partier || []).length,
+            }))
+            renderKlasseAdminInnhold()
+          }}, '+ Legg til parti'))
+        }
+        subjBox.appendChild(divList)
+        innhold.appendChild(subjBox)
       }
-      if ((divs || []).length < 8) {
-        divList.appendChild(el('button', { class: 'btn btn-sm', title: 'Legg til parti eller gruppe', onclick: async () => {
-          const type = prompt('Type (parti/gruppe):') || 'gruppe'
-          const navn = prompt('Navn:')
-          if (!navn) return
-          await medLagreOverlay(() => sb.from('subject_divisions').insert({
-            subject_id: subj.id, name: navn, type
-          }))
-          renderKlasseAdminInnhold()
-        }}, '+ Legg til inndeling'))
-      }
-      subjBox.appendChild(divList)
-      innhold.appendChild(subjBox)
     }
 
     // Backup
@@ -3082,7 +3134,7 @@ async function renderSkoleaarTab(container) {
 // format: 'json' | 'csv' | 'print'
 async function eksporterSkolear(school, skolear, format) {
   const { data: sessions, error } = await sb.from('sessions')
-    .select('*, subjects(name, short_code, color_hex), classes(name), users!teacher_id(full_name), subject_divisions(name, division_type)')
+    .select('*, subjects(name, short_code, color_hex), classes(name), users!teacher_id(full_name), session_divisions(division_id, subject_divisions(name, division_type))')
     .eq('school_id', school.id)
     .eq('school_year', skolear)
     .is('deleted_at', null)
@@ -3104,7 +3156,7 @@ async function eksporterSkolear(school, skolear, format) {
       s.classes?.name ?? '',
       s.subjects?.name ?? '',
       s.subjects?.short_code ?? '',
-      s.subject_divisions ? `${s.subject_divisions.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${s.subject_divisions.name}` : '',
+      (s.session_divisions || []).map(sd => sd.subject_divisions ? `${sd.subject_divisions.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${sd.subject_divisions.name}` : '').filter(Boolean).join(', '),
       s.users?.full_name ?? '',
       s.activity ?? '',
       s.meeting_point ?? '',
@@ -3175,10 +3227,19 @@ function lastNed(blob, filnavn) {
 async function renderFagTab(container) {
   async function refresh() {
     clearEl(container)
-    const { data: subjects } = await sb.from('subjects').select('*').order('name')
+    const [{ data: subjects }, { data: alleDivisjoner }] = await Promise.all([
+      sb.from('subjects').select('*').is('deleted_at', null).order('name'),
+      sb.from('subject_divisions').select('*').is('class_id', null).is('deleted_at', null).order('sort_order'),
+    ])
+    const grupperPerFag = {}
+    for (const d of alleDivisjoner || []) {
+      if (!grupperPerFag[d.subject_id]) grupperPerFag[d.subject_id] = []
+      grupperPerFag[d.subject_id].push(d)
+    }
 
     container.appendChild(el('h3', {}, 'Fag'))
     for (const s of subjects || []) {
+      const blokk = el('div', { class: 'admin-fag-blokk' })
       const row = el('div', { class: 'admin-rad' })
       const swatch = el('span', { class: 'color-swatch', style: `background:${s.color_hex || '#ccc'}` })
       row.appendChild(swatch)
@@ -3189,7 +3250,42 @@ async function renderFagTab(container) {
         await medLagreOverlay(() => sb.from('subjects').update({ deleted_at: new Date().toISOString() }).eq('id', s.id))
         refresh()
       }}, '🗑️'))
-      container.appendChild(row)
+      blokk.appendChild(row)
+
+      // Grupper (class_id IS NULL) – kun for fag med has_gruppe = true
+      if (s.has_gruppe) {
+        const grupper = grupperPerFag[s.id] || []
+        const gruppeRad = el('div', { class: 'admin-grupper-rad' })
+        for (const g of grupper) {
+          const gRow = el('div', { class: 'div-row' })
+          const gInput = el('input', { type: 'text', class: 'felt input input-sm', value: g.name })
+          gRow.appendChild(gInput)
+          gRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Lagre gruppenavn', onclick: async () => {
+            await medLagreOverlay(() => sb.from('subject_divisions').update({ name: gInput.value }).eq('id', g.id))
+            showToast('Lagret', 'success')
+          }}, '💾'))
+          gRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: `Slett gruppen ${g.name}`, onclick: async () => {
+            if (!confirm(`Slette gruppen «${g.name}»?`)) return
+            await medLagreOverlay(() => sb.from('subject_divisions')
+              .update({ deleted_at: new Date().toISOString() }).eq('id', g.id))
+            refresh()
+          }}, '🗑️'))
+          gruppeRad.appendChild(gRow)
+        }
+        if (grupper.length < 8) {
+          gruppeRad.appendChild(el('button', { class: 'btn btn-sm', title: 'Legg til gruppe', onclick: async () => {
+            const navn = prompt(`Navn på ny gruppe for ${s.name}:`)
+            if (!navn) return
+            await medLagreOverlay(() => sb.from('subject_divisions').insert({
+              subject_id: s.id, division_type: 'gruppe', name: navn, sort_order: grupper.length,
+            }))
+            refresh()
+          }}, '+ Legg til gruppe'))
+        }
+        blokk.appendChild(gruppeRad)
+      }
+
+      container.appendChild(blokk)
     }
     container.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til nytt fag', onclick: () => visRedigerFagModal(null, refresh) }, '+ Nytt fag'))
   }
