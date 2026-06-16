@@ -1,5 +1,110 @@
 # PLAN — Ukeplan1E v4
 
+## Status: VENTER PÅ GODKJENNING — Parti/gruppe-styring (frontend)
+## Neste steg: Godkjenn plan nedenfor, så starter koding
+
+---
+
+### Runde: Parti/gruppe-styring i frontend
+
+**Forutsetning:** Migrasjon 017 er kjørt (class_id på subject_divisions,
+session_divisions-tabell, oppdatert RLS). sessions.division_id beholdes
+men utfases gradvis — session_divisions er ny primærkilde.
+
+**Scope:** `v4/app.js`, `v4/style.css`. Ingen ny migrasjon, ingen edge-function-endringer.
+
+**Modell (fra migrasjon 017):**
+- GRUPPE: class_id IS NULL, admin eier → administreres i admin-panelet
+- PARTI: class_id IS NOT NULL per klasse, kontaktlærer/admin eier → administreres i klasse-admin-fanen
+
+---
+
+**Delsteg 1 — Admin fag-panel: vis kun grupper** [ ]
+
+`renderKlasseAdminInnhold()` henter i dag alle divisjoner for et fag.
+Etter 017 finnes det to typer:
+- Grupper (class_id IS NULL) — admin eier
+- Partier (class_id IS NOT NULL) — kontaktlærer eier, vises ikke her
+
+Endringer:
+- Legg til `.is('class_id', null)` i subject_divisions-spørringen
+- Overskrift endres fra «Inndelinger» til «Grupper»
+- Insert legger IKKE til class_id (null er korrekt for grupper)
+- Kolonnene division_type og sort_order settes riktig ved insert
+  (grupper bruker `division_type = 'gruppe'`)
+
+---
+
+**Delsteg 2 — Kontaktlærer: administrer partier i klasse-admin-fanen** [ ]
+
+Ny seksjon i `renderKlasseAdminTab` (lærervisning → klasse-admin):
+- Vises kun for fag der `has_parti = true` og kontaktlærer har `is_contact_teacher_for(klasse.id)`
+- Henter partier for klassen: `.eq('division_type', 'parti').eq('class_id', klasse.id)`
+- Rad per parti: navn-input + lagre-knapp + slett-knapp (soft-delete)
+- «+ Legg til parti»-knapp: oppretter ny rad med class_id = klasse.id,
+  division_type = 'parti'
+- Ingen type-prompt (alltid parti i denne seksjonen)
+- Admin ser samme seksjon for alle klasser
+
+---
+
+**Delsteg 3 — Session-modaler: flervalg av divisjoner** [ ]
+
+`visNyOktModal`, `visRedigerOktModal`, `visKopierOktModal`:
+
+*Henting:*
+- Spørringen henter: grupper (class_id IS NULL) + partier for den aktuelle klassen
+  `.or('class_id.is.null,class_id.eq.<klasse_id>')`
+- Sortert: partier først (per klasse), deretter grupper
+
+*UI:*
+- Erstatt `<select>` med checkboxes (én per divisjon, gruppert: «Partier» / «Grupper»)
+- Vises kun når faget har divisjoner
+- Ingen obligatorisk valg — alle ukrysset = «hele klassen»
+
+*Lagring:*
+- `division_id` settes til null (multi-select → enkeltkolonne utfases)
+- Etter session er lagret: slett alle rader i session_divisions for session_id,
+  deretter insert de valgte divisjonene
+- Ved redigering: samme mønster (slett gammel kobling, insert nye)
+
+---
+
+**Delsteg 4 — Session-spørringer og visning: bruk session_divisions** [ ]
+
+Berører: `renderElevView`, `renderMinKlasseTab`, `renderAlleOkterTab`,
+`eksporterSkolear`.
+
+*Spørring (ny form):*
+```js
+.select('*, subjects(name,color_hex,short_code), users!teacher_id(full_name), session_divisions(division_id, subject_divisions(name,division_type))')
+```
+(Fjerner den direkte `subject_divisions(...)`-embeddingen via division_id.)
+
+*Filtrering i elev-view:*
+```js
+const sdIds = new Set((s.session_divisions || []).map(sd => sd.division_id))
+daySessions = daySessions.filter(s =>
+  sdIds.size === 0 || [...valgteDivisjoner].some(id => sdIds.has(id)))
+```
+
+*Badge-visning:*
+- Erstatt enkelt `div-badge` med liste av badges, én per divisjon i session_divisions
+- Tom session_divisions → ingen badge (gjelder hele klassen)
+
+*Export:*
+- Divisjoner concatenert med komma: «Parti: P1, Parti: P2» eller «Gruppe: G1»
+
+---
+
+**Delsteg 5 — Bump, commit og push** [ ]
+- Bump `?v=20260616a` i `v4/index.html`
+- Commit per delsteg
+- Push til `claude/sweet-fermi-1l3uqy`
+- Ingen manuelle steg i Supabase
+
+---
+
 ## Status: FULLFØRT — Elevfilter for parti og grupper
 ## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
 
