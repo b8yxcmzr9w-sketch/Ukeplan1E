@@ -1,5 +1,49 @@
 # PLAN — Ukeplan1E v4
 
+## Pågående: Kompakt layout og bulk-redigering i «Alle mine økter»
+
+**Scope:** `v4/app.js`, `v4/style.css`. Ingen DB-endringer, ingen edge-function-endringer.
+
+### Fase 1 — Kompakt/mobilvennlig layout for «Alle mine økter»
+- [ ] Finn `renderAlleOkterTab` (eller tilsvarende funksjon) i `app.js` og kartlegg
+      dagens kortstruktur.
+- [ ] Bytt store kort med kompakte rader: én rad per økt med klasse, fag (fargekodet
+      chip/badge), aktivitet, møtested og eventuell info som sekundærtekst.
+- [ ] Grupper per uke (Uke 2, Uke 3 …) beholder dagens kollapsbare ukehoder.
+- [ ] Mobiloptimalisering: rader er minst 44 px høye (touch-target), tekst bryter
+      pent på smal skjerm, ikke horisontalt skroll.
+- [ ] CSS i `style.css` — nye klasser prefixet `.mine-okter-` for isolasjon.
+- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html`.
+- [ ] Commit: «Fase 1: kompakt radvisning i Alle mine økter».
+
+### Fase 2 — Markeringsmodus (velg flere økter)
+- [ ] Legg til «Velg»-knapp øverst i fanen som slår på/av markeringsmodus.
+- [ ] I markeringsmodus: checkbox til venstre på hver rad; klikk på raden togglar
+      valg (ikke åpner rediger-modal).
+- [ ] Teller «X valgt» vises i en sticky verktøylinje nederst (eller øverst) i fanen.
+- [ ] «Velg alle i uke»-knapp per ukehode i markeringsmodus.
+- [ ] «Avbryt»-knapp avslutter markeringsmodus og nullstiller valg.
+- [ ] Bump `?v=YYYYMMDDx`.
+- [ ] Commit: «Fase 2: markeringsmodus i Alle mine økter».
+
+### Fase 3 — Bulk-handlinger
+- [ ] Verktøylinjen viser tre knapper når ≥ 1 økt er valgt:
+      **Kopier** / **Flytt** / **Slett**.
+- [ ] **Kopier:** kall eksisterende `visBulkKopierModal(valgte, onSave)` direkte —
+      ingen ny modal.
+- [ ] **Flytt:** ny lett modal — velg måluke (og eventuelt dag-offset: behold samme
+      dag | flytt til spesifikk dag); kall `lagreOkt` per økt med ny `week_nr`
+      (og `day_of_week` om dag ble valgt), med versjonskontroll.
+- [ ] **Slett:** bekreftelsesdialog «Sletter X økter — kan ikke angres»; kall
+      eksisterende `slettOkt`-logikk (soft-delete via `deleted_at`) sekvensielt.
+- [ ] Alle tre handlinger avslutter markeringsmodus og oppdaterer listen etterpå.
+- [ ] Bump `?v=YYYYMMDDx`.
+- [ ] Commit: «Fase 3: bulk kopier/flytt/slett i Alle mine økter».
+
+**Neste steg etter godkjenning:** Start Fase 1.
+
+---
+
 ## Status: FULLFØRT — Elevfilter for parti og grupper
 ## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
 
