@@ -12,7 +12,7 @@ const corsHeaders = {
 // Portet fra kallGemini_ i appsscript.gs (velprøvd i produksjon).
 // Identisk kopi ligger i generate-facts og ai-parse-skolerute,
 // siden hver Edge Function deployes som én fil i Supabase Dashboard.
-const GEMINI_MODEL = 'gemini-2.5-flash'
+const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
 
 async function kallGemini(prompt: string, generationConfig?: Record<string, unknown>): Promise<string> {
   const key = Deno.env.get('GEMINI_API_KEY')
