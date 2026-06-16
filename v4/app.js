@@ -4213,8 +4213,8 @@ async function init() {
   if (schools && schools.length) {
     APP.school = schools[0]
     oppdaterHeader()
-    const h = location.hash
-    if (!h || h === '#/' || h === '#') {
+    const h = location.hash || '#/'
+    if (!h.startsWith('#/login')) {
       await router()
     }
   }
