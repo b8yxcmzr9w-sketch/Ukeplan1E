@@ -3298,24 +3298,61 @@ async function visRedigerFagModal(subj, onSave) {
   box.appendChild(el('h3', {}, subj ? 'Rediger fag' : 'Nytt fag'))
   if (subj) box.appendChild(el('p', { class: 'warning-text' }, '⚠️ Endring av navn påvirker alle eksisterende visninger.'))
 
+  // Last inn eksisterende inndelinger når vi redigerer
+  let eksisterendeDivs = []
+  if (subj) {
+    const { data: divs } = await sb.from('subject_divisions').select('*')
+      .eq('subject_id', subj.id).is('deleted_at', null).order('sort_order')
+    eksisterendeDivs = divs || []
+  }
+
+  const divNavnContainer = el('div', { class: 'div-list' })
+
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
+    const divType = fd.get('division_type')
+    const maks = parseInt(fd.get('max_divisions')) || 8
     const data = {
       name: fd.get('name'),
       short_code: fd.get('short_code'),
       color_hex: fd.get('color_hex'),
-      has_parti: fd.get('division_type') === 'parti',
-      has_gruppe: fd.get('division_type') === 'gruppe',
-      max_divisions: parseInt(fd.get('max_divisions')) || 8,
+      has_parti: divType === 'parti',
+      has_gruppe: divType === 'gruppe',
+      max_divisions: maks,
     }
     await medLagreOverlay(async () => {
+      let subjId = subj?.id
       if (subj) {
         const { error } = await sb.from('subjects').update(data).eq('id', subj.id)
         if (error) throw error
       } else {
-        const { error } = await sb.from('subjects').insert({ ...data, school_id: APP.school.id })
+        const { data: nytt, error } = await sb.from('subjects')
+          .insert({ ...data, school_id: APP.school.id }).select('id').single()
         if (error) throw error
+        subjId = nytt.id
+      }
+
+      // Oppdater inndelinger
+      const navnInputs = divNavnContainer.querySelectorAll('input[type=text]')
+      const navnListe = Array.from(navnInputs).map(inp => inp.value.trim())
+
+      if (divType === 'ingen') {
+        for (const d of eksisterendeDivs) {
+          await sb.from('subject_divisions').update({ deleted_at: new Date().toISOString() }).eq('id', d.id)
+        }
+      } else {
+        for (let i = 0; i < maks; i++) {
+          const navn = navnListe[i] || (divType === 'parti' ? `P${i + 1}` : `Gruppe ${i + 1}`)
+          if (eksisterendeDivs[i]) {
+            await sb.from('subject_divisions').update({ name: navn, division_type: divType }).eq('id', eksisterendeDivs[i].id)
+          } else {
+            await sb.from('subject_divisions').insert({ subject_id: subjId, division_type: divType, name: navn, sort_order: i + 1 })
+          }
+        }
+        for (let i = maks; i < eksisterendeDivs.length; i++) {
+          await sb.from('subject_divisions').update({ deleted_at: new Date().toISOString() }).eq('id', eksisterendeDivs[i].id)
+        }
       }
     })
     modal.remove()
@@ -3396,11 +3433,37 @@ async function visRedigerFagModal(subj, onSave) {
   const maksRad = el('div', { class: 'felt' })
   maksRad.appendChild(el('label', {}, 'Maks antall inndelinger'))
   maksRad.appendChild(maksInput)
-  maksRad.style.display = (dtSel.value === 'ingen') ? 'none' : 'block'
-  dtSel.addEventListener('change', () => {
-    maksRad.style.display = (dtSel.value === 'ingen') ? 'none' : 'block'
-  })
   form.appendChild(maksRad)
+
+  // Navnefelt for inndelinger
+  const divNavnRad = el('div', { class: 'felt' })
+  divNavnRad.appendChild(el('label', {}, 'Navn på inndelinger'))
+  divNavnRad.appendChild(divNavnContainer)
+  form.appendChild(divNavnRad)
+
+  function oppdaterDivNavn() {
+    const divType = dtSel.value
+    const maks = Math.max(1, Math.min(20, parseInt(maksInput.value) || 8))
+    const skjul = divType === 'ingen'
+    maksRad.style.display = skjul ? 'none' : 'block'
+    divNavnRad.style.display = skjul ? 'none' : 'block'
+    if (skjul) { clearEl(divNavnContainer); return }
+    // Bevar verdier brukeren allerede har skrevet inn
+    const gjeldende = Array.from(divNavnContainer.querySelectorAll('input[type=text]')).map(inp => inp.value)
+    clearEl(divNavnContainer)
+    for (let i = 0; i < maks; i++) {
+      const standardNavn = divType === 'parti' ? `P${i + 1}` : `Gruppe ${i + 1}`
+      const verdi = gjeldende[i] !== undefined ? gjeldende[i] : (eksisterendeDivs[i]?.name || '')
+      const row = el('div', { class: 'div-row' })
+      row.appendChild(el('span', { style: 'min-width:72px;font-size:.88rem;color:var(--tekst-svak)' }, standardNavn + ':'))
+      row.appendChild(el('input', { type: 'text', class: 'felt input input-sm', value: verdi, placeholder: standardNavn }))
+      divNavnContainer.appendChild(row)
+    }
+  }
+
+  dtSel.addEventListener('change', oppdaterDivNavn)
+  maksInput.addEventListener('input', oppdaterDivNavn)
+  oppdaterDivNavn()
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))

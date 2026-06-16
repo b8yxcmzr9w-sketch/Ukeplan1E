@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER PÅ GODKJENNING — Admin navngiving av parti og grupper
-## Etter dette: Elevfilter bruker admin-satte navn (fullfør) → Migrasjon 017 (Plan_YFF)
+## Status: FULLFØRT — Admin navngiving av parti og grupper
+## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
 
 ---
 
@@ -32,7 +32,7 @@ for å navngi inndelinger. En liten editor eksisterer i lærerens Klasse-admin-t
 
 **Planlagte delsteg:**
 
-**Delsteg 1 — Navnefelt for inndelinger i `visRedigerFagModal`** [ ]
+**Delsteg 1 — Navnefelt for inndelinger i `visRedigerFagModal`** [x]
 
 Når «Inndeling» er satt til parti eller gruppe, og faget allerede er lagret
 (`subj != null`), vises en liste over eksisterende `subject_divisions` med
@@ -50,7 +50,7 @@ Implementasjonsvalg:
 - Håndter endring av `max_divisions`: legg til manglende rader (insert) og
   soft-delete overskytende (sett `deleted_at`).
 
-**Delsteg 2 — Bruk admin-satte navn konsekvent** [ ]
+**Delsteg 2 — Bruk admin-satte navn konsekvent** [x]
 
 Verifiser at alle steder som viser `subject_divisions.name` bruker verdien
 direkte (ikke harde strenger). Per kodegjennomgang er dette allerede korrekt:
@@ -61,7 +61,7 @@ direkte (ikke harde strenger). Per kodegjennomgang er dette allerede korrekt:
 - Elevfilter: `s.subject_divisions?.name` (`app.js:965`) ✓
 Ingen endringer nødvendig her — delsteget er en verifisering.
 
-**Delsteg 3 — Bump, commit og push** [ ]
+**Delsteg 3 — Bump, commit og push** [x]
 - Bump `?v=YYYYMMDDx` i `v4/index.html`.
 - Commit og push til `claude/determined-hypatia-58bo4x`.
 
