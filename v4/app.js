@@ -4192,34 +4192,27 @@ async function init() {
   oppdaterHeader()
   await router()
 
-  // Last profil og skoledata i bakgrunnen
-  if (session) {
-    try {
-      APP.profile = await fetchProfile(session.user.id)
-      APP.isAdminActive = APP.profile.is_admin_active || false
-      oppdaterHeader()
-      // Re-render hvis vi er på en side som trenger profil
-      const h = location.hash || '#/'
-      if (h === '#/' || h === '#' || h.startsWith('#/laerer') || h.startsWith('#/admin')) {
-        await router()
-      }
-    } catch (err) {
-      console.warn('Kunne ikke hente brukerprofil:', err.message)
-    }
+  // Last profil og skoledata parallelt, så én router()-kall når begge er klare
+  const [profileResult, schoolsResult] = await Promise.allSettled([
+    session ? fetchProfile(session.user.id) : Promise.resolve(null),
+    sb.from('schools').select('*').limit(1),
+  ])
+
+  if (profileResult.status === 'fulfilled' && profileResult.value) {
+    APP.profile = profileResult.value
+    APP.isAdminActive = APP.profile.is_admin_active || false
+  } else if (profileResult.status === 'rejected') {
+    console.warn('Kunne ikke hente brukerprofil:', profileResult.reason?.message)
   }
 
-  // Last skoledata i bakgrunnen
-  const { data: schools } = await sb.from('schools').select('*').limit(1)
-  if (schools && schools.length) {
-    APP.school = schools[0]
-    oppdaterHeader()
-    const h = location.hash || '#/'
-    if (!h.startsWith('#/login')) {
-      await router()
-    }
-  }
+  const schools = schoolsResult.status === 'fulfilled' ? schoolsResult.value?.data : null
+  if (schools && schools.length) APP.school = schools[0]
 
-  // Load school facts for overlay (background)
+  oppdaterHeader()
+  const h = location.hash || '#/'
+  if (!h.startsWith('#/login')) await router()
+
+  // Last funfacts i bakgrunnen (ikke blokkerende)
   if (APP.school) {
     const { data: facts } = await sb.from('school_facts').select('*')
       .eq('school_id', APP.school.id).is('deleted_at', null)
