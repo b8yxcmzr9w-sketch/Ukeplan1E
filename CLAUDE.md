@@ -101,9 +101,15 @@ APP = {
 ## Viktige invarianter / fallgruver
 
 ### Init-rekkefølge (KRITISK)
-`router()` kalles FØR profil og skole er lastet. `renderLaererView` og `renderAdminPanel`
-sjekker `if (!APP.profile || !APP.school) { vis "Laster…"; return }` — re-render skjer
-automatisk når data er lastet. Endre ALDRI rekkefølgen i `init()` uten å teste refresh.
+`init()` henter profil og skole **parallelt** med `Promise.allSettled`, og kaller `router()`
+**én gang** etterpå (for alle hash-paths unntatt `#/login`). Gjeninnfør ALDRI sekvensielle
+`router()`-kall med betingede hash-sjekker — det har gjentatte ganger ført til at nye routes
+ble glemt og siden hengte på «Laster…» ved refresh. Mønsteret er:
+```js
+const [profileResult, schoolsResult] = await Promise.allSettled([fetchProfile(...), sb.from('schools')...])
+// sett APP.profile / APP.school
+await router()  // én gang, ubetinget (bortsett fra #/login)
+```
 
 ### Cache-busting
 Bump `?v=YYYYMMDDx` i `index.html` (både CSS og JS) ved HVER endring som skal til prod.
