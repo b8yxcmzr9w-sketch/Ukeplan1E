@@ -350,3 +350,26 @@ til alle tre AI-edge-functions (generate-facts, ai-parse-sessions,
 ai-parse-skolerute). Migrasjon 004–010 er kjørt;
 `GEMINI_API_KEY` er satt og `006_fix_school_facts_rls.sql` bekreftet
 kjørt i prod.
+
+---
+
+## Backlogg
+
+### Backlogg: Admin bulk-utvalg på tvers av alle læreres økter
+
+**Idé:** I lærervisningen kan en lærer i dag bare krysse av (bulk-velge) sine
+egne økter — riktig for en lærer. Vurder om **admin** skal kunne bulk-velge
+ALLE økter i en klasse/uke, ikke bare sine egne, for opprydding og omrokkering
+på vegne av skolen.
+
+**Må avklares før bygging:**
+- Bekreftelse/sikring: admin som bulk-opererer på andres økter bør ha en tydelig
+  bekreftelse (jf. «kollegahjelp»-dialogen for enkeltøkter — kanskje sterkere
+  for bulk).
+- Angre: bulk-handlinger på tvers er vanskeligere å angre. Vurder mot et
+  eventuelt fremtidig trash/undo-system.
+- RLS: krever policy som lar `is_active_admin()` velge/endre alle økter i egen
+  skole.
+
+**Status:** Egen oppgave. Tas etter at elevfilter + admin-navngiving av
+parti/grupper er ferdig. IKKE bland inn i den pågående elevfilter-sessionen.
