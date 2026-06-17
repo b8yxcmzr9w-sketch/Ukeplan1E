@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
 ## Status: FULLFØRT — Admin navngiving av parti og grupper
-## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
+## Neste steg: Ingen pågående oppgave
 
 ---
 
@@ -295,8 +295,8 @@ _Implementasjon:_
 
 ---
 
-## Status: VENTER — import av ekte produksjonsdata 25/26 (NPT/NNA/Naturfag i basen)
-## Neste steg (etter UI-runden): Plan_YFF limes inn → migrasjon 017
+## Status: FULLFØRT — import av ekte produksjonsdata 25/26
+## YFF: beholder syntetiske data (avklart 17.06.2026)
 
 Bruker limer inn ark for ark fra dagens løsning; hvert ark blir en
 import-migrasjon som soft-sletter de syntetiske øktene for faget og

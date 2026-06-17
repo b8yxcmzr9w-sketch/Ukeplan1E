@@ -59,6 +59,8 @@ v4/
       014_import_npt_2526.sql     # Ekte NPT-plan 25/26 fra prod (erstatter syntetiske NPT-økter; lærermapping på fornavn)
       015_import_nna_2526.sql     # Ekte NNA-plan 25/26 fra prod (samme mønster som 014)
       016_import_fag_2526.sql     # Ekte fellesfag-plan 25/26 fra prod (Plan_Fag; kun Naturfag, mapper fag-kolonne mot subjects)
+      017_parti_per_klasse.sql    # class_id på subject_divisions + session_divisions-tabell + RLS (KJØRT)
+      018_funfacts_view_count.sql # view_count på school_facts + increment_fact_view()-funksjon (KJØRT)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini
