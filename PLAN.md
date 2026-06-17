@@ -1,5 +1,72 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Admin navngiving av parti og grupper
+## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
+
+---
+
+### Runde: Admin navngiving av parti og grupper (i Fag-fanen)
+
+**Scope:** Kun `v4/app.js` (og evt. `v4/style.css`). Ingen DB-endringer —
+`subject_divisions.name` finnes allerede og lagres/leses av eksisterende kode.
+
+**Svar på spørsmål fra bruker:**
+
+**1. Avkryssingsboksen øverst i dag-kolonnen (lærervisning «Min klasse»)**
+Antagelsen stemmer ikke helt. Det finnes _ingen_ per-dag «velg alle»-boks øverst
+i dag-kolonnen. Checkboxene (`session-cb`, `app.js:1646`) sitter på _hvert enkelt
+økt-kort_. Når én eller flere er huket av, vises en `bulk-bar` (`app.js:1596`)
+øverst i uke-området med tre knapper: «Rediger valgte», **«Kopier valgte»**
+(→ `visBulkKopierModal`), og «Slett valgte». Det som kan se ut som «en boks
+øverst i kolonnen» er rett og slett checkbox på det _første_ kortet i kolonnen.
+
+**2. «P1/P2/Gruppe 1/Gruppe 2» — autogenererte standardnavn?**
+Navnene er eksplisitt satt i migrasjonene:
+- `013_testdata_2526.sql:231–250`: `'P1'`, `'P2'`, `'Gruppe 1'`, `'Gruppe 2'`
+- `014_import_npt_2526.sql:86–88`: `'P1'`, `'P2'`
+De lagres i `subject_divisions.name` og vises direkte på økt-kort via
+`s.subject_divisions.name` (`app.js:1214`).
+Det fins _ingen_ admin-UI i Fag-fanen (`visRedigerFagModal`, `app.js:3199`)
+for å navngi inndelinger. En liten editor eksisterer i lærerens Klasse-admin-tab
+(`app.js:2604–2620`), men ikke i admin-panelet.
+
+**Planlagte delsteg:**
+
+**Delsteg 1 — Navnefelt for inndelinger i `visRedigerFagModal`** [x]
+
+Når «Inndeling» er satt til parti eller gruppe, og faget allerede er lagret
+(`subj != null`), vises en liste over eksisterende `subject_divisions` med
+redigerbare navnefelt (ett per rad). Admin kan:
+- Redigere navn direkte i tekstfeltet (auto-lagres på «Lagre»-klikk i
+  modal-formen, eller med dedikert 💾-knapp per rad).
+- Se antall inndelinger vs `max_divisions`.
+
+Implementasjonsvalg:
+- Etter lagring av fagdata (`subjects.update/insert`) og før `modal.remove()`:
+  kjør én `subject_divisions.upsert`-løkke for alle navnefelt i formen.
+- Ved _nytt_ fag (insert): opprett `subject_divisions`-radene med auto-genererte
+  navn (`P1`/`P2`/... eller `Gruppe 1`/`Gruppe 2`/...) basert på `max_divisions`,
+  slik at de er redigerbare ved neste åpning.
+- Håndter endring av `max_divisions`: legg til manglende rader (insert) og
+  soft-delete overskytende (sett `deleted_at`).
+
+**Delsteg 2 — Bruk admin-satte navn konsekvent** [x]
+
+Verifiser at alle steder som viser `subject_divisions.name` bruker verdien
+direkte (ikke harde strenger). Per kodegjennomgang er dette allerede korrekt:
+- Økt-kort: `s.subject_divisions.name` (`app.js:1214`) ✓
+- Eksport CSV: `s.subject_divisions.name` (`app.js:3107`) ✓
+- Divisjonsvelger i ny/rediger/kopier-modal: `d.name` (`app.js:1972`, `2069`,
+  `2182`) ✓
+- Elevfilter: `s.subject_divisions?.name` (`app.js:965`) ✓
+Ingen endringer nødvendig her — delsteget er en verifisering.
+
+**Delsteg 3 — Bump, commit og push** [x]
+- Bump `?v=YYYYMMDDx` i `v4/index.html`.
+- Commit og push til `claude/determined-hypatia-58bo4x`.
+
+---
+
 ## Status: FULLFØRT — Parti/gruppe-styring (frontend)
 ## Neste steg: Avventer
 
