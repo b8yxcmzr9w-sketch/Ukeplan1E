@@ -259,8 +259,7 @@ _Implementasjon:_
 **Delsteg 4 — Bump, commit og push** [x]
 - Bump `?v=20260614e` i `v4/index.html`.
 - Commit per delsteg, push til `claude/adoring-darwin-8qet33`.
-- **Manuelt steg (ikke automatisert):** iCal edge-funksjon må deployes
-  manuelt i Supabase Dashboard → Edge Functions → ical → Code → Deploy.
+- **Manuelt steg:** iCal edge-funksjon re-deployet i Supabase Dashboard (17.06.2026) ✅
 
 ---
 
