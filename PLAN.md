@@ -1,5 +1,62 @@
 # PLAN — Ukeplan1E v4
 
+## Status: UNDER PLANLEGGING — Økt A (P2): Ukenummer som primær tidsenhet
+## Neste steg: Godkjenn delplanen nedenfor, så starter koding
+
+---
+
+## Økt A (P2) — Ukenummer som primær tidsenhet i hele UI
+
+**Status: VENTER PÅ GODKJENNING**
+**Branch:** `claude/P2-ukenummer-ui`
+
+### Fase 0 — Funn: Tid-presentasjon i nåværende UI
+
+| Sted | Funksjon / linje | Nåværende format | Vurdering |
+|------|------------------|------------------|-----------|
+| Navigasjonsrad (student + lærer) | `renderElevView` ~1129, `renderMinKlasseTab` ~1594 | `← Forrige uke [9] Neste uke →` — uketallet i `<input>` uten «Uke»-etikett; `.uke-label`-klassen finnes i CSS men er ubrukt | ⚠️ Uke vises, men mangler synlig etikett |
+| Dag-titler i ukenettet | begge ~1176/1672 | «MANDAG 10.02» — dag primær (bold, uppercase, .82rem), dato sekundær (`opacity:.6`, .75rem) | ✓ Dato allerede nedtonet |
+| Admin skolerute-liste | `renderSkolerute` ~3970 | `[Tittel (uthevet)]  [10.02 – 21.02 (liten, dempet)]` — ingen ukenummer | ⚠️ Dato uten uke-kontekst |
+| «Legg til hendelse»-modal | `visNySkolerute` ~4052 | `type="date"`-felt, ingen live uke-hint | ⚠️ Dato-input uten uke-tilbakemelding |
+| Flerdagsarrangementer (klasse-admin) | `renderKlasseAdminInnhold` ~2660 | `Tittel (DD.MM – DD.MM)` — ingen ukenummer | ⚠️ Dato uten uke-kontekst |
+| Utskriftshode | begge | «25/26 Skolenavn, klasse X – Uke 9» | ✓ Kun uke, ingen dato |
+| «Alle mine økter»-fanen | `renderAlleOkterTab` ~1763 | Seksjonstittel `Uke 9` (h3) | ✓ Uke primær |
+| Søk-fanen | `renderSokTab` ~1838 | `Klasse – Uke 9 Mandag` | ✓ Uke primær |
+| AI-forhåndsvisning skolerute | `visSkoleruteForhandsvisning` ~4123 | Egen «Uke»-kolonne («uke 7», «uke 6–8») | ✓ Uke primær (forrige runde) |
+
+**Konklusjon:** Uke er allerede primær i student- og lærervendte flater. Tre hull gjenstår:
+1. Navigasjonsraden mangler eksplisitt «Uke»-etikett (`.uke-label`-klassen er klar i CSS, men aldri brukt)
+2. Admin skolerute-listen viser dato uten uke-kontekst
+3. Flerdagsarrangementer (klasse-admin) viser dato uten uke-kontekst
+
+---
+
+### Delplan — P2-implementasjon
+
+**Scope:** Kun `v4/app.js`. Ingen CSS-endringer (`.uke-label` er allerede klar).
+Ingen DB-endringer. Ingen edge-function-endringer.
+
+- [ ] **Delsteg 1 — «Uke»-etikett i navigasjonsrad (student + lærer)**
+  - `renderElevView` (~linje 1129): legg til `el('span', { class: 'uke-label' }, 'Uke ')` rett FØR `weekInput` i `navRow.appendChild`-rekkefølgen.
+  - `renderMinKlasseTab` (~linje 1594): samme.
+  - `renderElevView`: endre knapptekst «← Forrige uke» → «← Forrige» og «Neste uke →» → «Neste →» (konsekvent med lærervisningen; «Uke»-etiketten er nå synlig ved siden av inputen).
+  - Resultat: `← Forrige  Uke [9]  Neste →  Nå`
+
+- [ ] **Delsteg 2 — Ukenummer i admin skolerute-liste + ny-hendelse-modal**
+  - Ekstraher `ukeTekst(fra, til)`-logikken fra `visSkoleruteForhandsvisning` (linje 4113–4118) til en frittstående hjelpefunksjon på modulnivå (bruker eksisterende `getISOWeek`).
+  - `renderSkolerute` (~linje 3970): erstatt dato-spennet med «uke X · DD.MM – DD.MM» i `tekst-svak`-spennet — uke foran dato som hjelpeinfo.
+  - `visNySkolerute` (~linje 4052–4060): legg til et live `span.tekst-svak` under dato-radene som oppdateres på `onchange` for fra/til og viser f.eks. «uke 7» eller «uke 6–8».
+
+- [ ] **Delsteg 3 — Ukenummer i flerdagsarrangementer (klasse-admin)**
+  - `renderKlasseAdminInnhold` (~linje 2660): endre `${e.title} (DD.MM – DD.MM)` til `${e.title} · uke X (DD.MM – DD.MM)` ved bruk av `ukeTekst` fra delsteg 2.
+
+- [ ] **Delsteg 4 — Bump, commit og push**
+  - Bump `?v=YYYYMMDDx` i `v4/index.html`.
+  - Commit per delsteg, push til `claude/P2-ukenummer-ui`.
+  - Ingen manuelle steg i Supabase.
+
+---
+
 ## Status: FULLFØRT — Admin navngiving av parti og grupper
 ## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
 
