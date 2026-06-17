@@ -7,8 +7,8 @@
 
 # PLAN — Parti/gruppe-styring (Ukeplan1E v4)
 
-## Status: Fase 1 FULLFØRT (migrasjon skrevet, ikke kjørt i DB ennå)
-## Neste steg: Bruker kjører 017_parti_per_klasse.sql manuelt i Supabase SQL Editor
+## Status: Fase 1 FULLFØRT (migrasjon kjørt og verifisert i DB 17.06.2026)
+## Neste steg: —
 
 ## Bakgrunn
 Fag kan deles i grupper (lik på tvers av klasser, admin navngir per fag) eller
@@ -31,7 +31,9 @@ velge én eller flere partier/grupper — obligatorisk, ingen unntak, ingen frit
 - [x] Tabell session_divisions + datamigrering fra sessions.division_id
 - [x] RLS på subject_divisions (admin/grupper, kontaktlærer/partier, SELECT alle)
 - [x] RLS på session_divisions (følger sessions — kollegahjelp-terskel for insert/delete)
-- [ ] MANUELT: kjør 017_parti_per_klasse.sql i Supabase Dashboard → SQL Editor
+- [x] MANUELT: kjørt via 017_parti_per_klasse_fix.sql i Supabase SQL Editor (17.06.2026)
+      Verifisert: class_id ✓, chk_parti_har_klasse ✓, uq_division_navn ✓,
+      session_divisions ✓, alle 6 RLS-policyer ✓
 
 ## FASE 2 — Navngiving (fullført i frontend-sesjonene)
 ### 2a — Admin navngir grupper (under Fag) — [x] FULLFØRT (PR #91)
