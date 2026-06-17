@@ -5,6 +5,47 @@
 
 ---
 
+# PLAN — Parti/gruppe-styring (Ukeplan1E v4)
+
+## Status: Fase 1 FULLFØRT (migrasjon skrevet, ikke kjørt i DB ennå)
+## Neste steg: Bruker kjører 017_parti_per_klasse.sql manuelt i Supabase SQL Editor
+
+## Bakgrunn
+Fag kan deles i grupper (lik på tvers av klasser, admin navngir per fag) eller
+partier (spesifikk per klasse, kontaktlærer/admin navngir). Et fag har ENTEN
+grupper ELLER partier, aldri begge. Når en økt legges i et slikt fag, MÅ bruker
+velge én eller flere partier/grupper — obligatorisk, ingen unntak, ingen fritekst.
+
+## Beslutninger tatt
+- Datamodell: Modell A — `subject_divisions` får ny `class_id`-kolonne.
+  gruppe → class_id IS NULL. parti → class_id satt. Håndheves med CHECK.
+- Flervalg: økt kan gjelde FLERE inndelinger → ny tabell `session_divisions`.
+  `sessions.division_id` utfases (migreres inn, droppes først i Fase 3).
+- Obligatorisk: fag med has_parti/has_gruppe krever minst én inndeling i økt-modal.
+
+## FASE 1 — Datamodell (migrasjon 017, skrevet av claude/zen-feynman-izs5zl)
+- [x] Verifiser skjema mot faktiske migrasjoner; bekreft neste migrasjonsnummer
+- [x] Migrasjon `017_parti_per_klasse.sql`: class_id på subject_divisions + CHECK-constraint
+      (constraint ekskluderer soft-delete-rader: deleted_at IS NOT NULL OR ...)
+- [x] Delvis unik-indeks via sentinel-UUID: COALESCE(class_id, '00000000-...'::uuid)
+- [x] Tabell session_divisions + datamigrering fra sessions.division_id
+- [x] RLS på subject_divisions (admin/grupper, kontaktlærer/partier, SELECT alle)
+- [x] RLS på session_divisions (følger sessions — kollegahjelp-terskel for insert/delete)
+- [ ] MANUELT: kjør 017_parti_per_klasse.sql i Supabase Dashboard → SQL Editor
+
+## FASE 2 — Navngiving (fullført i frontend-sesjonene)
+### 2a — Admin navngir grupper (under Fag) — [x] FULLFØRT (PR #91)
+### 2b — Kontaktlærer/admin navngir partier (i klassen) — [x] FULLFØRT (PR #90)
+
+## FASE 3 — Økt-modal med obligatorisk valg — [x] FULLFØRT (PR #90)
+- [x] visNyOktModal + visRedigerOktModal: flervalg over relevante inndelinger
+- [x] Lagring via session_divisions (delete gamle, insert nye)
+- [ ] Når migrasjon 017 er kjørt og verifisert i prod: dropp sessions.division_id
+
+---
+
+---
+
 ### Runde: Admin navngiving av parti og grupper (i Fag-fanen)
 
 **Scope:** Kun `v4/app.js` (og evt. `v4/style.css`). Ingen DB-endringer —
