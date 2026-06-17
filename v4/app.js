@@ -299,17 +299,22 @@ async function medAIOverlay(tittel, asyncFn) {
     let forrige = null
     function nesteFakta() {
       if (!koe.length) {
-        koe = APP.facts.map(f => f.fact_text)
+        koe = [...APP.facts]
         for (let i = koe.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1))
           ;[koe[i], koe[j]] = [koe[j], koe[i]]
         }
-        if (koe.length > 1 && koe[koe.length - 1] === forrige) {
+        if (koe.length > 1 && koe[koe.length - 1]?.id === forrige?.id) {
           ;[koe[koe.length - 1], koe[0]] = [koe[0], koe[koe.length - 1]]
         }
       }
       forrige = koe.pop()
-      return forrige
+      // Tell visning: oppdater lokalt + DB (ikke-blokkerende, omgår RLS via SECURITY DEFINER)
+      if (forrige?.id) {
+        forrige.view_count = (forrige.view_count || 0) + 1
+        sb.rpc('increment_fact_view', { p_fact_id: forrige.id }).catch(() => {})
+      }
+      return forrige?.fact_text ?? ''
     }
     function visNeste(medFade) {
       if (!medFade) { tekstEl.textContent = nesteFakta(); return }
@@ -349,7 +354,41 @@ async function medAIOverlay(tittel, asyncFn) {
     clearInterval(intervall)
     clearTimeout(fadeTimer)
     overlay.remove()
+    // Ikke-blokkerende etterspill: forny funfacts-pølja om terskelen er nådd
+    sjekkOgFornyFunfacts().catch(() => {})
   }
+}
+
+// Sjekk om funfacts-pølja bør fornyes (terskel: ≥ 3 visninger på én setning).
+// Krever admin-tilgang siden generate-facts er adminbeskyttet. Feil svelges stille.
+async function sjekkOgFornyFunfacts() {
+  if (!APP.school || !APP.facts.length) return
+  if (!APP.profile?.is_admin_active && APP.profile?.role !== 'admin') return
+  if (!APP.facts.some(f => (f.view_count || 0) >= 3)) return
+  try {
+    await fornyFunfactsRotasjon()
+  } catch (e) {
+    console.warn('[funfacts] Automatisk fornyelse feilet (ufarlig):', e.message)
+  }
+}
+
+// Bytt ut de 5 mest viste aktive setningene med 5 nye AI-genererte.
+async function fornyFunfactsRotasjon() {
+  const { data, error } = await sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } })
+  if (error || !data?.facts?.length) throw new Error(error?.message || 'Tomt svar fra generate-facts')
+  const nyeFakta = data.facts.slice(0, 5)
+  const sortert = [...APP.facts].sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
+  const skalSlettes = sortert.slice(0, Math.min(5, sortert.length)).map(f => f.id)
+  if (skalSlettes.length) {
+    const { error: delErr } = await sb.from('school_facts')
+      .update({ deleted_at: new Date().toISOString() }).in('id', skalSlettes)
+    if (delErr) throw new Error(delErr.message)
+  }
+  const { error: insErr } = await sb.from('school_facts')
+    .insert(nyeFakta.map(txt => ({ school_id: APP.school.id, fact_text: txt })))
+  if (insErr) throw new Error(insErr.message)
+  APP.facts = APP.facts.filter(f => !skalSlettes.includes(f.id))
+  console.log('[funfacts] Fornyet: 5 sett ut, 5 nye inn.')
 }
 
 // ─────────────────────────────────────────
@@ -4226,6 +4265,23 @@ async function renderFaktaTab(container) {
       }
     }}, '✨ Generer med AI')
     knappeRad.appendChild(aiBtn)
+
+    const fornyBtn = el('button', { class: 'btn btn-s', title: 'Bytt ut de 5 mest viste setningene med 5 nye AI-genererte', onclick: async () => {
+      if (!APP.facts.length) { showToast('Ingen funfacts å fornye', 'info'); return }
+      if (!confirm('Generer 5 nye funfacts og bytt ut de 5 mest viste? De utgåtte slettes mykt.')) return
+      fornyBtn.disabled = true; fornyBtn.textContent = 'Genererer…'
+      try {
+        await fornyFunfactsRotasjon()
+        showToast('5 nye funfacts generert – de 5 mest viste er byttet ut.', 'ok')
+        await refresh()
+      } catch (err) {
+        showToast(err.message || 'Noe gikk galt', 'error')
+      } finally {
+        fornyBtn.disabled = false; fornyBtn.textContent = '🔄 Generer nye funfacts nå'
+      }
+    }}, '🔄 Generer nye funfacts nå')
+    knappeRad.appendChild(fornyBtn)
+
     wrap.appendChild(knappeRad)
 
     // Tom-tilstand
