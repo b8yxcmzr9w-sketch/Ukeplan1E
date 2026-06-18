@@ -116,6 +116,22 @@ Safari cacher hardt. Bruk hard refresh (Cmd+Shift+R) for å verifisere.
 Brukes i `renderElevView` og `renderMinKlasseTab` (via `ukeRenderToken`) for å unngå
 race conditions ved dobbeltkall til async render-funksjoner.
 
+### Uke er primær tidsenhet — UI-prinsipp (P2)
+All tidsreferanse i brukergrensesnittet bruker ukenummer som primærenhet.
+Dato er alltid sekundær hjelpeinfo. Mønstre som skal følges konsekvent:
+- **Navigasjonsrad:** `span.uke-label` («Uke ») + `input.uke-nr-input`
+  (tall). Knapper: «← Forrige» / «Neste →» — ikke «Forrige uke».
+- **Dag-kolonner:** `.dag-dato` er `display:block` med `opacity:.55` og
+  `font-size:.72rem` — på egen linje under dagnavnet, aldri innebygd.
+- **Perioder** (skolerute-liste, MDE-lister): `ukeTekst(fra, til)` foran
+  dato. Format: «uke 7 · 10.02–21.02».
+- **Fridags-toaster:** uke nevnes eksplisitt i meldingen.
+  Format: «Vinterferie (uke 7, 10.02–14.02)».
+- **Dato-input-modaler** (skolerute + MDE): live `→ uke X`-hint under
+  dato-feltene, oppdateres ved `onchange`.
+- **Unntak:** `last_modified_at` i sporbarhet — kalenderdato er riktig
+  her (redigeringstidspunkt er ikke en skoleuke).
+
 ### Uke er primær tidsenhet — AI gjetter aldri årstall
 Lærere og elever forholder seg til ukenummer/ukedag; datoer beregnes fra
 uke + skoleår. Mønster for alle AI-edge-functions (bygget i
@@ -249,6 +265,7 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `bekreftKollegahjelp(s)` | Advarsel før redigering av annens økt |
 | `merkFellesOkter(sessions)` | Setter `_fellesMed` (klassenavn) på fellesøkter |
 | `visSkoleruteForhandsvisning(events, warnings, onSave)` | Redigerbar forhåndsvisning av AI-tolket skolerute før lagring |
+| `ukeTekst(fra, til)` | Ukeperiode som tekst: «uke 7» eller «uke 6–8» — bruk alltid foran dato i UI |
 | `rensVarsel(tekst)` | Sikkerhetsnett: fjerner setninger med `week_nr` fra AI-varsler |
 | `skoleaarIntervall(sy)` | Datointervallet et skoleår dekker (1. aug år1 – 31. jul år2) |
 | `showToast(msg, type)` | Toast-melding |
