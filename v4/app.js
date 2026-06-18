@@ -1102,7 +1102,7 @@ async function renderElevView(klasseNavn) {
     const navRow = el('div', { class: 'nav-bar' })
     const prevBtn = el('button', { class: 'btn btn-s', title: 'Gå til forrige uke', onclick: () => {
       if (ukePosisjon(weekNr, schoolStart) > 0) { currentWeek = weekNr === 1 ? 52 : weekNr - 1; renderUke(currentWeek) }
-    }}, '← Forrige uke')
+    }}, '← Forrige')
     if (ukePosisjon(weekNr, schoolStart) === 0) prevBtn.setAttribute('disabled', 'true')
 
     const weekInput = el('input', { type: 'number', class: 'uke-nr-input', value: weekNr,
@@ -1117,7 +1117,7 @@ async function renderElevView(klasseNavn) {
 
     const nextBtn = el('button', { class: 'btn btn-s', title: 'Gå til neste uke', onclick: () => {
       if (ukePosisjon(weekNr, schoolStart) < ukePosisjon(schoolEnd, schoolStart)) { currentWeek = weekNr === 52 ? 1 : weekNr + 1; renderUke(currentWeek) }
-    }}, 'Neste uke →')
+    }}, 'Neste →')
     if (ukePosisjon(weekNr, schoolStart) >= ukePosisjon(schoolEnd, schoolStart)) nextBtn.setAttribute('disabled', 'true')
 
     const naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)
@@ -1127,6 +1127,7 @@ async function renderElevView(klasseNavn) {
     if (weekNr === naaWeek) naaBtn.setAttribute('disabled', 'true')
 
     navRow.appendChild(prevBtn)
+    navRow.appendChild(el('span', { class: 'uke-label' }, 'Uke '))
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
     navRow.appendChild(naaBtn)
@@ -1592,6 +1593,7 @@ async function renderMinKlasseTab(container) {
     if (currentWeek === naaWeek) naaBtn.setAttribute('disabled', 'true')
 
     navRow.appendChild(prevBtn)
+    navRow.appendChild(el('span', { class: 'uke-label' }, 'Uke '))
     navRow.appendChild(weekInput)
     navRow.appendChild(nextBtn)
     navRow.appendChild(naaBtn)
@@ -1924,7 +1926,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
     // Fridagssjekk – skoleruten blokkerer økter på fridager
     const fridag = await finnFridag(weekNr, dagOfWeek, skoleAar || APP.school?.active_school_year)
     if (fridag) {
-      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${ukeTekst(fridag.start_date, fridag.end_date)}, ${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
       return
     }
 
@@ -2114,7 +2116,7 @@ async function visRedigerOktModal(session, onSave) {
     // Fridagssjekk – gjelder også flytting av økt til annen uke/dag
     const fridag = await finnFridag(data.week_nr, data.day_of_week, session.school_year)
     if (fridag) {
-      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${ukeTekst(fridag.start_date, fridag.end_date)}, ${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
       return
     }
     await medLagreOverlay(async () => {
@@ -2216,7 +2218,7 @@ async function visKopierOktModal(session, onSave) {
     // Fridagssjekk – skoleruten blokkerer økter på fridager
     const fridag = await finnFridag(parseInt(fd.get('week_nr')), parseInt(fd.get('day_of_week')), aktivtSkolear)
     if (fridag) {
-      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${ukeTekst(fridag.start_date, fridag.end_date)}, ${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
       return
     }
     await medLagreOverlay(async () => {
@@ -2657,7 +2659,7 @@ async function renderKlasseAdminTab(container) {
 
     for (const e of mde || []) {
       const row = el('div', { class: 'mde-row' })
-      row.appendChild(el('span', {}, `${e.title} (${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)})`))
+      row.appendChild(el('span', {}, `${e.title} · ${ukeTekst(e.start_date, e.end_date)} (${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)})`))
       row.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger arrangement', onclick: () => visRedigerMDEModal(e, renderKlasseAdminInnhold) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett arrangement', onclick: async () => {
         if (!confirm('Slette?')) return
@@ -2746,10 +2748,20 @@ async function visNyMDEModal(classId, onSave) {
   const startInput = el('input', { type: 'date', class: 'felt input' })
   const endInput = el('input', { type: 'date', class: 'felt input' })
 
+  const mdeUkeHintNy = el('p', { class: 'tekst-svak skjult', style: 'margin:2px 0 6px; font-size:.9rem' })
+  const oppdaterMdeUkeHintNy = () => {
+    const ut = ukeTekst(startInput.value || null, endInput.value || null)
+    mdeUkeHintNy.textContent = ut ? `→ ${ut}` : ''
+    mdeUkeHintNy.classList.toggle('skjult', !ut)
+  }
+  startInput.addEventListener('change', oppdaterMdeUkeHintNy)
+  endInput.addEventListener('change', oppdaterMdeUkeHintNy)
+
   box.appendChild(lagFormRad('Tittel', titleInput))
   box.appendChild(lagFormRad('Beskrivelse', descInput))
   box.appendChild(lagFormRad('Fra', startInput))
   box.appendChild(lagFormRad('Til', endInput))
+  box.appendChild(mdeUkeHintNy)
 
   box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     if (!titleInput.value || !startInput.value || !endInput.value) return
@@ -2793,10 +2805,20 @@ async function visRedigerMDEModal(mde, onSave) {
   const startInput = el('input', { type: 'date', class: 'felt input', value: mde.start_date })
   const endInput = el('input', { type: 'date', class: 'felt input', value: mde.end_date })
 
+  const mdeUkeHintRed = el('p', { class: 'tekst-svak', style: 'margin:2px 0 6px; font-size:.9rem' })
+  const oppdaterMdeUkeHintRed = () => {
+    const ut = ukeTekst(startInput.value || null, endInput.value || null)
+    mdeUkeHintRed.textContent = ut ? `→ ${ut}` : ''
+  }
+  startInput.addEventListener('change', oppdaterMdeUkeHintRed)
+  endInput.addEventListener('change', oppdaterMdeUkeHintRed)
+  oppdaterMdeUkeHintRed()
+
   box.appendChild(lagFormRad('Tittel', titleInput))
   box.appendChild(lagFormRad('Beskrivelse', descInput))
   box.appendChild(lagFormRad('Fra', startInput))
   box.appendChild(lagFormRad('Til', endInput))
+  box.appendChild(mdeUkeHintRed)
 
   box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     await medLagreOverlay(async () => {
@@ -3968,7 +3990,7 @@ async function renderSkolerute(container) {
       const info = el('div', { style: 'flex:1; min-width:0' })
       info.appendChild(el('span', { class: 'tekst', style: 'font-weight:600; margin-right:8px' }, e.title))
       info.appendChild(el('span', { class: 'tekst-svak', style: 'font-size:.85rem; white-space:nowrap' },
-        `${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)}`))
+        `${ukeTekst(e.start_date, e.end_date)} · ${formatDatoNO(e.start_date)} – ${formatDatoNO(e.end_date)}`))
       row.appendChild(info)
       row.appendChild(el('span', { class: 'div-badge' }, e.type ? kalenderTypeNavn(e.type) : ''))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett denne hendelsen fra skoleruten', onclick: async () => {
@@ -4059,6 +4081,16 @@ function visNySkolerute(onSave, skolear) {
   datoRad.appendChild(fraGrp); datoRad.appendChild(tilGrp)
   form.appendChild(lagFormRad('Dato', datoRad))
 
+  const ukeHint = el('p', { class: 'tekst-svak skjult', style: 'margin:2px 0 0; font-size:.9rem' })
+  form.appendChild(ukeHint)
+  const oppdaterUkeHint = () => {
+    const ut = ukeTekst(fraIn.value || null, tilIn.value || null)
+    ukeHint.textContent = ut ? `→ ${ut}` : ''
+    ukeHint.classList.toggle('skjult', !ut)
+  }
+  fraIn.addEventListener('change', oppdaterUkeHint)
+  tilIn.addEventListener('change', oppdaterUkeHint)
+
   const datoAdvarsel = el('p', { class: 'advarsel-tekst skjult', style: 'margin:4px 0 0; font-size:.9rem' })
   form.appendChild(datoAdvarsel)
   if (syIntervall) {
@@ -4086,6 +4118,16 @@ function visNySkolerute(onSave, skolear) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
+// ISO-ukenummer for en dato-periode: «uke 41», eller «uke 51–1» over nyttår.
+// Datoer parses som lokale datoer (ikke UTC) så uka ikke tipper feil.
+function ukeTekst(fra, til) {
+  if (!fra) return ''
+  const lokal = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
+  const u1 = getISOWeek(lokal(fra))
+  const u2 = til ? getISOWeek(lokal(til)) : u1
+  return u1 === u2 ? `uke ${u1}` : `uke ${u1}–${u2}`
+}
+
 // Sikkerhetsnett: AI-varsler skal være i klarspråk (styrt av prompten),
 // men fjern setninger med interne feltnavn hvis modellen likevel tar dem med
 function rensVarsel(tekst) {
@@ -4106,16 +4148,6 @@ function visSkoleruteForhandsvisning(events, warnings, onSave, skolear) {
   const rensedeVarsler = warnings.map(rensVarsel).filter(Boolean)
   if (rensedeVarsler.length) {
     box.appendChild(el('p', { class: 'advarsel-tekst' }, `⚠️ ${rensedeVarsler.join(' | ')}`))
-  }
-
-  // ISO-ukenummer for en hendelse: «uke 41», eller «uke 51–1» over flere uker.
-  // Datoer parses som lokale (ikke new Date(str) = UTC) så uka ikke tipper feil.
-  function ukeTekst(fra, til) {
-    if (!fra) return ''
-    const lokal = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
-    const u1 = getISOWeek(lokal(fra))
-    const u2 = til ? getISOWeek(lokal(til)) : u1
-    return u1 === u2 ? `uke ${u1}` : `uke ${u1}–${u2}`
   }
 
   const rader = []

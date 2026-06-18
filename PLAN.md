@@ -1,85 +1,73 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER PÅ GODKJENNING — Økt B (P3): klasse-admin ukeinntasting + skoleår-veksler
-## Neste steg etter godkjenning: se delplan nedenfor
+## Status: PÅGÅR — Økt B (P3): klasse-admin ukeinntasting + skoleår-veksler
 
 ---
 
 ## Økt B (P3): Klasse-admin – ukeinntasting + skoleår-veksler
 
-### Kartlegging — dagens tilstand
-
-**`renderSkolerute` (linje 3926–4024):**
-- Har allerede en `<select>` (skoleår-dropdown) øverst med aktivt år + neste år.
-- Problem: neste-skoleår-alternativet vises **alltid** — ikke gated av
-  `erNesteAarVinduApent()`. Dvs. selv midt i november kan man klikke seg over til
-  neste år og legge inn hendelser der (kanskje ikke etter hensikten).
-- Visuell markering: liten label «Skoleår:» + `<select>`. Under denne er en
-  `skolear-banner` med perioden (f.eks. «Skoleår 25/26 (uke 33 2025 – uke 24 2026)»).
-  Indikasjonen finnes, men er ikke veldig tydelig (særlig om man er midt i det
-  aktive året og ikke tenker over det).
-
-**`visNySkolerute(onSave, skolear)` (linje 4026–4087):**
-- Modal med: Tittel, Fra dato (`<input type="date">`), Til dato (`<input type="date">`),
-  Type-dropdown (ferie/høytid/planleggingsdag/annet).
-- **Ingen ukenummer-input** — admin må taste inn råe datoer, ikke ukenummer.
-- En live-advarsel vises hvis datoen er utenfor det valgte skoleårets intervall.
-- Lagrer direkte i `school_calendar` med `start_date`/`end_date` fra date-pickerne.
-
-**Tilgjengelige hjelpefunksjoner:**
-- `isoWeekToDate(year, week, dayOfWeek)` (linje 110) — uke + år + ukedag → `Date`
-- `skoleaarKalenderaar(schoolYear, weekNr, startWeek)` (linje 166) — riktig kalenderår
-- `erNesteAarVinduApent()` (linje 157) — `true` fra 17. mai
-- `nesteSkolear(sy)` (linje 149) — neste skoleår-streng
-- `skoleaarIntervall(sy)` (linje 175) — datointervall for skoleår
-- `getISOWeek(date)` (linje 102) — dato → ISO-ukenummer
-- `ukeTekst(fra, til)` (linje 4113, inne i `visSkoleruteForhandsvisning`) — dato → «uke X»
-
----
-
 ### Delplan
 
 **Delsteg A — Skoleår-veksler: gate + tydeligere UI i `renderSkolerute`** [ ]
-
-Scope: `renderSkolerute` i `app.js` (~linje 3934–3957).
-
-- Gate neste-skoleår-alternativet bak `erNesteAarVinduApent()`:
-  - Hvis vinduet IKKE er åpent: vis bare aktivt år som ren tekst/badge (ingen
-    dropdown nødvendig — bare ett alternativ).
-  - Hvis vinduet ER åpent: vis en tydelig veksler (toggle-knapper eller select)
-    mellom «Aktivt år» og «Neste år (planleggingsmodus)».
-- Gjør redigert skoleår mer synlig:
-  - Aktivt år: normal `skolear-banner` (som i dag).
-  - Neste år valgt: et tydelig «Planleggingsmodus»-varselsbanner (annen farge,
-    f.eks. `--info-bg`) slik at admin ikke kan ta feil.
-- Ingen endringer i DB-spørringen — `skoleaarIntervall(valgtSkolear)` gir korrekt filter.
-
 **Delsteg B — Ukenummer-inntasting i `visNySkolerute`** [ ]
-
-Scope: `visNySkolerute` i `app.js` (~linje 4026–4087) + minimal CSS.
-
-- Erstatt date-pickerene med uke-inndatafelter som primær input:
-  - «Fra uke» (tall, 1–53) + «Fra dag» (select: man/tir/ons/tor/fre, default mandag)
-  - «Til uke» (tall, 1–53) + «Til dag» (select: man/tir/ons/tor/fre, default fredag)
-  - Default: «Til uke» kopierer «Fra uke» ved endring (for enkeltukehendelser)
-- Beregn `start_date`/`end_date` i kode ved submit (ikke live preview — se under):
-  ```js
-  const aar = skoleaarKalenderaar(skolear, fraNr, startWeek)
-  const startDate = isoWeekToDate(aar, fraNr, fraDay).toISOString().slice(0, 10)
-  // For tilDato: husk at uke over nyttår kan ha annet kalenderår
-  const aarTil = skoleaarKalenderaar(skolear, tilNr, startWeek)
-  const endDate = isoWeekToDate(aarTil, tilNr, tilDay).toISOString().slice(0, 10)
-  ```
-- Vis beregnede datoer som hjelpetekst under feltene (read-only, oppdateres live
-  ved `oninput` på uke-feltene, så admin ser hva som vil lagres).
-- Behold advarsel om dato utenfor skoleåret (nå trigget av beregnet dato).
-- DB-skjema endres ikke — lagrer fortsatt `start_date`/`end_date`.
-
 **Delsteg C — Bump `?v=`, commit og push** [ ]
-- Bump til `?v=20260617b` i `v4/index.html` (CSS-endringer i A + JS-endringer i A+B).
-- Commit per delsteg med beskrivende melding.
-- Push til `claude/P3-admin-skolear-uke`.
-- Ingen migrasjoner. Ingen edge-function-endringer. Ingen manuelle steg i Supabase.
+
+---
+
+## Status: FULLFØRT — Økt A (P2): Ukenummer som primær tidsenhet
+## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
+
+---
+
+## Økt A (P2) — Ukenummer som primær tidsenhet i hele UI
+
+**Status: FULLFØRT**
+**Branch:** `claude/P2-ukenummer-ui`
+
+### Fase 0 — Funn: Tid-presentasjon i nåværende UI
+
+| Sted | Funksjon / linje | Nåværende format | Vurdering |
+|------|------------------|------------------|-----------|
+| Navigasjonsrad (student + lærer) | `renderElevView` ~1129, `renderMinKlasseTab` ~1594 | `← Forrige uke [9] Neste uke →` — uketallet i `<input>` uten «Uke»-etikett; `.uke-label`-klassen finnes i CSS men er ubrukt | ⚠️ Uke vises, men mangler synlig etikett |
+| Dag-titler i ukenettet | begge ~1176/1672 | «MANDAG 10.02» — dag primær (bold, uppercase, .82rem), dato sekundær (`opacity:.6`, .75rem) | ✓ Dato allerede nedtonet |
+| Admin skolerute-liste | `renderSkolerute` ~3970 | `[Tittel (uthevet)]  [10.02 – 21.02 (liten, dempet)]` — ingen ukenummer | ⚠️ Dato uten uke-kontekst |
+| «Legg til hendelse»-modal | `visNySkolerute` ~4052 | `type="date"`-felt, ingen live uke-hint | ⚠️ Dato-input uten uke-tilbakemelding |
+| Flerdagsarrangementer (klasse-admin) | `renderKlasseAdminInnhold` ~2660 | `Tittel (DD.MM – DD.MM)` — ingen ukenummer | ⚠️ Dato uten uke-kontekst |
+| Utskriftshode | begge | «25/26 Skolenavn, klasse X – Uke 9» | ✓ Kun uke, ingen dato |
+| «Alle mine økter»-fanen | `renderAlleOkterTab` ~1763 | Seksjonstittel `Uke 9` (h3) | ✓ Uke primær |
+| Søk-fanen | `renderSokTab` ~1838 | `Klasse – Uke 9 Mandag` | ✓ Uke primær |
+| AI-forhåndsvisning skolerute | `visSkoleruteForhandsvisning` ~4123 | Egen «Uke»-kolonne («uke 7», «uke 6–8») | ✓ Uke primær (forrige runde) |
+
+**Konklusjon:** Uke er allerede primær i student- og lærervendte flater. Tre hull gjenstår:
+1. Navigasjonsraden mangler eksplisitt «Uke»-etikett (`.uke-label`-klassen er klar i CSS, men aldri brukt)
+2. Admin skolerute-listen viser dato uten uke-kontekst
+3. Flerdagsarrangementer (klasse-admin) viser dato uten uke-kontekst
+
+---
+
+### Delplan — P2-implementasjon
+
+**Scope:** Kun `v4/app.js`. Ingen CSS-endringer (`.uke-label` er allerede klar).
+Ingen DB-endringer. Ingen edge-function-endringer.
+
+- [x] **Delsteg 1 — «Uke»-etikett i navigasjonsrad (student + lærer)**
+  - `renderElevView` (~linje 1129): legg til `el('span', { class: 'uke-label' }, 'Uke ')` rett FØR `weekInput` i `navRow.appendChild`-rekkefølgen.
+  - `renderMinKlasseTab` (~linje 1594): samme.
+  - `renderElevView`: endre knapptekst «← Forrige uke» → «← Forrige» og «Neste uke →» → «Neste →» (konsekvent med lærervisningen; «Uke»-etiketten er nå synlig ved siden av inputen).
+  - Resultat: `← Forrige  Uke [9]  Neste →  Nå`
+
+- [x] **Delsteg 2 — Ukenummer i admin skolerute-liste + ny-hendelse-modal**
+  - Ekstraher `ukeTekst(fra, til)`-logikken fra `visSkoleruteForhandsvisning` (linje 4113–4118) til en frittstående hjelpefunksjon på modulnivå (bruker eksisterende `getISOWeek`).
+  - `renderSkolerute` (~linje 3970): erstatt dato-spennet med «uke X · DD.MM – DD.MM» i `tekst-svak`-spennet — uke foran dato som hjelpeinfo.
+  - `visNySkolerute` (~linje 4052–4060): legg til et live `span.tekst-svak` under dato-radene som oppdateres på `onchange` for fra/til og viser f.eks. «uke 7» eller «uke 6–8».
+
+- [x] **Delsteg 3 — Ukenummer i flerdagsarrangementer (klasse-admin)**
+  - `renderKlasseAdminInnhold` (~linje 2660): endre `${e.title} (DD.MM – DD.MM)` til `${e.title} · uke X (DD.MM – DD.MM)` ved bruk av `ukeTekst` fra delsteg 2.
+
+- [x] **Delsteg 4 — Bump, commit og push**
+  - Bump `?v=YYYYMMDDx` i `v4/index.html`.
+  - Commit per delsteg, push til `claude/P2-ukenummer-ui`.
+  - Ingen manuelle steg i Supabase.
 
 ---
 

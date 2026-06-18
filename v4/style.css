@@ -262,7 +262,7 @@ header .spacer { flex: 1; }
   padding: 6px 4px; border-bottom: 2px solid var(--dag-kant);
   margin-bottom: 7px;
 }
-.dag-dato { font-size: .75rem; font-weight: 400; opacity: .6; text-transform: none; letter-spacing: 0; }
+.dag-dato { display: block; font-size: .72rem; font-weight: 400; opacity: .55; text-transform: none; letter-spacing: 0; margin-top: 1px; }
 .dag-okter {
   display: flex; flex-direction: column; gap: 7px;
   min-height: 180px; /* plass til minst 3 synlige */
