@@ -1,6 +1,6 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PÅGÅR — Økt B (P3): klasse-admin ukeinntasting + skoleår-veksler
+## Status: FULLFØRT — Økt B (P3): klasse-admin ukeinntasting + skoleår-veksler
 
 ---
 
@@ -8,9 +8,9 @@
 
 ### Delplan
 
-**Delsteg A — Skoleår-veksler: gate + tydeligere UI i `renderSkolerute`** [ ]
-**Delsteg B — Ukenummer-inntasting i `visNySkolerute`** [ ]
-**Delsteg C — Bump `?v=`, commit og push** [ ]
+**Delsteg A — Skoleår-veksler: gate + tydeligere UI i `renderSkolerute`** [x]
+**Delsteg B — Ukenummer-inntasting i `visNySkolerute`** [x]
+**Delsteg C — Bump `?v=`, commit og push** [x]
 
 ---
 

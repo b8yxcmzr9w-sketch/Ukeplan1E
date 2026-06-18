@@ -3953,25 +3953,34 @@ async function renderSkolerute(container) {
     const wrap = el('div', { class: 'skjema-smal' })
     wrap.appendChild(el('h3', {}, 'Skolerute'))
 
-    // Skoleår-velger (aktivt år + neste år, alltid synlig)
+    // Skoleår-veksler: neste år kun tilgjengelig fra 17. mai
     const aktivtSy = APP.school?.active_school_year
     const nesteSy = nesteSkolear(aktivtSy)
-    const velgerRad = el('div', { style: 'display:flex; align-items:center; gap:8px; margin-bottom:10px' })
-    const velger = el('select', { class: 'felt select', style: 'width:auto', onchange: (e) => {
-      valgtSkolear = e.target.value
-      refresh()
-    }})
-    for (const sy of [aktivtSy, nesteSy].filter(Boolean)) {
-      const opt = el('option', { value: sy }, sy === aktivtSy ? `${sy} (aktivt)` : sy)
-      if (sy === valgtSkolear) opt.selected = true
-      velger.appendChild(opt)
+    const vinduApent = erNesteAarVinduApent()
+
+    if (vinduApent && nesteSy) {
+      const vekslerRad = el('div', { class: 'skolear-veksler' })
+      for (const sy of [aktivtSy, nesteSy]) {
+        const erValgt = sy === valgtSkolear
+        const knapp = el('button', {
+          type: 'button',
+          class: `btn ${erValgt ? 'btn-p' : 'btn-s'} skolear-veksler-knapp`,
+          onclick: () => { valgtSkolear = sy; refresh() }
+        }, sy === aktivtSy ? `${sy} (aktivt)` : `${sy} – planlegging`)
+        vekslerRad.appendChild(knapp)
+      }
+      wrap.appendChild(vekslerRad)
+    } else {
+      wrap.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.9rem; margin:0 0 8px' },
+        `Skoleår: ${aktivtSy ?? '–'}`))
     }
-    velgerRad.appendChild(el('label', { class: 'tekst-svak', style: 'font-size:.9rem' }, 'Skoleår:'))
-    velgerRad.appendChild(velger)
-    wrap.appendChild(velgerRad)
 
     const intervall = skoleaarIntervall(valgtSkolear)
-    if (intervall) {
+    const erNesteSkolear = valgtSkolear !== aktivtSy
+    if (erNesteSkolear) {
+      wrap.appendChild(el('p', { class: 'planlegging-banner' },
+        `Planleggingsmodus — du redigerer neste skoleår (${valgtSkolear}). Endringer er ikke synlige for elever ennå.`))
+    } else if (intervall) {
       const startWeek = APP.school?.school_year_start_week || 33
       const endWeek = APP.school?.school_year_end_week || 24
       wrap.appendChild(el('p', { class: 'skolear-banner' },
@@ -4050,16 +4059,74 @@ function visNySkolerute(onSave, skolear) {
   const box   = el('div', { class: 'modal' })
   box.appendChild(el('h3', {}, 'Legg til hendelse'))
   const syIntervall = skoleaarIntervall(skolear)
+  const startWeek = APP.school?.school_year_start_week || 33
+
+  function ukeNrTilDato(weekNr, dagNr) {
+    if (!weekNr || !skolear) return null
+    const aar = skoleaarKalenderaar(skolear, weekNr, startWeek)
+    return isoWeekToDate(aar, weekNr, dagNr).toISOString().slice(0, 10)
+  }
+
+  const dagValg = [['1','Man'],['2','Tir'],['3','Ons'],['4','Tor'],['5','Fre']]
+  const fraUkeIn  = el('input', { name: 'fra_uke', type: 'number', class: 'felt input', min: 1, max: 53, required: 'true', style: 'width:72px' })
+  const fraDagSel = el('select', { name: 'fra_dag', class: 'felt select', style: 'width:auto' })
+  const tilUkeIn  = el('input', { name: 'til_uke', type: 'number', class: 'felt input', min: 1, max: 53, required: 'true', style: 'width:72px' })
+  const tilDagSel = el('select', { name: 'til_dag', class: 'felt select', style: 'width:auto' })
+  for (const [v, t] of dagValg) {
+    fraDagSel.appendChild(el('option', { value: v }, t))
+    tilDagSel.appendChild(el('option', { value: v, ...(v === '5' ? { selected: 'true' } : {}) }, t))
+  }
+
+  const datoHint    = el('p', { class: 'tekst-svak skjult', style: 'margin:2px 0 0; font-size:.9rem' })
+  const datoAdvarsel = el('p', { class: 'advarsel-tekst skjult', style: 'margin:4px 0 0; font-size:.9rem' })
+
+  function oppdaterHint() {
+    const fraNr  = parseInt(fraUkeIn.value)
+    const tilNr  = parseInt(tilUkeIn.value)
+    const fraDay = parseInt(fraDagSel.value)
+    const tilDay = parseInt(tilDagSel.value)
+    if (!fraNr) { datoHint.classList.add('skjult'); datoAdvarsel.classList.add('skjult'); return }
+    const startDate = ukeNrTilDato(fraNr, fraDay)
+    const endDate   = tilNr ? ukeNrTilDato(tilNr, tilDay) : startDate
+    const hintTekst = endDate && endDate !== startDate
+      ? `→ ${formatDatoNO(startDate)} – ${formatDatoNO(endDate)}`
+      : `→ ${formatDatoNO(startDate)}`
+    datoHint.textContent = hintTekst
+    datoHint.classList.toggle('skjult', !startDate)
+    if (syIntervall && startDate) {
+      const utenfor = startDate < syIntervall.fra || startDate > syIntervall.til
+      datoAdvarsel.textContent = `NB: Uke ${fraNr} er utenfor skoleåret ${skolear}`
+      datoAdvarsel.classList.toggle('skjult', !utenfor)
+    }
+  }
+
+  // Auto-copy Fra uke → Til uke for single-week events
+  let forrigeFraUke = ''
+  fraUkeIn.addEventListener('input', () => {
+    if (!tilUkeIn.value || tilUkeIn.value === forrigeFraUke) tilUkeIn.value = fraUkeIn.value
+    forrigeFraUke = fraUkeIn.value
+    oppdaterHint()
+  })
+  tilUkeIn.addEventListener('input', oppdaterHint)
+  fraDagSel.addEventListener('change', oppdaterHint)
+  tilDagSel.addEventListener('change', oppdaterHint)
 
   const form = el('form', { class: 'skjema', onsubmit: async (ev) => {
     ev.preventDefault()
     const fd = new FormData(form)
+    const fraNr  = parseInt(fd.get('fra_uke'))
+    const tilNr  = parseInt(fd.get('til_uke'))
+    const fraDay = parseInt(fd.get('fra_dag'))
+    const tilDay = parseInt(fd.get('til_dag'))
+    const startDate = ukeNrTilDato(fraNr, fraDay)
+    const endDate   = ukeNrTilDato(tilNr, tilDay)
+    if (!startDate || !endDate) { showToast('Ugyldig ukenummer', 'error'); return }
     await medLagreOverlay(async () => {
       const { error } = await sb.from('school_calendar').insert({
         school_id: APP.school.id,
         title: fd.get('title'),
-        start_date: fd.get('start_date'),
-        end_date: fd.get('end_date'),
+        start_date: startDate,
+        end_date: endDate,
         type: fd.get('type'),
       })
       if (error) throw error
@@ -4071,37 +4138,21 @@ function visNySkolerute(onSave, skolear) {
   form.appendChild(lagFormRad('Tittel',
     el('input', { name: 'title', type: 'text', class: 'felt input', required: 'true', maxlength: 30 })))
 
-  const fraIn = el('input', { name: 'start_date', type: 'date', class: 'felt input', required: 'true' })
-  const tilIn = el('input', { name: 'end_date',   type: 'date', class: 'felt input', required: 'true' })
-  const datoRad = el('div', { class: 'uke-rad' })
-  const fraGrp  = el('div', { class: 'uke-grp dato-grp' })
-  fraGrp.appendChild(el('label', {}, 'Fra')); fraGrp.appendChild(fraIn)
-  const tilGrp  = el('div', { class: 'uke-grp dato-grp' })
-  tilGrp.appendChild(el('label', {}, 'Til')); tilGrp.appendChild(tilIn)
-  datoRad.appendChild(fraGrp); datoRad.appendChild(tilGrp)
-  form.appendChild(lagFormRad('Dato', datoRad))
-
-  const ukeHint = el('p', { class: 'tekst-svak skjult', style: 'margin:2px 0 0; font-size:.9rem' })
-  form.appendChild(ukeHint)
-  const oppdaterUkeHint = () => {
-    const ut = ukeTekst(fraIn.value || null, tilIn.value || null)
-    ukeHint.textContent = ut ? `→ ${ut}` : ''
-    ukeHint.classList.toggle('skjult', !ut)
-  }
-  fraIn.addEventListener('change', oppdaterUkeHint)
-  tilIn.addEventListener('change', oppdaterUkeHint)
-
-  const datoAdvarsel = el('p', { class: 'advarsel-tekst skjult', style: 'margin:4px 0 0; font-size:.9rem' })
+  const ukeRad = el('div', { class: 'uke-rad', style: 'gap:16px' })
+  const fraGrp = el('div', { class: 'uke-grp' })
+  fraGrp.appendChild(el('label', {}, 'Fra uke'))
+  const fraInnRad = el('div', { style: 'display:flex; gap:5px; align-items:center' })
+  fraInnRad.appendChild(fraUkeIn); fraInnRad.appendChild(fraDagSel)
+  fraGrp.appendChild(fraInnRad)
+  const tilGrp = el('div', { class: 'uke-grp' })
+  tilGrp.appendChild(el('label', {}, 'Til uke'))
+  const tilInnRad = el('div', { style: 'display:flex; gap:5px; align-items:center' })
+  tilInnRad.appendChild(tilUkeIn); tilInnRad.appendChild(tilDagSel)
+  tilGrp.appendChild(tilInnRad)
+  ukeRad.appendChild(fraGrp); ukeRad.appendChild(tilGrp)
+  form.appendChild(lagFormRad('Uke', ukeRad))
+  form.appendChild(datoHint)
   form.appendChild(datoAdvarsel)
-  if (syIntervall) {
-    const sjekkDato = () => {
-      if (!fraIn.value) { datoAdvarsel.classList.add('skjult'); return }
-      const utenfor = fraIn.value < syIntervall.fra || fraIn.value > syIntervall.til
-      datoAdvarsel.textContent = `NB: Datoen er utenfor skoleåret ${skolear}`
-      datoAdvarsel.classList.toggle('skjult', !utenfor)
-    }
-    fraIn.addEventListener('change', sjekkDato)
-  }
 
   const typeSel = el('select', { name: 'type', class: 'felt select' })
   for (const t of ['ferie', 'helligdag', 'planleggingsdag', 'annet'])
