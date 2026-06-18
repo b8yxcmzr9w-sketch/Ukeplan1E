@@ -1,13 +1,13 @@
 # PLAN — Ukeplan1E v4
 
-## Status: UNDER PLANLEGGING — Økt A (P2): Ukenummer som primær tidsenhet
-## Neste steg: Godkjenn delplanen nedenfor, så starter koding
+## Status: FULLFØRT — Økt A (P2): Ukenummer som primær tidsenhet
+## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
 
 ---
 
 ## Økt A (P2) — Ukenummer som primær tidsenhet i hele UI
 
-**Status: VENTER PÅ GODKJENNING**
+**Status: FULLFØRT**
 **Branch:** `claude/P2-ukenummer-ui`
 
 ### Fase 0 — Funn: Tid-presentasjon i nåværende UI
@@ -36,21 +36,21 @@
 **Scope:** Kun `v4/app.js`. Ingen CSS-endringer (`.uke-label` er allerede klar).
 Ingen DB-endringer. Ingen edge-function-endringer.
 
-- [ ] **Delsteg 1 — «Uke»-etikett i navigasjonsrad (student + lærer)**
+- [x] **Delsteg 1 — «Uke»-etikett i navigasjonsrad (student + lærer)**
   - `renderElevView` (~linje 1129): legg til `el('span', { class: 'uke-label' }, 'Uke ')` rett FØR `weekInput` i `navRow.appendChild`-rekkefølgen.
   - `renderMinKlasseTab` (~linje 1594): samme.
   - `renderElevView`: endre knapptekst «← Forrige uke» → «← Forrige» og «Neste uke →» → «Neste →» (konsekvent med lærervisningen; «Uke»-etiketten er nå synlig ved siden av inputen).
   - Resultat: `← Forrige  Uke [9]  Neste →  Nå`
 
-- [ ] **Delsteg 2 — Ukenummer i admin skolerute-liste + ny-hendelse-modal**
+- [x] **Delsteg 2 — Ukenummer i admin skolerute-liste + ny-hendelse-modal**
   - Ekstraher `ukeTekst(fra, til)`-logikken fra `visSkoleruteForhandsvisning` (linje 4113–4118) til en frittstående hjelpefunksjon på modulnivå (bruker eksisterende `getISOWeek`).
   - `renderSkolerute` (~linje 3970): erstatt dato-spennet med «uke X · DD.MM – DD.MM» i `tekst-svak`-spennet — uke foran dato som hjelpeinfo.
   - `visNySkolerute` (~linje 4052–4060): legg til et live `span.tekst-svak` under dato-radene som oppdateres på `onchange` for fra/til og viser f.eks. «uke 7» eller «uke 6–8».
 
-- [ ] **Delsteg 3 — Ukenummer i flerdagsarrangementer (klasse-admin)**
+- [x] **Delsteg 3 — Ukenummer i flerdagsarrangementer (klasse-admin)**
   - `renderKlasseAdminInnhold` (~linje 2660): endre `${e.title} (DD.MM – DD.MM)` til `${e.title} · uke X (DD.MM – DD.MM)` ved bruk av `ukeTekst` fra delsteg 2.
 
-- [ ] **Delsteg 4 — Bump, commit og push**
+- [x] **Delsteg 4 — Bump, commit og push**
   - Bump `?v=YYYYMMDDx` i `v4/index.html`.
   - Commit per delsteg, push til `claude/P2-ukenummer-ui`.
   - Ingen manuelle steg i Supabase.
