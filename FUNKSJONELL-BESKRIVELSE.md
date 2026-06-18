@@ -85,10 +85,20 @@ Skole (flere skoler kan bruke tjenesten, adskilt fra hverandre)
 - **Skoleskille:** Brukere ser og endrer kun data for sin egen skole.
 - **Utskrift:** Ukeplanen kan skrives ut med eget utskriftshode.
 - **Uke er primær tidsenhet.** Lærere og elever forholder seg til
-  ukenummer og ukedag («uke 9, onsdag»), ikke datoer. Datoer vises som
-  hjelpeinformasjon og beregnes fra uke + skoleår. Ved AI-tolkning av
-  skolerute og økter skal skoleåret alltid sendes med som kontekst, og
-  årstall skal aldri gjettes av modellen.
+  ukenummer og ukedag («uke 9, onsdag»), ikke datoer. Dette gjelder
+  overalt i grensesnittet:
+  - Navigasjonsraden viser «Uke 9» prominente — datointervallet for uka
+    er ikke synlig i navigasjonen.
+  - Dagnavnet i ukenettet (MANDAG, TIRSDAG …) er primær; datoen (10.02)
+    vises nedtonet på en sekundær linje under.
+  - Perioder i skoleruten og arrangementer angis alltid med uke først:
+    «uke 7 · 10.02–21.02».
+  - Fridags-feilmeldinger nevner uke eksplisitt:
+    «Vinterferie (uke 7, 10.02–14.02)».
+  - Datovelgere i admin-modaler viser et live uke-hint når dato fylles ut.
+  - Datoer beregnes fra uke + skoleår, aldri omvendt. Ved AI-tolkning av
+    skolerute og økter: skoleåret sendes alltid med som kontekst, og
+    årstall gjettes aldri av modellen.
 
 ## Avklarte beslutninger (juni 2026)
 

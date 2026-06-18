@@ -1926,7 +1926,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
     // Fridagssjekk – skoleruten blokkerer økter på fridager
     const fridag = await finnFridag(weekNr, dagOfWeek, skoleAar || APP.school?.active_school_year)
     if (fridag) {
-      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${ukeTekst(fridag.start_date, fridag.end_date)}, ${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
       return
     }
 
@@ -2116,7 +2116,7 @@ async function visRedigerOktModal(session, onSave) {
     // Fridagssjekk – gjelder også flytting av økt til annen uke/dag
     const fridag = await finnFridag(data.week_nr, data.day_of_week, session.school_year)
     if (fridag) {
-      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${ukeTekst(fridag.start_date, fridag.end_date)}, ${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
       return
     }
     await medLagreOverlay(async () => {
@@ -2218,7 +2218,7 @@ async function visKopierOktModal(session, onSave) {
     // Fridagssjekk – skoleruten blokkerer økter på fridager
     const fridag = await finnFridag(parseInt(fd.get('week_nr')), parseInt(fd.get('day_of_week')), aktivtSkolear)
     if (fridag) {
-      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
+      showToast(`Kan ikke legge økt på fridag: ${fridag.title} (${ukeTekst(fridag.start_date, fridag.end_date)}, ${formatDatoNO(fridag.start_date)}–${formatDatoNO(fridag.end_date)})`, 'error')
       return
     }
     await medLagreOverlay(async () => {
@@ -2748,10 +2748,20 @@ async function visNyMDEModal(classId, onSave) {
   const startInput = el('input', { type: 'date', class: 'felt input' })
   const endInput = el('input', { type: 'date', class: 'felt input' })
 
+  const mdeUkeHintNy = el('p', { class: 'tekst-svak skjult', style: 'margin:2px 0 6px; font-size:.9rem' })
+  const oppdaterMdeUkeHintNy = () => {
+    const ut = ukeTekst(startInput.value || null, endInput.value || null)
+    mdeUkeHintNy.textContent = ut ? `→ ${ut}` : ''
+    mdeUkeHintNy.classList.toggle('skjult', !ut)
+  }
+  startInput.addEventListener('change', oppdaterMdeUkeHintNy)
+  endInput.addEventListener('change', oppdaterMdeUkeHintNy)
+
   box.appendChild(lagFormRad('Tittel', titleInput))
   box.appendChild(lagFormRad('Beskrivelse', descInput))
   box.appendChild(lagFormRad('Fra', startInput))
   box.appendChild(lagFormRad('Til', endInput))
+  box.appendChild(mdeUkeHintNy)
 
   box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     if (!titleInput.value || !startInput.value || !endInput.value) return
@@ -2795,10 +2805,20 @@ async function visRedigerMDEModal(mde, onSave) {
   const startInput = el('input', { type: 'date', class: 'felt input', value: mde.start_date })
   const endInput = el('input', { type: 'date', class: 'felt input', value: mde.end_date })
 
+  const mdeUkeHintRed = el('p', { class: 'tekst-svak', style: 'margin:2px 0 6px; font-size:.9rem' })
+  const oppdaterMdeUkeHintRed = () => {
+    const ut = ukeTekst(startInput.value || null, endInput.value || null)
+    mdeUkeHintRed.textContent = ut ? `→ ${ut}` : ''
+  }
+  startInput.addEventListener('change', oppdaterMdeUkeHintRed)
+  endInput.addEventListener('change', oppdaterMdeUkeHintRed)
+  oppdaterMdeUkeHintRed()
+
   box.appendChild(lagFormRad('Tittel', titleInput))
   box.appendChild(lagFormRad('Beskrivelse', descInput))
   box.appendChild(lagFormRad('Fra', startInput))
   box.appendChild(lagFormRad('Til', endInput))
+  box.appendChild(mdeUkeHintRed)
 
   box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
     await medLagreOverlay(async () => {
