@@ -488,12 +488,24 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
   opacity: 1; background: rgba(255,255,255,.12);
 }
 
-/* ── Skolerute: skoleår-banner og AI-forhåndsvisning ────────────── */
+/* ── Skolerute: skoleår-banner, veksler og AI-forhåndsvisning ───── */
 .skolear-banner {
   background: var(--badge-bg); color: var(--badge-tekst);
   border-radius: var(--radius); padding: 10px 14px;
   font-weight: 600; font-size: .95rem; margin: 0 0 14px;
 }
+.planlegging-banner {
+  background: #fff3cd; color: #664d03;
+  border: 1px solid #ffda6a; border-radius: var(--radius);
+  padding: 10px 14px; font-weight: 600; font-size: .92rem; margin: 0 0 14px;
+}
+[data-theme="mork"] .planlegging-banner {
+  background: #3a2f00; color: #ffd166; border-color: #7a6000;
+}
+.skolear-veksler {
+  display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.skolear-veksler-knapp { font-size: .9rem; }
 /* Modalen er en flex-kolonne: listen scroller for seg, mens bunnfeltet
    (erstatt/legg til + Avbryt/Lagre) alltid er synlig. */
 .skolerute-prev-modal { display: flex; flex-direction: column; overflow: hidden; }

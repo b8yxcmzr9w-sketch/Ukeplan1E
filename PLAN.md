@@ -1,5 +1,19 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt B (P3): klasse-admin ukeinntasting + skoleår-veksler
+
+---
+
+## Økt B (P3): Klasse-admin – ukeinntasting + skoleår-veksler
+
+### Delplan
+
+**Delsteg A — Skoleår-veksler: gate + tydeligere UI i `renderSkolerute`** [x]
+**Delsteg B — Ukenummer-inntasting i `visNySkolerute`** [x]
+**Delsteg C — Bump `?v=`, commit og push** [x]
+
+---
+
 ## Status: FULLFØRT — Økt A (P2): Ukenummer som primær tidsenhet
 ## Neste steg: Migrasjon 017 (Plan_YFF) — venter på bruker
 
