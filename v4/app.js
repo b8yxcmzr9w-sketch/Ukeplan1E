@@ -3704,8 +3704,9 @@ async function visNyBrukerModal(klasser, onSave) {
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
-    const rolle = fd.get('role')
     const erAdmin = form.querySelector('[name=is_admin]').checked
+    // Administrator er en egen rolle (role='admin'); ellers styrer radioknappen
+    const rolle = erAdmin ? 'admin' : fd.get('role')
     const klassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
       // Sjekk maks 2 admins
@@ -3798,13 +3799,14 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
-    const rolle = fd.get('role')
     const erAdmin = form.querySelector('[name=is_admin]').checked
+    // Administrator er en egen rolle (role='admin'); ellers styrer radioknappen
+    const rolle = erAdmin ? 'admin' : fd.get('role')
     const newKlassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
       // Sjekk maks 2 admins (unntatt seg selv)
-      if (erAdmin && !user.is_admin_active) {
-        const { data: admins } = await sb.from('users').select('id').eq('school_id', APP.school.id).eq('is_admin_active', true).is('deleted_at', null).neq('id', user.id)
+      if (erAdmin && user.role !== 'admin') {
+        const { data: admins } = await sb.from('users').select('id').eq('school_id', APP.school.id).eq('role', 'admin').is('deleted_at', null).neq('id', user.id)
         if ((admins?.length || 0) >= 2) throw new Error('Maks 2 administratorer er tillatt per skole')
       }
       // Sjekk maks 3 kontaktlærere per klasse
