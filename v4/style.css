@@ -422,6 +422,14 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
 .fane.aktiv { color: var(--primær); border-bottom-color: var(--primær); font-weight: 700; }
 .fane:hover:not(.aktiv) { color: var(--tekst); }
 
+/* Klassevelger-fane (fane 0): native <select> integrert i faneraden */
+.fane-velger { display: inline-flex; align-items: center; gap: 4px; }
+.fane-velger-sel {
+  border: none; background: none; cursor: pointer;
+  font: inherit; color: inherit; font-weight: inherit;
+  padding: 2px 2px 2px 4px; outline: none; max-width: 11rem;
+}
+
 /* ── Modal ──────────────────────────────────────────────────────── */
 .modal-bg {
   position: fixed; inset: 0; background: rgba(0,0,0,.5);

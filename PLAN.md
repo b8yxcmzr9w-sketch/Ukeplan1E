@@ -1,14 +1,12 @@
 # PLAN — Ukeplan1E v4
 
-## Status: AVVENTER GODKJENNING — Økt X (P8): Klassevelger som fane + sortert klasseliste
+## Status: FULLFØRT — Økt X (P8): Klassevelger som fane + sortert klasseliste
 
 ---
 
 ## Økt X (P8): Klassevelger – flytt velger til fane og sorter klasseliste
 
-**Branch:** session-branch `claude/charming-bardeen-p9xciw` (sesjonsoppsettet krever
-denne branchen; oppgavens foreslåtte `claude/P8-klassevelger-fane` brukes ikke uten
-eksplisitt tillatelse).
+**Branch:** `claude/P8-klassevelger-fane` (godkjent av bruker).
 **Scope:** `v4/app.js`, `v4/style.css`, `v4/index.html` (cache-bust).
 Ingen DB-endringer, ingen edge-function-endringer.
 
@@ -53,34 +51,36 @@ gratis, og fungerer også for lærere med én tilknyttet klasse (selectet rendre
 
 ### Delplan
 
-- [ ] **Delsteg 1 — Data: hent både egne og alle klasser i `renderMinKlasseTab`**
-  For ikke-admin: behold `user_classes`-kallet (= mine), og legg til et kall til
-  `classes` (alle skolens klasser). Bygg `mineKlasser` (sortert på navn) + `andreKlasser`
-  (resten, sortert på navn). Admin: alle er «mine» (ingen «andre»-gruppe), eller vis alle
-  i én gruppe — avklares, men admin får uansett alle. Send strukturen videre til velgeren.
+- [x] **Delsteg 1 — Data: hent både egne og alle klasser (flyttet til `renderLaererView`)**
+  Klassehentingen er løftet fra `renderMinKlasseTab` til `renderLaererView` (gjelder ALLE
+  roller): `mineKlasser` via `user_classes` (sortert på navn) + `andreKlasser` = resten av
+  skolens klasser fra `classes` (RLS `classes_read_any` tillater lesing av alle
+  ikke-slettede klasser, også for vanlige lærere). `renderMinKlasseTab(container, klasse)`
+  mottar nå aktiv klasse som parameter.
 
-- [ ] **Delsteg 2 — Klassevelger som første fane i `renderLaererView`**
-  Erstatt den første fanen («Min klasse») med en velger-fane som viser «Klasse [navn ⌄]».
-  Når fanen er aktiv vises `renderMinKlasseTab`-innholdet (uke-visning) som før.
-  «Alle mine økter» m.fl. står uendret ved siden av. Endring av klasse i velgeren bytter
-  klasse i uke-visningen (samme `onChange` → `renderUke`).
+- [x] **Delsteg 2 — Klassevelger som første fane i `renderLaererView`**
+  Første fane («Min klasse») er erstattet av en velger-fane `«Klasse [navn ⌄]»`
+  (`div.fane.fane-velger` med `select.fane-velger-sel`). Aktiv fane → `renderMinKlasseTab`
+  (uke-visning) som før. «Alle mine økter» m.fl. uendret. Klassebytte på klasse-fanen går
+  via `APP.klasseVelger.setKlasse` → `renderUke` (beholder valgt uke); bytte fra annen fane
+  går via `setTab(0)`.
 
-- [ ] **Delsteg 3 — Native `<select>` med `<optgroup>` + sortering**
-  Bygg selectet med `<optgroup label="Dine klasser">` (sortert) og
-  `<optgroup label="Andre klasser">` (sortert). Alltid åpningsbar dropdown, også ved én
-  egen klasse.
+- [x] **Delsteg 3 — Native `<select>` med `<optgroup>` + sortering**
+  `<optgroup label="Dine klasser">` (sortert) + `<optgroup label="Andre klasser">`.
+  Alltid åpningsbar dropdown — den gamle `klasser.length > 1`-betingelsen er fjernet.
 
-- [ ] **Delsteg 4 — Fjern velger fra headeren**
-  I `oppdaterHeader`: ikke bygg `<select>` i `#hdr-klasse` for lærer lenger; behold kun
-  statisk «klasse {navn}»-tekst via `oppdaterKlasseStatisk`. Rydd `#hdr-klasse`-grenen.
+- [x] **Delsteg 4 — Fjern velger fra headeren**
+  `oppdaterHeader` bygger ikke lenger `<select>` i `#hdr-klasse`; containeren skjules.
+  Statisk «klasse {navn}»-tekst beholdes via `oppdaterKlasseStatisk`, drevet av
+  `APP.klasseVelger.aktivKlasse` (overlever realtime-`oppdaterHeader`-kall på klasse-fanen).
 
-- [ ] **Delsteg 5 — CSS for velger-fanen**
-  Styling så `<select>` ser ut som/passer inn i `.fane-bar` (aktiv-tilstand som øvrige
-  faner). Gjenbruk `.fane`-mønsteret der mulig.
+- [x] **Delsteg 5 — CSS for velger-fanen**
+  `.fane-velger` (inline-flex) + `.fane-velger-sel` (arver font/farge fra `.fane`, så
+  aktiv-tilstand følger fane-stilen).
 
-- [ ] **Delsteg 6 — Avslutning**
-  Bump `?v=` i `index.html`, oppdater PLAN-avkrysninger, skriv beslutninger til DECISIONS.md
-  hvis noen tas, commit. Ingen CI/PR-overvåking.
+- [x] **Delsteg 6 — Avslutning**
+  Bumpet `?v=` (`style.css?v=20260619c`, `app.js?v=20260619f`), oppdatert PLAN,
+  skrevet til DECISIONS.md, commit. Ingen CI/PR-overvåking.
 
 ---
 

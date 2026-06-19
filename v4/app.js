@@ -27,7 +27,7 @@ window.APP = {
   realtimeChannel: null,
   isAdminActive: false,
   renderToken: 0,
-  klasseVelger: null,    // { klasser, aktivKlasse, onChange } – satt av renderMinKlasseTab
+  klasseVelger: null,    // { aktivKlasse, setKlasse } – satt av renderMinKlasseTab (klassevelger-fanen)
 }
 
 // Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
@@ -640,43 +640,19 @@ function oppdaterHeader() {
     }
   }
 
-  // Valgt klasse i header – select (lærervisning) eller statisk tekst (elevvisning)
+  // Valgt klasse i header – kun statisk tekst. Klassevelgeren er flyttet til
+  // første fane i lærervisningen; #hdr-klasse-containeren brukes ikke lenger.
   const klasseEl = document.getElementById('hdr-klasse')
   if (klasseEl) {
     clearEl(klasseEl)
-    if (APP.klasseVelger && APP.klasseVelger.klasser.length > 0) {
-      if (APP.klasseVelger.klasser.length === 1) {
-        klasseEl.classList.add('skjult')
-      } else {
-        klasseEl.classList.remove('skjult')
-        const sel = document.createElement('select')
-        sel.className = 'hdr-klasse-sel'
-        sel.title = 'Velg klasse'
-        for (const k of APP.klasseVelger.klasser) {
-          const opt = document.createElement('option')
-          opt.value = k.id
-          opt.textContent = k.name
-          if (APP.klasseVelger.aktivKlasse?.id === k.id) opt.selected = true
-          sel.appendChild(opt)
-        }
-        sel.addEventListener('change', (e) => {
-          const k = APP.klasseVelger.klasser.find(k => k.id === e.target.value)
-          if (k) {
-            APP.klasseVelger.aktivKlasse = k
-            APP.klasseVelger.onChange(k)
-            oppdaterKlasseStatisk(k.name)
-          }
-        })
-        klasseEl.appendChild(sel)
-      }
-      oppdaterKlasseStatisk(APP.klasseVelger.aktivKlasse?.name || '')
-    } else if (APP.currentKlasse) {
-      klasseEl.classList.add('skjult')
-      oppdaterKlasseStatisk(APP.currentKlasse)
-    } else {
-      klasseEl.classList.add('skjult')
-      oppdaterKlasseStatisk(null)
-    }
+    klasseEl.classList.add('skjult')
+  }
+  if (APP.klasseVelger?.aktivKlasse?.name) {
+    oppdaterKlasseStatisk(APP.klasseVelger.aktivKlasse.name)
+  } else if (APP.currentKlasse) {
+    oppdaterKlasseStatisk(APP.currentKlasse)
+  } else {
+    oppdaterKlasseStatisk(null)
   }
   const favicon = document.getElementById('favicon')
   if (logo && APP.school && (APP.school.logo_url || APP.school.logo_file_path)) {
@@ -1443,6 +1419,20 @@ async function renderLaererView() {
 
   const isKontakt = APP.profile?.role === 'kontaktlaerer' || APP.isAdminActive
 
+  // Klasser til velgeren (gjelder alle roller): «Dine klasser» via user_classes,
+  // «Andre klasser» = resten av skolens klasser. RLS tillater lesing av alle
+  // ikke-slettede klasser, så også vanlige lærere får hele skolens liste.
+  const { data: mineRows } = await sb.from('user_classes')
+    .select('classes(*)')
+    .eq('user_id', APP.profile.id)
+  const mineKlasser = (mineRows || []).map(r => r.classes).filter(Boolean)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'no'))
+  const mineIds = new Set(mineKlasser.map(k => k.id))
+  const { data: alleRows } = await sb.from('classes')
+    .select('*').eq('school_id', APP.school.id).order('name')
+  const andreKlasser = (alleRows || []).filter(k => !mineIds.has(k.id))
+  let aktivKlasse = mineKlasser[0] || andreKlasser[0] || null
+
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
   const tabSlugs = ['klasse', 'alle', 'sok']
   if (isKontakt) { tabs.push('Klasse-admin'); tabSlugs.push('klasse-admin') }
@@ -1460,14 +1450,47 @@ async function renderLaererView() {
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
     if (slug !== 'klasse') { APP.klasseVelger = null; oppdaterHeader() }
-    if (slug === 'klasse') renderMinKlasseTab(tabContent)
+    if (slug === 'klasse') renderMinKlasseTab(tabContent, aktivKlasse)
     else if (slug === 'alle') renderAlleOkterTab(tabContent)
     else if (slug === 'sok') renderSokTab(tabContent)
     else if (slug === 'klasse-admin') renderKlasseAdminTab(tabContent)
     else if (slug === 'innstillinger') renderInnstillingerTab(tabContent)
   }
 
+  // Fane 0 = klassevelger: native <select> med optgroup «Dine»/«Andre klasser».
+  // Alltid åpningsbar (også med kun én egen klasse).
+  const velgerSel = el('select', { class: 'fane-velger-sel', title: 'Velg klasse' })
+  const leggTilGruppe = (label, liste) => {
+    if (!liste.length) return
+    const og = el('optgroup', { label })
+    for (const k of liste) {
+      const opt = el('option', { value: k.id }, k.name)
+      if (aktivKlasse && k.id === aktivKlasse.id) opt.selected = true
+      og.appendChild(opt)
+    }
+    velgerSel.appendChild(og)
+  }
+  leggTilGruppe('Dine klasser', mineKlasser)
+  leggTilGruppe('Andre klasser', andreKlasser)
+  // Hindre at klikk på selve nedtrekkslista trigger fane-byttet (som ville
+  // re-rendre uke-visningen og nullstille valgt uke).
+  velgerSel.addEventListener('click', (e) => e.stopPropagation())
+  velgerSel.addEventListener('change', () => {
+    const k = [...mineKlasser, ...andreKlasser].find(x => x.id === velgerSel.value)
+    if (!k) return
+    aktivKlasse = k
+    oppdaterKlasseStatisk(k.name)
+    // På klasse-fanen: bytt klasse uten å miste valgt uke. Ellers: gå til fanen.
+    if (APP.klasseVelger && APP.klasseVelger.setKlasse) APP.klasseVelger.setKlasse(k)
+    else setTab(0)
+  })
+  const velgerFane = el('div',
+    { class: 'fane fane-velger', title: 'Velg klasse',
+      onclick: () => { if (!velgerFane.classList.contains('aktiv')) setTab(0) } },
+    'Klasse ', velgerSel)
+
   tabs.forEach((t, i) => {
+    if (i === 0) { tabBar.appendChild(velgerFane); return }
     const btn = el('button', { class: 'fane', title: `Gå til ${t}`, onclick: () => setTab(i) }, t)
     tabBar.appendChild(btn)
   })
@@ -1528,25 +1551,15 @@ async function renderInnstillingerTab(container) {
   container.appendChild(wrap)
 }
 
-async function renderMinKlasseTab(container) {
-  // Hent klasser: admin ser alle, andre kun sine tilknyttede klasser
-  let klasser
-  if (APP.isAdminActive) {
-    const { data } = await sb.from('classes').select('*').eq('school_id', APP.school.id).order('name')
-    klasser = data || []
-  } else {
-    const { data: mine } = await sb.from('user_classes')
-      .select('classes(*)')
-      .eq('user_id', APP.profile.id)
-    klasser = (mine || []).map(r => r.classes).filter(Boolean)
-  }
-
-  if (!klasser.length) {
-    container.appendChild(el('p', {}, 'Du er ikke tilknyttet noen klasser.'))
+async function renderMinKlasseTab(container, klasse) {
+  // Aktiv klasse styres av klassevelger-fanen (renderLaererView). Faller tilbake
+  // til en informativ melding hvis skolen ikke har noen klasser.
+  let aktivKlasse = klasse
+  if (!aktivKlasse) {
+    container.appendChild(el('p', {}, 'Det finnes ingen klasser å vise ennå.'))
     return
   }
 
-  let aktivKlasse = klasser[0]
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
   let currentWeek = getCurrentISOWeek()
@@ -1575,8 +1588,10 @@ async function renderMinKlasseTab(container) {
     tilgjengeligeSkolear = [nesteAar, ...tilgjengeligeSkolear]
   }
 
-  // Klassevelger i header
-  APP.klasseVelger = { klasser, aktivKlasse, onChange: (k) => { aktivKlasse = k; APP.klasseVelger.aktivKlasse = k; renderUke() } }
+  // Eksponer klassevelger-koblingen for fanen (renderLaererView): setKlasse
+  // bytter klasse uten å miste valgt uke. aktivKlasse brukes også av
+  // oppdaterHeader til den statiske «klasse X»-teksten.
+  APP.klasseVelger = { aktivKlasse, setKlasse: (k) => { aktivKlasse = k; APP.klasseVelger.aktivKlasse = k; renderUke() } }
   oppdaterHeader()
 
   const topRow = el('div', { class: 'laerer-top' })
