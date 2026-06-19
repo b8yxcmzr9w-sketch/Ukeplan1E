@@ -1,5 +1,89 @@
 # PLAN — Ukeplan1E v4
 
+## Status: AVVENTER GODKJENNING — Økt X (P8): Klassevelger som fane + sortert klasseliste
+
+---
+
+## Økt X (P8): Klassevelger – flytt velger til fane og sorter klasseliste
+
+**Branch:** session-branch `claude/charming-bardeen-p9xciw` (sesjonsoppsettet krever
+denne branchen; oppgavens foreslåtte `claude/P8-klassevelger-fane` brukes ikke uten
+eksplisitt tillatelse).
+**Scope:** `v4/app.js`, `v4/style.css`, `v4/index.html` (cache-bust).
+Ingen DB-endringer, ingen edge-function-endringer.
+
+### Funn — kartlegging (kun lesing)
+
+**1. Hvor `<select>` for klassevelgeren bygges i dag:**
+`oppdaterHeader()` (app.js:625–680). Selve `<select class="hdr-klasse-sel">` bygges
+på linjene 643–671 inne i `#hdr-klasse`-diven. Viktig: selectet bygges **kun når
+`APP.klasseVelger.klasser.length > 1`** — ved nøyaktig 1 klasse skjules `#hdr-klasse`
+(linje 648–649) og bare statisk tekst vises. Native `<select>`, ikke custom dropdown.
+
+**2. Faneraden i lærervisningen:**
+`renderLaererView()` (app.js:1433–1480). Faner bygges som vanlige `<button class="fane">`
+(linje 1470–1473) fra arrayene `tabs`/`tabSlugs` (linje 1446–1449):
+`['Min klasse','Alle mine økter','Søk', (Klasse-admin), 'Innstillinger']`.
+`setTab(idx)` (1457–1468) bytter innhold; ved bytte vekk fra `klasse` nullstilles
+`APP.klasseVelger` og headeren oppdateres (linje 1462). «Min klasse» = `renderMinKlasseTab`,
+«Alle mine økter» = `renderAlleOkterTab`.
+
+**3. Hvor klasselista hentes/bygges:**
+`renderMinKlasseTab()` (app.js:1531–1542). I dag:
+- **Admin** (`APP.isAdminActive`): henter ALLE skolens klasser fra `classes`-tabellen
+  (`.eq('school_id', …).order('name')`).
+- **Andre lærere**: henter KUN egne via `user_classes` → `classes(*)`.
+
+→ Per i dag har en vanlig lærer **ikke** tilgang til (b) alle skolens klasser i denne
+funksjonen — kun (a) egne via `user_classes`. Det må legges til et ekstra kall til
+`classes` (alle skolens klasser) for ikke-admin, og lista partisjoneres i «dine»/«andre».
+`APP.klasseVelger` settes på linje 1579 og leses av `oppdaterHeader`.
+
+**4. Header «klasse 1E»-tekst:**
+HTML: `#hdr-klasse-statisk` (statisk tekst, index.html:32) og `#hdr-klasse` (select-container,
+index.html:35). `oppdaterKlasseStatisk(navn)` (app.js:614–623) skriver «klasse {navn}».
+I dag: select i `#hdr-klasse` PLUSS statisk tekst i `#hdr-klasse-statisk` (begge oppdateres
+i `oppdaterHeader`). Etter endringen skal `#hdr-klasse` (select) aldri fylles for lærer —
+kun statisk tekst beholdes.
+
+**Valg av dropdown-løsning:** Dagens kode bruker **native `<select>`** (både `hdr-klasse-sel`
+og `skolear-sel`). Anbefalt løsning: native `<select>` med to `<optgroup>` —
+`«Dine klasser»` og `«Andre klasser»` — som gir både nedtrekkspil og visuelt skille
+gratis, og fungerer også for lærere med én tilknyttet klasse (selectet rendres alltid).
+
+### Delplan
+
+- [ ] **Delsteg 1 — Data: hent både egne og alle klasser i `renderMinKlasseTab`**
+  For ikke-admin: behold `user_classes`-kallet (= mine), og legg til et kall til
+  `classes` (alle skolens klasser). Bygg `mineKlasser` (sortert på navn) + `andreKlasser`
+  (resten, sortert på navn). Admin: alle er «mine» (ingen «andre»-gruppe), eller vis alle
+  i én gruppe — avklares, men admin får uansett alle. Send strukturen videre til velgeren.
+
+- [ ] **Delsteg 2 — Klassevelger som første fane i `renderLaererView`**
+  Erstatt den første fanen («Min klasse») med en velger-fane som viser «Klasse [navn ⌄]».
+  Når fanen er aktiv vises `renderMinKlasseTab`-innholdet (uke-visning) som før.
+  «Alle mine økter» m.fl. står uendret ved siden av. Endring av klasse i velgeren bytter
+  klasse i uke-visningen (samme `onChange` → `renderUke`).
+
+- [ ] **Delsteg 3 — Native `<select>` med `<optgroup>` + sortering**
+  Bygg selectet med `<optgroup label="Dine klasser">` (sortert) og
+  `<optgroup label="Andre klasser">` (sortert). Alltid åpningsbar dropdown, også ved én
+  egen klasse.
+
+- [ ] **Delsteg 4 — Fjern velger fra headeren**
+  I `oppdaterHeader`: ikke bygg `<select>` i `#hdr-klasse` for lærer lenger; behold kun
+  statisk «klasse {navn}»-tekst via `oppdaterKlasseStatisk`. Rydd `#hdr-klasse`-grenen.
+
+- [ ] **Delsteg 5 — CSS for velger-fanen**
+  Styling så `<select>` ser ut som/passer inn i `.fane-bar` (aktiv-tilstand som øvrige
+  faner). Gjenbruk `.fane`-mønsteret der mulig.
+
+- [ ] **Delsteg 6 — Avslutning**
+  Bump `?v=` i `index.html`, oppdater PLAN-avkrysninger, skriv beslutninger til DECISIONS.md
+  hvis noen tas, commit. Ingen CI/PR-overvåking.
+
+---
+
 ## Status: FULLFØRT — admin additivt (018) ferdig, alle manuelle steg utført
 
 > **Hele 018-runden er ferdig** (19.06.2026):
