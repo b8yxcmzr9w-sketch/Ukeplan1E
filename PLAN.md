@@ -1,5 +1,64 @@
 # PLAN — Ukeplan1E v4
 
+## Status: PÅGÅR — Økt X (P6): plassbruk på mobil (elevvisning)
+
+---
+
+## Økt X (P6): Plassbruk på mobil — elevvisning
+
+**Branch:** `claude/eager-thompson-3laudr`
+**Scope:** `v4/style.css` (primært) + `v4/app.js` (ett sted), `v4/index.html` (cache-bust).
+Ingen DB-endringer, ingen edge-function-endringer.
+
+### Funn — kartlegging
+
+**To typer «heldagshendelse» — ulik behandling:**
+
+| Type | Kilde | Gjeldende rendering | Problem? |
+|------|-------|---------------------|----------|
+| `multi_day_events` (flerdagsarrangement) | DB: `multi_day_events` | `renderFlerdagsBjelkeRad` → kompakt bjelke-rad over rutenettet | ✓ Allerede kompakt |
+| `school_calendar` (type `helligdag`) | DB: `school_calendar` | Inni `.dag-kol`: dag får klasse `day-col--holiday` + `.holiday-label` + tom `.dag-okter` under | ⚠️ **Problemet** |
+
+**Årsak til tomrom:**
+
+| CSS-regel | Fil:linje | Effekt på mobil |
+|-----------|-----------|-----------------|
+| `.dag-okter { min-height: 180px }` | `style.css:268` | Hver dag reserverer 180px selv uten innhold. Gir tomrom under enkeltøkt-dager og under helligdag-etiketten. |
+| `@media (max-width:700px)` | `style.css:695–714` | Stabler dager vertikalt (flex-col), men **overstyrer ikke** `min-height:180px`. |
+| `.day-col--holiday .dag-okter { opacity:.5 }` | `style.css:810` | Den tomme containeren beholdes fullt synlig med 180px høyde — tomt felt under etiketten. |
+
+**Konklusjon:** `min-height: 180px` på `.dag-okter` er riktig for desktop (5-kol-grid,
+jevn høyde), men feil på mobil (vertikal stabling). Nullstilles i mobil-media-query.
+Helligdag trenger i tillegg en CSS-regel som skjuler den tomme containeren.
+
+### Delplan
+
+- [ ] **Delsteg 1 — Fjern fast høyde på mobil (CSS)**
+  - I `@media (max-width:700px)` i `style.css`: legg til
+    `.dag-okter { min-height: 0; max-height: none; overflow: visible; }`
+  - Daghøyden følger nå innholdet på mobil; desktop (5-kol) er uberørt.
+
+- [ ] **Delsteg 2 — Kompakt helligdag på mobil (CSS)**
+  - I `@media (max-width:700px)`: legg til
+    `.day-col--holiday .dag-okter { display: none; }`
+  - Effekt: helligdag-kolonne på mobil viser kun dag-tittel + `.holiday-label` —
+    ingen tom container under.
+  - Hvis dagen har *både* helligdag og økter: (ikke aktuelt i praksis — fridager
+    blokkerer alle nye økter, og `day-col--holiday .dag-okter` har `opacity:.5
+    pointer-events:none`). Vurdering: skjuler vi den, skjuler vi også evt.
+    allerede-eksisterende økter som ble lagt inn før fridagen. Alternativ:
+    skjul kun når `.dag-okter:empty` — dvs. legg til
+    `.day-col--holiday .dag-okter:empty { display: none; }` (ingen JS-endring).
+    **Valg: bruk `:empty`-selektoren** — tryggere.
+
+- [ ] **Delsteg 3 — Bump `?v=`, commit og push**
+  - Bump `?v=YYYYMMDDx` i `v4/index.html`.
+  - Commit og push til `claude/eager-thompson-3laudr`.
+
+**Merk:** Ingen endringer i `app.js` er nødvendig — alt løses i CSS.
+
+---
+
 ## Status: FULLFØRT — Økt B (P3): klasse-admin ukeinntasting + skoleår-veksler
 
 ---
