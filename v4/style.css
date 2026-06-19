@@ -700,6 +700,13 @@ tr:hover td { background: var(--primær-svak); }
   .dag-kol {
     min-width: 0; max-width: 100%; width: 100%;
   }
+  /* P6: høyden følger innholdet på mobil — ingen fast min-høyde/scroll per dag */
+  .dag-okter {
+    min-height: 0; max-height: none; overflow: visible;
+  }
+  /* P6: en helligdag uten økter viser kun etiketten — skjul den tomme containeren
+     (DOM-en bygges med createElement, så :empty treffer reelt tom dag-okter) */
+  .day-col--holiday .dag-okter:empty { display: none; }
   .filter-bar { padding: 8px 12px; }
   .nav-bar    { padding: 10px 12px 0; }
   .bulk-bar   { margin: 0 12px 10px; }
