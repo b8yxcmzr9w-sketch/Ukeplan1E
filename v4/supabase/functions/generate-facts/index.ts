@@ -90,8 +90,8 @@ serve(async (req) => {
     if (!caller) return new Response(JSON.stringify({ error: 'Ikke autentisert' }), { status: 401, headers: corsHeaders })
 
     const adminClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const { data: profile } = await adminClient.from('users').select('role, is_admin_active, school_id').eq('id', caller.id).single()
-    if (!profile || (!profile.is_admin_active && profile.role !== 'admin')) {
+    const { data: profile } = await adminClient.from('users').select('is_admin, is_admin_active, school_id').eq('id', caller.id).single()
+    if (!profile || (!profile.is_admin_active && !profile.is_admin)) {
       return new Response(JSON.stringify({ error: 'Krever admin-tilgang' }), { status: 403, headers: corsHeaders })
     }
 

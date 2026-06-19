@@ -363,7 +363,7 @@ async function medAIOverlay(tittel, asyncFn) {
 // Krever admin-tilgang siden generate-facts er adminbeskyttet. Feil svelges stille.
 async function sjekkOgFornyFunfacts() {
   if (!APP.school || !APP.facts.length) return
-  if (!APP.profile?.is_admin_active && APP.profile?.role !== 'admin') return
+  if (!APP.profile?.is_admin_active && !APP.profile?.is_admin) return
   if (!APP.facts.some(f => (f.view_count || 0) >= 3)) return
   try {
     await fornyFunfactsRotasjon()
@@ -496,7 +496,7 @@ function renderLoginForm() {
       oppdaterHeader()
       await sjekkVentendeOverforinger()
       showToast(`Velkommen, ${APP.profile.full_name}!`, 'info')
-      const erAdmin = APP.profile?.role === 'admin' || APP.isAdminActive
+      const erAdmin = APP.profile?.is_admin || APP.isAdminActive
       if (erAdmin && !(await erFerdigSattOpp())) {
         APP.isAdminActive = true
         navigate('#/admin')
@@ -704,9 +704,8 @@ function oppdaterHeader() {
   const ddLogin     = document.getElementById('hdr-dd-login')
 
   if (APP.user && APP.profile) {
-    const rolle = APP.profile?.role
-    const visAdmin = APP.profile.is_admin_active !== undefined && (rolle === 'admin' || APP.profile.is_admin_active)
-    const skjulLaerer = rolle === 'admin' && APP.isAdminActive
+    const visAdmin = !!APP.profile.is_admin
+    const skjulLaerer = APP.profile.is_admin && APP.isAdminActive
 
     // PC
     if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
@@ -795,7 +794,7 @@ async function router() {
 
   if (hash.startsWith('#/admin')) {
     if (!APP.user) { navigate('#/login'); return }
-    if (!APP.isAdminActive && APP.profile?.role !== 'admin') { navigate('#/laerer'); return }
+    if (!APP.isAdminActive && !APP.profile?.is_admin) { navigate('#/laerer'); return }
     renderAdminPanel()
     return
   }
@@ -3683,7 +3682,7 @@ async function renderBrukereTab(container) {
     for (const u of users || []) {
       const klList = (u.user_classes || []).map(tc => tc.classes?.name).filter(Boolean).join(', ')
       const row = el('div', { class: 'admin-rad' })
-      row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} – ${u.role}`))
+      row.appendChild(el('span', { class: 'tekst' }, `${u.full_name} – ${u.role}${u.is_admin ? ' + admin' : ''}`))
       if (klList) row.appendChild(el('span', { class: 'tekst-svak' }, klList))
       row.appendChild(el('button', { class: 'btn btn-ikon', title: `Rediger bruker ${u.full_name}`, onclick: () => visRedigerBrukerModal(u, klasser, refresh) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: `Slett bruker ${u.full_name}`, onclick: () => visSlettBrukerModal(u, refresh) }, '🗑️'))
@@ -3705,14 +3704,14 @@ async function visNyBrukerModal(klasser, onSave) {
     e.preventDefault()
     const fd = new FormData(form)
     const erAdmin = form.querySelector('[name=is_admin]').checked
-    // Administrator er en egen rolle (role='admin'); ellers styrer radioknappen
-    const rolle = erAdmin ? 'admin' : fd.get('role')
+    // Admin er additivt: basisrollen styres av radioknappen, is_admin er et eget flagg
+    const rolle = fd.get('role')
     const klassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
-      // Sjekk maks 2 admins
+      // Sjekk maks 3 admins
       if (erAdmin) {
-        const { data: admins } = await sb.from('users').select('id').eq('school_id', APP.school.id).eq('role', 'admin').is('deleted_at', null)
-        if ((admins?.length || 0) >= 2) throw new Error('Maks 2 administratorer er tillatt per skole')
+        const { data: admins } = await sb.from('users').select('id').eq('school_id', APP.school.id).eq('is_admin', true).is('deleted_at', null)
+        if ((admins?.length || 0) >= 3) throw new Error('Maks 3 administratorer er tillatt per skole')
       }
       // Sjekk maks 3 kontaktlærere per klasse
       if (rolle === 'kontaktlaerer') {
@@ -3800,14 +3799,14 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
     e.preventDefault()
     const fd = new FormData(form)
     const erAdmin = form.querySelector('[name=is_admin]').checked
-    // Administrator er en egen rolle (role='admin'); ellers styrer radioknappen
-    const rolle = erAdmin ? 'admin' : fd.get('role')
+    // Admin er additivt: basisrollen styres av radioknappen, is_admin er et eget flagg
+    const rolle = fd.get('role')
     const newKlassIds = [...form.querySelectorAll('[name=class_id]:checked')].map(c => c.value)
     await medLagreOverlay(async () => {
-      // Sjekk maks 2 admins (unntatt seg selv)
-      if (erAdmin && user.role !== 'admin') {
-        const { data: admins } = await sb.from('users').select('id').eq('school_id', APP.school.id).eq('role', 'admin').is('deleted_at', null).neq('id', user.id)
-        if ((admins?.length || 0) >= 2) throw new Error('Maks 2 administratorer er tillatt per skole')
+      // Sjekk maks 3 admins (unntatt seg selv)
+      if (erAdmin && !user.is_admin) {
+        const { data: admins } = await sb.from('users').select('id').eq('school_id', APP.school.id).eq('is_admin', true).is('deleted_at', null).neq('id', user.id)
+        if ((admins?.length || 0) >= 3) throw new Error('Maks 3 administratorer er tillatt per skole')
       }
       // Sjekk maks 3 kontaktlærere per klasse
       if (rolle === 'kontaktlaerer') {
@@ -3826,7 +3825,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
       await sb.from('users').update({
         full_name: fd.get('full_name'),
         role: rolle,
-        is_admin_active: erAdmin,
+        is_admin: erAdmin,
       }).eq('id', user.id)
       await sb.from('user_classes').delete().eq('user_id', user.id)
       for (const kid of newKlassIds) {
@@ -3845,7 +3844,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
   for (const [val, label] of [['laerer','Lærer'],['kontaktlaerer','Kontaktlærer']]) {
     const lbl = el('label', { style: 'display:flex;align-items:center;gap:6px;cursor:pointer' })
     const rb = el('input', { type: 'radio', name: 'role', value: val, required: 'true' })
-    if ((user.role === val) || (user.role === 'admin' && val === 'laerer')) rb.checked = true
+    if (user.role === val) rb.checked = true
     lbl.appendChild(rb); lbl.appendChild(document.createTextNode(label))
     rolleWrap2.appendChild(lbl)
   }
@@ -3853,7 +3852,7 @@ async function visRedigerBrukerModal(user, klasser, onSave) {
 
   const adminLbl2 = el('label', { style: 'display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:4px' })
   const adminCb2 = el('input', { type: 'checkbox', name: 'is_admin' })
-  if (user.is_admin_active) adminCb2.checked = true
+  if (user.is_admin) adminCb2.checked = true
   adminLbl2.appendChild(adminCb2); adminLbl2.appendChild(document.createTextNode('Administrator'))
   form.appendChild(el('div', { class: 'felt' }, adminLbl2))
 
