@@ -296,7 +296,32 @@ header .spacer { flex: 1; }
 .felles-velger__valg { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: .9rem; }
 .aktivitet { font-weight: 500; line-height: 1.4; font-size: .9rem; }
 .okt-meta { font-size: .78rem; color: var(--tekst-svak); margin-top: 3px; }
-.okt-handlinger { position: absolute; top: 7px; right: 7px; display: flex; gap: 4px; }
+/* Romsliggjør kortet slik at kebab-knappen ikke overlapper innhold */
+.okt-kort--handlinger { padding-right: 28px; }
+
+/* Kebab-knapp (⋮) — diskret, absolutt plassert i kortets hjørne */
+.okt-kebab {
+  position: absolute; top: 5px; right: 5px;
+  background: none; border: none; cursor: pointer;
+  font-size: 1.15rem; line-height: 1; padding: 2px 5px;
+  opacity: .35; color: var(--tekst); border-radius: 4px;
+}
+.okt-kebab:hover { opacity: 1; background: var(--kant); }
+
+/* Handlingsmeny (åpnes av kebab-klikk eller sveip) */
+.okt-handlingsmeny {
+  position: fixed; z-index: 200;
+  background: var(--bg-kort); border: 1px solid var(--kant);
+  border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  min-width: 130px; overflow: hidden; display: flex; flex-direction: column;
+}
+.okt-handlingsrad {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; cursor: pointer;
+  padding: 9px 14px; font-size: .9rem; color: var(--tekst);
+}
+.okt-handlingsrad:hover { background: var(--kant); }
+.okt-handlingsrad--fare { color: var(--fare); }
 
 /* ── Flerdagshendelse ───────────────────────────────────────────── */
 .fdag-banner {
@@ -713,6 +738,9 @@ tr:hover td { background: var(--primær-svak); }
   .fdag-banner, .ferie-banner { margin: 8px 12px; }
   .fdag-bjelke-rad { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 0; }
   .fdag-bjelke { white-space: normal; }
+  /* P7: sekundærdetaljer (rom, info, lærer, badges) skjult på mobil — tap på kort utvider */
+  .okt-detaljer { display: none; }
+  .okt-detaljer.okt-detaljer--apnet { display: block; }
   .side-wrap  { padding: 16px 16px 40px; }
   .kort       { padding: 14px; }
   .login-kort { padding: 20px; }
@@ -726,10 +754,12 @@ tr:hover td { background: var(--primær-svak); }
 @media print {
   @page { size: A4 landscape; margin: 12mm 10mm; }
   header, .nav-bar, .filter-bar, .bulk-bar,
-  .hdr-btn, .btn, .okt-handlinger, .okt-checkbox,
+  .hdr-btn, .btn, .okt-kebab, .okt-handlingsmeny, .okt-checkbox,
   .modal-bg, .lagre-overlay, .ai-overlay, #lastelinje,
   .elev-filter-panel, .elev-overflow-wrap,
   footer, .uno-footer { display: none !important; }
+  /* P7: vis alle detaljer ved utskrift uavhengig av mobilkollaps */
+  .okt-detaljer { display: block !important; }
 
   body { background: white; color: black; }
   .uke-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 0; }

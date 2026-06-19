@@ -1245,40 +1245,119 @@ function renderFlerdagsBjelkeRad(weekDates, multiDayEvents) {
   return rad.children.length ? rad : null
 }
 
+// ─── Økt-handlingsmeny (delt av kebab-klikk og sveip) ────────────────────────
+let aktivHandlingsmeny = null
+
+function visOktHandlinger(actions, anchorEl) {
+  if (aktivHandlingsmeny) { aktivHandlingsmeny.remove(); aktivHandlingsmeny = null }
+
+  const meny = el('div', { class: 'okt-handlingsmeny' })
+  for (const { key, label, fare } of [
+    { key: 'edit',     label: '✏️ Rediger' },
+    { key: 'copy',     label: '📋 Kopier' },
+    { key: 'del',      label: '🗑️ Slett',   fare: true },
+    { key: 'transfer', label: '↗️ Overfør' },
+  ]) {
+    if (!actions[key]) continue
+    meny.appendChild(el('button', {
+      class: 'okt-handlingsrad' + (fare ? ' okt-handlingsrad--fare' : ''),
+      onclick: (e) => { e.stopPropagation(); meny.remove(); aktivHandlingsmeny = null; actions[key]() }
+    }, label))
+  }
+
+  document.body.appendChild(meny)
+  aktivHandlingsmeny = meny
+
+  const aR = anchorEl.getBoundingClientRect()
+  const mR = meny.getBoundingClientRect()
+  let top  = aR.bottom + 4
+  let left = aR.right - mR.width
+  if (left < 4) left = 4
+  if (left + mR.width  > window.innerWidth  - 4) left = window.innerWidth  - mR.width  - 4
+  if (top  + mR.height > window.innerHeight - 4) top  = aR.top - mR.height - 4
+  meny.style.top  = top  + 'px'
+  meny.style.left = left + 'px'
+
+  const lukkUtenfor = (e) => {
+    if (!meny.contains(e.target)) {
+      meny.remove(); aktivHandlingsmeny = null
+      document.removeEventListener('click',   lukkUtenfor, true)
+      document.removeEventListener('keydown', lukkEsc)
+    }
+  }
+  const lukkEsc = (e) => {
+    if (e.key === 'Escape') {
+      meny.remove(); aktivHandlingsmeny = null
+      document.removeEventListener('click',   lukkUtenfor, true)
+      document.removeEventListener('keydown', lukkEsc)
+    }
+  }
+  setTimeout(() => {
+    document.addEventListener('click',   lukkUtenfor, true)
+    document.addEventListener('keydown', lukkEsc)
+  }, 0)
+}
+
 function renderSessionCard(s, showActions, actions = {}) {
   const color = s.subjects?.color_hex || '#4a90d9'
   const card = el('div', { class: 'okt-kort', style: `border-left: 4px solid ${color}` })
 
-  const subjectName = s.subjects?.name || 'Ukjent fag'
-  card.appendChild(el('div', { class: 'fag-badge' }, subjectName))
-
+  card.appendChild(el('div', { class: 'fag-badge' }, s.subjects?.name || 'Ukjent fag'))
   if (s.activity) card.appendChild(el('div', { class: 'aktivitet' }, truncate(s.activity)))
-  if (s.meeting_point) card.appendChild(el('div', { class: 'session-card__meeting' }, `📍 ${s.meeting_point}`))
-  if (s.info) card.appendChild(el('div', { class: 'session-card__info' }, truncate(s.info)))
-  if (s.users) card.appendChild(el('div', { class: 'session-card__teacher' }, s.users.full_name))
-  for (const sd of s.session_divisions || []) {
-    if (sd.subject_divisions) {
-      card.appendChild(el('div', { class: 'div-badge' }, sd.subject_divisions.name))
-    }
-  }
-  if (s._fellesMed?.length) {
-    card.appendChild(el('div', { class: 'felles-badge', title: 'Fellesundervisning' }, `👥 Felles med ${s._fellesMed.join(', ')}`))
-  }
 
   if (showActions) {
-    const skjulHandlinger = localStorage.getItem('ukeplan_skjul_handlinger') === '1'
-    const actionRow = el('div', { class: 'okt-handlinger' + (skjulHandlinger ? ' skjult' : '') })
-    if (actions.edit) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger økt', onclick: actions.edit }, '✏️'))
-    if (actions.copy) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Kopier økt', onclick: actions.copy }, '📋'))
-    if (actions.del) actionRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett økt', onclick: actions.del }, '🗑️'))
-    if (actions.transfer) actionRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Overfør til annen klasse', onclick: actions.transfer }, '↗️'))
-    card.appendChild(actionRow)
-    if (skjulHandlinger) {
-      card.addEventListener('contextmenu', (e) => {
-        e.preventDefault()
-        actionRow.classList.toggle('skjult')
-      })
+    card.classList.add('okt-kort--handlinger')
+
+    // Sekundærinnhold: på mobil skjult som standard, tap utvider
+    const detaljer = el('div', { class: 'okt-detaljer' })
+    if (s.meeting_point) detaljer.appendChild(el('div', { class: 'session-card__meeting' }, `📍 ${s.meeting_point}`))
+    if (s.info) detaljer.appendChild(el('div', { class: 'session-card__info' }, truncate(s.info)))
+    if (s.users) detaljer.appendChild(el('div', { class: 'session-card__teacher' }, s.users.full_name))
+    for (const sd of s.session_divisions || []) {
+      if (sd.subject_divisions) detaljer.appendChild(el('div', { class: 'div-badge' }, sd.subject_divisions.name))
     }
+    if (s._fellesMed?.length) detaljer.appendChild(el('div', { class: 'felles-badge', title: 'Fellesundervisning' }, `👥 Felles med ${s._fellesMed.join(', ')}`))
+    if (detaljer.children.length) card.appendChild(detaljer)
+
+    // Kebab-knapp (⋮) — diskret, åpner handlingsmeny
+    const kebabBtn = el('button', { class: 'okt-kebab', title: 'Handlinger',
+      onclick: (e) => { e.stopPropagation(); visOktHandlinger(actions, kebabBtn) }
+    }, '⋮')
+    card.appendChild(kebabBtn)
+
+    // Høyreklikk — valgfri snarvei på desktop
+    card.addEventListener('contextmenu', (e) => { e.preventDefault(); visOktHandlinger(actions, kebabBtn) })
+
+    // Touch-gester: sveip venstre = handlinger, kort trykk = utvid detaljer
+    let tX = 0, tY = 0, dX = 0, dY = 0, sveip = false
+    card.addEventListener('touchstart', (e) => {
+      tX = e.touches[0].clientX; tY = e.touches[0].clientY
+      dX = 0; dY = 0; sveip = false
+    }, { passive: true })
+    card.addEventListener('touchmove', (e) => {
+      if (!e.touches[0]) return
+      dX = e.touches[0].clientX - tX
+      dY = e.touches[0].clientY - tY
+      if (!sveip && Math.abs(dX) > 10 && Math.abs(dX) > Math.abs(dY) * 2) sveip = true
+      if (sveip) e.preventDefault()
+    }, { passive: false })
+    card.addEventListener('touchend', () => {
+      if (sveip && dX < -50 && Math.abs(dY) < 30) {
+        visOktHandlinger(actions, kebabBtn)
+      } else if (!sveip && Math.abs(dX) < 10 && Math.abs(dY) < 10) {
+        if (detaljer.parentNode) detaljer.classList.toggle('okt-detaljer--apnet')
+      }
+      sveip = false
+    })
+  } else {
+    // Elevvisning — alle detaljer alltid synlige
+    if (s.meeting_point) card.appendChild(el('div', { class: 'session-card__meeting' }, `📍 ${s.meeting_point}`))
+    if (s.info) card.appendChild(el('div', { class: 'session-card__info' }, truncate(s.info)))
+    if (s.users) card.appendChild(el('div', { class: 'session-card__teacher' }, s.users.full_name))
+    for (const sd of s.session_divisions || []) {
+      if (sd.subject_divisions) card.appendChild(el('div', { class: 'div-badge' }, sd.subject_divisions.name))
+    }
+    if (s._fellesMed?.length) card.appendChild(el('div', { class: 'felles-badge', title: 'Fellesundervisning' }, `👥 Felles med ${s._fellesMed.join(', ')}`))
   }
 
   return card
@@ -1408,18 +1487,6 @@ async function renderInnstillingerTab(container) {
   const rolleNavn = { laerer: 'Lærer', kontaktlaerer: 'Kontaktlærer', admin: 'Administrator' }
   info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:4px' }, rolleNavn[APP.profile?.role] || APP.profile?.role || ''))
   wrap.appendChild(info)
-
-  // Visningsvalg
-  wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'Visning'))
-  const skjulHandlingerLabel = el('label', { class: 'toggle-rad', style: 'display:flex;align-items:center;gap:10px;cursor:pointer' })
-  const skjulHandlingerCb = el('input', { type: 'checkbox' })
-  skjulHandlingerCb.checked = localStorage.getItem('ukeplan_skjul_handlinger') === '1'
-  skjulHandlingerCb.addEventListener('change', () => {
-    localStorage.setItem('ukeplan_skjul_handlinger', skjulHandlingerCb.checked ? '1' : '0')
-  })
-  skjulHandlingerLabel.appendChild(skjulHandlingerCb)
-  skjulHandlingerLabel.appendChild(document.createTextNode('Skjul handlingsknapper (✏️ 📋 🗑️ ↗️) på økt-kort – høyreklikk på økt for å vise dem'))
-  wrap.appendChild(skjulHandlingerLabel)
 
   // Bytt passord
   wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'Passord'))

@@ -67,8 +67,10 @@
   som «Min plan» ellers. (Code reiste dette som åpent spørsmål; avklart:
   scrollende har alltid vært ønsket. Ingen ukebasert variant.)
 
-## 4. Økt-kort — skjulte handlinger (gjelder ALLE visninger)
+## 4. Økt-kort — skjulte handlinger (gjelder ALLE visninger) ✅ FULLFØRT (P7)
 
+> **Status: FULLFØRT** som plan-punkt P7 (juni 2026, branch
+> `claude/P7-okt-handlinger-sveip-kebab`). Se PLAN.md → «Økt X (P7)».
 > Oppdatert juni 2026 etter drøfting med Claude Code.
 > **Forkastet:** long-press (lett å utløse ved uhell under scroll, treg, ingen
 > affordance) og hover på desktop («tivolistemning» — urolige kort).
