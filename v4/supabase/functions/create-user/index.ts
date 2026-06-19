@@ -24,11 +24,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     const { data: callerProfile } = await adminClient.from('users')
-      .select('school_id, role, is_admin_active')
+      .select('school_id, is_admin, is_admin_active')
       .eq('id', caller.id)
       .single()
 
-    if (!callerProfile || callerProfile.role !== 'admin' || !callerProfile.is_admin_active) {
+    if (!callerProfile || !callerProfile.is_admin || !callerProfile.is_admin_active) {
       return new Response(JSON.stringify({ error: 'Krever admin-tilgang' }), { status: 403, headers: corsHeaders })
     }
 
@@ -60,7 +60,8 @@ serve(async (req) => {
       school_id: callerProfile.school_id,
       full_name,
       role,
-      is_admin_active: is_admin === true,
+      is_admin: is_admin === true,
+      is_admin_active: false,
     })
     if (dbError) throw dbError
 

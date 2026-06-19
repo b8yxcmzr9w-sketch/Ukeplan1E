@@ -1,5 +1,79 @@
 # PLAN — Ukeplan1E v4
 
+## Status: KODE FERDIG — krever manuell migrasjon `018` + redeploy av 3 edge functions
+
+> **Neste steg (manuelt):** 1) Kjør `018_admin_additiv.sql` i SQL Editor.
+> 2) Redeploy `create-user`, `admin-user`, `generate-facts` i Dashboard.
+> 3) Hard refresh (Cmd+Shift+R). Verifiser at admin-meny overlever login.
+
+**Branch:** `claude/festive-knuth-qrf7a3`
+**Scope:** ny migrasjon `018_admin_additiv.sql`, RLS-oppdateringer, 3 edge functions
+(`create-user`, `admin-user`, `generate-facts` — manuell redeploy), `v4/app.js`,
+`v4/index.html` (cache-bust). Manuelle steg: kjøre migrasjon i SQL Editor + redeploye
+edge functions i Dashboard.
+
+### Problem
+Admin-menyen forsvinner gjentatte ganger. Årsak: hele tilgangssystemet bruker
+`role='admin'` som admin-flagg, mens brukerskjemaene lagrer admin-status i
+`is_admin_active` (som innlogging nullstiller). Når admin-brukeren redigeres,
+overskrives `role` til `laerer`/`kontaktlaerer` og menyen forsvinner ved neste login.
+
+### Beslutning (avklart med bruker)
+- Admin er **additivt**: en bruker er `laerer` ELLER `kontaktlaerer`, og kan **i tillegg**
+  være admin. En admin kan samtidig være kontaktlærer for en klasse.
+- Eget boolsk felt **`users.is_admin`** = permanent admin-tilgang.
+- `is_admin_active` beholdes uendret = «ser på adminpanelet nå» (visningsbryter,
+  nullstilles ved login).
+- **Maks 3 admin** per skole (endret fra 2).
+- Enum-verdien `'admin'` i `user_role_enum` beholdes (kan ikke trygt fjernes) men
+  brukes ikke lenger for nye/redigerte brukere.
+
+### Migrasjon `018_admin_additiv.sql` (kjøres manuelt i SQL Editor)
+- [x] `alter table users add column is_admin boolean not null default false;`
+- [x] Datamigrering: `update users set is_admin = true, role = 'laerer' where role = 'admin';`
+      (eksisterende admins får basisrolle `laerer` + `is_admin=true`; juster manuelt om
+      de også skal være kontaktlærer)
+- [x] **Eksplisitt gjenoppretting av kjente admins på e-post** (din konto er allerede
+      degradert, så `where role='admin'` fanger den ikke):
+      `update users set is_admin = true where id in (select id from auth.users where email in (<liste>));`
+- [x] Ny helper `auth_is_admin()` → returnerer `users.is_admin` for innlogget bruker.
+- [x] Erstatt `enforce_max_admins()`: tell `is_admin = true` med grense **3**;
+      trigger på `before insert or update of is_admin, deleted_at, school_id`.
+- [x] `006`-policy (school_facts): bytt `... = 'admin'` → `auth_is_admin()`.
+- [x] `002`-policyer `sessions_update/delete_kontaktlaerer`: bytt
+      `auth_role() in ('kontaktlaerer','admin')` → `(auth_role() = 'kontaktlaerer' or auth_is_admin())`.
+- [x] `017`-policy `subject_divisions_write_kontaktlaerer`: samme bytte som over.
+
+### Edge functions (manuell redeploy)
+- [x] `create-user`: caller-sjekk `role !== 'admin'` → `!is_admin` (selecte `is_admin`);
+      insert ny bruker med `is_admin: is_admin === true` (og `is_admin_active: false`).
+- [x] `admin-user`: samme caller-sjekk.
+- [x] `generate-facts`: `profile.role !== 'admin'` → `!profile.is_admin` (selecte `is_admin`).
+
+### app.js
+- [x] `visNyBrukerModal` / `visRedigerBrukerModal`: `rolle = fd.get('role')` (basisrolle),
+      send/lagre `is_admin = erAdmin`; ikke rør `is_admin_active`. Maks-admin-sjekk teller
+      `is_admin=true`, grense 3. Admin-checkbox forhåndshakes fra `user.is_admin`.
+      Fjern `role==='admin' → laerer`-spesialtilfellet i radio-forhåndsvalg.
+- [x] login (linje ~499): `erAdmin = APP.profile?.is_admin || APP.isAdminActive` → bruk `is_admin`.
+- [x] `oppdaterHeader` (708/709): `visAdmin = !!APP.profile.is_admin`;
+      `skjulLaerer = APP.profile.is_admin && APP.isAdminActive`.
+- [x] router-guard (798): `!APP.isAdminActive && !APP.profile?.is_admin`.
+- [x] `sjekkOgFornyFunfacts` (366): `!is_admin_active && !is_admin`.
+- [x] `renderBrukereTab`: vis «+ admin»-merke når `u.is_admin`.
+- [x] Bump `?v=` i `index.html`.
+
+### Verifisering
+- [x] Admin redigerer egen/annen bruker → admin-status overlever login.
+- [x] Admin som også er kontaktlærer beholder begge.
+- [x] Maks 3 admin håndheves (frontend + trigger).
+- [x] Funfacts-fornyelse, create-user, admin-user fungerer for admin.
+
+### Rydd opp
+- [x] Reverter den midlertidige `role='admin'`-fiksen i modalene (erstattes av is_admin).
+
+---
+
 ## Status: FULLFØRT — Økt X (P7): Skjulte økt-handlinger — sveip/kebab i alle visninger
 
 ---
