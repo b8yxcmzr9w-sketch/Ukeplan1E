@@ -1,5 +1,7 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt X (P7): Skjulte økt-handlinger — sveip/kebab i alle visninger
+
 ## Økt X (P7): Skjulte økt-handlinger — sveip/kebab i alle visninger
 
 **Branch:** `claude/P7-okt-handlinger-sveip-kebab`
@@ -29,7 +31,7 @@ Innstillingsfane-checkboxen (`renderInnstillingerTab` linje 1414–1422) fjernes
 
 ### Delplan
 
-- [ ] **Delsteg 1 — `visOktHandlinger(session, actions)` (ny felles funksjon)**
+- [x] **Delsteg 1 — `visOktHandlinger(session, actions)` (ny felles funksjon)**
 
   Ny hjelpefunksjon som bygger og viser handlingsmenyen uavhengig av trigger:
   - Rendrer en liten **meny-boks** (absolutt-posisjonert under kebab-ikonet) med
@@ -39,7 +41,7 @@ Innstillingsfane-checkboxen (`renderInnstillingerTab` linje 1414–1422) fjernes
   - Én aktiv meny om gangen: ny meny lukker ev. forrige.
   - Plassering: under/ved kebab-knappen; snues til venstre om kortet er ved høyre kant.
 
-- [ ] **Delsteg 2 — Kebab-ikon i `renderSessionCard` (desktop)**
+- [x] **Delsteg 2 — Kebab-ikon i `renderSessionCard` (desktop)**
 
   I `renderSessionCard`, når `showActions = true`:
   - Erstatt `okt-handlinger`-raden (alltid synlige emoji-knapper) med én `⋮`-knapp
@@ -49,7 +51,7 @@ Innstillingsfane-checkboxen (`renderInnstillingerTab` linje 1414–1422) fjernes
   - Fjern all `skjulHandlinger`/`ukeplan_skjul_handlinger`-logikk fra `renderSessionCard`.
   - Fjern innstillingscheckboxen i `renderInnstillingerTab` (linje 1414–1422).
 
-- [ ] **Delsteg 3 — Sveip venstre i `renderSessionCard` (mobil)**
+- [x] **Delsteg 3 — Sveip venstre i `renderSessionCard` (mobil)**
 
   Touch-gester håndteres i `renderSessionCard` via `touchstart`/`touchmove`/`touchend`:
   - **Sveip venstre** (horisontalt ≥ 50 px, vertikal avvik < 30 px):
@@ -62,7 +64,7 @@ Innstillingsfane-checkboxen (`renderInnstillingerTab` linje 1414–1422) fjernes
     unngår konflikt med nettleserens scroll.
   - Sveip og tap er gjensidig eksklusive: sveip startes → tap-handler avfyres ikke.
 
-- [ ] **Delsteg 4 — Komprimert kortinnhold på mobil**
+- [x] **Delsteg 4 — Komprimert kortinnhold på mobil**
 
   I `renderSessionCard` og tilhørende CSS:
   - På mobil (via CSS-klasse `okt-kort--kompakt` satt av JS med `matchMedia`) vises
@@ -72,7 +74,7 @@ Innstillingsfane-checkboxen (`renderInnstillingerTab` linje 1414–1422) fjernes
   - `okt-kort--kompakt` settes/fjernes ved window-resize for å synkronisere med CSS.
   - Desktop: alle detaljer alltid synlige (ingen endring fra i dag).
 
-- [ ] **Delsteg 5 — CSS: kebab, meny og sveip-animasjon**
+- [x] **Delsteg 5 — CSS: kebab, meny og sveip-animasjon**
 
   Nye CSS-klasser i `style.css`:
   - `.okt-kebab` — absolutt-posisjonert øvre hjørne, diskret (`opacity:.45`, hover `.85`),
@@ -84,7 +86,7 @@ Innstillingsfane-checkboxen (`renderInnstillingerTab` linje 1414–1422) fjernes
   - Print-CSS: `.okt-kebab` og `.okt-handlingsmeny` skjules ved print (legges i
     eksisterende print-skjull-liste linje 729).
 
-- [ ] **Delsteg 6 — Bump `?v=`, commit og push**
+- [x] **Delsteg 6 — Bump `?v=`, commit og push**
   - Bump cache-busting til `?v=20260619a` (eller høyere) i `v4/index.html`.
   - Commit per delsteg, push til `claude/P7-okt-handlinger-sveip-kebab`.
   - Ingen manuelle steg i Supabase.
