@@ -1,5 +1,96 @@
 # PLAN — Ukeplan1E v4
 
+## Økt X (P7): Skjulte økt-handlinger — sveip/kebab i alle visninger
+
+**Branch:** `claude/P7-okt-handlinger-sveip-kebab`
+**Scope:** `v4/app.js`, `v4/style.css`, `v4/index.html` (cache-bust).
+Ingen DB-endringer, ingen edge-function-endringer.
+
+### Funn — kartlegging
+
+**Byggemodell:** Én felles funksjon `renderSessionCard(s, showActions, actions)` (app.js:1248)
+bygger alle økt-kort. Ingen duplisering per visning.
+
+**Call sites med handlinger (showActions = true):**
+
+| Linje | Visning | Handlinger |
+|-------|---------|------------|
+| 1708 | `renderMinKlasseTab` → `renderUke` (Min klasse) | edit, copy, del, transfer |
+| 1768 | `renderAlleOkterTab` (Alle mine økter) | edit, copy, del, transfer |
+| 1835 | `renderSokTab` → `doSearch` (Søk) | edit, copy, del |
+
+**Elevvisning:** `renderSessionCard(s, false)` — ingen knapper, berøres ikke.
+
+**Eksisterende halvferdige løsning** (`ukeplan_skjul_handlinger` i localStorage):
+Skjuler `okt-handlinger` via `.skjult` + høyreklikk-toggle. Erstattes av P7.
+Innstillingsfane-checkboxen (`renderInnstillingerTab` linje 1414–1422) fjernes.
+
+**CSS-anker:** `.okt-kort` er `position:relative` → kebab-ikon plasseres absolutt i hjørnet.
+
+### Delplan
+
+- [ ] **Delsteg 1 — `visOktHandlinger(session, actions)` (ny felles funksjon)**
+
+  Ny hjelpefunksjon som bygger og viser handlingsmenyen uavhengig av trigger:
+  - Rendrer en liten **meny-boks** (absolutt-posisjonert under kebab-ikonet) med
+    én rad per tilgjengelig handling: ✏️ Rediger, 📋 Kopier, 🗑️ Slett, ↗️ Overfør.
+  - Null-handlinger (f.eks. `del: null`) vises ikke.
+  - Menyen lukkes ved: klikk på handling, klikk utenfor, Escape.
+  - Én aktiv meny om gangen: ny meny lukker ev. forrige.
+  - Plassering: under/ved kebab-knappen; snues til venstre om kortet er ved høyre kant.
+
+- [ ] **Delsteg 2 — Kebab-ikon i `renderSessionCard` (desktop)**
+
+  I `renderSessionCard`, når `showActions = true`:
+  - Erstatt `okt-handlinger`-raden (alltid synlige emoji-knapper) med én `⋮`-knapp
+    (klasse `okt-kebab`) absolutt-posisjonert i kortets øvre høyre hjørne.
+  - Klikk på `okt-kebab` → kaller `visOktHandlinger(session, actions)`.
+  - Høyre-klikk på selve kortet → kaller samme `visOktHandlinger` (valgfri snarvei).
+  - Fjern all `skjulHandlinger`/`ukeplan_skjul_handlinger`-logikk fra `renderSessionCard`.
+  - Fjern innstillingscheckboxen i `renderInnstillingerTab` (linje 1414–1422).
+
+- [ ] **Delsteg 3 — Sveip venstre i `renderSessionCard` (mobil)**
+
+  Touch-gester håndteres i `renderSessionCard` via `touchstart`/`touchmove`/`touchend`:
+  - **Sveip venstre** (horisontalt ≥ 50 px, vertikal avvik < 30 px):
+    - Avslører **handlingspanel** festet til høyre side av kortet (translateX-animasjon),
+      ELLER kaller `visOktHandlinger` som en bottom-sheet / overlay.
+    - Aldri direkte slett — bare åpner menyen.
+  - **Kort trykk** (tap): utvider komprimert kortinnhold (se delsteg 4).
+  - Sveip-start sjekker at bevegelsen er horisontal (ikke vertikal scroll) før gest låses.
+    `touchmove` kaller `e.preventDefault()` kun etter at horisontal intent er bekreftet —
+    unngår konflikt med nettleserens scroll.
+  - Sveip og tap er gjensidig eksklusive: sveip startes → tap-handler avfyres ikke.
+
+- [ ] **Delsteg 4 — Komprimert kortinnhold på mobil**
+
+  I `renderSessionCard` og tilhørende CSS:
+  - På mobil (via CSS-klasse `okt-kort--kompakt` satt av JS med `matchMedia`) vises
+    kun **fag-badge + aktivitet** som standard; møtepunkt, info, lærer og div-badges
+    er skjult (klasse `okt-detaljer skjult`).
+  - **Kort trykk** (tap) på kortet toggler klassen → viser/skjuler detaljer.
+  - `okt-kort--kompakt` settes/fjernes ved window-resize for å synkronisere med CSS.
+  - Desktop: alle detaljer alltid synlige (ingen endring fra i dag).
+
+- [ ] **Delsteg 5 — CSS: kebab, meny og sveip-animasjon**
+
+  Nye CSS-klasser i `style.css`:
+  - `.okt-kebab` — absolutt-posisjonert øvre hjørne, diskret (`opacity:.45`, hover `.85`),
+    `font-size:1.1rem`, `padding:2px 6px`, ingen border, bakgrunn transparent.
+  - `.okt-handlingsmeny` — absolutt-posisjonert meny-boks med shadow, liten padding,
+    `z-index:100`, `min-width:130px`. Rader: `.okt-handlingsrad` (flex, gap, hover-highlight).
+  - `.okt-detaljer.skjult` — `display:none` (innenfor `@media (max-width:700px)`).
+  - Sveip-animasjon: `transition: transform .15s` på `.okt-kort` ved sveip.
+  - Print-CSS: `.okt-kebab` og `.okt-handlingsmeny` skjules ved print (legges i
+    eksisterende print-skjull-liste linje 729).
+
+- [ ] **Delsteg 6 — Bump `?v=`, commit og push**
+  - Bump cache-busting til `?v=20260619a` (eller høyere) i `v4/index.html`.
+  - Commit per delsteg, push til `claude/P7-okt-handlinger-sveip-kebab`.
+  - Ingen manuelle steg i Supabase.
+
+---
+
 ## Status: FULLFØRT — Økt X (P6): plassbruk på mobil (elevvisning)
 
 ---
