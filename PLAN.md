@@ -1,6 +1,6 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PÅGÅR — Økt X (P6): plassbruk på mobil (elevvisning)
+## Status: FULLFØRT — Økt X (P6): plassbruk på mobil (elevvisning)
 
 ---
 
@@ -33,26 +33,23 @@ Helligdag trenger i tillegg en CSS-regel som skjuler den tomme containeren.
 
 ### Delplan
 
-- [ ] **Delsteg 1 — Fjern fast høyde på mobil (CSS)**
-  - I `@media (max-width:700px)` i `style.css`: legg til
+- [x] **Delsteg 1 — Fjern fast høyde på mobil (CSS)**
+  - I `@media (max-width:700px)` i `style.css`: lagt til
     `.dag-okter { min-height: 0; max-height: none; overflow: visible; }`
   - Daghøyden følger nå innholdet på mobil; desktop (5-kol) er uberørt.
 
-- [ ] **Delsteg 2 — Kompakt helligdag på mobil (CSS)**
-  - I `@media (max-width:700px)`: legg til
-    `.day-col--holiday .dag-okter { display: none; }`
+- [x] **Delsteg 2 — Kompakt helligdag på mobil (CSS)**
+  - Verifisert at `.dag-okter` på en helligdag er reelt tom: bygges med
+    `el()`/`document.createElement` (app.js:1193), løkka over `daySessions`
+    legger ingenting til på fridager → ingen whitespace-noder. `:empty` treffer.
+  - I `@media (max-width:700px)` lagt til
+    `.day-col--holiday .dag-okter:empty { display: none; }`
   - Effekt: helligdag-kolonne på mobil viser kun dag-tittel + `.holiday-label` —
-    ingen tom container under.
-  - Hvis dagen har *både* helligdag og økter: (ikke aktuelt i praksis — fridager
-    blokkerer alle nye økter, og `day-col--holiday .dag-okter` har `opacity:.5
-    pointer-events:none`). Vurdering: skjuler vi den, skjuler vi også evt.
-    allerede-eksisterende økter som ble lagt inn før fridagen. Alternativ:
-    skjul kun når `.dag-okter:empty` — dvs. legg til
-    `.day-col--holiday .dag-okter:empty { display: none; }` (ingen JS-endring).
-    **Valg: bruk `:empty`-selektoren** — tryggere.
+    ingen tom container under. Dersom dagen mot formodning har en allerede-lagret
+    økt, treffer ikke `:empty` → økta blir synlig (ønsket).
 
-- [ ] **Delsteg 3 — Bump `?v=`, commit og push**
-  - Bump `?v=YYYYMMDDx` i `v4/index.html`.
+- [x] **Delsteg 3 — Bump `?v=`, commit og push**
+  - Bumpet til `?v=20260619a` i `v4/index.html` (CSS + JS).
   - Commit og push til `claude/eager-thompson-3laudr`.
 
 **Merk:** Ingen endringer i `app.js` er nødvendig — alt løses i CSS.
