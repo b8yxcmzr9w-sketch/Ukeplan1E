@@ -2,6 +2,8 @@
 
 ## Status: FULLFØRT — Økt X (P7): Skjulte økt-handlinger — sveip/kebab i alle visninger
 
+---
+
 ## Økt X (P7): Skjulte økt-handlinger — sveip/kebab i alle visninger
 
 **Branch:** `claude/P7-okt-handlinger-sveip-kebab`
