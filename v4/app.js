@@ -363,7 +363,7 @@ async function medAIOverlay(tittel, asyncFn) {
 // Krever admin-tilgang siden generate-facts er adminbeskyttet. Feil svelges stille.
 async function sjekkOgFornyFunfacts() {
   if (!APP.school || !APP.facts.length) return
-  if (!APP.profile?.is_admin_active && !APP.profile?.is_admin) return
+  if (!APP.profile?.is_admin_active && !harAdminTilgang()) return
   if (!APP.facts.some(f => (f.view_count || 0) >= 3)) return
   try {
     await fornyFunfactsRotasjon()
@@ -414,6 +414,13 @@ async function fetchProfile(userId) {
   const { data, error } = await sb.from('users').select('*').eq('id', userId).single()
   if (error) throw error
   return data
+}
+
+// Admin-tilgang avgjøres av is_admin. role==='admin' beholdes som fallback
+// for overgangen før migrasjon 018 er kjørt (da finnes ikke is_admin-kolonnen
+// ennå, og en ny frontend ville ellers skjult admin-menyen for alle).
+function harAdminTilgang(p = APP.profile) {
+  return !!(p && (p.is_admin || p.role === 'admin'))
 }
 
 async function byttPassord(nytt) {
@@ -496,7 +503,7 @@ function renderLoginForm() {
       oppdaterHeader()
       await sjekkVentendeOverforinger()
       showToast(`Velkommen, ${APP.profile.full_name}!`, 'info')
-      const erAdmin = APP.profile?.is_admin || APP.isAdminActive
+      const erAdmin = harAdminTilgang() || APP.isAdminActive
       if (erAdmin && !(await erFerdigSattOpp())) {
         APP.isAdminActive = true
         navigate('#/admin')
@@ -704,8 +711,8 @@ function oppdaterHeader() {
   const ddLogin     = document.getElementById('hdr-dd-login')
 
   if (APP.user && APP.profile) {
-    const visAdmin = !!APP.profile.is_admin
-    const skjulLaerer = APP.profile.is_admin && APP.isAdminActive
+    const visAdmin = harAdminTilgang()
+    const skjulLaerer = harAdminTilgang() && APP.isAdminActive
 
     // PC
     if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
@@ -794,7 +801,7 @@ async function router() {
 
   if (hash.startsWith('#/admin')) {
     if (!APP.user) { navigate('#/login'); return }
-    if (!APP.isAdminActive && !APP.profile?.is_admin) { navigate('#/laerer'); return }
+    if (!APP.isAdminActive && !harAdminTilgang()) { navigate('#/laerer'); return }
     renderAdminPanel()
     return
   }
