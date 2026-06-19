@@ -1,5 +1,74 @@
 # PLAN — Ukeplan1E v4
 
+## Status: KARTLAGT — venter på godkjenning — Økt X (P6): komprimer plassbruk på mobil (elevvisning)
+
+---
+
+## Økt X (P6) — Komprimer plassbruk på mobil (elevvisning)
+
+> Gjelder KUN punkt 1 i BACKLOGG-UX-MOBIL.md.
+> **Avvik:** `BACKLOGG-UX-MOBIL.md` finnes ikke i repoet (ikke i arbeidsmappe,
+> tracked files eller git-historikk på noen branch). Kartleggingen bygger på
+> punkt 1 slik den er beskrevet i oppgaveteksten.
+
+### Fase 0 — Funn (kartlegging)
+
+Elevvisningen bygges i `renderElevView` → `renderUke` (`v4/app.js`).
+Hver dag rendres som en `.dag-kol` med:
+- `.dag-tittel` (dagnavn + dato)
+- evt. `.holiday-label` (helligdag-tittel, f.eks. «2. pinsedag») når dagen er
+  fridag — da får kolonnen også klassen `day-col--holiday` (`app.js:1199–1207`)
+- `.dag-okter` (øktlisten — `app.js:1193–1209`)
+
+Flerdagshendelser (`multi_day_events`) rendres separat som en egen rad over
+nettet via `renderFlerdagsBjelkeRad` (`app.js:1225`) — **ikke** kilden til
+problemet her. «Heldagshendelse» i punkt 1 = helligdag/fridag fra
+`school_calendar` (eks. «2. pinsedag»).
+
+**Hvorfor det tar plass — to årsaker, begge i CSS (`v4/style.css`):**
+1. `.dag-okter { min-height: 180px }` (`style.css:266–271`) — «plass til minst
+   3 synlige». Gjelder også på mobil (ingen override i `@media (max-width:700px)`,
+   `style.css:695–714`). På mobil stables dagene vertikalt (`.uke-grid` blir
+   `flex column`), så hver dag blir minst 180px høy uansett innhold:
+   - **Fridag** (f.eks. 2. pinsedag): tom/dimmet `.dag-okter` på 180px under
+     `.holiday-label` → «fyller hele dagens høyde med tomt felt under».
+   - **Dag med kun én økt:** ett kort + ~150px tomrom under.
+2. `.dag-okter { max-height: 70vh; overflow-y: auto }` (`style.css:269–270`) —
+   gir per-dag-scroll som er unødvendig i den vertikalt stablede mobilvisningen.
+
+Desktop (5 kolonner side om side) trenger `min-height` for at kolonnene skal
+være like høye visuelt — derfor må endringene scopes til mobil-media-queryet.
+
+### Delplan — endringer (alle scopet til `@media (max-width:700px)` i `style.css`)
+
+**Delsteg A — Høyde tilpasset innhold** [ ]
+- Override `.dag-okter` på mobil: `min-height: 0; max-height: none;
+  overflow: visible`. Da følger dagens høyde innholdet, og hele siden scroller
+  naturlig i stedet for per-dag.
+
+**Delsteg B — Kompakt fridag** [ ]
+- Skjul tom øktliste på mobil: `.dag-okter:empty { display: none }` (scopet til
+  mobil). En fridag uten økter blir da kun dagtittel + helligdag-etikett — en
+  kompakt rad uten tomt felt under.
+- Stram opp fridags-raden: la `.day-col--holiday` på mobil vise tittel +
+  `.holiday-label` som en kompakt banner (redusert luft/margin), slik at
+  «2. pinsedag» fremstår som én rad.
+
+**Delsteg C — Verifisering + cache-bust + commit** [ ]
+- Visuell sjekk i mobilbredde: (a) fridag = kompakt rad, (b) dag med én økt =
+  ingen tomrom, (c) dag med mange økter = vokser naturlig uten per-dag-scroll,
+  (d) desktop uendret (5 like høye kolonner).
+- Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS).
+- Commit + push til `claude/P6-mobil-plassbruk`.
+
+### Åpne spørsmål til godkjenning
+- **CSS-only foreslått** (ingen JS-endring) — lavest risiko, holder seg innenfor
+  mobil. OK?
+- Delsteg A foreslår også å fjerne per-dag-scroll på mobil (`max-height/overflow`).
+  Ønsker du det med, eller skal jeg kun røre `min-height`?
+
+---
+
 ## Status: FULLFØRT — Økt B (P3): klasse-admin ukeinntasting + skoleår-veksler
 
 ---
