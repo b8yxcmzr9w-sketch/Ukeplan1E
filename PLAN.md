@@ -1,16 +1,14 @@
 # PLAN — Ukeplan1E v4
 
-## Status: KODE FERDIG — krever manuell migrasjon `018` + redeploy av 3 edge functions
+## Status: KODE FERDIG — begge 018-migrasjoner kjørt; gjenstår kun redeploy av 3 edge functions
 
-> **Neste steg (manuelt):** 1) Kjør `018_admin_additiv.sql` i SQL Editor.
-> 2) Redeploy `create-user`, `admin-user`, `generate-facts` i Dashboard.
-> 3) Hard refresh (Cmd+Shift+R). Verifiser at admin-meny overlever login.
+> **Begge 018-migrasjoner BEKREFTET KJØRT** (19.06.2026, verifisert i SQL Editor):
+> - `018_admin_additiv.sql` → `users.is_admin` finnes.
+> - `018_funfacts_view_count.sql` → `school_facts.view_count` finnes.
 >
-> **`018_admin_additiv.sql` BEKREFTET KJØRT** (19.06.2026): verifisert i SQL Editor —
-> `users.is_admin`-kolonnen finnes. Gjenstår å bekrefte manuelt: redeploy av
-> `create-user`, `admin-user`, `generate-facts`, og at `018_funfacts_view_count.sql`
-> (school_facts.view_count) er kjørt — to filer deler nummer 018. Sjekk det andre med:
-> `select column_name from information_schema.columns where table_name='school_facts' and column_name='view_count';`
+> **Eneste gjenstående manuelle steg:** redeploy av `create-user`, `admin-user`,
+> `generate-facts` i Dashboard, deretter hard refresh (Cmd+Shift+R) og verifiser at
+> admin-menyen overlever login.
 
 **Branch:** `claude/festive-knuth-qrf7a3`
 **Scope:** ny migrasjon `018_admin_additiv.sql`, RLS-oppdateringer, 3 edge functions
