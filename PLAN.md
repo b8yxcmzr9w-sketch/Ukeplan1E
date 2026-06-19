@@ -1,14 +1,13 @@
 # PLAN — Ukeplan1E v4
 
-## Status: KODE FERDIG — begge 018-migrasjoner kjørt; gjenstår kun redeploy av 3 edge functions
+## Status: FULLFØRT — admin additivt (018) ferdig, alle manuelle steg utført
 
-> **Begge 018-migrasjoner BEKREFTET KJØRT** (19.06.2026, verifisert i SQL Editor):
-> - `018_admin_additiv.sql` → `users.is_admin` finnes.
-> - `018_funfacts_view_count.sql` → `school_facts.view_count` finnes.
+> **Hele 018-runden er ferdig** (19.06.2026):
+> - `018_admin_additiv.sql` kjørt → `users.is_admin` finnes (verifisert i SQL Editor).
+> - `018_funfacts_view_count.sql` kjørt → `school_facts.view_count` finnes (verifisert).
+> - Edge functions `create-user`, `admin-user`, `generate-facts` redeployet i Dashboard.
 >
-> **Eneste gjenstående manuelle steg:** redeploy av `create-user`, `admin-user`,
-> `generate-facts` i Dashboard, deretter hard refresh (Cmd+Shift+R) og verifiser at
-> admin-menyen overlever login.
+> Ingen gjenstående manuelle steg.
 
 **Branch:** `claude/festive-knuth-qrf7a3`
 **Scope:** ny migrasjon `018_admin_additiv.sql`, RLS-oppdateringer, 3 edge functions
