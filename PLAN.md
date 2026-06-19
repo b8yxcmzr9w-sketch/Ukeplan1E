@@ -5,6 +5,12 @@
 > **Neste steg (manuelt):** 1) Kjør `018_admin_additiv.sql` i SQL Editor.
 > 2) Redeploy `create-user`, `admin-user`, `generate-facts` i Dashboard.
 > 3) Hard refresh (Cmd+Shift+R). Verifiser at admin-meny overlever login.
+>
+> **`018_admin_additiv.sql` BEKREFTET KJØRT** (19.06.2026): verifisert i SQL Editor —
+> `users.is_admin`-kolonnen finnes. Gjenstår å bekrefte manuelt: redeploy av
+> `create-user`, `admin-user`, `generate-facts`, og at `018_funfacts_view_count.sql`
+> (school_facts.view_count) er kjørt — to filer deler nummer 018. Sjekk det andre med:
+> `select column_name from information_schema.columns where table_name='school_facts' and column_name='view_count';`
 
 **Branch:** `claude/festive-knuth-qrf7a3`
 **Scope:** ny migrasjon `018_admin_additiv.sql`, RLS-oppdateringer, 3 edge functions
@@ -591,8 +597,9 @@ _Implementasjon:_
 
 ---
 
-## Status: VENTER — import av ekte produksjonsdata 25/26 (NPT/NNA/Naturfag i basen)
-## Neste steg (etter UI-runden): Plan_YFF limes inn → migrasjon 017
+## Status: FULLFØRT — import av ekte produksjonsdata 25/26 (NPT/NNA/Naturfag i basen)
+## Merk: Plan_YFF-som-017 ble forlatt — 017 ble i stedet 017_parti_per_klasse.sql.
+##       «curl hentAlle»-ruten ble forlatt — ekte data kom inn via 014–016 (ark for ark).
 
 Bruker limer inn ark for ark fra dagens løsning; hvert ark blir en
 import-migrasjon som soft-sletter de syntetiske øktene for faget og
@@ -614,9 +621,12 @@ info, og re-kjøring etter brukeroppretting mapper riktig.
       brukere opprettes senere.
 - [x] MANUELT: 014, 015 og 016 kjørt i SQL Editor (bekreftet av
       bruker 12.06.2026).
-- [ ] (Venter på bruker) Plan_YFF — limes inn på samme måte og blir
-      migrasjon 017. Syntetiske fag uten ekte motpart (norsk, matte,
-      engelsk, kroppsøving + ev. YFF) beholdes inntil videre.
+- [x] ~~(Venter på bruker) Plan_YFF — limes inn på samme måte og blir
+      migrasjon 017.~~ FORLATT: Plan_YFF ble ikke importert som 017.
+      Nummer 017 ble i stedet brukt til `017_parti_per_klasse.sql`
+      (parti per klasse + session_divisions). Syntetiske fag uten ekte
+      motpart (norsk, matte, engelsk, kroppsøving + ev. YFF) beholdes
+      inntil videre.
 
 Mål: gi v4 et fullt datasett å jobbe med for 25/26. Ekte data fra
 produksjonen (Google Sheets via Apps Script) kunne ikke hentes fra
@@ -641,9 +651,12 @@ leverer realistisk seed-data i stedet. Bruker leverer ev. ekte
       SQL Editor gjør.
 - [x] MANUELT: 012 og 013 kjørt i Supabase SQL Editor (bekreftet av
       bruker 12.06.2026).
-- [ ] (Venter på bruker) Ekte data: kjør
+- [x] ~~(Venter på bruker) Ekte data: kjør
       `curl -sL -X POST '<SCRIPT_URL>' -d '{"action":"hentAlle"}'`
-      lokalt og legg JSON-en i repoet — så konverteres den til SQL.
+      lokalt og legg JSON-en i repoet — så konverteres den til SQL.~~
+      FORLATT: «curl hentAlle»-ruten ble ikke brukt (skymiljøet blokkerer
+      script.google.com). Ekte 25/26-data kom i stedet inn ark for ark via
+      `014_import_npt`, `015_import_nna` og `016_import_fag` (alle kjørt).
 
 Forrige runde (fire små UI/prompt-justeringer: «høytid», ukenummer og
 kompakt AI-forhåndsvisning, funfacts-overlay) er fullført og merget til
