@@ -6,12 +6,11 @@
 > 2) Redeploy `create-user`, `admin-user`, `generate-facts` i Dashboard.
 > 3) Hard refresh (Cmd+Shift+R). Verifiser at admin-meny overlever login.
 >
-> **NB – usikkert om 018 er kjørt:** appen har sikkerhetsnett
-> (`harAdminTilgang()` i app.js, `is_admin || role==='admin'`), så admin-menyen
-> fungerer uansett — fravær er ikke bevis. Sjekk i SQL Editor:
-> `select column_name from information_schema.columns where table_name='users' and column_name='is_admin';`
-> (én rad = kjørt). NB: to filer deler nummer 018 — `018_admin_additiv.sql`
-> og `018_funfacts_view_count.sql` (school_facts.view_count) — begge må kjøres hver for seg.
+> **`018_admin_additiv.sql` BEKREFTET KJØRT** (19.06.2026): verifisert i SQL Editor —
+> `users.is_admin`-kolonnen finnes. Gjenstår å bekrefte manuelt: redeploy av
+> `create-user`, `admin-user`, `generate-facts`, og at `018_funfacts_view_count.sql`
+> (school_facts.view_count) er kjørt — to filer deler nummer 018. Sjekk det andre med:
+> `select column_name from information_schema.columns where table_name='school_facts' and column_name='view_count';`
 
 **Branch:** `claude/festive-knuth-qrf7a3`
 **Scope:** ny migrasjon `018_admin_additiv.sql`, RLS-oppdateringer, 3 edge functions
