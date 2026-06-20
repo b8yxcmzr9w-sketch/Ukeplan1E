@@ -644,6 +644,59 @@ tr:hover td { background: var(--primær-svak); }
   padding: 10px 14px; font-size: .88rem; color: #0d47a1; margin-bottom: 12px;
 }
 
+/* ── «Alle mine økter»: tabell (desktop) + kort-liste (mobil) ─────── */
+/* Uke-overskrift med scroll-offset for sticky header + fane-bar */
+.min-plan-uke {
+  margin: 22px 0 8px;
+  scroll-margin-top: calc(var(--header-h, 58px) + 54px);
+}
+.min-plan-uke:first-of-type { margin-top: 4px; }
+
+/* Desktop-tabell: faste smale kolonner for ☑/Klasse/Fag, flytende resten */
+.min-plan-tabell { width: 100%; border-collapse: collapse; font-size: .9rem; table-layout: auto; }
+.min-plan-tabell td {
+  padding: 7px 10px; border-bottom: 1px solid var(--kant);
+  text-align: left; vertical-align: top;
+}
+.min-plan-tabell tr:hover td { background: var(--primær-svak); }
+[data-theme="mork"] .min-plan-tabell tr:hover td { background: #2a2a2a; }
+.min-plan-tabell .mp-cb     { width: 30px; text-align: center; }
+.min-plan-tabell .mp-klasse { width: 88px; white-space: nowrap; }
+.min-plan-tabell .mp-fag    { width: 92px; }
+.min-plan-cb { width: 17px; height: 17px; cursor: pointer; }
+.mp-klasse-navn { display: block; font-weight: 700; }
+.mp-dag { display: block; font-size: .72rem; color: var(--tekst-svak); opacity: .8; }
+.mp-fag-badge {
+  display: inline-block; padding: 1px 8px; border-radius: 4px;
+  background: var(--badge-bg); color: var(--badge-tekst);
+  font-size: .78rem; font-weight: 600; white-space: nowrap;
+}
+.mp-pg   { font-size: .82rem; color: var(--tekst-svak); }
+.mp-akt  { font-weight: 500; }
+.mp-opp  { font-size: .82rem; color: var(--tekst-svak); }
+.mp-info { font-size: .82rem; color: var(--tekst-svak); position: relative; padding-right: 30px; }
+.min-plan-kebab {
+  position: absolute; top: 2px; right: 4px;
+  opacity: .4; font-size: 1.1rem;
+}
+.min-plan-kebab:hover { opacity: 1; }
+
+/* «Denne uka»-knapp: flytende, vises kun når scrollet forbi inneværende uke */
+.denne-uka-btn {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 22px; z-index: 35;
+  box-shadow: 0 4px 14px rgba(0,0,0,.22);
+  border-radius: 22px; padding: 9px 20px;
+}
+
+/* Desktop = tabell, mobil = kort-liste. Bytt på ~700px-brekkpunktet. */
+.min-plan-kort { display: none; }
+.min-plan-kort .session-wrapper .min-plan-cb { margin-top: 12px; flex-shrink: 0; }
+@media (max-width: 700px) {
+  .min-plan-tabell { display: none; }
+  .min-plan-kort { display: flex; flex-direction: column; gap: 7px; }
+}
+
 /* ── Kopi-modal: hint og AI-påminnelse ──────────────────────────── */
 .kopi-hint { font-size: .85rem; color: var(--tekst-svak); margin-bottom: 12px; }
 .sporbarhet-info { font-size: .8rem; color: var(--tekst-svak); margin: -4px 0 12px; }

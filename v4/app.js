@@ -1833,8 +1833,17 @@ async function renderMinKlasseTab(container, klasse) {
   await renderUke()
 }
 
-async function renderAlleOkterTab(container) {
+// «Alle mine økter»: brukerens egne økter (teacher_id = profil).
+// Desktop = kompakt tabell (én rad per økt), mobil = vertikal kort-liste (CSS-styrt).
+// Kontinuerlig liste over alle uker, auto-scroll til dagens uke, «Denne uka»-knapp
+// via IntersectionObserver, og bulk-redigering (marker → rediger/kopier/slett).
+async function renderAlleOkterTab(container, autoScroll = true) {
+  // Rydd opp tidligere observer (unngå lekkasje ved re-render)
+  if (renderAlleOkterTab._obs) { renderAlleOkterTab._obs.disconnect(); renderAlleOkterTab._obs = null }
+
   const aktivtSkolear = APP.school?.active_school_year
+  const schoolStart = APP.school?.school_year_start_week || 33
+
   let alleOkterQuery = sb.from('sessions')
     .select('*, subjects(name, color_hex, short_code), classes(name), session_divisions(division_id, subject_divisions(name, division_type))')
     .eq('teacher_id', APP.profile.id)
@@ -1843,33 +1852,158 @@ async function renderAlleOkterTab(container) {
   if (aktivtSkolear) alleOkterQuery = alleOkterQuery.eq('school_year', aktivtSkolear)
   const { data: sessions } = await alleOkterQuery
 
+  clearEl(container)
+
   if (!sessions || !sessions.length) {
     container.appendChild(el('p', {}, 'Ingen økter funnet.'))
     return
   }
 
-  // Group by week
+  // Grupper per uke, sorter i skoleår-rekkefølge (33→52→1→24)
   const byWeek = {}
   for (const s of sessions) {
     if (!byWeek[s.week_nr]) byWeek[s.week_nr] = []
     byWeek[s.week_nr].push(s)
   }
+  const uker = Object.keys(byWeek).map(Number)
+    .sort((a, b) => ukePosisjon(a, schoolStart) - ukePosisjon(b, schoolStart))
 
-  for (const week of Object.keys(byWeek).sort((a, b) => a - b)) {
-    container.appendChild(el('h3', {}, `Uke ${week}`))
-    const list = el('div', { class: 'dag-okter' })
-    for (const s of byWeek[week]) {
-      const card = renderSessionCard(s, true, {
-        edit: () => visRedigerOktModal(s, () => renderAlleOkterTab(container)),
-        copy: () => visKopierOktModal(s, () => renderAlleOkterTab(container)),
-        del: () => slettOkt(s.id, () => renderAlleOkterTab(container)),
-        transfer: () => visOverforModal(s, () => renderAlleOkterTab(container)),
-      })
-      const klasseLabel = el('span', { class: 'session-card__class' }, s.classes?.name || '')
-      card.prepend(klasseLabel)
-      list.appendChild(card)
+  const naaWeek = getCurrentISOWeek()
+  const reRender = () => renderAlleOkterTab(container, false)
+
+  // ── Bulk-valg ──────────────────────────────────────────────
+  const bulkSelected = new Set()
+  const cbRefs = new Map()  // session.id → [checkbox …] for synk på tvers av layout
+
+  function oppdaterBulkBar() {
+    bulkBar.style.display = bulkSelected.size > 0 ? 'flex' : 'none'
+    bulkCount.textContent = `${bulkSelected.size} valgt`
+  }
+
+  function lagCheckbox(s) {
+    const cb = el('input', { type: 'checkbox', class: 'min-plan-cb', title: 'Marker økt' })
+    cb.checked = bulkSelected.has(s.id)
+    cb.addEventListener('change', () => {
+      if (cb.checked) bulkSelected.add(s.id); else bulkSelected.delete(s.id)
+      for (const annen of (cbRefs.get(s.id) || [])) { if (annen !== cb) annen.checked = cb.checked }
+      oppdaterBulkBar()
+    })
+    if (!cbRefs.has(s.id)) cbRefs.set(s.id, [])
+    cbRefs.get(s.id).push(cb)
+    return cb
+  }
+
+  const bulkBar = el('div', { class: 'bulk-bar', style: 'display:none' })
+  const bulkCount = el('span', {}, '0 valgt')
+  bulkBar.appendChild(bulkCount)
+  bulkBar.appendChild(el('button', { class: 'btn btn-s', title: 'Rediger alle valgte økter samtidig', onclick: () => visBulkEditModal([...bulkSelected], reRender) }, 'Rediger valgte'))
+  bulkBar.appendChild(el('button', { class: 'btn btn-s', title: 'Kopier alle valgte økter til en annen uke', onclick: () => {
+    const valgte = sessions.filter(s => bulkSelected.has(s.id))
+    visBulkKopierModal(valgte, reRender)
+  }}, 'Kopier valgte'))
+  bulkBar.appendChild(el('button', { class: 'btn btn-f', title: 'Slett alle valgte økter', onclick: async () => {
+    if (!confirm('Slette alle valgte?')) return
+    await medLagreOverlay(async () => {
+      for (const id of bulkSelected) await sb.from('sessions').delete().eq('id', id)
+    })
+    reRender()
+  }}, 'Slett valgte'))
+  bulkBar.appendChild(el('button', { class: 'btn btn-s', title: 'Fjern markeringen', onclick: () => {
+    bulkSelected.clear()
+    for (const arr of cbRefs.values()) arr.forEach(cb => { cb.checked = false })
+    oppdaterBulkBar()
+  }}, 'Avbryt'))
+  container.appendChild(bulkBar)
+
+  // ── Innhold per uke (tabell for desktop + kort-liste for mobil) ──
+  let naaHeader = null
+  for (const week of uker) {
+    const weekHeader = el('h3', { class: 'min-plan-uke', 'data-uke': week }, `Uke ${week}`)
+    container.appendChild(weekHeader)
+    if (week === naaWeek) naaHeader = weekHeader
+
+    const rader = byWeek[week].slice().sort((a, b) =>
+      (a.day_of_week - b.day_of_week) ||
+      (a.subjects?.name || '').localeCompare(b.subjects?.name || '', 'nb'))
+
+    const lagActions = (s) => ({
+      edit: () => visRedigerOktModal(s, reRender),
+      copy: () => visKopierOktModal(s, reRender),
+      del: () => slettOkt(s.id, reRender),
+      transfer: () => visOverforModal(s, reRender),
+    })
+
+    // Desktop: tabell
+    const tabell = el('table', { class: 'min-plan-tabell' })
+    for (const s of rader) {
+      const kalAar = skoleaarKalenderaar(s.school_year, s.week_nr, schoolStart)
+      const datoKort = formatDatoNO(isoWeekToDate(kalAar, s.week_nr, s.day_of_week).toISOString().slice(0, 10))
+      const dagKort = ['Man', 'Tir', 'Ons', 'Tor', 'Fre'][s.day_of_week - 1] || ''
+      const farge = s.subjects?.color_hex || '#4a90d9'
+      const divtekst = (s.session_divisions || []).map(sd => sd.subject_divisions?.name).filter(Boolean).join(', ')
+      const actions = lagActions(s)
+
+      const kebab = el('button', { class: 'okt-kebab min-plan-kebab', title: 'Handlinger',
+        onclick: (e) => { e.stopPropagation(); visOktHandlinger(actions, kebab) } }, '⋮')
+
+      const infoCell = el('td', { class: 'mp-info' }, s.info || '')
+      infoCell.appendChild(kebab)
+
+      const tr = el('tr', { class: 'min-plan-rad' },
+        el('td', { class: 'mp-cb' }, lagCheckbox(s)),
+        el('td', { class: 'mp-klasse' },
+          el('span', { class: 'mp-klasse-navn' }, s.classes?.name || ''),
+          el('span', { class: 'mp-dag' }, `${dagKort} ${datoKort}`)),
+        el('td', { class: 'mp-fag' },
+          el('span', { class: 'mp-fag-badge', style: `border-left:3px solid ${farge}` },
+            s.subjects?.short_code || s.subjects?.name || '')),
+        el('td', { class: 'mp-pg' }, divtekst),
+        el('td', { class: 'mp-akt' }, s.activity || ''),
+        el('td', { class: 'mp-opp' }, s.meeting_point || ''),
+        infoCell)
+      tr.addEventListener('contextmenu', (e) => { e.preventDefault(); visOktHandlinger(actions, kebab) })
+      tabell.appendChild(tr)
     }
-    container.appendChild(list)
+    container.appendChild(tabell)
+
+    // Mobil: vertikal kort-liste (gjenbruker renderSessionCard m/sveip/kebab)
+    const kortListe = el('div', { class: 'min-plan-kort' })
+    for (const s of rader) {
+      const wrapper = el('div', { class: 'session-wrapper' })
+      wrapper.appendChild(lagCheckbox(s))
+      const card = renderSessionCard(s, true, lagActions(s))
+      card.prepend(el('span', { class: 'session-card__class' }, `${s.classes?.name || ''} · ${dagNavn(s.day_of_week)}`))
+      wrapper.appendChild(card)
+      kortListe.appendChild(wrapper)
+    }
+    container.appendChild(kortListe)
+  }
+
+  // ── «Denne uka»-knapp + auto-scroll ──────────────────────────
+  // Anker = inneværende ukes overskrift, ellers nærmeste kommende uke (skoleår-rekkefølge)
+  let anker = naaHeader
+  if (!anker) {
+    const naaPos = ukePosisjon(naaWeek, schoolStart)
+    const valgtUke = uker.find(w => ukePosisjon(w, schoolStart) >= naaPos) ?? uker[uker.length - 1]
+    anker = container.querySelector(`.min-plan-uke[data-uke="${valgtUke}"]`)
+  }
+
+  const denneUkaBtn = el('button', { class: 'btn btn-p denne-uka-btn', style: 'display:none',
+    title: 'Bla tilbake til inneværende uke',
+    onclick: () => anker?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, '↑ Denne uka')
+  container.appendChild(denneUkaBtn)
+
+  if (anker) {
+    if (autoScroll) requestAnimationFrame(() => anker.scrollIntoView({ behavior: 'auto', block: 'start' }))
+    const obs = new IntersectionObserver((entries) => {
+      const e = entries[0]
+      // Vis knapp KUN når ankeret er scrollet forbi (over toppen av viewport)
+      const forbi = !e.isIntersecting && e.boundingClientRect.top < 0
+      denneUkaBtn.style.display = forbi ? 'block' : 'none'
+    }, { threshold: 0 })
+    obs.observe(anker)
+    renderAlleOkterTab._obs = obs
   }
 }
 

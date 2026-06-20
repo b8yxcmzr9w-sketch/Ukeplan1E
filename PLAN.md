@@ -1,5 +1,75 @@
 # PLAN — Ukeplan1E v4
 
+## Status: UNDER ARBEID — Økt 2 (P11): «Alle mine økter» tabell-layout + «Denne uka»
+
+---
+
+## Økt 2 (P11): «Alle mine økter» — tabell-layout (desktop) + «Denne uka»
+
+**Branch:** `claude/P11-min-plan-tabell` (fra `origin/main`, har P9 + P10).
+**Scope:** `v4/app.js` (`renderAlleOkterTab`, ev. liten hjelpefunksjon),
+`v4/style.css` (tabell + media query), `v4/index.html` (cache-bust).
+Ingen DB-endringer, ingen edge-function-endringer.
+
+### Bakgrunn
+`renderAlleOkterTab` (app.js ~1836) viser brukerens EGNE økter (der brukeren er
+ansvarlig lærer), gruppert per uke, hver økt som et stort kort. Lærere jobber mye
+fra mobil. Denne økta gjør desktop-visningen om til en kompakt tabell, beholder
+vertikal liste på mobil, og legger til auto-scroll til dagens dato + «Denne uka»-knapp.
+OMGJØR tidligere beslutning om dag-kolonner (man→fre) for denne visningen.
+
+### Funn — kartlegging (kun lesing)
+- `renderAlleOkterTab` henter sessions for `teacher_id = profil.id`, sortert på
+  `week_nr`/`day_of_week`, grupperer per uke (`<h3>Uke X</h3>` + `.dag-okter`-liste),
+  rendrer `renderSessionCard` + prepender klasse-label.
+- **Bulk-redigering finnes IKKE i denne fanen i dag** (ingen checkbox, ingen bulk-bar).
+  Bulk finnes kun i `renderMinKlasseTab` (per-uke), som har `bulkSelected`-Set,
+  `bulk-bar`, og gjenbruker `visBulkEditModal(ids)`, `visBulkKopierModal(valgte)` +
+  inline slett. → **FLAGGET** (se «Åpne avklaringer» under).
+- Spørringen mangler `users!teacher_id(full_name)` (lærernavn) — må legges til hvis
+  Lærer-kolonnen skal vise navn (alle rader = innlogget bruker, så kolonnen blir
+  alltid samme navn). → **FLAGGET**.
+- Sidescroll = vindusscroll (sticky header, `.side-wrap`). Auto-scroll og
+  IntersectionObserver må forholde seg til vindusscroll, ikke en intern container.
+- `.dag-okter` har `max-height:70vh; overflow-y:auto` — egen intern scroll. For en
+  kontinuerlig liste over alle uker må vi IKKE bruke `.dag-okter` rått, ellers får vi
+  nøstet scroll. Egen klasse/markup for denne fanen.
+
+### Avklart med bruker (GODKJENT)
+1. **Bulk i denne fanen:** Bygg full bulk her — markeringsmodus + bulk-bar som
+   gjenbruker `visBulkEditModal`/`visBulkKopierModal` + inline slett (samme som
+   per-uke-visningen).
+2. **Kolonner (desktop), venstre → høyre:** `☑ · Klasse · Fag · P/G · Aktivitet ·
+   Oppmøte · Info`.
+   - **Checkbox HELT TIL VENSTRE** (overstyrer opprinnelig KRAV «til høyre» — bruker
+     bestemte venstre).
+   - Header for parti/gruppe heter **«P/G»**.
+   - **Faste, smale** kolonner: `☑`, `Klasse`, `Fag`.
+   - **Flytende** bredde: `P/G`, `Aktivitet`, `Oppmøte`, `Info`.
+   - «Lærer»-kolonnen droppes (alltid innlogget bruker).
+
+### Delplan (faser)
+- [x] **Fase 1 — Markup/datagrunnlag:** behold uke-gruppering, bygg tabell-markup
+  (desktop) + kort-liste (mobil) i samme DOM, styrt av CSS. Uke-overskrift med
+  `data-uke` for IntersectionObserver. Ukedag-merking kompakt per rad.
+- [x] **Fase 2 — CSS:** tabell-stil for bred skjerm, skjul tabell / vis kort-liste
+  under ~700px-brekkpunkt. Faste smale kolonner (☑/Klasse/Fag), flytende resten.
+- [x] **Fase 3 — Auto-scroll + «Denne uka»:** ved åpning scroll til dagens uke.
+  IntersectionObserver på inneværende ukes overskrift styrer «Denne uka»-knappen;
+  klikk scroller tilbake.
+- [x] **Fase 4 — Bulk:** markeringsmodus + bulk-bar, gjenbruk bulk-modaler.
+- [x] **Fase 5 — Cache-bust, commit per delsteg, kryss av, oppsummering.**
+
+### Verifiser før merge
+- [ ] Desktop: økter vises som tabell, én rad per økt, checkbox helt til venstre på alle rader
+- [ ] Mobil: fortsatt vertikal liste (ikke tabell)
+- [ ] Auto-scroll til dagens dato ved åpning
+- [ ] «Denne uka»-knapp vises kun når man har scrollet forbi inneværende uke, og scroller riktig tilbake
+- [ ] Bulk-redigering virker (marker → rediger/kopier/slett)
+- [ ] Hard refresh henger ikke på «Laster…»
+
+---
+
 ## Status: FULLFØRT — Økt X (P10): Admin-toggle skal ikke navigere
 
 ---
