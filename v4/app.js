@@ -1991,18 +1991,29 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   }
 
   // ── «Denne uka»-knapp + auto-scroll ──────────────────────────
-  // Anker = inneværende ukes overskrift, ellers nærmeste kommende uke (skoleår-rekkefølge)
+  // Anker: inneværende ukes overskrift hvis den finnes i planen, ellers nærmeste
+  // KOMMENDE uke. Ligger alt bak oss (sommerferie / etter skoleslutt) → første uke
+  // (toppen), så knappen aldri blir permanent skjult utenfor skoleåret.
   let anker = naaHeader
+  let knappTekst = '↑ Denne uka'
+  let knappTittel = 'Bla tilbake til inneværende uke'
   if (!anker) {
     const naaPos = ukePosisjon(naaWeek, schoolStart)
-    const valgtUke = uker.find(w => ukePosisjon(w, schoolStart) >= naaPos) ?? uker[uker.length - 1]
-    anker = container.querySelector(`.min-plan-uke[data-uke="${valgtUke}"]`)
+    const kommendeUke = uker.find(w => ukePosisjon(w, schoolStart) >= naaPos)
+    if (kommendeUke != null) {
+      anker = container.querySelector(`.min-plan-uke[data-uke="${kommendeUke}"]`)
+    } else {
+      // Alt ligger bak oss → fall tilbake til toppen / første uke i planen
+      anker = container.querySelector(`.min-plan-uke[data-uke="${uker[0]}"]`)
+      knappTekst = '↑ Til toppen'
+      knappTittel = 'Bla tilbake til toppen av planen'
+    }
   }
 
   const denneUkaBtn = el('button', { class: 'btn btn-p denne-uka-btn', style: 'display:none',
-    title: 'Bla tilbake til inneværende uke',
+    title: knappTittel,
     onclick: () => anker?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, '↑ Denne uka')
+  }, knappTekst)
   container.appendChild(denneUkaBtn)
 
   if (anker) {

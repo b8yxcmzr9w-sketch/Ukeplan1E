@@ -1,5 +1,35 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P14): «Denne uka»-knapp utenfor skoleåret
+Cache-bust: `20260620i`. Branch `claude/P14-denne-uka-utenfor-skolearet` pushet.
+
+---
+
+## Økt X (P14): «Denne uka»-knapp må også virke utenfor skoleåret (tillegg til P11/P12)
+
+**Scope:** `v4/app.js` (kun anker-logikken i `renderAlleOkterTab`),
+`v4/index.html` (cache-bust). Ingen CSS-, DB- eller edge-function-endringer.
+
+### Problem
+Knappen var skjult når «inneværende uke» ikke fantes i planen (sommerferie /
+før/etter skoleåret). Anker falt tilbake til SISTE uke (`uker[uker.length-1]`), så
+etter auto-scroll til bunnen hadde knappen ingenting å scrolle til og forble skjult.
+
+### Fiks
+- Anker-rekkefølge: inneværende uke → nærmeste KOMMENDE uke → **første uke (toppen)**.
+  Byttet fallback fra siste uke til `uker[0]`, så knappen alltid kan dukke opp når
+  man har bladd forbi ankeret — også utenfor skoleåret.
+- Kontekstuell tekst: «↑ Denne uka» når inneværende/kommende uke er anker; «↑ Til
+  toppen» når alt ligger bak oss (sommerferie / etter skoleslutt).
+- Observer/auto-scroll uendret (fra P12).
+
+### Verifiser før merge
+- [ ] I dagens situasjon (uke ~25, etter skoleslutt): knappen dukker opp når man blar ned i «Alle mine økter» og scroller til toppen
+- [ ] I skoleåret: knappen heter «↑ Denne uka» og scroller til inneværende uke
+- [ ] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P13): Fiks tabell-kolonnebredder (tegn-bryting)
 Cache-bust: `20260620h`. Branch `claude/P13-fiks-tabell-kolonnebredder` pushet.
 
