@@ -23,6 +23,13 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 - Commit etter hver fullførte deloppgave, med beskrivende melding.
 - Hold deg til oppgavens omfang — ikke endre kode utenfor det som er avtalt.
 
+## Fast prosedyre for hver Code-økt
+- **Neste plan-nummer leses fra PLAN.md** — aldri anta eller hardkod. Code finner
+  selv neste ledige PN ved oppstart.
+- **Avslutt hver økt med en kort oppsummering** (norsk, ikke-teknisk) som Morfar kan
+  lime tilbake til planleggingschatten. Oppsummeringen skal alltid inneholde: hva ble
+  gjort, hvilket PN-nummer og branch som ble brukt, og hva som eventuelt gjenstår.
+
 ## Teknisk stack
 - **Frontend**: Vanilla JS (ingen rammeverk), én fil: `v4/app.js` (~4000 linjer)
 - **CSS**: `v4/style.css`
