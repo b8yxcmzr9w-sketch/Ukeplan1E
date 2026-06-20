@@ -1,5 +1,57 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P12): Fiks sticky header + «Denne uka» + kolonnebredder
+Cache-bust: `20260620g`. Branch `claude/P12-fiks-sticky-deneuka-kolonner` pushet.
+
+---
+
+## Økt X (P12): Korrigering av P9 + P11 — sticky header, «Denne uka», kolonnebredder
+
+**Scope:** `v4/style.css`, `v4/app.js` (kun observer-logikk i `renderAlleOkterTab`),
+`v4/index.html` (cache-bust). Ingen DB-/edge-function-endringer.
+
+### Funn — rotårsak (kun lesing)
+- **FEIL 1 (sticky header/fanerad scroller bort):** `html, body { overflow-x: hidden }`
+  (style.css:8) og `main { overflow-x: hidden }` (style.css:10). Når `overflow-x`
+  settes til `hidden`, beregnes `overflow-y` til `auto` → elementet blir en
+  *scroll-container*. Da fester `position: sticky` seg til denne containeren (som
+  IKKE scroller — innholdet scroller på vinduet), så header (barn av `body`) og
+  `.fane-bar` (barn av `main`) klistrer seg aldri. Dette er den faktiske årsaken,
+  ikke manglende `position: sticky` (begge HAR allerede sticky).
+- **FEIL 2 («Denne uka»-knapp vises aldri):** Samme rotårsak. `IntersectionObserver`
+  i `renderAlleOkterTab` (app.js:2010) bruker standard root = viewport, men reell
+  scroll skjer ikke på viewport så lenge `main` er scroll-container → observeren
+  fyrer aldri riktig. Når scroll-containeren rettes (FEIL 1), virker observeren.
+- **JUSTERING 3 (kolonnebredder):** `.min-plan-tabell` er `width:100%` +
+  `table-layout:auto`. P/G·Aktivitet·Oppmøte·Info har ingen eksplisitt bredde, så
+  slakken (100% − faste kolonner) fordeles utover alle fire → store tomrom, og tom
+  P/G reserverer plass.
+
+### Delplan (faser)
+- [x] **Fase 1 — FEIL 1: scroll-container.** Bytt `overflow-x: hidden` → `overflow-x: clip`
+  på `html, body` (style.css:8) og `main` (style.css:10). `clip` klipper horisontal
+  overflyt uten å lage scroll-container (tvinger ikke `overflow-y:auto`), så sticky
+  + vindusscroll virker igjen. Verifiser at header + `.fane-bar` blir værende øverst.
+- [x] **Fase 2 — FEIL 2: «Denne uka»-observer.** Med scroll-containeren rettet
+  virker observeren. Gjør den i tillegg robust: la knappen dukke opp når
+  inneværende-uke-ankeret skyves under den klebrige header+fanerad (rootMargin =
+  −(header+fanerad)px), ikke først når det er helt ute av viewport. Klikk scroller
+  tilbake (uendret).
+- [x] **Fase 3 — JUSTERING 3: kolonnebredder.** Behold faste, smale kolonner kun for
+  `☑ · Klasse · Fag`. La `Info` absorbere slakken (`width:100%`) så P/G·Aktivitet·
+  Oppmøte krymper til innhold og pakkes tett etter hverandre. Legg et diskret
+  vertikalt skille (`border-left`, faint) mellom de fire flytende kolonnene. Ingen
+  stive faste bredder på dem. Mobil (kort-liste) uendret.
+- [x] **Fase 4 — Cache-bust, commit per delsteg, kryss av, oppsummering.**
+
+### Verifiser før merge
+- [ ] Header + fanerad blir værende øverst ved scroll (i «Alle mine økter»)
+- [ ] «Denne uka»-knapp dukker opp når inneværende uke er scrollet ut av syne, og scroller riktig tilbake
+- [ ] P/G·Aktivitet·Oppmøte·Info ligger tett etter hverandre uten store tomrom; ☑·Klasse·Fag fortsatt faste/smale
+- [ ] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt 2 (P11): «Alle mine økter» tabell-layout + «Denne uka»
 Cache-bust: `20260620d`. Branch `claude/P11-min-plan-tabell` pushet.
 

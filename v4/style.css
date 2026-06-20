@@ -5,9 +5,12 @@
 
 /* ── Reset ──────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { max-width: 100%; overflow-x: hidden; }
+/* overflow-x: clip (ikke hidden): hindrer horisontal scroll UTEN å lage en
+   scroll-container. `hidden` ville tvunget overflow-y til auto og brutt både
+   `position: sticky` (header/fanerad) og IntersectionObserver-en (vindusscroll). */
+html, body { max-width: 100%; overflow-x: clip; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-main { flex: 1; overflow-x: hidden; }
+main { flex: 1; overflow-x: clip; }
 
 /* ── Tema: standard (grønn) ─────────────────────────────────────── */
 :root,
@@ -669,6 +672,14 @@ tr:hover td { background: var(--primær-svak); }
 .min-plan-tabell .mp-cb     { width: 30px; text-align: center; }
 .min-plan-tabell .mp-klasse { width: 88px; white-space: nowrap; }
 .min-plan-tabell .mp-fag    { width: 92px; }
+/* Flytende kolonner (P/G · Aktivitet · Oppmøte · Info): ingen faste bredder.
+   Info absorberer all slakk (width:100%) så de tre andre krymper til innhold og
+   pakkes tett etter hverandre — tom P/G reserverer ikke plass. Diskret vertikalt
+   skille mellom de fire. */
+.min-plan-tabell .mp-info { width: 100%; }
+.min-plan-tabell .mp-pg   { white-space: nowrap; }
+.min-plan-tabell .mp-pg, .min-plan-tabell .mp-akt,
+.min-plan-tabell .mp-opp, .min-plan-tabell .mp-info { border-left: 1px solid var(--kant); }
 .min-plan-cb { width: 17px; height: 17px; cursor: pointer; }
 .mp-klasse-navn { display: block; font-weight: 700; }
 .mp-dag { display: block; font-size: .72rem; color: var(--tekst-svak); opacity: .8; }
