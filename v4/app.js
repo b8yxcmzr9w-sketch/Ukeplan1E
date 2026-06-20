@@ -670,30 +670,24 @@ function oppdaterHeader() {
     document.documentElement.dataset.theme = APP.school.color_theme
   }
 
-  // PC-knapper
-  const loginBtn   = document.getElementById('hdr-login-btn')
-  const logoutBtn  = document.getElementById('hdr-logout-btn')
+  // Alltid-synlige toggle-brytere i headeren
   const laererBtn  = document.getElementById('hdr-laerer-btn')
   const adminToggle= document.getElementById('hdr-admin-toggle')
-  const username   = document.getElementById('hdr-username')
 
   // Hamburger-elementer
-  const hamburger   = document.getElementById('hdr-hamburger')
-  const dropdown    = document.getElementById('hdr-dropdown')
-  const ddNavn      = document.getElementById('hdr-dropdown-navn')
-  const ddAdmin     = document.getElementById('hdr-dd-admin')
-  const ddLaerer    = document.getElementById('hdr-dd-laerer')
-  const ddLogout    = document.getElementById('hdr-dd-logout')
-  const ddLogin     = document.getElementById('hdr-dd-login')
+  const hamburger        = document.getElementById('hdr-hamburger')
+  const dropdown         = document.getElementById('hdr-dropdown')
+  const ddNavn           = document.getElementById('hdr-dropdown-navn')
+  const ddProfil         = document.getElementById('hdr-dd-profil')
+  const ddInnstillinger  = document.getElementById('hdr-dd-innstillinger')
+  const ddLogout         = document.getElementById('hdr-dd-logout')
+  const ddLogin          = document.getElementById('hdr-dd-login')
 
   if (APP.user && APP.profile) {
     const visAdmin = harAdminTilgang()
     const skjulLaerer = harAdminTilgang() && APP.isAdminActive
 
-    // PC
-    if (username)    { username.textContent = APP.profile.full_name; username.classList.remove('skjult') }
-    if (loginBtn)    loginBtn.classList.add('skjult')
-    if (logoutBtn)   { logoutBtn.classList.remove('skjult'); logoutBtn.onclick = logout; logoutBtn.title = 'Logg ut av Ukeplan1e' }
+    // Toggle: Elevvisning / Lærervisning (alltid synlig)
     if (laererBtn) {
       laererBtn.classList.toggle('skjult', skjulLaerer)
       const erILaerer = APP.currentView === 'laerer'
@@ -701,6 +695,7 @@ function oppdaterHeader() {
       laererBtn.onclick = () => navigate(erILaerer ? '#/' : '#/laerer')
       laererBtn.title = erILaerer ? 'Bytt til elevvisning' : 'Gå til lærervisning'
     }
+    // Toggle: Admin av/på (alltid synlig for admin)
     if (adminToggle && visAdmin) {
       adminToggle.classList.remove('skjult')
       adminToggle.textContent = 'Admin'
@@ -709,40 +704,46 @@ function oppdaterHeader() {
       adminToggle.title = APP.isAdminActive ? 'Bytt til lærervisning' : 'Bytt til adminvisning'
     } else if (adminToggle) adminToggle.classList.add('skjult')
 
-    // Hamburger
+    // Hamburger: brukernavn · Profil · Innstillinger (kun admin) · Logg ut
     if (hamburger) { hamburger.classList.remove('skjult'); hamburger.title = 'Åpne meny' }
     if (ddNavn)   { ddNavn.textContent = APP.profile.full_name; ddNavn.classList.remove('skjult') }
     if (ddLogin)  ddLogin.classList.add('skjult')
-    if (ddLogout) { ddLogout.classList.remove('skjult'); ddLogout.onclick = () => { dropdown?.classList.add('skjult'); logout() } }
-    if (ddLaerer) {
-      ddLaerer.classList.toggle('skjult', skjulLaerer)
-      const erILaerer = APP.currentView === 'laerer'
-      ddLaerer.textContent = erILaerer ? 'Elevvisning' : 'Lærervisning'
-      ddLaerer.onclick = () => { dropdown?.classList.add('skjult'); navigate(erILaerer ? '#/' : '#/laerer') }
+    if (ddProfil) {
+      ddProfil.classList.remove('skjult')
+      ddProfil.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/laerer/innstillinger') }
     }
-    if (ddAdmin && visAdmin) {
-      ddAdmin.classList.remove('skjult')
-      ddAdmin.classList.toggle('admin-aktiv', APP.isAdminActive)
-      ddAdmin.onclick = () => { dropdown?.classList.add('skjult'); toggleAdminModus() }
-    } else if (ddAdmin) ddAdmin.classList.add('skjult')
+    if (ddInnstillinger) {
+      ddInnstillinger.classList.toggle('skjult', !visAdmin)
+      ddInnstillinger.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/admin') }
+    }
+    if (ddLogout) { ddLogout.classList.remove('skjult'); ddLogout.onclick = () => { dropdown?.classList.add('skjult'); logout() } }
   } else {
-    if (username)    username.classList.add('skjult')
-    if (loginBtn)    { loginBtn.classList.remove('skjult'); loginBtn.onclick = () => navigate('#/login'); loginBtn.title = 'Logg inn' }
-    if (logoutBtn)   logoutBtn.classList.add('skjult')
     if (laererBtn)   laererBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
 
     if (hamburger) { hamburger.classList.remove('skjult'); hamburger.title = 'Åpne meny' }
-    if (ddNavn)   ddNavn.classList.add('skjult')
-    if (ddAdmin)  ddAdmin.classList.add('skjult')
-    if (ddLaerer) ddLaerer.classList.add('skjult')
-    if (ddLogout) ddLogout.classList.add('skjult')
+    if (ddNavn)          ddNavn.classList.add('skjult')
+    if (ddProfil)        ddProfil.classList.add('skjult')
+    if (ddInnstillinger) ddInnstillinger.classList.add('skjult')
+    if (ddLogout)        ddLogout.classList.add('skjult')
     if (ddLogin)  { ddLogin.classList.remove('skjult'); ddLogin.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/login') } }
   }
 
   // Hamburger toggle
   if (hamburger && dropdown) {
     hamburger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('skjult') }
+  }
+
+  settHeaderHoyde()
+}
+
+// Måler headerens høyde og eksponerer den som --header-h, slik at den
+// sticky faneraden kan feste seg rett under headeren (høyden varierer med
+// skjermbredde og ev. linjebryting i headeren).
+function settHeaderHoyde() {
+  const header = document.getElementById('app-header')
+  if (header) {
+    document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`)
   }
 }
 
@@ -4551,6 +4552,9 @@ async function init() {
       dropdown.classList.add('skjult')
     }
   })
+
+  // Hold --header-h i synk med headerens faktiske høyde (sticky fanerad)
+  window.addEventListener('resize', settHeaderHoyde)
 
   window.addEventListener('hashchange', router)
 
