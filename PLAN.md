@@ -1,6 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: UNDER ARBEID — Økt 2 (P11): «Alle mine økter» tabell-layout + «Denne uka»
+## Status: FULLFØRT (venter verifisering) — Økt 2 (P11): «Alle mine økter» tabell-layout + «Denne uka»
+Cache-bust: `20260620d`. Branch `claude/P11-min-plan-tabell` pushet.
 
 ---
 
