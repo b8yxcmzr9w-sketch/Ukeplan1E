@@ -1,5 +1,131 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt 1 (P9): Sticky header + faner + hamburgermeny
+
+---
+
+## Økt 1 (P9): Sticky header + faner + hamburgermeny
+
+**Branch:** `claude/P9-sticky-header-hamburger`
+**Scope:** `v4/app.js`, `v4/style.css`, `v4/index.html` (cache-bust).
+Ingen DB-endringer, ingen edge-function-endringer.
+
+### Funn — kartlegging (kun lesing)
+
+**1. Header (index.html:26–54):** Ett globalt `<header>`. PC-raden har
+`hdr-username`, `hdr-admin-toggle` (Admin), `hdr-laerer-btn` (Lærervisning/
+Elevvisning), `hdr-logout-btn`, `hdr-login-btn` — alle med klassen `hdr-pc-only`.
+Hamburger (`hdr-hamburger` + dropdown `hdr-dropdown` med navn/Admin/Lærer/Logg ut/
+Logg inn) finnes allerede, men styres i CSS til **kun mobil**.
+
+**2. CSS (style.css):**
+- `header { position: sticky; top:0; z-index:40 }` (linje 102–109) — men
+  `@media (max-width:600px){ header { position: relative } }` (linje 162)
+  fjerner sticky på mobil.
+- `.hdr-hamburger { display:none }` (linje 139); media-query (160–161) skjuler
+  `.hdr-pc-only` og viser hamburger først under 600px.
+- `.fane-bar` (linje 412–415) har **ingen** sticky og ingen bakgrunn.
+- Sidebakgrunn: `--bg`. Header-høyde varierer (~58px desktop, mer ved wrap).
+
+**3. `oppdaterHeader()` (app.js:625–747):** Setter PC-knapper OG hamburger-
+elementer. `skjulLaerer = harAdminTilgang() && APP.isAdminActive`. Dropdown har i
+dag duplikat av Admin/Lærer.
+
+**4. `renderLaererView()` (app.js:1409–1503):** Faner bygges fra `tabs`/`tabSlugs`.
+«Innstillinger» legges alltid til som siste fane (1439) og rendres av
+`renderInnstillingerTab` via `setTab` (1457). Fane 0 er klassevelgeren.
+
+### Beslutninger (avklart med bruker)
+
+**Tre separate funksjoner — ikke bland sammen:**
+1. **«Admin»** = toggle-bryter i headeren (`hdr-admin-toggle` → `toggleAdminModus`).
+   Bytter admin-visning av/på. **BLIR STÅENDE uendret, alltid synlig** ved siden
+   av Elevvisning. Skal IKKE inn i hamburgeren.
+2. **«Innstillinger»** = inngang til admin-PANELET (skoleinfo, fag, klasser,
+   brukere, skolerute, funfacts), dvs. rute `#/admin` → `renderAdminPanel`.
+   Dette er en NY hamburger-knapp. Vises kun for brukere med admin-tilgang.
+3. **«Profil»** = brukerens egne innstillinger (dagens lærer-fane
+   «Innstillinger», `renderInnstillingerTab`, rute `#/laerer/innstillinger`).
+   Flyttes INN i hamburgeren, omdøpt til «Profil».
+
+**Hamburger (likt på desktop og mobil), innlogget:** brukernavn · «Profil» ·
+«Innstillinger» (kun admin) · «Logg ut». **Utlogget:** «Logg inn».
+
+- **Sticky på alle skjermstørrelser:** Fjern mobil-overstyringen som gjør
+  headeren `relative`. Gjør `.fane-bar` sticky rett under headeren med
+  `top: var(--header-h)`, der `--header-h` settes i JS (måler `header.offsetHeight`
+  ved last + resize), `z-index:30` (under header 40), og `background: var(--bg)`
+  så innhold ikke skinner gjennom.
+- **Toggle-brytere alltid synlige:** Fjern `hdr-pc-only` fra `hdr-admin-toggle` og
+  `hdr-laerer-btn` slik at Admin/Elevvisning vises på alle størrelser (uendret
+  vis/skjul-logikk for rolle). Fjern Admin/Lærer fra hamburger-dropdownen
+  (de er nå alltid-synlige toggles, unngå duplikat).
+- **Hamburger alltid synlig:** Vis ☰ på alle størrelser. Fjern `hdr-username`,
+  `hdr-logout-btn` og `hdr-login-btn` fra den faste PC-raden (navn + logg ut/inn
+  bor kun i hamburgeren nå).
+- **«Profil» flyttes fra fane til hamburger:** Fjern Innstillinger-fanen fra
+  `renderLaererView` (faneraden viser kun Klasse / Alle mine økter / Søk
+  [+ Klasse-admin for kontaktlærer]). Hamburger-knapp «Profil» →
+  `navigate('#/laerer/innstillinger')`; `renderLaererView` rendrer fortsatt
+  innholdet for den slug-en (ingen aktiv fane uthevet). Overskriften «Innstillinger»
+  i `renderInnstillingerTab` endres til «Profil».
+- **«Innstillinger» (admin-panel) i hamburger:** Ny knapp → `navigate('#/admin')`.
+  Router (app.js:780) tillater visning når `harAdminTilgang()`.
+
+### Delplan
+
+- [x] **Delsteg 1 — index.html: omstrukturer header-knapper**
+  - Fjern `hdr-pc-only` fra `hdr-admin-toggle` og `hdr-laerer-btn` (alltid synlige).
+  - Fjern `hdr-username`, `hdr-logout-btn` og `hdr-login-btn` fra den faste raden.
+  - I `hdr-dropdown`: behold `hdr-dropdown-navn`, `hdr-dd-logout`, `hdr-dd-login`.
+    Legg til `hdr-dd-profil` («Profil») og `hdr-dd-innstillinger» («Innstillinger»).
+    Fjern `hdr-dd-admin` og `hdr-dd-laerer` (nå alltid-synlige header-toggles).
+
+- [x] **Delsteg 2 — CSS: sticky + alltid synlig hamburger**
+  - `.hdr-hamburger { display: inline-flex }` (alltid synlig); fjern
+    `@media`-reglene som bare viser den under 600px og fjern
+    `header { position: relative }`-overstyringen.
+  - `.fane-bar { position: sticky; top: var(--header-h, 58px); z-index: 30;
+    background: var(--bg); }` (+ liten padding-topp så fanene ikke klistrer til
+    headeren). Behold `margin-bottom`.
+  - Sikre at modaler/overlays (z-index ≥ 200/500) fortsatt ligger over.
+
+- [x] **Delsteg 3 — app.js: `oppdaterHeader` + `--header-h`-måling**
+  - Oppdater `oppdaterHeader` til ny knapp-fordeling: Admin- og Elev/Lærer-toggle
+    alltid synlige (uendret logikk); hamburger har navn / Profil / Innstillinger
+    (kun admin) / Logg ut (+ Logg inn utlogget).
+  - `hdr-dd-profil`: vises innlogget → `navigate('#/laerer/innstillinger')` + lukk.
+  - `hdr-dd-innstillinger`: vises kun ved `harAdminTilgang()` →
+    `navigate('#/admin')` + lukk.
+  - Ny `settHeaderHoyde()` som setter `--header-h` fra `header.offsetHeight`;
+    kalles i `oppdaterHeader` og på `window resize`.
+
+- [x] **Delsteg 4 — app.js: flytt «Profil» ut av faneraden**
+  - Fjern «Innstillinger» fra `tabs`/`tabSlugs` i `renderLaererView` som synlig
+    fane (behold slug-håndtering i `setTab` for `#/laerer/innstillinger`, men
+    uten egen fane-knapp).
+  - Endre overskrift i `renderInnstillingerTab` fra «Innstillinger» til «Profil».
+  - Verifiser at navigasjon fra hamburgeren viser profil-innholdet.
+
+- [x] **Delsteg 5 — Bump `?v=`, commit og push**
+  - Bumpet `?v=20260620a` (CSS + JS) i `v4/index.html`.
+  - Commit per delsteg, push til `claude/P9-sticky-header-hamburger`.
+  - Ingen manuelle steg i Supabase.
+
+### Verifiser før merge (klikk gjennom på branchen)
+
+- [ ] Innlogging virker (logg inn → lærervisning laster)
+- [ ] Hard refresh (Cmd+Shift+R) henger ikke på «Laster…» (init-rekkefølge)
+- [ ] «Admin»-toggle bytter visning riktig, av og på
+- [ ] «Elevvisning»-toggle bytter visning riktig
+- [ ] Hamburger åpner; «Innstillinger» åpner admin-panel; «Profil» åpner
+      brukerinnstillinger; «Logg ut» virker
+- [ ] «Innstillinger» i hamburger er skjult for ikke-admin (test med lærer-konto)
+- [ ] Header + fanerad blir værende øverst ved scroll
+- [ ] Sjekk på smal mobilskjerm: knappene hopper ikke
+
+---
+
 ## Status: FULLFØRT — Økt X (P8): Klassevelger som fane + sortert klasseliste
 
 ---
