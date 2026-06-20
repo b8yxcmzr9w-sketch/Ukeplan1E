@@ -2006,13 +2006,20 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   container.appendChild(denneUkaBtn)
 
   if (anker) {
+    // Klebrig header + fanerad dekker toppen av viewporten. Mål høyden så knappen
+    // dukker opp idet inneværende-uke-ankeret skyves UNDER fanerad-en (ikke først
+    // når det er helt ute av skjermen). rootMargin trekker observerens topp-kant
+    // ned tilsvarende, slik at tilbakekallet fyrer ved riktig grense.
+    const headerH = document.getElementById('app-header')?.offsetHeight || 58
+    const faneH = document.querySelector('.fane-bar')?.offsetHeight || 0
+    const stickyTop = headerH + faneH
     if (autoScroll) requestAnimationFrame(() => anker.scrollIntoView({ behavior: 'auto', block: 'start' }))
     const obs = new IntersectionObserver((entries) => {
       const e = entries[0]
-      // Vis knapp KUN når ankeret er scrollet forbi (over toppen av viewport)
-      const forbi = !e.isIntersecting && e.boundingClientRect.top < 0
+      // Vis knapp når ankeret er skjøvet opp bak/over den klebrige fanerad-en
+      const forbi = e.boundingClientRect.top < stickyTop
       denneUkaBtn.style.display = forbi ? 'block' : 'none'
-    }, { threshold: 0 })
+    }, { threshold: 0, rootMargin: `-${stickyTop}px 0px 0px 0px` })
     obs.observe(anker)
     renderAlleOkterTab._obs = obs
   }

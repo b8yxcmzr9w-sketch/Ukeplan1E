@@ -32,7 +32,7 @@ Branch `claude/P12-fiks-sticky-deneuka-kolonner` (fra `origin/main`, har P9+P10+
   på `html, body` (style.css:8) og `main` (style.css:10). `clip` klipper horisontal
   overflyt uten å lage scroll-container (tvinger ikke `overflow-y:auto`), så sticky
   + vindusscroll virker igjen. Verifiser at header + `.fane-bar` blir værende øverst.
-- [ ] **Fase 2 — FEIL 2: «Denne uka»-observer.** Med scroll-containeren rettet
+- [x] **Fase 2 — FEIL 2: «Denne uka»-observer.** Med scroll-containeren rettet
   virker observeren. Gjør den i tillegg robust: la knappen dukke opp når
   inneværende-uke-ankeret skyves under den klebrige header+fanerad (rootMargin =
   −(header+fanerad)px), ikke først når det er helt ute av viewport. Klikk scroller
