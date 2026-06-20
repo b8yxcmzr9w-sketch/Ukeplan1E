@@ -67,7 +67,6 @@ OMGJØR tidligere beslutning om dag-kolonner (man→fre) for denne visningen.
 - [ ] Auto-scroll til dagens dato ved åpning
 - [ ] «Denne uka»-knapp vises kun når man har scrollet forbi inneværende uke, og scroller riktig tilbake
 - [ ] Bulk-redigering virker (marker → rediger/kopier/slett)
-- [ ] Hard refresh henger ikke på «Laster…»
 
 ---
 
