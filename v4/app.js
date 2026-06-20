@@ -459,7 +459,9 @@ async function toggleAdminModus() {
   APP.isAdminActive = ny
   APP.profile.is_admin_active = ny
   oppdaterHeader()
-  navigate(ny ? '#/admin' : '#/laerer')
+  // Veksle KUN rettighetsnivå i gjeldende visning – aldri bytte rute.
+  // router() re-rendrer samme hash på nytt med oppdatert is_admin_active.
+  router()
 }
 
 async function erFerdigSattOpp() {
