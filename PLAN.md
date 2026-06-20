@@ -1,5 +1,41 @@
 # PLAN — Ukeplan1E v4
 
+## Status: VENTER GODKJENNING — Økt X (P13): Fiks tabell-kolonnebredder (tegn-bryting)
+Branch `claude/P13-fiks-tabell-kolonnebredder` (fra `origin/main`, har P9–P12).
+
+---
+
+## Økt X (P13): Korrigering av P12 — tabell-kolonner brytes tegn-for-tegn
+
+**Scope:** `v4/style.css` (kun `.min-plan-tabell`-kolonnereglene),
+`v4/index.html` (cache-bust). Ingen JS-, DB- eller edge-function-endringer.
+
+### Funn — rotårsak (kun lesing)
+- P12 satte `.min-plan-tabell .mp-info { width: 100% }` (style.css:679). I en
+  `table-layout: auto`-tabell med `width:100%` tvinger en celle med `width:100%`
+  de øvrige flytende kolonnene (Aktivitet, Oppmøte) under sin min-bredde, så
+  tekst med flere ord wrapper tegn-for-tegn («L-i-s-t-e…»). Info står nesten tom
+  men tar mesteparten av bredden.
+
+### Delplan (faser)
+- [ ] **Fase 1 — Fjern `width:100%` på Info + balanser kolonnene.** Fjern
+  `width:100%`. Behold `table-layout: auto` (respekterer min-bredde → aldri
+  tegn-bryting). Gi Aktivitet og Info mest plass og La de to dele slakken
+  (f.eks. `width: 30%` hver), Oppmøte middels (`~15%`), `☑·Klasse·Fag·P/G`
+  smale/innholdstilpassede (uendret, P/G `nowrap`). Juster prosentene om
+  nødvendig så ingen celle klemmes under ett helt ord. Behold det diskrete
+  vertikale skillet (`border-left`) fra P12.
+- [ ] **Fase 2 — Cache-bust, commit, kryss av, oppsummering.**
+
+### Verifiser før merge
+- [ ] Aktivitet-tekst står på normale linjer (ikke ett tegn per linje)
+- [ ] Oppmøte-tekst står på normale linjer
+- [ ] Info-kolonnen tar ikke lenger all bredden alene
+- [ ] Kolonnene ser balanserte ut; diskret skille beholdt
+- [ ] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P12): Fiks sticky header + «Denne uka» + kolonnebredder
 Cache-bust: `20260620g`. Branch `claude/P12-fiks-sticky-deneuka-kolonner` pushet.
 
