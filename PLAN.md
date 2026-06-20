@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING — Økt X (P12): Fiks sticky header + «Denne uka» + kolonnebredder
-Branch `claude/P12-fiks-sticky-deneuka-kolonner` (fra `origin/main`, har P9+P10+P11).
+## Status: FULLFØRT (venter verifisering) — Økt X (P12): Fiks sticky header + «Denne uka» + kolonnebredder
+Cache-bust: `20260620g`. Branch `claude/P12-fiks-sticky-deneuka-kolonner` pushet.
 
 ---
 
