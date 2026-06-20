@@ -135,8 +135,8 @@ header .spacer { flex: 1; }
 .hdr-btn:hover { background: rgba(255,255,255,.28); }
 .hdr-btn.admin-aktiv { background: var(--advarsel); color: #000; border-color: transparent; }
 
-/* Hamburger-meny */
-.hdr-hamburger { font-size: 1.2rem; padding: 6px 11px; display: none; }
+/* Hamburger-meny (alltid synlig på alle skjermstørrelser) */
+.hdr-hamburger { font-size: 1.2rem; padding: 6px 11px; display: inline-flex; }
 .hdr-dropdown {
   position: absolute; top: 56px; right: 12px;
   background: var(--header-bg); border: 1px solid rgba(255,255,255,.2);
@@ -155,12 +155,6 @@ header .spacer { flex: 1; }
 }
 .hdr-dropdown-btn:hover { background: rgba(255,255,255,.15); }
 .hdr-dropdown-btn.admin-aktiv { color: var(--advarsel); font-weight: 700; }
-
-@media (max-width: 600px) {
-  .hdr-pc-only { display: none !important; }
-  .hdr-hamburger { display: inline-flex !important; }
-  header { position: relative; }
-}
 
 /* ── Navigasjon ─────────────────────────────────────────────────── */
 .nav-bar {
@@ -412,6 +406,8 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
 .fane-bar {
   display: flex; gap: 2px; border-bottom: 2px solid var(--kant);
   margin-bottom: 20px; flex-wrap: wrap;
+  position: sticky; top: var(--header-h, 58px); z-index: 30;
+  background: var(--bg); padding-top: 8px;
 }
 .fane {
   padding: 8px 16px; border: none; background: none;
