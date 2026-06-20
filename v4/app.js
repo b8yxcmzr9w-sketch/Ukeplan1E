@@ -1935,6 +1935,16 @@ async function renderAlleOkterTab(container, autoScroll = true) {
 
     // Desktop: tabell
     const tabell = el('table', { class: 'min-plan-tabell' })
+    const thead = el('thead', {}, el('tr', { class: 'min-plan-hode' },
+      el('th', { class: 'mp-cb' }, ''),
+      el('th', { class: 'mp-klasse' }, 'Klasse'),
+      el('th', { class: 'mp-fag' }, 'Fag'),
+      el('th', { class: 'mp-pg' }, 'P/G'),
+      el('th', { class: 'mp-akt' }, 'Aktivitet'),
+      el('th', { class: 'mp-opp' }, 'Oppmøte'),
+      el('th', { class: 'mp-info' }, 'Info')))
+    tabell.appendChild(thead)
+    const tbody = el('tbody', {})
     for (const s of rader) {
       const kalAar = skoleaarKalenderaar(s.school_year, s.week_nr, schoolStart)
       const datoKort = formatDatoNO(isoWeekToDate(kalAar, s.week_nr, s.day_of_week).toISOString().slice(0, 10))
@@ -1962,8 +1972,9 @@ async function renderAlleOkterTab(container, autoScroll = true) {
         el('td', { class: 'mp-opp' }, s.meeting_point || ''),
         infoCell)
       tr.addEventListener('contextmenu', (e) => { e.preventDefault(); visOktHandlinger(actions, kebab) })
-      tabell.appendChild(tr)
+      tbody.appendChild(tr)
     }
+    tabell.appendChild(tbody)
     container.appendChild(tabell)
 
     // Mobil: vertikal kort-liste (gjenbruker renderSessionCard m/sveip/kebab)

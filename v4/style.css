@@ -658,6 +658,12 @@ tr:hover td { background: var(--primær-svak); }
   padding: 7px 10px; border-bottom: 1px solid var(--kant);
   text-align: left; vertical-align: top;
 }
+.min-plan-tabell th {
+  padding: 4px 10px; text-align: left;
+  font-size: .74rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .03em; color: var(--tekst-svak);
+  border-bottom: 1.5px solid var(--kant); background: transparent;
+}
 .min-plan-tabell tr:hover td { background: var(--primær-svak); }
 [data-theme="mork"] .min-plan-tabell tr:hover td { background: #2a2a2a; }
 .min-plan-tabell .mp-cb     { width: 30px; text-align: center; }
