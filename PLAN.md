@@ -49,7 +49,6 @@ Cache-bust: `20260620g`. Branch `claude/P12-fiks-sticky-deneuka-kolonner` pushet
 - [ ] «Denne uka»-knapp dukker opp når inneværende uke er scrollet ut av syne, og scroller riktig tilbake
 - [ ] P/G·Aktivitet·Oppmøte·Info ligger tett etter hverandre uten store tomrom; ☑·Klasse·Fag fortsatt faste/smale
 - [ ] Mobil fortsatt vertikal liste
-- [ ] Hard refresh henger ikke på «Laster…»
 
 ---
 
