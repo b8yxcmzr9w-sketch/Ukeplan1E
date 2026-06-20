@@ -96,7 +96,6 @@ body {
 
 /* ── Header ─────────────────────────────────────────────────────── */
 .hdr-home-link { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
-.hdr-username  { font-size: .84rem; opacity: .8; }
 .laster-start  { padding-top: 60px; }
 
 header {

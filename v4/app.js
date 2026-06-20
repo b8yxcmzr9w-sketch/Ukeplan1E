@@ -1437,7 +1437,9 @@ async function renderLaererView() {
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
   const tabSlugs = ['klasse', 'alle', 'sok']
   if (isKontakt) { tabs.push('Klasse-admin'); tabSlugs.push('klasse-admin') }
-  tabs.push('Innstillinger'); tabSlugs.push('innstillinger')
+  // «Profil» (innstillinger) ligger i hamburgeren, ikke som synlig fane. Slug-en
+  // beholdes så #/laerer/innstillinger fortsatt rendrer innholdet via setTab.
+  tabs.push('Profil'); tabSlugs.push('innstillinger')
 
   const hashTab = location.hash.split('/')[2]
   const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
@@ -1492,6 +1494,7 @@ async function renderLaererView() {
 
   tabs.forEach((t, i) => {
     if (i === 0) { tabBar.appendChild(velgerFane); return }
+    if (tabSlugs[i] === 'innstillinger') return  // vises via hamburger («Profil»)
     const btn = el('button', { class: 'fane', title: `Gå til ${t}`, onclick: () => setTab(i) }, t)
     tabBar.appendChild(btn)
   })
@@ -1505,7 +1508,7 @@ async function renderLaererView() {
 
 async function renderInnstillingerTab(container) {
   const wrap = el('div', { class: 'skjema-smal' })
-  wrap.appendChild(el('h3', {}, 'Innstillinger'))
+  wrap.appendChild(el('h3', {}, 'Profil'))
 
   // Kontoinfo
   const { data: { user } } = await sb.auth.getUser()
