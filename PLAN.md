@@ -1,6 +1,6 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER PÅ GODKJENNING — Økt X (P10): Admin-toggle skal ikke navigere
+## Status: FULLFØRT — Økt X (P10): Admin-toggle skal ikke navigere
 
 ---
 
@@ -32,7 +32,7 @@ brukeren allerede står i — aldri bytte rute.
 
 ### Delplan
 
-- [ ] **Delsteg 1 — Fjern navigasjon fra `toggleAdminModus`**
+- [x] **Delsteg 1 — Fjern navigasjon fra `toggleAdminModus`**
   - Bytt ut `navigate(ny ? '#/admin' : '#/laerer')` med `router()` slik at
     gjeldende visning re-rendres med nytt rettighetsnivå (ingen rute-bytte).
   - Behold: DB-oppdatering av `is_admin_active`, `APP.isAdminActive`/
@@ -41,7 +41,7 @@ brukeren allerede står i — aldri bytte rute.
   - Ikke rør hamburger «Innstillinger» (→ `#/admin`, admin-only) — den er den
     eneste inngangen til admin-panelet.
 
-- [ ] **Delsteg 2 — Bump `?v=`, commit og push**
+- [x] **Delsteg 2 — Bump `?v=`, commit og push**
   - Bump `?v=` (JS) i `v4/index.html`.
   - Commit, push til `claude/P10-admin-toggle-rettighet`.
   - Ingen manuelle steg i Supabase.
