@@ -35,7 +35,21 @@ dag duplikat av Admin/Lærer.
 «Innstillinger» legges alltid til som siste fane (1439) og rendres av
 `renderInnstillingerTab` via `setTab` (1457). Fane 0 er klassevelgeren.
 
-### Beslutninger (foreslått)
+### Beslutninger (avklart med bruker)
+
+**Tre separate funksjoner — ikke bland sammen:**
+1. **«Admin»** = toggle-bryter i headeren (`hdr-admin-toggle` → `toggleAdminModus`).
+   Bytter admin-visning av/på. **BLIR STÅENDE uendret, alltid synlig** ved siden
+   av Elevvisning. Skal IKKE inn i hamburgeren.
+2. **«Innstillinger»** = inngang til admin-PANELET (skoleinfo, fag, klasser,
+   brukere, skolerute, funfacts), dvs. rute `#/admin` → `renderAdminPanel`.
+   Dette er en NY hamburger-knapp. Vises kun for brukere med admin-tilgang.
+3. **«Profil»** = brukerens egne innstillinger (dagens lærer-fane
+   «Innstillinger», `renderInnstillingerTab`, rute `#/laerer/innstillinger`).
+   Flyttes INN i hamburgeren, omdøpt til «Profil».
+
+**Hamburger (likt på desktop og mobil), innlogget:** brukernavn · «Profil» ·
+«Innstillinger» (kun admin) · «Logg ut». **Utlogget:** «Logg inn».
 
 - **Sticky på alle skjermstørrelser:** Fjern mobil-overstyringen som gjør
   headeren `relative`. Gjør `.fane-bar` sticky rett under headeren med
@@ -45,24 +59,27 @@ dag duplikat av Admin/Lærer.
 - **Toggle-brytere alltid synlige:** Fjern `hdr-pc-only` fra `hdr-admin-toggle` og
   `hdr-laerer-btn` slik at Admin/Elevvisning vises på alle størrelser (uendret
   vis/skjul-logikk for rolle). Fjern Admin/Lærer fra hamburger-dropdownen
-  (unngå duplikat).
-- **Hamburger alltid synlig:** Vis ☰ på alle størrelser. Innhold: brukernavn,
-  «Innstillinger», «Logg ut» (og «Logg inn» når utlogget). Fjern `hdr-username`
-  og `hdr-logout-btn` fra den faste PC-raden (de bor kun i hamburgeren nå).
-- **«Innstillinger» flyttes fra fane til hamburger:** Fjern Innstillinger-fanen
-  fra `renderLaererView` (faneraden viser kun Klasse / Alle mine økter / Søk
-  [+ Klasse-admin for kontaktlærer]). Ny hamburger-knapp «Innstillinger» →
+  (de er nå alltid-synlige toggles, unngå duplikat).
+- **Hamburger alltid synlig:** Vis ☰ på alle størrelser. Fjern `hdr-username`,
+  `hdr-logout-btn` og `hdr-login-btn` fra den faste PC-raden (navn + logg ut/inn
+  bor kun i hamburgeren nå).
+- **«Profil» flyttes fra fane til hamburger:** Fjern Innstillinger-fanen fra
+  `renderLaererView` (faneraden viser kun Klasse / Alle mine økter / Søk
+  [+ Klasse-admin for kontaktlærer]). Hamburger-knapp «Profil» →
   `navigate('#/laerer/innstillinger')`; `renderLaererView` rendrer fortsatt
-  innstillinger-innholdet for den slug-en (ingen aktiv fane uthevet).
+  innholdet for den slug-en (ingen aktiv fane uthevet). Overskriften «Innstillinger»
+  i `renderInnstillingerTab` endres til «Profil».
+- **«Innstillinger» (admin-panel) i hamburger:** Ny knapp → `navigate('#/admin')`.
+  Router (app.js:780) tillater visning når `harAdminTilgang()`.
 
 ### Delplan
 
 - [ ] **Delsteg 1 — index.html: omstrukturer header-knapper**
   - Fjern `hdr-pc-only` fra `hdr-admin-toggle` og `hdr-laerer-btn` (alltid synlige).
-  - Fjern `hdr-username` og `hdr-logout-btn`/`hdr-login-btn` fra den faste raden
-    (brukernavn + logg ut/inn lever i hamburgeren).
-  - Legg til `hdr-dd-innstillinger`-knapp i `hdr-dropdown`.
-  - Fjern `hdr-dd-admin` og `hdr-dd-laerer` fra dropdownen (nå alltid-synlige toggles).
+  - Fjern `hdr-username`, `hdr-logout-btn` og `hdr-login-btn` fra den faste raden.
+  - I `hdr-dropdown`: behold `hdr-dropdown-navn`, `hdr-dd-logout`, `hdr-dd-login`.
+    Legg til `hdr-dd-profil` («Profil») og `hdr-dd-innstillinger» («Innstillinger»).
+    Fjern `hdr-dd-admin` og `hdr-dd-laerer` (nå alltid-synlige header-toggles).
 
 - [ ] **Delsteg 2 — CSS: sticky + alltid synlig hamburger**
   - `.hdr-hamburger { display: inline-flex }` (alltid synlig); fjern
@@ -70,21 +87,25 @@ dag duplikat av Admin/Lærer.
     `header { position: relative }`-overstyringen.
   - `.fane-bar { position: sticky; top: var(--header-h, 58px); z-index: 30;
     background: var(--bg); }` (+ liten padding-topp så fanene ikke klistrer til
-    headeren). Vurder `margin-bottom` beholdt.
+    headeren). Behold `margin-bottom`.
   - Sikre at modaler/overlays (z-index ≥ 200/500) fortsatt ligger over.
 
 - [ ] **Delsteg 3 — app.js: `oppdaterHeader` + `--header-h`-måling**
-  - Oppdater `oppdaterHeader` til ny knapp-fordeling: toggles alltid synlige;
-    hamburger har navn / Innstillinger / Logg ut (+ Logg inn utlogget).
-  - `hdr-dd-innstillinger`: vises kun innlogget → `navigate('#/laerer/innstillinger')`
-    og lukk dropdown.
+  - Oppdater `oppdaterHeader` til ny knapp-fordeling: Admin- og Elev/Lærer-toggle
+    alltid synlige (uendret logikk); hamburger har navn / Profil / Innstillinger
+    (kun admin) / Logg ut (+ Logg inn utlogget).
+  - `hdr-dd-profil`: vises innlogget → `navigate('#/laerer/innstillinger')` + lukk.
+  - `hdr-dd-innstillinger`: vises kun ved `harAdminTilgang()` →
+    `navigate('#/admin')` + lukk.
   - Ny `settHeaderHoyde()` som setter `--header-h` fra `header.offsetHeight`;
     kalles i `oppdaterHeader` og på `window resize`.
 
-- [ ] **Delsteg 4 — app.js: flytt Innstillinger ut av faneraden**
-  - Fjern «Innstillinger» fra `tabs` (behold slug-håndtering i `setTab` for
-    `#/laerer/innstillinger`, men uten egen fane-knapp).
-  - Verifiser at navigasjon fra hamburgeren viser innstillinger-innholdet.
+- [ ] **Delsteg 4 — app.js: flytt «Profil» ut av faneraden**
+  - Fjern «Innstillinger» fra `tabs`/`tabSlugs` i `renderLaererView` som synlig
+    fane (behold slug-håndtering i `setTab` for `#/laerer/innstillinger`, men
+    uten egen fane-knapp).
+  - Endre overskrift i `renderInnstillingerTab` fra «Innstillinger» til «Profil».
+  - Verifiser at navigasjon fra hamburgeren viser profil-innholdet.
 
 - [ ] **Delsteg 5 — Bump `?v=`, commit og push**
   - Bump `?v=` (CSS + JS) i `v4/index.html`.
