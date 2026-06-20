@@ -5,9 +5,12 @@
 
 /* ── Reset ──────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { max-width: 100%; overflow-x: hidden; }
+/* overflow-x: clip (ikke hidden): hindrer horisontal scroll UTEN å lage en
+   scroll-container. `hidden` ville tvunget overflow-y til auto og brutt både
+   `position: sticky` (header/fanerad) og IntersectionObserver-en (vindusscroll). */
+html, body { max-width: 100%; overflow-x: clip; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-main { flex: 1; overflow-x: hidden; }
+main { flex: 1; overflow-x: clip; }
 
 /* ── Tema: standard (grønn) ─────────────────────────────────────── */
 :root,

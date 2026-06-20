@@ -28,7 +28,7 @@ Branch `claude/P12-fiks-sticky-deneuka-kolonner` (fra `origin/main`, har P9+P10+
   P/G reserverer plass.
 
 ### Delplan (faser)
-- [ ] **Fase 1 — FEIL 1: scroll-container.** Bytt `overflow-x: hidden` → `overflow-x: clip`
+- [x] **Fase 1 — FEIL 1: scroll-container.** Bytt `overflow-x: hidden` → `overflow-x: clip`
   på `html, body` (style.css:8) og `main` (style.css:10). `clip` klipper horisontal
   overflyt uten å lage scroll-container (tvinger ikke `overflow-y:auto`), så sticky
   + vindusscroll virker igjen. Verifiser at header + `.fane-bar` blir værende øverst.
