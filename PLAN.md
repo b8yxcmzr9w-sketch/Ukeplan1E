@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING — Økt X (P13): Fiks tabell-kolonnebredder (tegn-bryting)
-Branch `claude/P13-fiks-tabell-kolonnebredder` (fra `origin/main`, har P9–P12).
+## Status: FULLFØRT (venter verifisering) — Økt X (P13): Fiks tabell-kolonnebredder (tegn-bryting)
+Cache-bust: `20260620h`. Branch `claude/P13-fiks-tabell-kolonnebredder` pushet.
 
 ---
 
@@ -18,14 +18,14 @@ Branch `claude/P13-fiks-tabell-kolonnebredder` (fra `origin/main`, har P9–P12)
   men tar mesteparten av bredden.
 
 ### Delplan (faser)
-- [ ] **Fase 1 — Fjern `width:100%` på Info + balanser kolonnene.** Fjern
+- [x] **Fase 1 — Fjern `width:100%` på Info + balanser kolonnene.** Fjern
   `width:100%`. Behold `table-layout: auto` (respekterer min-bredde → aldri
   tegn-bryting). Gi Aktivitet og Info mest plass og La de to dele slakken
   (f.eks. `width: 30%` hver), Oppmøte middels (`~15%`), `☑·Klasse·Fag·P/G`
   smale/innholdstilpassede (uendret, P/G `nowrap`). Juster prosentene om
   nødvendig så ingen celle klemmes under ett helt ord. Behold det diskrete
   vertikale skillet (`border-left`) fra P12.
-- [ ] **Fase 2 — Cache-bust, commit, kryss av, oppsummering.**
+- [x] **Fase 2 — Cache-bust, commit, kryss av, oppsummering.**
 
 ### Verifiser før merge
 - [ ] Aktivitet-tekst står på normale linjer (ikke ett tegn per linje)

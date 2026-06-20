@@ -672,11 +672,14 @@ tr:hover td { background: var(--primær-svak); }
 .min-plan-tabell .mp-cb     { width: 30px; text-align: center; }
 .min-plan-tabell .mp-klasse { width: 88px; white-space: nowrap; }
 .min-plan-tabell .mp-fag    { width: 92px; }
-/* Flytende kolonner (P/G · Aktivitet · Oppmøte · Info): ingen faste bredder.
-   Info absorberer all slakk (width:100%) så de tre andre krymper til innhold og
-   pakkes tett etter hverandre — tom P/G reserverer ikke plass. Diskret vertikalt
-   skille mellom de fire. */
-.min-plan-tabell .mp-info { width: 100%; }
+/* Flytende kolonner (P/G · Aktivitet · Oppmøte · Info): balansert fordeling.
+   `table-layout: auto` respekterer min-bredde, så tekst brytes aldri tegn-for-tegn.
+   Aktivitet + Info (lengst tekst) deler mest plass; Oppmøte middels; P/G smal/nowrap.
+   IKKE `width:100%` på én celle — det presser de andre under min-bredde (P12-feilen).
+   Diskret vertikalt skille mellom de fire beholdes. */
+.min-plan-tabell .mp-akt  { width: 30%; }
+.min-plan-tabell .mp-info { width: 30%; }
+.min-plan-tabell .mp-opp  { width: 15%; }
 .min-plan-tabell .mp-pg   { white-space: nowrap; }
 .min-plan-tabell .mp-pg, .min-plan-tabell .mp-akt,
 .min-plan-tabell .mp-opp, .min-plan-tabell .mp-info { border-left: 1px solid var(--kant); }
