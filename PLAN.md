@@ -37,12 +37,12 @@ Branch `claude/P12-fiks-sticky-deneuka-kolonner` (fra `origin/main`, har P9+P10+
   inneværende-uke-ankeret skyves under den klebrige header+fanerad (rootMargin =
   −(header+fanerad)px), ikke først når det er helt ute av viewport. Klikk scroller
   tilbake (uendret).
-- [ ] **Fase 3 — JUSTERING 3: kolonnebredder.** Behold faste, smale kolonner kun for
+- [x] **Fase 3 — JUSTERING 3: kolonnebredder.** Behold faste, smale kolonner kun for
   `☑ · Klasse · Fag`. La `Info` absorbere slakken (`width:100%`) så P/G·Aktivitet·
   Oppmøte krymper til innhold og pakkes tett etter hverandre. Legg et diskret
   vertikalt skille (`border-left`, faint) mellom de fire flytende kolonnene. Ingen
   stive faste bredder på dem. Mobil (kort-liste) uendret.
-- [ ] **Fase 4 — Cache-bust, commit per delsteg, kryss av, oppsummering.**
+- [x] **Fase 4 — Cache-bust, commit per delsteg, kryss av, oppsummering.**
 
 ### Verifiser før merge
 - [ ] Header + fanerad blir værende øverst ved scroll (i «Alle mine økter»)
