@@ -1,5 +1,61 @@
 # PLAN — Ukeplan1E v4
 
+## Status: VENTER PÅ GODKJENNING — Økt X (P10): Admin-toggle skal ikke navigere
+
+---
+
+## Økt X (P10): Admin-toggle = rettighetsbryter, ikke navigasjon
+
+**Branch:** `claude/P10-admin-toggle-rettighet`
+**Scope:** `v4/app.js` (kun `toggleAdminModus`), `v4/index.html` (cache-bust).
+Ingen DB-endringer, ingen edge-function-endringer, ingen CSS-endringer.
+
+### Problem
+
+«Admin»-toggelen i headeren (`hdr-admin-toggle` → `toggleAdminModus`) navigerer i
+dag til admin-panelet via `navigate(ny ? '#/admin' : '#/laerer')` (app.js:462).
+Det er feil: toggelen skal kun veksle admin-RETTIGHETER av/på i den plan-visningen
+brukeren allerede står i — aldri bytte rute.
+
+### Funn — kartlegging (kun lesing)
+
+- `toggleAdminModus()` (app.js:456–463): skrur `is_admin_active` av/på i DB +
+  `APP`, kaller `oppdaterHeader()`, og deretter `navigate(...)` (← feilen).
+- `is_admin_active`/`APP.isAdminActive` styrer rettighetsnivået i visningene:
+  `isKontakt = role === 'kontaktlaerer' || APP.isAdminActive` i `renderLaererView`
+  (1421) og `renderAlleOkterTab` (1782). Re-render av gjeldende visning gir derfor
+  riktig effekt (utvidet admin-redigering på/av).
+- `router()` (758–789) re-rendrer ut fra **gjeldende** hash uten å endre rute →
+  egnet til «re-render der brukeren står».
+- Hamburger «Innstillinger» (`hdr-dd-innstillinger`, app.js:715–717) navigerer til
+  `#/admin` og er kun synlig for admin (`!visAdmin` → skjult). **Korrekt — røres ikke.**
+
+### Delplan
+
+- [ ] **Delsteg 1 — Fjern navigasjon fra `toggleAdminModus`**
+  - Bytt ut `navigate(ny ? '#/admin' : '#/laerer')` med `router()` slik at
+    gjeldende visning re-rendres med nytt rettighetsnivå (ingen rute-bytte).
+  - Behold: DB-oppdatering av `is_admin_active`, `APP.isAdminActive`/
+    `APP.profile.is_admin_active`, og `oppdaterHeader()` (oppdaterer toggle-tekst/
+    `admin-aktiv`-stil).
+  - Ikke rør hamburger «Innstillinger» (→ `#/admin`, admin-only) — den er den
+    eneste inngangen til admin-panelet.
+
+- [ ] **Delsteg 2 — Bump `?v=`, commit og push**
+  - Bump `?v=` (JS) i `v4/index.html`.
+  - Commit, push til `claude/P10-admin-toggle-rettighet`.
+  - Ingen manuelle steg i Supabase.
+
+### Verifiser før merge
+
+- [ ] Admin-toggle PÅ viser bulk-redigering av alle viste økter
+- [ ] Admin-toggle AV viser kun brukerens egne rettigheter
+- [ ] Admin-toggle navigerer IKKE til admin-panelet
+- [ ] Hamburger «Innstillinger» åpner fortsatt admin-panelet
+- [ ] Hard refresh henger ikke på «Laster…»
+
+---
+
 ## Status: FULLFØRT — Økt 1 (P9): Sticky header + faner + hamburgermeny
 
 ---
