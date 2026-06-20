@@ -1,5 +1,68 @@
 # PLAN — Ukeplan1E v4
 
+## Status: VENTER GODKJENNING — Økt X (P15): «Nå»-knapp i «Alle mine økter» (gjenbruk Klasse-logikk)
+Branch `claude/P15-naa-knapp-alle-okter` (fra `origin/main`, har P9–P14).
+
+---
+
+## Økt X (P15): «Alle mine økter» — «Denne uka»/«Til toppen» → «Nå» (som Klasse-visningen)
+
+**Scope (foreslått):** `v4/app.js`, `v4/index.html` (cache-bust). Ingen CSS-/DB-/edge.
+
+### Funn — «Nå»-knappen i Klasse-visningen (kun lesing)
+- Klasse-visning (`renderMinKlasseTab`, app.js:1683) og elev-visning
+  (`renderElevView`, app.js:1108) har en «Nå»-knapp:
+  `naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)`,
+  knappen setter `currentWeek = naaWeek` og re-rendrer den uka. Tittel «Gå til
+  gjeldende uke». Deaktiveres når man allerede står på `naaWeek`.
+
+### ⚠️ FLAGG — «Nå»-knappen er feil for skoleår som krysser nyttår
+- Med Øksnevad sine verdier (`school_year_start_week = 33`, `school_year_end_week = 24`)
+  blir `Math.min(Math.max(w, 33), 24)` **= 24 for ALLE uker** (fordi `max(w,33) ≥ 33 > 24`,
+  så `min(…,24) = 24`). Samme gjelder init-klampen `if (currentWeek > schoolEnd)
+  currentWeek = schoolEnd`.
+- Konsekvens: Klasse-/elev-visningens «Nå» går ALLTID til uke 24, ikke til faktisk
+  inneværende uke. Det ser riktig ut NÅ (sommer, uke 25 → 24 er nærmeste fornuftige),
+  men i høstsemesteret (f.eks. uke 40) ville «Nå» feilaktig hoppe til uke 24.
+- Den naive tallklampen håndterer ikke årsskiftet; det krever posisjonslogikk
+  (`ukePosisjon`). Verifisert med tallgjennomgang (alle uker → 24).
+
+### Beslutning trengs (se spørsmål til bruker)
+Å «gjenbruke Klasse-logikken» bokstavelig ville gi en «Nå»-knapp som alltid sikter
+mot uke 24 — i strid med kravet «ta brukeren tilbake til dagens dato … også utenfor
+skoleåret». Derfor foreslås en KORRIGERT felles helper:
+
+```js
+// Inneværende uke klemt inn i skoleåret, korrekt over årsskiftet.
+function gjeldendeSkoleuke(schoolStart, schoolEnd) {
+  const w = getCurrentISOWeek()
+  const pos = ukePosisjon(w, schoolStart)
+  const sluttPos = ukePosisjon(schoolEnd, schoolStart)
+  if (pos <= sluttPos) return w                 // i skoleåret → faktisk uke
+  // i sommergapet (etter slutt, før start) → nærmeste ende
+  return (pos - sluttPos) <= (52 - pos) ? schoolEnd : schoolStart
+}
+```
+
+### Delplan (faser) — avhenger av valgt omfang
+- [ ] **Fase 1 — Felles helper `gjeldendeSkoleuke()`** (korrekt over årsskiftet).
+- [ ] **Fase 2 — «Alle mine økter»:** bytt «Denne uka»/«Til toppen» til én «Nå»-knapp.
+  Anker = overskrift for `gjeldendeSkoleuke(...)` hvis den finnes blant lærerens
+  uker; ellers nærmeste uke etter posisjon; ellers første uke. Tittel «Gå til
+  gjeldende uke». Observer/auto-scroll som før (P12). Knappen dukker alltid opp når
+  man har bladd forbi ankeret — også utenfor skoleåret.
+- [ ] **Fase 3 (KUN hvis godkjent) — Fiks kilden:** bruk `gjeldendeSkoleuke()` i
+  Klasse- og elev-visningen så «Nå» og default-uke blir korrekt i høst/vår òg.
+- [ ] **Fase 4 — Cache-bust, commit per delsteg, kryss av, oppsummering.**
+
+### Verifiser før merge
+- [ ] Knappen i «Alle mine økter» heter «Nå»
+- [ ] Uke ~25 (etter skoleslutt): «Nå» dukker opp ved scroll og tar deg til dagens/nærmeste uke
+- [ ] Klasse- og «Alle mine økter»-«Nå» oppfører seg likt
+- [ ] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P14): «Denne uka»-knapp utenfor skoleåret
 Cache-bust: `20260620i`. Branch `claude/P14-denne-uka-utenfor-skolearet` pushet.
 
