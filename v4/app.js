@@ -711,7 +711,21 @@ function oppdaterHeader() {
       laererBtn.classList.remove('skjult')
       const erILaerer = APP.currentView === 'laerer'
       laererBtn.textContent = erILaerer ? 'Elevvisning' : 'Lærervisning'
-      laererBtn.onclick = () => navigate(erILaerer ? '#/' : '#/laerer')
+      laererBtn.onclick = () => {
+        if (erILaerer) {
+          // P21: åpne elevvisningen for nøyaktig den klassen + uka læreren står i.
+          const navn = APP.laererCtx.klasseNavn
+          if (navn) {
+            APP.elevPeekWeek = APP.laererCtx.week   // transient – leses én gang av renderElevView
+            navigate(`#/klasse/${encodeURIComponent(navn)}`)
+          } else {
+            navigate('#/')
+          }
+        } else {
+          // P21: tilbake til lærervisning på samme fane (klasse + uke seeder fra ctx).
+          navigate(`#/laerer/${APP.laererCtx.tab || 'klasse'}`)
+        }
+      }
       laererBtn.title = erILaerer ? 'Bytt til elevvisning' : 'Gå til lærervisning'
     }
     // Toggle: Admin av/på (alltid synlig for admin)
@@ -920,6 +934,10 @@ function showConflictWarning(konflikt) {
 async function renderElevView(klasseNavn) {
   const myToken = ++APP.renderToken
   const main = document.getElementById('app-main')
+  // P21: lærer-peek – uke som elevvisningen skal åpne på. Leses ÉN gang og nulles,
+  // slik at elever som åpner #/klasse/X direkte alltid får «nå»-uka.
+  const peekWeek = APP.elevPeekWeek
+  APP.elevPeekWeek = null
   // Rydd opp overflow-lytter fra forrige elevvisning
   if (APP._closeOverflowFn) { document.removeEventListener('click', APP._closeOverflowFn); APP._closeOverflowFn = null }
   clearEl(main)
@@ -974,7 +992,8 @@ async function renderElevView(klasseNavn) {
   // Week state
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
-  let currentWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
+  // P21: lærer-peek åpner på samme uke som i lærervisningen; ellers «nå»-uka.
+  let currentWeek = peekWeek ?? gjeldendeSkoleuke(schoolStart, schoolEnd)
 
   const aktivtSkolear = APP.school?.active_school_year
 
