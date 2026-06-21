@@ -95,7 +95,7 @@ Asymmetriske synlighetsbetingelser i `oppdaterHeader`:
 **Faser:**
 - [x] Fase 0 — Symmetrisk synlighet: `laererBtn` alltid synlig for innlogget bruker
   (fjern `skjulLaerer`).
-- [ ] Fase 1 — Innfør `APP.laererCtx` (init i `APP`-objektet) + skriv/les i
+- [x] Fase 1 — Innfør `APP.laererCtx` (init i `APP`-objektet) + skriv/les i
   `renderLaererView` (klasse-seed, select/setTab-skriving).
 - [ ] Fase 2 — `renderMinKlasseTab`: seed uke + skoleår fra ctx; skriv uke/skoleår/klasse.
 - [ ] Fase 3 — Elev-toggle: `laererBtn.onclick` (klasse+uke ut), `renderElevView`

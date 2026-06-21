@@ -28,6 +28,10 @@ window.APP = {
   isAdminActive: false,
   renderToken: 0,
   klasseVelger: null,    // { aktivKlasse, setKlasse } – satt av renderMinKlasseTab (klassevelger-fanen)
+  // P21: in-memory kontekst som bevarer hvor læreren var (klasse, uke, skoleår,
+  // fane) gjennom admin-toggle og elevvisning-toggle. Lever hele sesjonen.
+  laererCtx: { klasseId: null, klasseNavn: null, week: null, skolear: null, tab: null },
+  elevPeekWeek: null,    // P21: transient – uke som elevvisningen skal åpne på (lærer-peek)
 }
 
 // Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
@@ -1445,7 +1449,13 @@ async function renderLaererView() {
   const { data: alleRows } = await sb.from('classes')
     .select('*').eq('school_id', APP.school.id).order('name')
   const andreKlasser = (alleRows || []).filter(k => !mineIds.has(k.id))
-  let aktivKlasse = mineKlasser[0] || andreKlasser[0] || null
+  // P21: seed valgt klasse fra lagret kontekst (bevares gjennom admin-/elev-toggle).
+  // Fallback til første klasse hvis ingen kontekst eller klassen er borte/slettet.
+  let aktivKlasse =
+    (APP.laererCtx.klasseId && [...mineKlasser, ...andreKlasser].find(k => k.id === APP.laererCtx.klasseId))
+    || mineKlasser[0] || andreKlasser[0] || null
+  // Skriv tilbake faktisk valgt klasse, så ctx alltid speiler det som vises.
+  if (aktivKlasse) { APP.laererCtx.klasseId = aktivKlasse.id; APP.laererCtx.klasseNavn = aktivKlasse.name }
 
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
   const tabSlugs = ['klasse', 'alle', 'sok']
@@ -1462,6 +1472,7 @@ async function renderLaererView() {
 
   function setTab(idx) {
     const slug = tabSlugs[idx]
+    APP.laererCtx.tab = slug   // P21: husk fane for retur fra elevvisning
     history.replaceState(null, '', `#/laerer/${slug}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
@@ -1495,6 +1506,7 @@ async function renderLaererView() {
     const k = [...mineKlasser, ...andreKlasser].find(x => x.id === velgerSel.value)
     if (!k) return
     aktivKlasse = k
+    APP.laererCtx.klasseId = k.id; APP.laererCtx.klasseNavn = k.name   // P21: husk valgt klasse
     oppdaterKlasseStatisk(k.name)
     // På klasse-fanen: bytt klasse uten å miste valgt uke. Ellers: gå til fanen.
     if (APP.klasseVelger && APP.klasseVelger.setKlasse) APP.klasseVelger.setKlasse(k)
