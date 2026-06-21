@@ -1,5 +1,36 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P16): «Nå»-knapp må vises i begge scroll-retninger
+Cache-bust: `20260621a`. Branch `claude/P16-naa-knapp-vises-begge-retninger` pushet.
+
+---
+
+## Økt X (P16): «Nå»-knapp dukket aldri opp (observer kun én retning)
+
+**Scope:** `v4/app.js` (kun observer-callback i `renderAlleOkterTab`),
+`v4/index.html` (cache-bust). Ingen CSS-/DB-/edge.
+
+### Rotårsak
+Observeren viste knappen kun når «nå»-uka var skjøvet OPP forbi fanerad-en
+(`boundingClientRect.top < stickyTop`). I sommer er «nå»-uka (uke 24) den
+SISTE/nederste uka i lista; når man blar oppover for å se tidligere uker, havner
+uke 24 UNDER skjermen, og betingelsen slo aldri til → knappen dukket aldri opp.
+P15 gjorde dette synlig fordi `gjeldendeSkoleuke` peker på uke 24 (som finnes i
+lista), mens P14 falt tilbake til første uke (toppen).
+
+### Fiks
+- Vis «Nå» når nå-uka IKKE er synlig, uansett retning: `display = e.isIntersecting
+  ? 'none' : 'block'` (beholdt `rootMargin: -stickyTop` så fanerad-en teller som
+  skjult). Dekker både opp (framtid) og ned (tidligere uker / sommer).
+
+### Verifiser før merge
+- [ ] «Nå» dukker opp når man blar bort fra nå-uka (både opp og ned)
+- [ ] Klikk på «Nå» scroller til nå-uka
+- [ ] Sommer (uke ~25, nå-uke = siste uke): knappen vises når man blar oppover
+- [ ] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P15): «Nå»-knapp i «Alle mine økter» (gjenbruk Klasse-logikk)
 Cache-bust: `20260620j`. Branch `claude/P15-naa-knapp-alle-okter` pushet. Bruker valgte «Fiks begge».
 
