@@ -1,5 +1,68 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P20): Skolerute-merke — ny rekkefølge + ikoner for alle fridagstyper
+Cache-bust: `20260621e`. Branch `claude/P20-skolerute-merke-format` (fra `origin/main`, har P9–P19) pushet.
+Bruker presiserte: 1. mai er høytidsdag (ikke helligdag) som 17. mai — håndteres ved
+navne-match (1. mai→✊, 17. mai→🇳🇴), uavhengig av DB-type. Symbolvalg godkjent.
+
+## Økt X (P20): Skolerute-merke — dag/dato først, navne-matchede ikoner for alle typer
+
+**Scope:** `v4/app.js` (kun `lagFridagMerke` i `renderAlleOkterTab`),
+`v4/index.html` (cache-bust), `PLAN.md`. Ingen DB-/edge-/CSS-endringer
+(eksisterende `.mp-fridag-dag`/`.mp-fridag-dato`-stil gjenbrukes uendret).
+
+### Funn (kun lesing)
+- `lagFridagMerke(fe, week)` (app.js:1924) bygger i dag merket som
+  `${ikon} ${title} · ${type} · ` + `<span.mp-fridag-dag>` + `<span.mp-fridag-dato>`
+  → ikon/tittel FØRST, dag/dato sist. Ikon: kun høstferie 🍂 / vinterferie ❄️ på
+  navn, ellers type-ikon (`ferie 🏖️ · helligdag 🎉 · planleggingsdag 📝`, fallback 🗓️).
+- Brukes tre steder (rene ferieuker, desktop-rad, mobil-kort) — én funksjon, så
+  endringen treffer alle tre.
+- **Faktiske titler i `school_calendar` 25/26** (verifisert i seed-migrasjon 013):
+  `Planleggingsdager (skolestart)` [planleggingsdag], `Høstferie` [ferie],
+  `Juleferie` [helligdag], `Vinterferie` [ferie], `Påskeferie` [helligdag],
+  `Offentlig høytidsdag (1. mai)` [helligdag], `Kristi himmelfartsdag` [helligdag],
+  `Planleggingsdag` [planleggingsdag], `2. pinsedag` [helligdag].
+  → NB: `Juleferie`/`Påskeferie` er lagret som type **helligdag**, så ikon må
+  matches på **navn** (ikke type). Ingen `17. mai`/`Sommerferie`/`Nyttårsdag` i
+  dagens data, men matchere bygges likevel (robust for andre skoler/år).
+
+### JUSTERING 1 — Rekkefølge
+- Bytt barne-rekkefølgen i `el('div',{class:'min-plan-fridag'}, …)` til:
+  `<span.mp-fridag-dag>` → `<span.mp-fridag-dato>` → `` ` ${ikon} ${title} · ${type}` ``.
+  Linja starter da med dag/dato til venstre, likt øktene. Samme spans/klasser/styling
+  som i dag — kun rekkefølgen endres.
+
+### JUSTERING 2 — Navne-matchede ikoner (match på lowercase `title`, ordnet)
+Ferier (navn): `juleferie`→🎄 · `påskeferie`→🐣 · `sommerferie`→☀️ · `høstferie`→🍂 · `vinterferie`→❄️
+Helligdager (navn): `17. mai`/`grunnlovsdag`→🇳🇴 · `1. mai`→✊ · `juledag`/`jul`→🎄 ·
+`langfredag`/`skjærtorsdag`/`påske`→✝️ · `pinse`→🕊️ · `himmelfart`→☁️ · `nyttår`→🎆
+Øvrig: type `planleggingsdag`→📋 · nøytralt fallback for alt annet →🗓️
+- Rekkefølge er viktig: `-ferie`-navnene sjekkes FØR de generiske `jul`/`påske`-navnene
+  (så `påskeferie`→🐣, ikke ✝️; `juleferie`→🎄 likt). Implementeres som ordnet liste
+  `[ [substring, emoji], … ]` + type-fallback.
+
+### Emoji-flagg
+- 🇳🇴 (regional-indikator-par): på eldre Windows kan det vises som «NO» i stedet for
+  flagg. Universelt på Apple/Android/moderne Windows. Foreslått alternativ ved behov:
+  behold 🇳🇴 (gjeldende data har uansett ingen 17. mai-rad), ev. 🎌. Flagget for innsyn.
+- Øvrige (🎄🐣☀️🍂❄️✊✝️🕊️☁️🎆📋🗓️) er enkle, bredt støttede enkelt-emoji — ingen kjente problemer.
+
+### Delplan (faser)
+- [x] **Fase 1 — `lagFridagMerke`:** ny ikon-resolver (ordnet navne-liste + type-fallback)
+  + ny barne-rekkefølge (dag/dato først). Behold dag/dato-utregning og spans uendret.
+- [x] **Fase 2 — Cache-bust (`20260621e`), commit, kryss av, oppsummering.**
+
+### Verifiser
+- [ ] Merket starter med dag/dato, deretter ikon + tittel + type
+- [ ] Formatering ellers uendret fra P19 (samme spans/styling)
+- [ ] Juleferie 🎄, Påskeferie 🐣, Sommerferie ☀️, Høstferie 🍂, Vinterferie ❄️
+- [ ] Helligdager: 1. mai ✊, Kristi himmelfartsdag ☁️, 2. pinsedag 🕊️, (17. mai 🇳🇴)
+- [ ] Planleggingsdag 📋; ukjent navn/type → 🗓️
+- [ ] Ingen sesong-feil ikoner; mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P19): Skolerute i «Alle mine økter» — finpuss
 Cache-bust: `20260621d`. Branch `claude/P19-skolerute-finpuss` pushet.
 

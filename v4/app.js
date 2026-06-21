@@ -1919,14 +1919,31 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   const reRender = () => renderAlleOkterTab(container, false)
 
   const DAGKORT = ['Man', 'Tir', 'Ons', 'Tor', 'Fre']
-  // Skolerute-merke for én hendelse i én uke: dag primært (som øktene), dato som
-  // diskret støtte. Ikon: høstferie/vinterferie på navn, ellers type-ikon.
+  // Passende ikon per fridag, matchet på navn (uavhengig av DB-type — Juleferie/
+  // Påskeferie er f.eks. lagret som «helligdag»). Ordnet liste: spesifikke
+  // «-ferie»-navn sjekkes FØR generiske «jul»/«påske» (så påskeferie→🐣, ikke ✝️).
+  // Type-fallback for planleggingsdag, ellers nøytralt kalender-ikon.
+  const FRIDAG_NAVN_IKON = [
+    ['juleferie', '🎄'], ['påskeferie', '🐣'], ['sommerferie', '☀️'],
+    ['høstferie', '🍂'], ['vinterferie', '❄️'],
+    ['17. mai', '🇳🇴'], ['grunnlovsdag', '🇳🇴'],
+    ['1. mai', '✊'],
+    ['juledag', '🎄'], ['jul', '🎄'],
+    ['langfredag', '✝️'], ['skjærtorsdag', '✝️'], ['palmesøndag', '✝️'], ['påske', '✝️'],
+    ['pinse', '🕊️'],
+    ['himmelfart', '☁️'],
+    ['nyttår', '🎆'],
+  ]
+  function fridagIkon(ev) {
+    const navn = (ev.title || '').toLowerCase()
+    for (const [nokkel, ikon] of FRIDAG_NAVN_IKON) if (navn.includes(nokkel)) return ikon
+    return ev.type === 'planleggingsdag' ? '📋' : '🗓️'
+  }
+  // Skolerute-merke for én hendelse i én uke: dag/dato FØRST (som øktene), deretter
+  // ikon + tittel + type. Dag primært, dato som diskret støtte.
   function lagFridagMerke(fe, week) {
     const { ev, dagFra, dagTil } = fe
-    const navn = (ev.title || '').toLowerCase()
-    const ikon = navn.includes('høstferie') ? '🍂'
-      : navn.includes('vinterferie') ? '❄️'
-      : ({ ferie: '🏖️', helligdag: '🎉', planleggingsdag: '📝' }[ev.type] || '🗓️')
+    const ikon = fridagIkon(ev)
     const dagTekst = dagFra === dagTil
       ? (DAGKORT[dagFra - 1] || '')
       : `${DAGKORT[dagFra - 1] || ''}–${DAGKORT[dagTil - 1] || ''}`
@@ -1935,9 +1952,9 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     const datoTil = formatDatoNO(isoWeekToDate(kalAar, week, dagTil).toISOString().slice(0, 10))
     const datoTekst = dagFra === dagTil ? datoFra : `${datoFra}–${datoTil}`
     return el('div', { class: 'min-plan-fridag' },
-      `${ikon} ${ev.title} · ${kalenderTypeNavn(ev.type)} · `,
       el('span', { class: 'mp-fridag-dag' }, dagTekst),
-      el('span', { class: 'mp-fridag-dato' }, ` ${datoTekst}`))
+      el('span', { class: 'mp-fridag-dato' }, ` ${datoTekst}`),
+      ` ${ikon} ${ev.title} · ${kalenderTypeNavn(ev.type)}`)
   }
 
   // ── Bulk-valg ──────────────────────────────────────────────
