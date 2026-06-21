@@ -1,7 +1,9 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING — Økt X (P20): Skolerute-merke — ny rekkefølge + ikoner for alle fridagstyper
-Branch `claude/P20-skolerute-merke-format` (fra `origin/main`, har P9–P19).
+## Status: FULLFØRT (venter verifisering) — Økt X (P20): Skolerute-merke — ny rekkefølge + ikoner for alle fridagstyper
+Cache-bust: `20260621e`. Branch `claude/P20-skolerute-merke-format` (fra `origin/main`, har P9–P19) pushet.
+Bruker presiserte: 1. mai er høytidsdag (ikke helligdag) som 17. mai — håndteres ved
+navne-match (1. mai→✊, 17. mai→🇳🇴), uavhengig av DB-type. Symbolvalg godkjent.
 
 ## Økt X (P20): Skolerute-merke — dag/dato først, navne-matchede ikoner for alle typer
 
@@ -47,9 +49,9 @@ Helligdager (navn): `17. mai`/`grunnlovsdag`→🇳🇴 · `1. mai`→✊ · `ju
 - Øvrige (🎄🐣☀️🍂❄️✊✝️🕊️☁️🎆📋🗓️) er enkle, bredt støttede enkelt-emoji — ingen kjente problemer.
 
 ### Delplan (faser)
-- [ ] **Fase 1 — `lagFridagMerke`:** ny ikon-resolver (ordnet navne-liste + type-fallback)
+- [x] **Fase 1 — `lagFridagMerke`:** ny ikon-resolver (ordnet navne-liste + type-fallback)
   + ny barne-rekkefølge (dag/dato først). Behold dag/dato-utregning og spans uendret.
-- [ ] **Fase 2 — Cache-bust (`20260621e`), commit, kryss av, oppsummering.**
+- [x] **Fase 2 — Cache-bust (`20260621e`), commit, kryss av, oppsummering.**
 
 ### Verifiser
 - [ ] Merket starter med dag/dato, deretter ikon + tittel + type
