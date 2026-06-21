@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING — Økt X (P15): «Nå»-knapp i «Alle mine økter» (gjenbruk Klasse-logikk)
-Branch `claude/P15-naa-knapp-alle-okter` (fra `origin/main`, har P9–P14).
+## Status: FULLFØRT (venter verifisering) — Økt X (P15): «Nå»-knapp i «Alle mine økter» (gjenbruk Klasse-logikk)
+Cache-bust: `20260620j`. Branch `claude/P15-naa-knapp-alle-okter` pushet. Bruker valgte «Fiks begge».
 
 ---
 
@@ -45,15 +45,15 @@ function gjeldendeSkoleuke(schoolStart, schoolEnd) {
 ```
 
 ### Delplan (faser) — avhenger av valgt omfang
-- [ ] **Fase 1 — Felles helper `gjeldendeSkoleuke()`** (korrekt over årsskiftet).
-- [ ] **Fase 2 — «Alle mine økter»:** bytt «Denne uka»/«Til toppen» til én «Nå»-knapp.
+- [x] **Fase 1 — Felles helper `gjeldendeSkoleuke()`** (korrekt over årsskiftet).
+- [x] **Fase 2 — «Alle mine økter»:** bytt «Denne uka»/«Til toppen» til én «Nå»-knapp.
   Anker = overskrift for `gjeldendeSkoleuke(...)` hvis den finnes blant lærerens
   uker; ellers nærmeste uke etter posisjon; ellers første uke. Tittel «Gå til
   gjeldende uke». Observer/auto-scroll som før (P12). Knappen dukker alltid opp når
   man har bladd forbi ankeret — også utenfor skoleåret.
-- [ ] **Fase 3 (KUN hvis godkjent) — Fiks kilden:** bruk `gjeldendeSkoleuke()` i
+- [x] **Fase 3 (GODKJENT — «Fiks begge») — Fiks kilden:** bruk `gjeldendeSkoleuke()` i
   Klasse- og elev-visningen så «Nå» og default-uke blir korrekt i høst/vår òg.
-- [ ] **Fase 4 — Cache-bust, commit per delsteg, kryss av, oppsummering.**
+- [x] **Fase 4 — Cache-bust, commit per delsteg, kryss av, oppsummering.**
 
 ### Verifiser før merge
 - [ ] Knappen i «Alle mine økter» heter «Nå»
