@@ -135,6 +135,18 @@ function ukePosisjon(uke, startWeek = 33) {
   return uke >= startWeek ? uke - startWeek : uke + (52 - startWeek)
 }
 
+// Inneværende uke klemt inn i skoleåret, korrekt over årsskiftet. Erstatter den
+// naive tallklampen Math.min(Math.max(w, start), end), som for skoleår der
+// start > end (f.eks. 33→24) alltid kollapser til `end`. Returnerer faktisk uke
+// når vi er i skoleåret, ellers nærmeste ende (sommergapet etter slutt / før start).
+function gjeldendeSkoleuke(schoolStart, schoolEnd) {
+  const w = getCurrentISOWeek()
+  const pos = ukePosisjon(w, schoolStart)
+  const sluttPos = ukePosisjon(schoolEnd, schoolStart)
+  if (pos <= sluttPos) return w
+  return (pos - sluttPos) <= (52 - pos) ? schoolEnd : schoolStart
+}
+
 function dagNavn(n) {
   return ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'][n - 1]
 }
@@ -957,9 +969,7 @@ async function renderElevView(klasseNavn) {
   // Week state
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
-  let currentWeek = getCurrentISOWeek()
-  if (currentWeek < schoolStart) currentWeek = schoolStart
-  if (currentWeek > schoolEnd) currentWeek = schoolEnd
+  let currentWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
 
   const aktivtSkolear = APP.school?.active_school_year
 
@@ -1105,7 +1115,7 @@ async function renderElevView(klasseNavn) {
     }}, 'Neste →')
     if (ukePosisjon(weekNr, schoolStart) >= ukePosisjon(schoolEnd, schoolStart)) nextBtn.setAttribute('disabled', 'true')
 
-    const naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)
+    const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
     const naaBtn = el('button', { class: 'btn btn-s', title: 'Gå til gjeldende uke', onclick: () => {
       currentWeek = naaWeek; renderUke(currentWeek)
     }}, 'Nå')
@@ -1568,9 +1578,7 @@ async function renderMinKlasseTab(container, klasse) {
 
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
-  let currentWeek = getCurrentISOWeek()
-  if (currentWeek < schoolStart) currentWeek = schoolStart
-  if (currentWeek > schoolEnd) currentWeek = schoolEnd
+  let currentWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
 
   // Hent tilgjengelige skoleår for denne skolen (for skoleår-velger)
   const aktivtSkolear = APP.school?.active_school_year || null
@@ -1680,7 +1688,7 @@ async function renderMinKlasseTab(container, klasse) {
       }
     })
 
-    const naaWeek = Math.min(Math.max(getCurrentISOWeek(), schoolStart), schoolEnd)
+    const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
     const naaBtn = el('button', { class: 'btn btn-s', title: 'Gå til gjeldende uke', onclick: () => {
       currentWeek = naaWeek; renderUke()
     }}, 'Nå')
@@ -1835,7 +1843,7 @@ async function renderMinKlasseTab(container, klasse) {
 
 // «Alle mine økter»: brukerens egne økter (teacher_id = profil).
 // Desktop = kompakt tabell (én rad per økt), mobil = vertikal kort-liste (CSS-styrt).
-// Kontinuerlig liste over alle uker, auto-scroll til dagens uke, «Denne uka»-knapp
+// Kontinuerlig liste over alle uker, auto-scroll til dagens uke, «Nå»-knapp
 // via IntersectionObserver, og bulk-redigering (marker → rediger/kopier/slett).
 async function renderAlleOkterTab(container, autoScroll = true) {
   // Rydd opp tidligere observer (unngå lekkasje ved re-render)
@@ -1843,6 +1851,7 @@ async function renderAlleOkterTab(container, autoScroll = true) {
 
   const aktivtSkolear = APP.school?.active_school_year
   const schoolStart = APP.school?.school_year_start_week || 33
+  const schoolEnd = APP.school?.school_year_end_week || 24
 
   let alleOkterQuery = sb.from('sessions')
     .select('*, subjects(name, color_hex, short_code), classes(name), session_divisions(division_id, subject_divisions(name, division_type))')
@@ -1868,7 +1877,8 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   const uker = Object.keys(byWeek).map(Number)
     .sort((a, b) => ukePosisjon(a, schoolStart) - ukePosisjon(b, schoolStart))
 
-  const naaWeek = getCurrentISOWeek()
+  // Samme «nå»-uke som Klasse-/elev-visningen (korrekt over årsskiftet)
+  const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
   const reRender = () => renderAlleOkterTab(container, false)
 
   // ── Bulk-valg ──────────────────────────────────────────────
@@ -1990,30 +2000,21 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     container.appendChild(kortListe)
   }
 
-  // ── «Denne uka»-knapp + auto-scroll ──────────────────────────
-  // Anker: inneværende ukes overskrift hvis den finnes i planen, ellers nærmeste
-  // KOMMENDE uke. Ligger alt bak oss (sommerferie / etter skoleslutt) → første uke
-  // (toppen), så knappen aldri blir permanent skjult utenfor skoleåret.
+  // ── «Nå»-knapp + auto-scroll (samme navn/oppførsel som Klasse-visningen) ──
+  // Anker: overskriften for «nå»-uka (gjeldendeSkoleuke) hvis læreren har økter
+  // den uka, ellers nærmeste uke etter posisjon, ellers første uke i planen — så
+  // knappen alltid har et fornuftig mål og aldri blir permanent skjult.
   let anker = naaHeader
-  let knappTekst = '↑ Denne uka'
-  let knappTittel = 'Bla tilbake til inneværende uke'
   if (!anker) {
     const naaPos = ukePosisjon(naaWeek, schoolStart)
-    const kommendeUke = uker.find(w => ukePosisjon(w, schoolStart) >= naaPos)
-    if (kommendeUke != null) {
-      anker = container.querySelector(`.min-plan-uke[data-uke="${kommendeUke}"]`)
-    } else {
-      // Alt ligger bak oss → fall tilbake til toppen / første uke i planen
-      anker = container.querySelector(`.min-plan-uke[data-uke="${uker[0]}"]`)
-      knappTekst = '↑ Til toppen'
-      knappTittel = 'Bla tilbake til toppen av planen'
-    }
+    const naermesteUke = uker.find(w => ukePosisjon(w, schoolStart) >= naaPos) ?? uker[0]
+    anker = container.querySelector(`.min-plan-uke[data-uke="${naermesteUke}"]`)
   }
 
   const denneUkaBtn = el('button', { class: 'btn btn-p denne-uka-btn', style: 'display:none',
-    title: knappTittel,
+    title: 'Gå til gjeldende uke',
     onclick: () => anker?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, knappTekst)
+  }, 'Nå')
   container.appendChild(denneUkaBtn)
 
   if (anker) {
