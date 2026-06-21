@@ -699,11 +699,12 @@ function oppdaterHeader() {
 
   if (APP.user && APP.profile) {
     const visAdmin = harAdminTilgang()
-    const skjulLaerer = harAdminTilgang() && APP.isAdminActive
 
-    // Toggle: Elevvisning / Lærervisning (alltid synlig)
+    // Toggle: Elevvisning / Lærervisning. Alltid synlig for innlogget bruker –
+    // symmetrisk med Admin-knappen, så en admin kan veksle fritt i alle moduser
+    // (P21). Tidligere ble den skjult i admin-modus (asymmetrisk oppførsel).
     if (laererBtn) {
-      laererBtn.classList.toggle('skjult', skjulLaerer)
+      laererBtn.classList.remove('skjult')
       const erILaerer = APP.currentView === 'laerer'
       laererBtn.textContent = erILaerer ? 'Elevvisning' : 'Lærervisning'
       laererBtn.onclick = () => navigate(erILaerer ? '#/' : '#/laerer')

@@ -93,7 +93,7 @@ Asymmetriske synlighetsbetingelser i `oppdaterHeader`:
   elev/lærer-toggelen; utlogget ser ingen (uendret `else`-gren).
 
 **Faser:**
-- [ ] Fase 0 — Symmetrisk synlighet: `laererBtn` alltid synlig for innlogget bruker
+- [x] Fase 0 — Symmetrisk synlighet: `laererBtn` alltid synlig for innlogget bruker
   (fjern `skjulLaerer`).
 - [ ] Fase 1 — Innfør `APP.laererCtx` (init i `APP`-objektet) + skriv/les i
   `renderLaererView` (klasse-seed, select/setTab-skriving).
