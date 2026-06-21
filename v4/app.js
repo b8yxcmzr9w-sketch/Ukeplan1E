@@ -1591,12 +1591,15 @@ async function renderMinKlasseTab(container, klasse) {
 
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
-  let currentWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
+  // P21: seed uke fra lagret kontekst (bevares gjennom admin-/elev-toggle).
+  // Fallback til «nå»-uka når ingen kontekst finnes.
+  let currentWeek = APP.laererCtx.week ?? gjeldendeSkoleuke(schoolStart, schoolEnd)
 
   // Hent tilgjengelige skoleår for denne skolen (for skoleår-velger)
   const aktivtSkolear = APP.school?.active_school_year || null
   const nesteAar = nesteSkolear(aktivtSkolear)
-  let valgtSkolear = aktivtSkolear
+  // P21: seed valgt skoleår fra kontekst (fallback til aktivt år).
+  let valgtSkolear = APP.laererCtx.skolear ?? aktivtSkolear
   let tilgjengeligeSkolear = aktivtSkolear ? [aktivtSkolear] : []
   try {
     const { data: aarRows } = await sb.from('sessions')
@@ -1618,7 +1621,11 @@ async function renderMinKlasseTab(container, klasse) {
   // Eksponer klassevelger-koblingen for fanen (renderLaererView): setKlasse
   // bytter klasse uten å miste valgt uke. aktivKlasse brukes også av
   // oppdaterHeader til den statiske «klasse X»-teksten.
-  APP.klasseVelger = { aktivKlasse, setKlasse: (k) => { aktivKlasse = k; APP.klasseVelger.aktivKlasse = k; renderUke() } }
+  APP.klasseVelger = { aktivKlasse, setKlasse: (k) => {
+    aktivKlasse = k; APP.klasseVelger.aktivKlasse = k
+    APP.laererCtx.klasseId = k.id; APP.laererCtx.klasseNavn = k.name   // P21: husk valgt klasse
+    renderUke()
+  } }
   oppdaterHeader()
 
   const topRow = el('div', { class: 'laerer-top' })
@@ -1635,7 +1642,7 @@ async function renderMinKlasseTab(container, klasse) {
       if (aa === valgtSkolear) opt.selected = true
       aarSel.appendChild(opt)
     }
-    aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; renderUke() })
+    aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; APP.laererCtx.skolear = valgtSkolear; renderUke() })
     topRow.appendChild(aarSel)
   }
 
@@ -1664,6 +1671,9 @@ async function renderMinKlasseTab(container, klasse) {
 
   async function renderUke() {
     const myToken = ++ukeRenderToken
+    // P21: speil gjeldende uke/skoleår i konteksten (bevares ved toggling).
+    APP.laererCtx.week = currentWeek
+    APP.laererCtx.skolear = valgtSkolear
     clearEl(weekArea)
     bulkSelected.clear()
 
