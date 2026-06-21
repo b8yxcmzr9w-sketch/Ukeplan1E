@@ -1,5 +1,54 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P18): Skolerute i «Alle mine økter»
+Cache-bust: `20260621c`. Branch `claude/P18-skolerute-i-alle-okter` pushet.
+
+---
+
+## Økt X (P18): Vis skoleruten (ferie/høytid/planleggingsdag) i «Alle mine økter»
+
+**Scope:** `v4/app.js` (`renderAlleOkterTab`), `v4/style.css` (skolerute-merke),
+`v4/index.html` (cache-bust), `PLAN.md` + `CLAUDE.md`. Ingen DB-/edge-endringer.
+
+### Funn (kun lesing)
+- `renderAlleOkterTab` (app.js ~1848) grupperer kun lærerens egne `sessions` per uke
+  (`<h3>Uke X</h3>` + rader). Den henter IKKE `school_calendar`.
+- «Min klasse»-ukevisningen (`renderUke`) henter derimot skoleruten og merker
+  fridager — derfor mangelen kun i «Alle mine økter».
+- Hjelpere finnes: `getISOWeek`, `ukeTekst`, `kalenderTypeNavn` (helligdag→«høytid»),
+  `formatDatoNO`, `ukePosisjon`, `skoleaarIntervall`.
+
+### Avklart med bruker (GODKJENT)
+- Visning: **«Alle mine økter»**.
+- **Ferieuker uten økter skal også vises** (egen uke-overskrift med ferie-merke).
+
+### Delplan (faser)
+- [x] **Fase 1 — Datahenting.** Parallelt med `sessions`: hent `school_calendar`
+  for aktivt skoleår (`school_id`, `deleted_at is null`, innenfor `skoleaarIntervall`,
+  typer `ferie/helligdag/planleggingsdag`).
+- [x] **Fase 2 — Map hendelse → uke + union av uker.** For hver hendelse: samle
+  ISO-uker den dekker (iterer ukedager man–fre fra start til slutt → `getISOWeek`),
+  filtrer til skoleårets uke-vindu (`ukePosisjon ≤ sluttPos`). Bygg `eventsByWeek`.
+  Vis-uker = union av økt-uker ∪ skolerute-uker, sortert i skoleår-rekkefølge
+  (33→52→1→24). Juleferie (uke 52→1) havner korrekt i begge uker.
+- [x] **Fase 3 — Render.** Under hver uke-overskrift: skolerute-linje(r) (ikon +
+  tittel + type via `kalenderTypeNavn` + `ukeTekst` + dato). Guard for uker uten
+  økter (ingen tabell/kort, bare overskrift + ferie-merke). «Nå»-anker, bulk og
+  observer beholdes uendret. Linja vises i både desktop og mobil.
+- [x] **Fase 4 — CSS.** `.min-plan-fridag`-merke (bruker `--fridag-bg`/`--fridag-tekst`).
+- [x] **Fase 5 — Avslutning.** Oppdater `PLAN.md` + `CLAUDE.md`, cache-bust
+  (`20260621c`), commit per delsteg, PR + merge.
+
+### Verifiser før merge
+- [ ] Ferieuke uten økter vises med egen uke-overskrift + ferie-merke
+- [ ] Uker med økter viser skolerute-linje når uka har en hendelse
+- [ ] Juleferie (spenner uke 52→1) vises i begge uker
+- [ ] «Høytid» vises for `helligdag` (ikke databaseverdien)
+- [ ] Mobil viser samme skolerute-linje (vertikal liste ellers uendret)
+- [ ] «Nå»-knapp og bulk-redigering uendret
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P17): «Alle mine økter» — tett pakking (rad-basert)
 Cache-bust: `20260621b`. Branch `claude/P17-tabell-tett-pakking` pushet.
 

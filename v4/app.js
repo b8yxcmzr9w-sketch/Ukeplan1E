@@ -1859,7 +1859,16 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     .order('week_nr')
     .order('day_of_week')
   if (aktivtSkolear) alleOkterQuery = alleOkterQuery.eq('school_year', aktivtSkolear)
-  const { data: sessions } = await alleOkterQuery
+
+  // Skolerute for skoleåret (ferie/høytid/planleggingsdag) — vises per uke
+  const interval = skoleaarIntervall(aktivtSkolear)
+  let calQuery = sb.from('school_calendar').select('*')
+    .eq('school_id', APP.school.id)
+    .is('deleted_at', null)
+    .in('type', ['ferie', 'helligdag', 'planleggingsdag'])
+  if (interval) calQuery = calQuery.gte('end_date', interval.fra).lte('start_date', interval.til)
+
+  const [{ data: sessions }, { data: calEvents }] = await Promise.all([alleOkterQuery, calQuery])
 
   clearEl(container)
 
@@ -1868,13 +1877,36 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     return
   }
 
-  // Grupper per uke, sorter i skoleår-rekkefølge (33→52→1→24)
+  // Grupper økter per uke
   const byWeek = {}
   for (const s of sessions) {
     if (!byWeek[s.week_nr]) byWeek[s.week_nr] = []
     byWeek[s.week_nr].push(s)
   }
-  const uker = Object.keys(byWeek).map(Number)
+
+  // Map skolerute-hendelser til ukene de dekker (man–fre), innenfor skoleårets
+  // uke-vindu. Jul/påske kan spenne flere uker → vises i hver uke de treffer.
+  const sluttPos = ukePosisjon(schoolEnd, schoolStart)
+  const eventsByWeek = {}
+  for (const ev of (calEvents || [])) {
+    const ukerForEv = new Set()
+    const d = new Date(ev.start_date + 'T00:00:00')
+    const slutt = new Date(ev.end_date + 'T00:00:00')
+    let guard = 0
+    while (d <= slutt && guard++ < 400) {
+      const dow = d.getDay()
+      if (dow >= 1 && dow <= 5) ukerForEv.add(getISOWeek(d))  // kun ukedager
+      d.setDate(d.getDate() + 1)
+    }
+    for (const w of ukerForEv) {
+      if (ukePosisjon(w, schoolStart) > sluttPos) continue  // utenfor skoleårsvinduet
+      if (!eventsByWeek[w]) eventsByWeek[w] = []
+      eventsByWeek[w].push(ev)
+    }
+  }
+
+  // Vis-uker = union av økt-uker og skolerute-uker, i skoleår-rekkefølge (33→52→1→24)
+  const uker = [...new Set([...Object.keys(byWeek), ...Object.keys(eventsByWeek)].map(Number))]
     .sort((a, b) => ukePosisjon(a, schoolStart) - ukePosisjon(b, schoolStart))
 
   // Samme «nå»-uke som Klasse-/elev-visningen (korrekt over årsskiftet)
@@ -1932,9 +1964,18 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     container.appendChild(weekHeader)
     if (week === naaWeek) naaHeader = weekHeader
 
-    const rader = byWeek[week].slice().sort((a, b) =>
+    // Skolerute-merke(r) for uka (ferie/høytid/planleggingsdag) — også på uker
+    // uten egne økter, så det er tydelig hvorfor uka ev. er tom.
+    for (const ev of (eventsByWeek[week] || [])) {
+      const ikon = { ferie: '🏖️', helligdag: '🎉', planleggingsdag: '📝' }[ev.type] || '🗓️'
+      container.appendChild(el('div', { class: 'min-plan-fridag' },
+        `${ikon} ${ev.title} · ${kalenderTypeNavn(ev.type)} · ${ukeTekst(ev.start_date, ev.end_date)} · ${formatDatoNO(ev.start_date)}–${formatDatoNO(ev.end_date)}`))
+    }
+
+    const rader = (byWeek[week] || []).slice().sort((a, b) =>
       (a.day_of_week - b.day_of_week) ||
       (a.subjects?.name || '').localeCompare(b.subjects?.name || '', 'nb'))
+    if (!rader.length) continue  // ren ferieuke: kun overskrift + skolerute-merke
 
     const lagActions = (s) => ({
       edit: () => visRedigerOktModal(s, reRender),

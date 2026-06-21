@@ -255,6 +255,7 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `renderLaererView()` | Lærervisning med tabs |
 | `renderAdminPanel()` | Adminpanel med tabs |
 | `renderMinKlasseTab(container)` | Ukeoversikt for lærer |
+| `renderAlleOkterTab(container)` | Lærerens egne økter, gruppert per uke (desktop: rad-basert tett pakking, mobil: kort-liste). Viser også skoleruten (ferie/høytid/planleggingsdag) per uke — inkl. rene ferieuker uten økter. |
 | `visNyOktModal(...)` | Ny økt-modal |
 | `visRedigerOktModal(session, onSave)` | Rediger økt |
 | `visKopierOktModal(session, onSave)` | Kopier økt (redigerbar) |

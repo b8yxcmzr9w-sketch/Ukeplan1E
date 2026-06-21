@@ -655,6 +655,13 @@ tr:hover td { background: var(--primær-svak); }
 }
 .min-plan-uke:first-of-type { margin-top: 4px; }
 
+/* Skolerute-merke i «Alle mine økter» (ferie/høytid/planleggingsdag) */
+.min-plan-fridag {
+  background: var(--fridag-bg); color: var(--fridag-tekst);
+  border-radius: 6px; padding: 6px 12px; margin: 0 0 8px;
+  font-size: .85rem; font-weight: 500;
+}
+
 /* Desktop: rad-basert flex. Hver økt pakkes tett etter SITT eget innhold
    (ikke en justert tabell): faste, litt smale kolonner for ☑/Klasse/Fag, mens
    P/G·Aktivitet·Oppmøte hugger innholdet og Info sluker slakken til høyre.
