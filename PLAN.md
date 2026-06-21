@@ -1,5 +1,49 @@
 # PLAN — Ukeplan1E v4
 
+## Status: VENTER GODKJENNING — Økt X (P19): Skolerute i «Alle mine økter» — finpuss
+Branch `claude/P19-skolerute-finpuss`.
+
+---
+
+## Økt X (P19): Skolerute i «Alle mine økter» — dag-merking, kronologisk innsortering, ikoner
+
+**Scope:** `v4/app.js` (`renderAlleOkterTab`), `v4/style.css` (liten støttetekst-stil),
+`v4/index.html` (cache-bust), `PLAN.md`. Ingen DB-/edge-endringer.
+
+### Funn (kun lesing)
+- P18 lagrer `eventsByWeek[w] = [ev]` og rendrer alle fridager som `.min-plan-fridag`
+  samlet rett under uke-overskriften, merket med dato (`formatDatoNO(start)–slutt`).
+- Øktene merkes med dag først + diskret dato (`Ons 3.6.` via `.mp-dag`). Fridagene
+  bør følge samme mønster.
+- `getDay()` gir Man=1…Fre=5 (= `day_of_week`), så dag-utregning er rett frem.
+
+### Delplan (faser)
+- [ ] **Fase 1 — Dag-data per uke (JUST. 1).** Endre uke-mappingen så hver hendelse
+  lagres med dagene den dekker i HVER uke: `eventsByWeek[w].push({ ev, dagFra, dagTil })`
+  (min/maks ukedag man–fre i den uka). Flerukers ferie får riktig dag-spenn per uke.
+- [ ] **Fase 2 — `lagFridagMerke(fe, week)` (JUST. 1 + 3).** Bygger merket med dag
+  primært (`Man–Fre` / `Ons`) og diskret klamret dato som støtte. Ikon: match på
+  navn — `høstferie → 🍂`, `vinterferie → ❄️`, ellers uendret type-ikon
+  (`ferie 🏖️ · helligdag 🎉 · planleggingsdag 📝`). Tekst: `ikon Tittel · type · DAG dato`.
+- [ ] **Fase 3 — Kronologisk innsortering (JUST. 2).** I uker MED økter: bygg én liste
+  av økter (`dag = day_of_week`) + fridager (`dag = dagFra`), sorter på dag (ties:
+  fridag før økt, så fag-navn). Render i den rekkefølgen i BÅDE desktop-rad-lista og
+  mobil-kortlista. Rene ferieuker uten økter: behold P18 (merke rett under overskrift).
+- [ ] **Fase 4 — CSS.** `.mp-fridag-dato` diskret (dempet/lettere), `.mp-fridag-dag`
+  litt uthevet. `.min-plan-fridag` ellers uendret.
+- [ ] **Fase 5 — Avslutning.** Cache-bust (`20260621d`), commit per delsteg, kryss av,
+  oppsummering, PR + merge.
+
+### Verifiser før merge
+- [ ] Fridag merkes med dag (énkeltdag «Ons», flerdagers «Man–Ons»), dato kun støtte
+- [ ] Fridag sorteres inn på riktig dag blant øktene, ikke samlet øverst
+- [ ] Høstferie 🍂, vinterferie ❄️; øvrige ikoner uendret
+- [ ] Rene ferieuker uten økter får fortsatt egen overskrift + merke
+- [ ] Flerukers ferie (jul/påske) vises i hver uke (med riktig dag-spenn per uke)
+- [ ] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P18): Skolerute i «Alle mine økter»
 Cache-bust: `20260621c`. Branch `claude/P18-skolerute-i-alle-okter` pushet.
 
