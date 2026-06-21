@@ -1884,24 +1884,29 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     byWeek[s.week_nr].push(s)
   }
 
-  // Map skolerute-hendelser til ukene de dekker (man–fre), innenfor skoleårets
-  // uke-vindu. Jul/påske kan spenne flere uker → vises i hver uke de treffer.
+  // Map skolerute-hendelser til ukene de dekker, med dag-spennet (man–fre) i HVER
+  // uke. Jul/påske kan spenne flere uker → vises i hver uke med riktig dag-spenn.
   const sluttPos = ukePosisjon(schoolEnd, schoolStart)
   const eventsByWeek = {}
   for (const ev of (calEvents || [])) {
-    const ukerForEv = new Set()
+    const dagerPerUke = {}  // uke → Set(ukedag 1–5)
     const d = new Date(ev.start_date + 'T00:00:00')
     const slutt = new Date(ev.end_date + 'T00:00:00')
     let guard = 0
     while (d <= slutt && guard++ < 400) {
-      const dow = d.getDay()
-      if (dow >= 1 && dow <= 5) ukerForEv.add(getISOWeek(d))  // kun ukedager
+      const dow = d.getDay()  // Man=1 … Fre=5 (lør/søn ignoreres)
+      if (dow >= 1 && dow <= 5) {
+        const w = getISOWeek(d)
+        if (!dagerPerUke[w]) dagerPerUke[w] = new Set()
+        dagerPerUke[w].add(dow)
+      }
       d.setDate(d.getDate() + 1)
     }
-    for (const w of ukerForEv) {
+    for (const w of Object.keys(dagerPerUke).map(Number)) {
       if (ukePosisjon(w, schoolStart) > sluttPos) continue  // utenfor skoleårsvinduet
+      const dager = [...dagerPerUke[w]]
       if (!eventsByWeek[w]) eventsByWeek[w] = []
-      eventsByWeek[w].push(ev)
+      eventsByWeek[w].push({ ev, dagFra: Math.min(...dager), dagTil: Math.max(...dager) })
     }
   }
 
@@ -1912,6 +1917,28 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   // Samme «nå»-uke som Klasse-/elev-visningen (korrekt over årsskiftet)
   const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
   const reRender = () => renderAlleOkterTab(container, false)
+
+  const DAGKORT = ['Man', 'Tir', 'Ons', 'Tor', 'Fre']
+  // Skolerute-merke for én hendelse i én uke: dag primært (som øktene), dato som
+  // diskret støtte. Ikon: høstferie/vinterferie på navn, ellers type-ikon.
+  function lagFridagMerke(fe, week) {
+    const { ev, dagFra, dagTil } = fe
+    const navn = (ev.title || '').toLowerCase()
+    const ikon = navn.includes('høstferie') ? '🍂'
+      : navn.includes('vinterferie') ? '❄️'
+      : ({ ferie: '🏖️', helligdag: '🎉', planleggingsdag: '📝' }[ev.type] || '🗓️')
+    const dagTekst = dagFra === dagTil
+      ? (DAGKORT[dagFra - 1] || '')
+      : `${DAGKORT[dagFra - 1] || ''}–${DAGKORT[dagTil - 1] || ''}`
+    const kalAar = skoleaarKalenderaar(aktivtSkolear, week, schoolStart)
+    const datoFra = formatDatoNO(isoWeekToDate(kalAar, week, dagFra).toISOString().slice(0, 10))
+    const datoTil = formatDatoNO(isoWeekToDate(kalAar, week, dagTil).toISOString().slice(0, 10))
+    const datoTekst = dagFra === dagTil ? datoFra : `${datoFra}–${datoTil}`
+    return el('div', { class: 'min-plan-fridag' },
+      `${ikon} ${ev.title} · ${kalenderTypeNavn(ev.type)} · `,
+      el('span', { class: 'mp-fridag-dag' }, dagTekst),
+      el('span', { class: 'mp-fridag-dato' }, ` ${datoTekst}`))
+  }
 
   // ── Bulk-valg ──────────────────────────────────────────────
   const bulkSelected = new Set()
@@ -1964,18 +1991,14 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     container.appendChild(weekHeader)
     if (week === naaWeek) naaHeader = weekHeader
 
-    // Skolerute-merke(r) for uka (ferie/høytid/planleggingsdag) — også på uker
-    // uten egne økter, så det er tydelig hvorfor uka ev. er tom.
-    for (const ev of (eventsByWeek[week] || [])) {
-      const ikon = { ferie: '🏖️', helligdag: '🎉', planleggingsdag: '📝' }[ev.type] || '🗓️'
-      container.appendChild(el('div', { class: 'min-plan-fridag' },
-        `${ikon} ${ev.title} · ${kalenderTypeNavn(ev.type)} · ${ukeTekst(ev.start_date, ev.end_date)} · ${formatDatoNO(ev.start_date)}–${formatDatoNO(ev.end_date)}`))
-    }
+    const ukeOkter = byWeek[week] || []
+    const ukeFridager = eventsByWeek[week] || []
 
-    const rader = (byWeek[week] || []).slice().sort((a, b) =>
-      (a.day_of_week - b.day_of_week) ||
-      (a.subjects?.name || '').localeCompare(b.subjects?.name || '', 'nb'))
-    if (!rader.length) continue  // ren ferieuke: kun overskrift + skolerute-merke
+    // Ren ferieuke uten økter: behold P18-oppførsel (merke rett under overskrift).
+    if (!ukeOkter.length) {
+      for (const fe of ukeFridager) container.appendChild(lagFridagMerke(fe, week))
+      continue
+    }
 
     const lagActions = (s) => ({
       edit: () => visRedigerOktModal(s, reRender),
@@ -1984,10 +2007,22 @@ async function renderAlleOkterTab(container, autoScroll = true) {
       transfer: () => visOverforModal(s, reRender),
     })
 
+    // Bland økter + fridager og sorter kronologisk på dag (man=1 … fre=5). Ved
+    // lik dag: fridag før økt, deretter fag-navn. Samme rekkefølge i desktop og mobil.
+    const items = [
+      ...ukeOkter.map(s => ({ fridag: false, dag: s.day_of_week, sub: s.subjects?.name || '', s })),
+      ...ukeFridager.map(fe => ({ fridag: true, dag: fe.dagFra, fe })),
+    ].sort((a, b) =>
+      (a.dag - b.dag) ||
+      ((a.fridag ? 0 : 1) - (b.fridag ? 0 : 1)) ||
+      ((a.sub || '').localeCompare(b.sub || '', 'nb')))
+
     // Desktop: rad-liste. Hver økt er en flex-rad som pakkes tett etter sitt
     // eget innhold (ikke en justert tabell) — tomme felt utelates per rad.
     const tabell = el('div', { class: 'min-plan-tabell' })
-    for (const s of rader) {
+    for (const it of items) {
+      if (it.fridag) { tabell.appendChild(lagFridagMerke(it.fe, week)); continue }
+      const s = it.s
       const kalAar = skoleaarKalenderaar(s.school_year, s.week_nr, schoolStart)
       const datoKort = formatDatoNO(isoWeekToDate(kalAar, s.week_nr, s.day_of_week).toISOString().slice(0, 10))
       const dagKort = ['Man', 'Tir', 'Ons', 'Tor', 'Fre'][s.day_of_week - 1] || ''
@@ -2020,7 +2055,9 @@ async function renderAlleOkterTab(container, autoScroll = true) {
 
     // Mobil: vertikal kort-liste (gjenbruker renderSessionCard m/sveip/kebab)
     const kortListe = el('div', { class: 'min-plan-kort' })
-    for (const s of rader) {
+    for (const it of items) {
+      if (it.fridag) { kortListe.appendChild(lagFridagMerke(it.fe, week)); continue }
+      const s = it.s
       const wrapper = el('div', { class: 'session-wrapper' })
       wrapper.appendChild(lagCheckbox(s))
       const card = renderSessionCard(s, true, lagActions(s))

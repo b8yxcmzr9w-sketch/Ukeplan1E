@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING — Økt X (P19): Skolerute i «Alle mine økter» — finpuss
-Branch `claude/P19-skolerute-finpuss`.
+## Status: FULLFØRT (venter verifisering) — Økt X (P19): Skolerute i «Alle mine økter» — finpuss
+Cache-bust: `20260621d`. Branch `claude/P19-skolerute-finpuss` pushet.
 
 ---
 
@@ -18,20 +18,20 @@ Branch `claude/P19-skolerute-finpuss`.
 - `getDay()` gir Man=1…Fre=5 (= `day_of_week`), så dag-utregning er rett frem.
 
 ### Delplan (faser)
-- [ ] **Fase 1 — Dag-data per uke (JUST. 1).** Endre uke-mappingen så hver hendelse
+- [x] **Fase 1 — Dag-data per uke (JUST. 1).** Endre uke-mappingen så hver hendelse
   lagres med dagene den dekker i HVER uke: `eventsByWeek[w].push({ ev, dagFra, dagTil })`
   (min/maks ukedag man–fre i den uka). Flerukers ferie får riktig dag-spenn per uke.
-- [ ] **Fase 2 — `lagFridagMerke(fe, week)` (JUST. 1 + 3).** Bygger merket med dag
+- [x] **Fase 2 — `lagFridagMerke(fe, week)` (JUST. 1 + 3).** Bygger merket med dag
   primært (`Man–Fre` / `Ons`) og diskret klamret dato som støtte. Ikon: match på
   navn — `høstferie → 🍂`, `vinterferie → ❄️`, ellers uendret type-ikon
   (`ferie 🏖️ · helligdag 🎉 · planleggingsdag 📝`). Tekst: `ikon Tittel · type · DAG dato`.
-- [ ] **Fase 3 — Kronologisk innsortering (JUST. 2).** I uker MED økter: bygg én liste
+- [x] **Fase 3 — Kronologisk innsortering (JUST. 2).** I uker MED økter: bygg én liste
   av økter (`dag = day_of_week`) + fridager (`dag = dagFra`), sorter på dag (ties:
   fridag før økt, så fag-navn). Render i den rekkefølgen i BÅDE desktop-rad-lista og
   mobil-kortlista. Rene ferieuker uten økter: behold P18 (merke rett under overskrift).
-- [ ] **Fase 4 — CSS.** `.mp-fridag-dato` diskret (dempet/lettere), `.mp-fridag-dag`
+- [x] **Fase 4 — CSS.** `.mp-fridag-dato` diskret (dempet/lettere), `.mp-fridag-dag`
   litt uthevet. `.min-plan-fridag` ellers uendret.
-- [ ] **Fase 5 — Avslutning.** Cache-bust (`20260621d`), commit per delsteg, kryss av,
+- [x] **Fase 5 — Avslutning.** Cache-bust (`20260621d`), commit per delsteg, kryss av,
   oppsummering, PR + merge.
 
 ### Verifiser før merge

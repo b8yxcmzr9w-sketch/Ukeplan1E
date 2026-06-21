@@ -658,9 +658,11 @@ tr:hover td { background: var(--primær-svak); }
 /* Skolerute-merke i «Alle mine økter» (ferie/høytid/planleggingsdag) */
 .min-plan-fridag {
   background: var(--fridag-bg); color: var(--fridag-tekst);
-  border-radius: 6px; padding: 6px 12px; margin: 0 0 8px;
+  border-radius: 6px; padding: 6px 12px; margin: 2px 0;
   font-size: .85rem; font-weight: 500;
 }
+.min-plan-fridag .mp-fridag-dag  { font-weight: 700; }
+.min-plan-fridag .mp-fridag-dato { font-weight: 400; opacity: .65; font-size: .8rem; }
 
 /* Desktop: rad-basert flex. Hver økt pakkes tett etter SITT eget innhold
    (ikke en justert tabell): faste, litt smale kolonner for ☑/Klasse/Fag, mens
