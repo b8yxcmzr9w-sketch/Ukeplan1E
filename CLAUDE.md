@@ -24,6 +24,10 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 - Hold deg til oppgavens omfang — ikke endre kode utenfor det som er avtalt.
 
 ## Fast prosedyre for hver Code-økt
+- **Kjør `git fetch` FØR du sammenligner mot eller brancher fra origin/main.**
+  Arbeidsmiljøet starter ofte med utdatert remote-tracking; konklusjoner om hva
+  origin/main inneholder må tas etter fetch, aldri før. (Dette har skapt falske
+  «feil repo»/«divergens»-alarmer flere ganger.)
 - **Neste plan-nummer leses fra PLAN.md** — aldri anta eller hardkod. Code finner
   selv neste ledige PN ved oppstart.
 - **Avslutt hver økt med en kort oppsummering** (norsk, ikke-teknisk) som Morfar kan
