@@ -1,7 +1,7 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING — Økt X (P18): Skolerute i «Alle mine økter»
-Branch `claude/P18-skolerute-i-alle-okter`.
+## Status: FULLFØRT (venter verifisering) — Økt X (P18): Skolerute i «Alle mine økter»
+Cache-bust: `20260621c`. Branch `claude/P18-skolerute-i-alle-okter` pushet.
 
 ---
 
@@ -23,20 +23,20 @@ Branch `claude/P18-skolerute-i-alle-okter`.
 - **Ferieuker uten økter skal også vises** (egen uke-overskrift med ferie-merke).
 
 ### Delplan (faser)
-- [ ] **Fase 1 — Datahenting.** Parallelt med `sessions`: hent `school_calendar`
+- [x] **Fase 1 — Datahenting.** Parallelt med `sessions`: hent `school_calendar`
   for aktivt skoleår (`school_id`, `deleted_at is null`, innenfor `skoleaarIntervall`,
   typer `ferie/helligdag/planleggingsdag`).
-- [ ] **Fase 2 — Map hendelse → uke + union av uker.** For hver hendelse: samle
+- [x] **Fase 2 — Map hendelse → uke + union av uker.** For hver hendelse: samle
   ISO-uker den dekker (iterer ukedager man–fre fra start til slutt → `getISOWeek`),
   filtrer til skoleårets uke-vindu (`ukePosisjon ≤ sluttPos`). Bygg `eventsByWeek`.
   Vis-uker = union av økt-uker ∪ skolerute-uker, sortert i skoleår-rekkefølge
   (33→52→1→24). Juleferie (uke 52→1) havner korrekt i begge uker.
-- [ ] **Fase 3 — Render.** Under hver uke-overskrift: skolerute-linje(r) (ikon +
+- [x] **Fase 3 — Render.** Under hver uke-overskrift: skolerute-linje(r) (ikon +
   tittel + type via `kalenderTypeNavn` + `ukeTekst` + dato). Guard for uker uten
   økter (ingen tabell/kort, bare overskrift + ferie-merke). «Nå»-anker, bulk og
   observer beholdes uendret. Linja vises i både desktop og mobil.
-- [ ] **Fase 4 — CSS.** `.min-plan-fridag`-merke (bruker `--fridag-bg`/`--fridag-tekst`).
-- [ ] **Fase 5 — Avslutning.** Oppdater `PLAN.md` + `CLAUDE.md`, cache-bust
+- [x] **Fase 4 — CSS.** `.min-plan-fridag`-merke (bruker `--fridag-bg`/`--fridag-tekst`).
+- [x] **Fase 5 — Avslutning.** Oppdater `PLAN.md` + `CLAUDE.md`, cache-bust
   (`20260621c`), commit per delsteg, PR + merge.
 
 ### Verifiser før merge
