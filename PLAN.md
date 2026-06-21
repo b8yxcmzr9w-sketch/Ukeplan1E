@@ -78,7 +78,23 @@ er sesjonsintern, og elevlenker skal forbli rene `#/klasse/:navn` uten ukenummer
   elev-«Nå» beregnes uavhengig; vi seeder kun INITIELL uke. Klikk på «Nå» skriver
   naaWeek til ctx via `renderUke` — konsistent.
 
+### STEG 1-tillegg — Hvorfor «Elevvisning» skjules i admin-modus
+Asymmetriske synlighetsbetingelser i `oppdaterHeader`:
+- `laererBtn` (Elevvisning/Lærervisning): `skjulLaerer = harAdminTilgang() && APP.isAdminActive`
+  (app.js:702) → `classList.toggle('skjult', skjulLaerer)` (app.js:706). **Skjules** når
+  admin-modus er på.
+- `adminToggle` (Admin): `visAdmin = harAdminTilgang()` (app.js:701) → vises alltid
+  (app.js:713–714), modus-uavhengig.
+
+### STEG 2-tillegg — Delplan (symmetrisk synlighet)
+- Erstatt app.js:706 med `laererBtn.classList.remove('skjult')` og fjern overflødig
+  `skjulLaerer` (app.js:702). `adminToggle` uendret.
+- Resultat: innlogget admin ser begge knappene i alle moduser; vanlig lærer ser kun
+  elev/lærer-toggelen; utlogget ser ingen (uendret `else`-gren).
+
 **Faser:**
+- [ ] Fase 0 — Symmetrisk synlighet: `laererBtn` alltid synlig for innlogget bruker
+  (fjern `skjulLaerer`).
 - [ ] Fase 1 — Innfør `APP.laererCtx` (init i `APP`-objektet) + skriv/les i
   `renderLaererView` (klasse-seed, select/setTab-skriving).
 - [ ] Fase 2 — `renderMinKlasseTab`: seed uke + skoleår fra ctx; skriv uke/skoleår/klasse.
@@ -100,6 +116,8 @@ er sesjonsintern, og elevlenker skal forbli rene `#/klasse/:navn` uten ukenummer
 - [ ] Retur til lærervisning lander på samme klasse + uke + fane
 - [ ] Admin-toggelen navigerer fortsatt ikke til admin-panelet (P10 intakt)
 - [ ] Hard refresh henger ikke på «Laster…»
+- [ ] «Admin» og «Elevvisning» er begge synlige samtidig, i alle moduser
+- [ ] Ingen av de to knappene skjules når den andre aktiveres
 
 ---
 
