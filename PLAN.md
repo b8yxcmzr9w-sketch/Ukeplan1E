@@ -1,42 +1,46 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING — Økt X (P17): «Alle mine økter»-tabell — tett pakking av kolonner
-Branch (foreslått): `claude/PN-tabell-tett-pakking`.
+## Status: FULLFØRT (venter verifisering) — Økt X (P17): «Alle mine økter» — tett pakking (rad-basert)
+Cache-bust: `20260621b`. Branch `claude/P17-tabell-tett-pakking` pushet.
 
 ---
 
 ## Økt X (P17): «Alle mine økter» — fjern dødt mellomrom mellom kolonnene
 
-**Scope:** Kun `v4/style.css` (`.min-plan-tabell`-kolonnereglene) + `v4/index.html`
-(cache-bust). Ingen JS-, DB- eller edge-function-endringer.
+**Scope:** `v4/app.js` (desktop-markup i `renderAlleOkterTab`), `v4/style.css`
+(`.min-plan-tabell`-reglene) + `v4/index.html` (cache-bust). Ingen DB-/edge-endringer.
 
-### Funn — rotårsak (kun lesing)
-- Kolonnene har faste prosentbredder: `mp-akt 30%`, `mp-info 30%`, `mp-opp 15%`
-  (style.css:680–682). Disse reserverer langt mer enn innholdet trenger → store
-  tomromsfelt: Aktivitet→Oppmøte og (særlig) Oppmøte→Info.
-- P13 turte ikke gjøre Info grådig (`width:100%`) fordi den globale regelen
-  `.side-wrap { word-break: break-word }` (style.css:909) krymper hver celles
-  min-bredde til ett tegn → da kollapser de andre kolonnene tegn-for-tegn (P12-feilen).
-  Løsningen er å nøytralisere `word-break` på celle-nivå, så min-bredde = lengste ORD.
+### Funn + valgt tilnærming
+- Dagens desktop-visning er en ekte `<table>` (`table-layout: auto` + faste
+  prosentbredder `mp-akt 30%`, `mp-info 30%`, `mp-opp 15%`). En tabell tvinger
+  FELLES kolonnebredder: hver kolonne blir like bred som det bredeste innholdet på
+  tvers av ALLE rader → korte rader får tomrom.
+- **Bruker valgte «Hver rad pakkes for seg»** (godkjent): hver økt skal hugge sitt
+  eget innhold, kolonnene står IKKE nødvendigvis rett under hverandre fra rad til rad.
+  Dette kan ikke gjøres med en `<table>` → bytter desktop til **rad-basert flex**.
 
 ### Delplan (faser)
-- [ ] **Fase 1 — Ordgrense på celle-nivå (forutsetning for tett pakking).**
-  `.min-plan-tabell td { word-break: normal; overflow-wrap: break-word; }`.
-  `overflow-wrap: break-word` påvirker IKKE min-content (kun veldig lange enkeltord
-  brytes som siste utvei), så `table-layout: auto` reserverer plass for lengste ord
-  → aldri tegn-for-tegn. Beholder P13/P17-oppførselen.
-- [ ] **Fase 2 — Tett pakking av kolonnene.**
-  - `mp-klasse`: 88px → 78px (litt smalere, fortsatt fast + nowrap).
-  - `mp-fag`: 92px → 82px (litt smalere, fortsatt fast).
-  - `mp-akt`, `mp-opp`: fjern prosentbredde → krymper til innhold (auto).
-  - `mp-pg`: behold `nowrap`, ingen fast bredde (hugger innhold).
-  - `mp-info`: `width: 100%` → sluker all slakk til høyre, så de foranstående
-    kolonnene pakkes tett. (Trygt nå som Fase 1 er på plass.)
-  - Behold diskret `border-left`-skille mellom de fire flytende kolonnene.
-- [ ] **Fase 3 — Cache-bust (`20260621b`), commit per delsteg, kryss av, oppsummering.**
+- [x] **Fase 1 — app.js: desktop fra `<table>` til flex-rader.**
+  Bytt `<table>/<thead>/<tbody>/<tr>/<td>` til `div.min-plan-tabell` (flex-kolonne)
+  med én `div.min-plan-rad` (flex) per økt. Dropp kolonnehodet (gir ikke mening når
+  kolonnene ikke er justert). Tomme felt (P/G, Aktivitet, Oppmøte) utelates per rad
+  → tett pakking. Oppmøte får `📍`-prefiks (som mobilkortet) for å skille det fra
+  Info. Kebab bor i Info-cellen. Mobil-kortlista uendret.
+- [x] **Fase 2 — style.css: flex-regler.**
+  - `.min-plan-tabell`: `display:flex; flex-direction:column`.
+  - `.min-plan-rad`: `display:flex; align-items:flex-start`, hover-stil, ordgrense
+    (`word-break:normal; overflow-wrap:break-word`) + `min-width:0` på barn (bryting
+    aldri tegn-for-tegn).
+  - `mp-cb` (~22px), `mp-klasse` (88→74px), `mp-fag` (92→78px): faste, litt smalere,
+    `flex:0 0 auto`.
+  - `mp-pg`, `mp-akt`, `mp-opp`: `flex:0 1 auto` → hugger innhold.
+  - `mp-info`: `flex:1 1 auto` → sluker slakken til høyre.
+  - Diskret `border-left` + `padding-left` som skille foran hver flytende kolonne.
+  - Fjern gamle `td/th/tr/%`-regler. Mobil-`display:none` beholdes.
+- [x] **Fase 3 — Cache-bust (`20260621b`), commit per delsteg, kryss av, oppsummering.**
 
 ### Verifiser før merge
-- [ ] Ingen store tomromsfelt mellom Aktivitet→Oppmøte→Info
+- [ ] Ingen store tomromsfelt mellom Aktivitet→Oppmøte→Info (hver rad tett)
 - [ ] Klasse og Fag litt smalere enn før, fortsatt faste
 - [ ] Aktivitet/Oppmøte/P-G krymper til innhold
 - [ ] Tekst bryter fortsatt på ordgrense (ikke tegn-for-tegn)
