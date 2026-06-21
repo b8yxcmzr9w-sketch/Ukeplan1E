@@ -24,6 +24,10 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 - Hold deg til oppgavens omfang — ikke endre kode utenfor det som er avtalt.
 
 ## Fast prosedyre for hver Code-økt
+- **Kjør `git fetch` FØR du sammenligner mot eller brancher fra origin/main.**
+  Arbeidsmiljøet starter ofte med utdatert remote-tracking; konklusjoner om hva
+  origin/main inneholder må tas etter fetch, aldri før. (Dette har skapt falske
+  «feil repo»/«divergens»-alarmer flere ganger.)
 - **Neste plan-nummer leses fra PLAN.md** — aldri anta eller hardkod. Code finner
   selv neste ledige PN ved oppstart.
 - **Avslutt hver økt med en kort oppsummering** (norsk, ikke-teknisk) som Morfar kan
@@ -102,8 +106,21 @@ APP = {
   renderToken: 0,
   isAdminActive: false,
   klasseVelger: null,      // { klasser, aktivKlasse, onChange } – satt av renderMinKlasseTab
+  laererCtx: {...},        // P21: bevarer { klasseId, klasseNavn, week, skolear, tab } gjennom
+                           // admin-/elevvisning-toggle. Lærervisningen skriver, re-render seeder.
+  elevPeekWeek: null,      // P21: transient uke for lærer-peek av elevvisning (leses én gang)
 }
 ```
+
+### Bevaring av kontekst ved toggling (P21)
+`APP.laererCtx` holder hvor læreren var (klasse + uke + skoleår + fane) gjennom hele
+sesjonen. `renderLaererView` seeder `aktivKlasse` fra `laererCtx.klasseId`,
+`renderMinKlasseTab` seeder uke/skoleår — og begge skriver tilbake ved endring.
+Admin-toggle (`toggleAdminModus` → `router()`) bevarer dermed klasse + uke automatisk
+(P10 intakt: ingen navigasjon). Elevvisning-toggelen åpner `#/klasse/<klasse>` og setter
+transient `APP.elevPeekWeek` (renderElevView leser den ÉN gang og nuller den, så
+elev-lenker `#/klasse/X` forblir rene/på «nå»-uka). Admin- og Elevvisning-knappene er
+alltid synlige samtidig for innlogget admin (symmetrisk synlighet i `oppdaterHeader`).
 
 ## Viktige invarianter / fallgruver
 

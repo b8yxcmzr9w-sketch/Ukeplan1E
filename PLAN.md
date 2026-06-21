@@ -1,5 +1,127 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P21): Bevar klasse + uke (+ fane) ved toggling
+Cache-bust: `20260621f`. Branch `claude/intelligent-tesla-6lfogx` (mandatert dev-branch;
+bygger på `origin/main`@P20). Delplanen ble godkjent og bygget fase 0–4.
+
+### STEG 1 — Kartlegging (kun lesing, med bevis)
+
+a) **«Gjeldende klasse» i lærervisning — FINNES DELVIS.**
+   `renderLaererView` (app.js:1447) setter `let aktivKlasse = mineKlasser[0] || andreKlasser[0]`
+   — lokal variabel, defaulter ALLTID til første klasse (sortert), ingen persistens.
+   Mens man står på Klasse-fanen eksponeres den via
+   `APP.klasseVelger = { aktivKlasse, setKlasse }` (app.js:1608), men `klasseVelger`
+   nulles så snart man bytter fane (app.js:1467) eller forlater lærervisning
+   (`renderElevView` app.js:922, `renderAdminPanel` app.js:3251). Ingen varig
+   «valgt klasse»-state mellom re-renders.
+
+b) **«Gjeldende uke» / skoleår i Klasse-visningen — FINNES IKKE (ikke persistert).**
+   `renderMinKlasseTab` (app.js:1581) setter `let currentWeek = gjeldendeSkoleuke(...)`
+   — lokal closure-variabel. Endres av ← Forrige/Neste →/uke-input/«Nå» via `renderUke`,
+   men lagres aldri utenfor closuren. `valgtSkolear` (app.js:1586) er også lokal.
+   Helper `gjeldendeSkoleuke(schoolStart, schoolEnd)` (app.js:142) finnes og gir
+   «nå»-uka, men det finnes INGEN state for «valgt uke».
+
+c) **`toggleAdminModus()` — FINNES, og forklarer hoppet.**
+   app.js:468 oppdaterer `is_admin_active` i DB + `APP.isAdminActive`, kaller
+   `oppdaterHeader()` og deretter `router()` (app.js:476). Den navigerer IKKE
+   (P10 intakt — samme hash beholdes). MEN `router()` (app.js:787) kjører
+   `renderLaererView()` på nytt, som re-oppretter alt fra bunnen: `aktivKlasse`
+   resettes til `mineKlasser[0]` (= første sorterte klasse, derfor 1D før 1E) og
+   `currentWeek` resettes til `gjeldendeSkoleuke`. Derav hoppet til annen klasse/uke.
+   NB: **fanen bevares allerede** via hash (`history.replaceState … #/laerer/<slug>`
+   app.js:1464 → `initTab` app.js:1457). Kun klasse + uke går tapt ved admin-toggle.
+
+d) **Elevvisning-toggelen — FINNES, men tar ikke imot klasse/uke.**
+   `oppdaterHeader` (app.js:709) setter `laererBtn.onclick = () =>
+   navigate(erILaerer ? '#/' : '#/laerer')`. Fra lærer → `#/` = velkomstside
+   (klasseliste), altså IKKE lærerens klasse. Elevruten `#/klasse/:navn`
+   (router app.js:801 → `renderElevView(klasseNavn)` app.js:915) kan ta imot KLASSE
+   via hash, men `currentWeek` (app.js:972) settes alltid til `gjeldendeSkoleuke` —
+   ingen uke-parameter. Retur → `#/laerer` resetter alt (jf. c).
+
+e) **«Hvor var jeg»-state — FINNES IKKE.**
+   `APP` har `currentView`, `currentKlasse` (kun elev), `klasseVelger` (kun mens man
+   står på Klasse-fanen, nulles ellers), `isAdminActive`, `renderToken`. Ingen samlet
+   bærer av klasse + uke + skoleår + fane mellom visninger.
+
+### STEG 2 — Delplan (enkleste robuste mekanisme)
+
+**Idé:** Innfør ÉN in-memory kontekst-bærer `APP.laererCtx = { klasseId, klasseNavn,
+week, skolear, tab }` som lever gjennom hele sesjonen (ikke localStorage — toggling
+er sesjonsintern, og elevlenker skal forbli rene `#/klasse/:navn` uten ukenummer).
+
+- **Skriving (lærervisning oppdaterer ctx):**
+  - `renderLaererView`: ved init, skriv `tab` (fra hash). Ved klassebytte (select
+    `change`, app.js:1496) skriv `klasseId/klasseNavn`. Ved fanebytte (`setTab`,
+    app.js:1462) skriv `tab`.
+  - `renderMinKlasseTab`: i `renderUke` skriv `week = currentWeek`; ved
+    skoleår-bytte (aarSel `change`, app.js:1625) og `setKlasse` (app.js:1608) skriv
+    `skolear`/`klasse`. (Init-skriving av klasse skjer her også.)
+- **Lesing (seed ved re-render):**
+  - `renderLaererView`: seed `aktivKlasse` fra `APP.laererCtx.klasseId` (finn i
+    mine/andre-listene; fallback til dagens default hvis borte/slettet).
+  - `renderMinKlasseTab`: seed `currentWeek` fra `APP.laererCtx.week ?? gjeldendeSkoleuke`
+    og `valgtSkolear` fra `APP.laererCtx.skolear ?? aktivtSkolear`.
+- **Admin-toggle (krav 1):** uendret `toggleAdminModus` (P10 intakt) — fordi
+  re-render nå seeder fra ctx, bevares klasse + uke automatisk. Fanen bevares som i dag.
+- **Elevvisning fra lærer (krav 2):** endre `laererBtn.onclick`: når `erILaerer`, naviger
+  til `#/klasse/<APP.laererCtx.klasseNavn>` (fallback `#/` hvis ingen klasse) og sett
+  transient `APP.elevPeekWeek = APP.laererCtx.week`. `renderElevView` leser
+  `APP.elevPeekWeek` ÉN gang (nulles straks) for å sette `currentWeek`; ellers
+  `gjeldendeSkoleuke`. Elever som åpner `#/klasse/X` direkte påvirkes ikke
+  (elevPeekWeek er da undefined).
+- **Retur til lærer (krav 3):** når `!erILaerer`, naviger til
+  `#/laerer/<APP.laererCtx.tab || 'klasse'>` → fane gjenopprettes via hash, klasse via
+  ctx-seed, uke via ctx-seed.
+- **«Nå»-knapp (krav 4):** uendret. `naaWeek = gjeldendeSkoleuke` (app.js:1691) og
+  elev-«Nå» beregnes uavhengig; vi seeder kun INITIELL uke. Klikk på «Nå» skriver
+  naaWeek til ctx via `renderUke` — konsistent.
+
+### STEG 1-tillegg — Hvorfor «Elevvisning» skjules i admin-modus
+Asymmetriske synlighetsbetingelser i `oppdaterHeader`:
+- `laererBtn` (Elevvisning/Lærervisning): `skjulLaerer = harAdminTilgang() && APP.isAdminActive`
+  (app.js:702) → `classList.toggle('skjult', skjulLaerer)` (app.js:706). **Skjules** når
+  admin-modus er på.
+- `adminToggle` (Admin): `visAdmin = harAdminTilgang()` (app.js:701) → vises alltid
+  (app.js:713–714), modus-uavhengig.
+
+### STEG 2-tillegg — Delplan (symmetrisk synlighet)
+- Erstatt app.js:706 med `laererBtn.classList.remove('skjult')` og fjern overflødig
+  `skjulLaerer` (app.js:702). `adminToggle` uendret.
+- Resultat: innlogget admin ser begge knappene i alle moduser; vanlig lærer ser kun
+  elev/lærer-toggelen; utlogget ser ingen (uendret `else`-gren).
+
+**Faser:**
+- [x] Fase 0 — Symmetrisk synlighet: `laererBtn` alltid synlig for innlogget bruker
+  (fjern `skjulLaerer`).
+- [x] Fase 1 — Innfør `APP.laererCtx` (init i `APP`-objektet) + skriv/les i
+  `renderLaererView` (klasse-seed, select/setTab-skriving).
+- [x] Fase 2 — `renderMinKlasseTab`: seed uke + skoleår fra ctx; skriv uke/skoleår/klasse.
+- [x] Fase 3 — Elev-toggle: `laererBtn.onclick` (klasse+uke ut), `renderElevView`
+  konsumerer `APP.elevPeekWeek`; retur til `#/laerer/<tab>`.
+- [x] Fase 4 — Cache-bust (`20260621f`), oppdater APP-doc i CLAUDE.md, commit per fase, oppsummering.
+
+**Flagg / risiko:**
+- Lav kompleksitet, kun `v4/app.js` + cache-bump + doc. Ingen DB/edge/CSS/migrasjoner.
+- Branch-merknad: oppgaven foreslo `claude/PN-bevar-kontekst-ved-toggle`, men
+  systemets «Git Development Branch Requirements» mandaterer `claude/intelligent-tesla-6lfogx`
+  — jeg blir på den (ingen push til annen branch uten eksplisitt tillatelse).
+- `origin/main` har en urelatert historie (91 commits, ingen P9–P20); P-arbeidet
+  ligger kun på `claude/intelligent-tesla-6lfogx` (127 commits). Bygger derfor videre der.
+
+### Sjekkliste (verifiseres etter bygging)
+- [ ] Admin-toggle bevarer klasse + uke (ingen hopp til annen klasse/uke)
+- [ ] Elevvisning fra lærer viser samme klasse + uke
+- [ ] Retur til lærervisning lander på samme klasse + uke + fane
+- [ ] Admin-toggelen navigerer fortsatt ikke til admin-panelet (P10 intakt)
+- [ ] Hard refresh henger ikke på «Laster…»
+- [ ] «Admin» og «Elevvisning» er begge synlige samtidig, i alle moduser
+- [ ] Ingen av de to knappene skjules når den andre aktiveres
+
+---
+
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P20): Skolerute-merke — ny rekkefølge + ikoner for alle fridagstyper
 Cache-bust: `20260621e`. Branch `claude/P20-skolerute-merke-format` (fra `origin/main`, har P9–P19) pushet.
 Bruker presiserte: 1. mai er høytidsdag (ikke helligdag) som 17. mai — håndteres ved

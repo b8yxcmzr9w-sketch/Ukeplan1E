@@ -28,6 +28,10 @@ window.APP = {
   isAdminActive: false,
   renderToken: 0,
   klasseVelger: null,    // { aktivKlasse, setKlasse } – satt av renderMinKlasseTab (klassevelger-fanen)
+  // P21: in-memory kontekst som bevarer hvor læreren var (klasse, uke, skoleår,
+  // fane) gjennom admin-toggle og elevvisning-toggle. Lever hele sesjonen.
+  laererCtx: { klasseId: null, klasseNavn: null, week: null, skolear: null, tab: null },
+  elevPeekWeek: null,    // P21: transient – uke som elevvisningen skal åpne på (lærer-peek)
 }
 
 // Registreres umiddelbart (ikke i init) slik at PASSWORD_RECOVERY/invitasjon
@@ -699,14 +703,29 @@ function oppdaterHeader() {
 
   if (APP.user && APP.profile) {
     const visAdmin = harAdminTilgang()
-    const skjulLaerer = harAdminTilgang() && APP.isAdminActive
 
-    // Toggle: Elevvisning / Lærervisning (alltid synlig)
+    // Toggle: Elevvisning / Lærervisning. Alltid synlig for innlogget bruker –
+    // symmetrisk med Admin-knappen, så en admin kan veksle fritt i alle moduser
+    // (P21). Tidligere ble den skjult i admin-modus (asymmetrisk oppførsel).
     if (laererBtn) {
-      laererBtn.classList.toggle('skjult', skjulLaerer)
+      laererBtn.classList.remove('skjult')
       const erILaerer = APP.currentView === 'laerer'
       laererBtn.textContent = erILaerer ? 'Elevvisning' : 'Lærervisning'
-      laererBtn.onclick = () => navigate(erILaerer ? '#/' : '#/laerer')
+      laererBtn.onclick = () => {
+        if (erILaerer) {
+          // P21: åpne elevvisningen for nøyaktig den klassen + uka læreren står i.
+          const navn = APP.laererCtx.klasseNavn
+          if (navn) {
+            APP.elevPeekWeek = APP.laererCtx.week   // transient – leses én gang av renderElevView
+            navigate(`#/klasse/${encodeURIComponent(navn)}`)
+          } else {
+            navigate('#/')
+          }
+        } else {
+          // P21: tilbake til lærervisning på samme fane (klasse + uke seeder fra ctx).
+          navigate(`#/laerer/${APP.laererCtx.tab || 'klasse'}`)
+        }
+      }
       laererBtn.title = erILaerer ? 'Bytt til elevvisning' : 'Gå til lærervisning'
     }
     // Toggle: Admin av/på (alltid synlig for admin)
@@ -915,6 +934,10 @@ function showConflictWarning(konflikt) {
 async function renderElevView(klasseNavn) {
   const myToken = ++APP.renderToken
   const main = document.getElementById('app-main')
+  // P21: lærer-peek – uke som elevvisningen skal åpne på. Leses ÉN gang og nulles,
+  // slik at elever som åpner #/klasse/X direkte alltid får «nå»-uka.
+  const peekWeek = APP.elevPeekWeek
+  APP.elevPeekWeek = null
   // Rydd opp overflow-lytter fra forrige elevvisning
   if (APP._closeOverflowFn) { document.removeEventListener('click', APP._closeOverflowFn); APP._closeOverflowFn = null }
   clearEl(main)
@@ -969,7 +992,8 @@ async function renderElevView(klasseNavn) {
   // Week state
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
-  let currentWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
+  // P21: lærer-peek åpner på samme uke som i lærervisningen; ellers «nå»-uka.
+  let currentWeek = peekWeek ?? gjeldendeSkoleuke(schoolStart, schoolEnd)
 
   const aktivtSkolear = APP.school?.active_school_year
 
@@ -1444,7 +1468,13 @@ async function renderLaererView() {
   const { data: alleRows } = await sb.from('classes')
     .select('*').eq('school_id', APP.school.id).order('name')
   const andreKlasser = (alleRows || []).filter(k => !mineIds.has(k.id))
-  let aktivKlasse = mineKlasser[0] || andreKlasser[0] || null
+  // P21: seed valgt klasse fra lagret kontekst (bevares gjennom admin-/elev-toggle).
+  // Fallback til første klasse hvis ingen kontekst eller klassen er borte/slettet.
+  let aktivKlasse =
+    (APP.laererCtx.klasseId && [...mineKlasser, ...andreKlasser].find(k => k.id === APP.laererCtx.klasseId))
+    || mineKlasser[0] || andreKlasser[0] || null
+  // Skriv tilbake faktisk valgt klasse, så ctx alltid speiler det som vises.
+  if (aktivKlasse) { APP.laererCtx.klasseId = aktivKlasse.id; APP.laererCtx.klasseNavn = aktivKlasse.name }
 
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
   const tabSlugs = ['klasse', 'alle', 'sok']
@@ -1461,6 +1491,7 @@ async function renderLaererView() {
 
   function setTab(idx) {
     const slug = tabSlugs[idx]
+    APP.laererCtx.tab = slug   // P21: husk fane for retur fra elevvisning
     history.replaceState(null, '', `#/laerer/${slug}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
@@ -1494,6 +1525,7 @@ async function renderLaererView() {
     const k = [...mineKlasser, ...andreKlasser].find(x => x.id === velgerSel.value)
     if (!k) return
     aktivKlasse = k
+    APP.laererCtx.klasseId = k.id; APP.laererCtx.klasseNavn = k.name   // P21: husk valgt klasse
     oppdaterKlasseStatisk(k.name)
     // På klasse-fanen: bytt klasse uten å miste valgt uke. Ellers: gå til fanen.
     if (APP.klasseVelger && APP.klasseVelger.setKlasse) APP.klasseVelger.setKlasse(k)
@@ -1578,12 +1610,15 @@ async function renderMinKlasseTab(container, klasse) {
 
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
-  let currentWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
+  // P21: seed uke fra lagret kontekst (bevares gjennom admin-/elev-toggle).
+  // Fallback til «nå»-uka når ingen kontekst finnes.
+  let currentWeek = APP.laererCtx.week ?? gjeldendeSkoleuke(schoolStart, schoolEnd)
 
   // Hent tilgjengelige skoleår for denne skolen (for skoleår-velger)
   const aktivtSkolear = APP.school?.active_school_year || null
   const nesteAar = nesteSkolear(aktivtSkolear)
-  let valgtSkolear = aktivtSkolear
+  // P21: seed valgt skoleår fra kontekst (fallback til aktivt år).
+  let valgtSkolear = APP.laererCtx.skolear ?? aktivtSkolear
   let tilgjengeligeSkolear = aktivtSkolear ? [aktivtSkolear] : []
   try {
     const { data: aarRows } = await sb.from('sessions')
@@ -1605,7 +1640,11 @@ async function renderMinKlasseTab(container, klasse) {
   // Eksponer klassevelger-koblingen for fanen (renderLaererView): setKlasse
   // bytter klasse uten å miste valgt uke. aktivKlasse brukes også av
   // oppdaterHeader til den statiske «klasse X»-teksten.
-  APP.klasseVelger = { aktivKlasse, setKlasse: (k) => { aktivKlasse = k; APP.klasseVelger.aktivKlasse = k; renderUke() } }
+  APP.klasseVelger = { aktivKlasse, setKlasse: (k) => {
+    aktivKlasse = k; APP.klasseVelger.aktivKlasse = k
+    APP.laererCtx.klasseId = k.id; APP.laererCtx.klasseNavn = k.name   // P21: husk valgt klasse
+    renderUke()
+  } }
   oppdaterHeader()
 
   const topRow = el('div', { class: 'laerer-top' })
@@ -1622,7 +1661,7 @@ async function renderMinKlasseTab(container, klasse) {
       if (aa === valgtSkolear) opt.selected = true
       aarSel.appendChild(opt)
     }
-    aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; renderUke() })
+    aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; APP.laererCtx.skolear = valgtSkolear; renderUke() })
     topRow.appendChild(aarSel)
   }
 
@@ -1651,6 +1690,9 @@ async function renderMinKlasseTab(container, klasse) {
 
   async function renderUke() {
     const myToken = ++ukeRenderToken
+    // P21: speil gjeldende uke/skoleår i konteksten (bevares ved toggling).
+    APP.laererCtx.week = currentWeek
+    APP.laererCtx.skolear = valgtSkolear
     clearEl(weekArea)
     bulkSelected.clear()
 
