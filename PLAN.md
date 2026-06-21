@@ -1,5 +1,50 @@
 # PLAN — Ukeplan1E v4
 
+## Status: VENTER GODKJENNING — Økt X (P17): «Alle mine økter»-tabell — tett pakking av kolonner
+Branch (foreslått): `claude/PN-tabell-tett-pakking`.
+
+---
+
+## Økt X (P17): «Alle mine økter» — fjern dødt mellomrom mellom kolonnene
+
+**Scope:** Kun `v4/style.css` (`.min-plan-tabell`-kolonnereglene) + `v4/index.html`
+(cache-bust). Ingen JS-, DB- eller edge-function-endringer.
+
+### Funn — rotårsak (kun lesing)
+- Kolonnene har faste prosentbredder: `mp-akt 30%`, `mp-info 30%`, `mp-opp 15%`
+  (style.css:680–682). Disse reserverer langt mer enn innholdet trenger → store
+  tomromsfelt: Aktivitet→Oppmøte og (særlig) Oppmøte→Info.
+- P13 turte ikke gjøre Info grådig (`width:100%`) fordi den globale regelen
+  `.side-wrap { word-break: break-word }` (style.css:909) krymper hver celles
+  min-bredde til ett tegn → da kollapser de andre kolonnene tegn-for-tegn (P12-feilen).
+  Løsningen er å nøytralisere `word-break` på celle-nivå, så min-bredde = lengste ORD.
+
+### Delplan (faser)
+- [ ] **Fase 1 — Ordgrense på celle-nivå (forutsetning for tett pakking).**
+  `.min-plan-tabell td { word-break: normal; overflow-wrap: break-word; }`.
+  `overflow-wrap: break-word` påvirker IKKE min-content (kun veldig lange enkeltord
+  brytes som siste utvei), så `table-layout: auto` reserverer plass for lengste ord
+  → aldri tegn-for-tegn. Beholder P13/P17-oppførselen.
+- [ ] **Fase 2 — Tett pakking av kolonnene.**
+  - `mp-klasse`: 88px → 78px (litt smalere, fortsatt fast + nowrap).
+  - `mp-fag`: 92px → 82px (litt smalere, fortsatt fast).
+  - `mp-akt`, `mp-opp`: fjern prosentbredde → krymper til innhold (auto).
+  - `mp-pg`: behold `nowrap`, ingen fast bredde (hugger innhold).
+  - `mp-info`: `width: 100%` → sluker all slakk til høyre, så de foranstående
+    kolonnene pakkes tett. (Trygt nå som Fase 1 er på plass.)
+  - Behold diskret `border-left`-skille mellom de fire flytende kolonnene.
+- [ ] **Fase 3 — Cache-bust (`20260621b`), commit per delsteg, kryss av, oppsummering.**
+
+### Verifiser før merge
+- [ ] Ingen store tomromsfelt mellom Aktivitet→Oppmøte→Info
+- [ ] Klasse og Fag litt smalere enn før, fortsatt faste
+- [ ] Aktivitet/Oppmøte/P-G krymper til innhold
+- [ ] Tekst bryter fortsatt på ordgrense (ikke tegn-for-tegn)
+- [ ] Diskret skille beholdt
+- [ ] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P16): «Nå»-knapp må vises i begge scroll-retninger
 Cache-bust: `20260621a`. Branch `claude/P16-naa-knapp-vises-begge-retninger` pushet.
 
