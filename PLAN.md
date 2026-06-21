@@ -1,8 +1,8 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING (kartlegging + delplan) — Økt X (P21): Bevar klasse + uke (+ fane) ved toggling
-Branch `claude/intelligent-tesla-6lfogx` (mandatert dev-branch; har P8–P20).
-Ingen kode skrevet ennå — venter på godkjenning av delplanen under.
+## Status: FULLFØRT (venter verifisering) — Økt X (P21): Bevar klasse + uke (+ fane) ved toggling
+Cache-bust: `20260621f`. Branch `claude/intelligent-tesla-6lfogx` (mandatert dev-branch;
+bygger på `origin/main`@P20). Delplanen ble godkjent og bygget fase 0–4.
 
 ### STEG 1 — Kartlegging (kun lesing, med bevis)
 
@@ -100,7 +100,7 @@ Asymmetriske synlighetsbetingelser i `oppdaterHeader`:
 - [x] Fase 2 — `renderMinKlasseTab`: seed uke + skoleår fra ctx; skriv uke/skoleår/klasse.
 - [x] Fase 3 — Elev-toggle: `laererBtn.onclick` (klasse+uke ut), `renderElevView`
   konsumerer `APP.elevPeekWeek`; retur til `#/laerer/<tab>`.
-- [ ] Fase 4 — Cache-bust (`?v=YYYYMMDDx`), oppdater APP-doc i CLAUDE.md, commit per fase, oppsummering.
+- [x] Fase 4 — Cache-bust (`20260621f`), oppdater APP-doc i CLAUDE.md, commit per fase, oppsummering.
 
 **Flagg / risiko:**
 - Lav kompleksitet, kun `v4/app.js` + cache-bump + doc. Ingen DB/edge/CSS/migrasjoner.

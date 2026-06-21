@@ -106,8 +106,21 @@ APP = {
   renderToken: 0,
   isAdminActive: false,
   klasseVelger: null,      // { klasser, aktivKlasse, onChange } – satt av renderMinKlasseTab
+  laererCtx: {...},        // P21: bevarer { klasseId, klasseNavn, week, skolear, tab } gjennom
+                           // admin-/elevvisning-toggle. Lærervisningen skriver, re-render seeder.
+  elevPeekWeek: null,      // P21: transient uke for lærer-peek av elevvisning (leses én gang)
 }
 ```
+
+### Bevaring av kontekst ved toggling (P21)
+`APP.laererCtx` holder hvor læreren var (klasse + uke + skoleår + fane) gjennom hele
+sesjonen. `renderLaererView` seeder `aktivKlasse` fra `laererCtx.klasseId`,
+`renderMinKlasseTab` seeder uke/skoleår — og begge skriver tilbake ved endring.
+Admin-toggle (`toggleAdminModus` → `router()`) bevarer dermed klasse + uke automatisk
+(P10 intakt: ingen navigasjon). Elevvisning-toggelen åpner `#/klasse/<klasse>` og setter
+transient `APP.elevPeekWeek` (renderElevView leser den ÉN gang og nuller den, så
+elev-lenker `#/klasse/X` forblir rene/på «nå»-uka). Admin- og Elevvisning-knappene er
+alltid synlige samtidig for innlogget admin (symmetrisk synlighet i `oppdaterHeader`).
 
 ## Viktige invarianter / fallgruver
 
