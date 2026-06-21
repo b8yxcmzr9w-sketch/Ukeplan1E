@@ -667,20 +667,24 @@ tr:hover td { background: var(--primær-svak); }
   letter-spacing: .03em; color: var(--tekst-svak);
   border-bottom: 1.5px solid var(--kant); background: transparent;
 }
+/* Tabellen arver `word-break: break-word` fra `.side-wrap` (~linje 909). Det lar
+   en klemt kolonne bryte MIDT i ordet (tegn-for-tegn). Overstyr på cellene så
+   gulvet blir min-content (lengste ord) og bryting kun skjer på ordgrenser. */
+.min-plan-tabell td, .min-plan-tabell th { word-break: normal; overflow-wrap: normal; }
 .min-plan-tabell tr:hover td { background: var(--primær-svak); }
 [data-theme="mork"] .min-plan-tabell tr:hover td { background: #2a2a2a; }
-.min-plan-tabell .mp-cb     { width: 30px; text-align: center; }
-.min-plan-tabell .mp-klasse { width: 88px; white-space: nowrap; }
-.min-plan-tabell .mp-fag    { width: 92px; }
-/* Flytende kolonner (P/G · Aktivitet · Oppmøte · Info): balansert fordeling.
-   `table-layout: auto` respekterer min-bredde, så tekst brytes aldri tegn-for-tegn.
-   Aktivitet + Info (lengst tekst) deler mest plass; Oppmøte middels; P/G smal/nowrap.
-   IKKE `width:100%` på én celle — det presser de andre under min-bredde (P12-feilen).
-   Diskret vertikalt skille mellom de fire beholdes. */
-.min-plan-tabell .mp-akt  { width: 30%; }
-.min-plan-tabell .mp-info { width: 30%; }
-.min-plan-tabell .mp-opp  { width: 15%; }
-.min-plan-tabell .mp-pg   { white-space: nowrap; }
+/* Innholdstilpassede kolonner (P17). `table-layout: auto` lar `width:1%` + nowrap
+   krympe en kolonne til nøyaktig innholdsbredden (shrink-to-fit): smal når tom,
+   vokser med innholdet, aldri ordbryting. Brukes på de korte: ☑/Klasse/Fag/P/G.
+   Aktivitet/Oppmøte får moderat foretrukket bredde og bryter på ordgrense ved lang
+   tekst. Info har ingen bredde → absorberer slakken (ofte tom; kebab beholdes). */
+.min-plan-tabell .mp-cb     { width: 1%; text-align: center; white-space: nowrap; }
+.min-plan-tabell .mp-klasse { width: 1%; white-space: nowrap; }
+.min-plan-tabell .mp-fag    { width: 1%; white-space: nowrap; }
+.min-plan-tabell .mp-pg     { width: 1%; white-space: nowrap; }
+.min-plan-tabell .mp-akt    { width: 160px; }
+.min-plan-tabell .mp-opp    { width: 130px; }
+/* mp-info: ingen bredde → tar resterende plass. */
 .min-plan-tabell .mp-pg, .min-plan-tabell .mp-akt,
 .min-plan-tabell .mp-opp, .min-plan-tabell .mp-info { border-left: 1px solid var(--kant); }
 .min-plan-cb { width: 17px; height: 17px; cursor: pointer; }

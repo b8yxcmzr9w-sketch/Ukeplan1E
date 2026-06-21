@@ -1,5 +1,50 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P17): «Alle mine økter»-tabell — innholdstilpassede kolonnebredder
+Cache-bust: `20260621b`. Branch `claude/P17-tabell-kolonner-innhold` (fra HEAD med P9–P16). Bruker valgte «px» for Aktivitet/Oppmøte.
+Scope: `v4/style.css` (kun `.min-plan-tabell`-kolonnereglene), `v4/index.html` (cache-bust).
+Ingen JS-, DB- eller edge-function-endringer.
+
+### Funn — ROTÅRSAK til tegn-for-tegn-bryting (kun lesing)
+- Tabellen ligger i `.side-wrap`, som setter `word-break: break-word`
+  (style.css:909). Cellene arver dette. Når en kolonne klemmes smalere enn
+  innholdets naturlige bredde (slik width:100% i P12 og prosentene i P13
+  gjorde), tillater `break-word` brytning MIDT i ordet → «L-i-s-t-e». Uten den
+  ville gulvet vært min-content (lengste ord). Dette er den faktiske kilden,
+  ikke kolonnebreddene i seg selv.
+- Dagens P13-regler (`mp-akt 30%`, `mp-info 30%`, `mp-opp 15%`) gir Aktivitet
+  for mye plass (korte titler som «Friluftsliv») og skjev fordeling.
+
+### Reelt innhold per kolonne (fra `renderAlleOkterTab`, app.js:1947–1983)
+- ☑ : kun checkbox. Klasse : «1E» + «Man 18.08» (smal, én linje).
+  Fag : badge med kortkode «NOR»/«ENG». P/G : `divtekst` — ofte tom, ev.
+  «Gruppe 1»/«Parti 2». Aktivitet : «Friluftsliv» o.l. Oppmøte : «Klasserom 1E».
+  Info : `s.info` (ofte tom) + kebab (⋮).
+
+### Delplan (faser)
+- [x] **Fase 1 — Drep kilden + innholdstilpass kolonnene** (`v4/style.css`):
+  - Overstyr arven på celler: `.min-plan-tabell td, .min-plan-tabell th
+    { word-break: normal; overflow-wrap: normal; }` → ingen tegn-for-tegn-bryting.
+  - Behold `table-layout: auto` (respekterer min-content som gulv).
+  - Shrink-to-fit på de korte: `☑ · Klasse · Fag · P/G` får `width:1%;
+    white-space:nowrap;` → akkurat innholdsbredde, aldri ordbryting, P/G smal
+    når tom og vokser med «Gruppe 1». (Erstatter faste px på klasse/fag.)
+  - Aktivitet/Oppmøte: moderat foretrukket bredde (`mp-akt ~160px`,
+    `mp-opp ~130px`), ordbryting tillatt ved lang tekst — tar ikke unødig plass.
+  - Info: ingen bredde → absorberer slakken (ofte tom; kebab beholdes).
+  - Behold diskret `border-left`-skille mellom de fire flytende.
+- [x] **Fase 2 — Cache-bust, commit, kryss av, oppsummering.**
+
+### Verifiser før merge
+- [ ] Ingen kolonne bryter tekst tegn-for-tegn (mot ekte innhold)
+- [ ] Aktivitet tar ikke unødig mye plass
+- [ ] P/G vokser med innholdet (smal når tom, bredere ved «Gruppe 1»)
+- [ ] Tabellen balansert; diskret skille beholdt
+- [ ] Mobil fortsatt vertikal liste
+- [ ] Hard refresh henger ikke på «Laster…»
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P16): «Nå»-knapp må vises i begge scroll-retninger
 Cache-bust: `20260621a`. Branch `claude/P16-naa-knapp-vises-begge-retninger` pushet.
 
