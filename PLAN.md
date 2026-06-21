@@ -1,5 +1,54 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P17): «Alle mine økter» — tett pakking (rad-basert)
+Cache-bust: `20260621b`. Branch `claude/P17-tabell-tett-pakking` pushet.
+
+---
+
+## Økt X (P17): «Alle mine økter» — fjern dødt mellomrom mellom kolonnene
+
+**Scope:** `v4/app.js` (desktop-markup i `renderAlleOkterTab`), `v4/style.css`
+(`.min-plan-tabell`-reglene) + `v4/index.html` (cache-bust). Ingen DB-/edge-endringer.
+
+### Funn + valgt tilnærming
+- Dagens desktop-visning er en ekte `<table>` (`table-layout: auto` + faste
+  prosentbredder `mp-akt 30%`, `mp-info 30%`, `mp-opp 15%`). En tabell tvinger
+  FELLES kolonnebredder: hver kolonne blir like bred som det bredeste innholdet på
+  tvers av ALLE rader → korte rader får tomrom.
+- **Bruker valgte «Hver rad pakkes for seg»** (godkjent): hver økt skal hugge sitt
+  eget innhold, kolonnene står IKKE nødvendigvis rett under hverandre fra rad til rad.
+  Dette kan ikke gjøres med en `<table>` → bytter desktop til **rad-basert flex**.
+
+### Delplan (faser)
+- [x] **Fase 1 — app.js: desktop fra `<table>` til flex-rader.**
+  Bytt `<table>/<thead>/<tbody>/<tr>/<td>` til `div.min-plan-tabell` (flex-kolonne)
+  med én `div.min-plan-rad` (flex) per økt. Dropp kolonnehodet (gir ikke mening når
+  kolonnene ikke er justert). Tomme felt (P/G, Aktivitet, Oppmøte) utelates per rad
+  → tett pakking. Oppmøte får `📍`-prefiks (som mobilkortet) for å skille det fra
+  Info. Kebab bor i Info-cellen. Mobil-kortlista uendret.
+- [x] **Fase 2 — style.css: flex-regler.**
+  - `.min-plan-tabell`: `display:flex; flex-direction:column`.
+  - `.min-plan-rad`: `display:flex; align-items:flex-start`, hover-stil, ordgrense
+    (`word-break:normal; overflow-wrap:break-word`) + `min-width:0` på barn (bryting
+    aldri tegn-for-tegn).
+  - `mp-cb` (~22px), `mp-klasse` (88→74px), `mp-fag` (92→78px): faste, litt smalere,
+    `flex:0 0 auto`.
+  - `mp-pg`, `mp-akt`, `mp-opp`: `flex:0 1 auto` → hugger innhold.
+  - `mp-info`: `flex:1 1 auto` → sluker slakken til høyre.
+  - Diskret `border-left` + `padding-left` som skille foran hver flytende kolonne.
+  - Fjern gamle `td/th/tr/%`-regler. Mobil-`display:none` beholdes.
+- [x] **Fase 3 — Cache-bust (`20260621b`), commit per delsteg, kryss av, oppsummering.**
+
+### Verifiser før merge
+- [ ] Ingen store tomromsfelt mellom Aktivitet→Oppmøte→Info (hver rad tett)
+- [ ] Klasse og Fag litt smalere enn før, fortsatt faste
+- [ ] Aktivitet/Oppmøte/P-G krymper til innhold
+- [ ] Tekst bryter fortsatt på ordgrense (ikke tegn-for-tegn)
+- [ ] Diskret skille beholdt
+- [ ] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P16): «Nå»-knapp må vises i begge scroll-retninger
 Cache-bust: `20260621a`. Branch `claude/P16-naa-knapp-vises-begge-retninger` pushet.
 

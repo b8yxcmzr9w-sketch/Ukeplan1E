@@ -1943,18 +1943,9 @@ async function renderAlleOkterTab(container, autoScroll = true) {
       transfer: () => visOverforModal(s, reRender),
     })
 
-    // Desktop: tabell
-    const tabell = el('table', { class: 'min-plan-tabell' })
-    const thead = el('thead', {}, el('tr', { class: 'min-plan-hode' },
-      el('th', { class: 'mp-cb' }, ''),
-      el('th', { class: 'mp-klasse' }, 'Klasse'),
-      el('th', { class: 'mp-fag' }, 'Fag'),
-      el('th', { class: 'mp-pg' }, 'P/G'),
-      el('th', { class: 'mp-akt' }, 'Aktivitet'),
-      el('th', { class: 'mp-opp' }, 'Oppmøte'),
-      el('th', { class: 'mp-info' }, 'Info')))
-    tabell.appendChild(thead)
-    const tbody = el('tbody', {})
+    // Desktop: rad-liste. Hver økt er en flex-rad som pakkes tett etter sitt
+    // eget innhold (ikke en justert tabell) — tomme felt utelates per rad.
+    const tabell = el('div', { class: 'min-plan-tabell' })
     for (const s of rader) {
       const kalAar = skoleaarKalenderaar(s.school_year, s.week_nr, schoolStart)
       const datoKort = formatDatoNO(isoWeekToDate(kalAar, s.week_nr, s.day_of_week).toISOString().slice(0, 10))
@@ -1966,25 +1957,24 @@ async function renderAlleOkterTab(container, autoScroll = true) {
       const kebab = el('button', { class: 'okt-kebab min-plan-kebab', title: 'Handlinger',
         onclick: (e) => { e.stopPropagation(); visOktHandlinger(actions, kebab) } }, '⋮')
 
-      const infoCell = el('td', { class: 'mp-info' }, s.info || '')
-      infoCell.appendChild(kebab)
-
-      const tr = el('tr', { class: 'min-plan-rad' },
-        el('td', { class: 'mp-cb' }, lagCheckbox(s)),
-        el('td', { class: 'mp-klasse' },
+      const rad = el('div', { class: 'min-plan-rad' },
+        el('div', { class: 'mp-cb' }, lagCheckbox(s)),
+        el('div', { class: 'mp-klasse' },
           el('span', { class: 'mp-klasse-navn' }, s.classes?.name || ''),
           el('span', { class: 'mp-dag' }, `${dagKort} ${datoKort}`)),
-        el('td', { class: 'mp-fag' },
+        el('div', { class: 'mp-fag' },
           el('span', { class: 'mp-fag-badge', style: `border-left:3px solid ${farge}` },
-            s.subjects?.short_code || s.subjects?.name || '')),
-        el('td', { class: 'mp-pg' }, divtekst),
-        el('td', { class: 'mp-akt' }, s.activity || ''),
-        el('td', { class: 'mp-opp' }, s.meeting_point || ''),
-        infoCell)
-      tr.addEventListener('contextmenu', (e) => { e.preventDefault(); visOktHandlinger(actions, kebab) })
-      tbody.appendChild(tr)
+            s.subjects?.short_code || s.subjects?.name || '')))
+      if (divtekst) rad.appendChild(el('div', { class: 'mp-pg' }, divtekst))
+      if (s.activity) rad.appendChild(el('div', { class: 'mp-akt' }, s.activity))
+      if (s.meeting_point) rad.appendChild(el('div', { class: 'mp-opp' }, `📍 ${s.meeting_point}`))
+      const infoCell = el('div', { class: 'mp-info' }, s.info || '')
+      infoCell.appendChild(kebab)
+      rad.appendChild(infoCell)
+
+      rad.addEventListener('contextmenu', (e) => { e.preventDefault(); visOktHandlinger(actions, kebab) })
+      tabell.appendChild(rad)
     }
-    tabell.appendChild(tbody)
     container.appendChild(tabell)
 
     // Mobil: vertikal kort-liste (gjenbruker renderSessionCard m/sveip/kebab)
