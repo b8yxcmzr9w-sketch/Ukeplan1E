@@ -841,7 +841,7 @@ tr:hover td { background: var(--primær-svak); }
   header, .nav-bar, .filter-bar, .bulk-bar,
   .hdr-btn, .btn, .okt-kebab, .okt-handlingsmeny, .okt-checkbox,
   .modal-bg, .lagre-overlay, .ai-overlay, #lastelinje,
-  .elev-filter-panel, .elev-overflow-wrap, .settings-close,
+  .elev-filter-panel, .elev-overflow-wrap, .settings-close, .fane-lukk,
   footer, .uno-footer { display: none !important; }
   /* P7: vis alle detaljer ved utskrift uavhengig av mobilkollaps */
   .okt-detaljer { display: block !important; }
@@ -947,6 +947,25 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 }
 .settings-close:hover { background: var(--bg); color: var(--primær); }
 .settings-close:focus-visible {
+  outline: none; border-color: var(--primær-lys);
+  box-shadow: 0 0 0 3px rgba(64,145,108,.30);
+}
+
+/* P24: adminpanelets faner deler samme settings-mønster, men «X»-en ligger på
+   panel-nivå (i fane-raden, .fane-lukk) i stedet for inni én enkelt fane. Litt
+   bredere spalte enn Profil, og ingen toppluft reservert til in-page-X. */
+.settings-page--admin { max-width: 920px; padding-top: 8px; }
+.fane-lukk {
+  margin-left: auto; align-self: center;
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--kant); border-radius: 50%;
+  background: var(--bg-kort); color: var(--tekst);
+  font-size: 1.15rem; line-height: 1; cursor: pointer;
+  box-shadow: var(--skygge); transition: background .15s, color .15s;
+}
+.fane-lukk:hover { background: var(--bg); color: var(--primær); }
+.fane-lukk:focus-visible {
   outline: none; border-color: var(--primær-lys);
   box-shadow: 0 0 0 3px rgba(64,145,108,.30);
 }
