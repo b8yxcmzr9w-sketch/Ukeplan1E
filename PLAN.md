@@ -1,5 +1,136 @@
 # PLAN — Ukeplan1E v4
 
+## Status: PLAN — AVVENTER GODKJENNING — Økt X (P23): Felles settings-mønster (Profil + Skoleinfo)
+Branch `claude/P23-felles-settings-monster` (fra `origin/main`@P22 etter fetch).
+Cache-bust planlagt: `20260622b`. Scope: `v4/style.css`, `v4/app.js`, `v4/index.html`
+(cache-bust), `PLAN.md`, `DECISIONS.md`. Ingen DB-/edge-/migrasjonsendringer.
+
+### Mål
+Etabler ÉTT gjenkjennbart layout-mønster for innstillings-/profilsider, og migrer
+**Profil** + admin-fanen **Skoleinfo** til det som referanseimplementasjon. Fundamentet
+to senere økter bygger på (P24: resten av admin-fanene; egen økt: header-bredde på mobil).
+KUN Profil + Skoleinfo migreres nå — ikke Skoleår/Fag/Klasser/Brukere/Skolerute/Funfacts.
+
+### STEG 1 — Kartlegging (kun lesing, med bevis)
+
+a) **Profil i dag — FINNES.** `renderInnstillingerTab(container)` (app.js:1553) bygger
+   `.skjema-smal`-wrap med `<h3>Profil` (1555), kontoinfo-boks `.subj-config-box`
+   (navn/e-post/rolle, 1561–1566), seksjon «Passord» (`.seksjon-tittel` + «Bytt passord»-knapp
+   → `visSettPassordModal`, 1569–1570), seksjon «E-postadresse» (`<form class="skjema">` med
+   e-post-input + «Endre e-post» + bekreftelsestekst, 1573–1597). Rute/slug: `innstillinger`
+   under `#/laerer/innstillinger` (router app.js:806 → `renderLaererView`; slug rendres via
+   `setTab` app.js:1503). INN: hamburger «Profil» (`ddProfil.onclick` app.js:746 →
+   `navigate('#/laerer/innstillinger')`). UT i dag: kun ved å klikke en annen fane / klassevelger.
+
+b) **Skoleinfo i dag — FINNES.** `renderSkoleInfoTab(container)` (app.js:3362), bygd som
+   `<form class="skjema skjema-smal">` med onsubmit (lagrer `name`, `school_year_start_week`,
+   `school_year_end_week`, `color_theme`, `logo_url`). Felt: Skolenavn m/tegnteller (3389–3395),
+   Skoleår «Fra uke/Til uke» m/live dato-hint `ukeHint` (3397–3417), Logo (url + filopplasting,
+   3419–3434), Fargetema (radio-gruppe `.theme-group` m/live preview, 3437–3458),
+   «Lagre skoleinfo»-knapp m/`overvakSkjema` (3460). Rendres via `renderAdminPanel` →
+   `setTab(0)` → `renderSkoleInfoTab` (app.js:3340), rute `#/admin/skoleinfo`.
+
+c) **Lærer-tab-raden — FINNES.** Bygges i `renderLaererView` (app.js:1489 `tabBar`,
+   1539–1544 fyllingen): fane 0 = klassevelger (`velgerFane`), så «Alle mine økter», «Søk»,
+   `[Klasse-admin]` (kun kontaktlærer/admin). `innstillinger`-slug-en finnes i `tabs`/`tabSlugs`
+   (1484) men hoppes over som synlig knapp (1541) — Profil vises altså IKKE som fane.
+   MEN tab-raden (`.fane-bar`) RENDRES fortsatt når man står på `innstillinger` (ingen
+   fane markert aktiv). `setTab(idx)` (1492) er ett sted hvor `slug` er kjent → her kan
+   raden skjules betinget når `slug === 'innstillinger'`, uten å røre de ekte fanene.
+   **Vurdert: enkel betinget visning holder** (`tabBar.classList.toggle('skjult', slug==='innstillinger')`)
+   — slug-håndteringen er IKKE sammenfiltret. Ingen blokker.
+
+d) **Admin-panelets fane-rad — SEPARAT.** `renderAdminPanel` (app.js:3318) bygger sin EGEN
+   `tabBar` (3332) + `setTab` (3335) med fanene Skoleinfo/Skoleår/Fag/Klasser/Brukere/Skolerute/Funfacts
+   (3326–3327, 3350–3353). Helt adskilt fra lærer-tab-raden i (c): egen funksjon, egen `tabBar`,
+   ingen delt state. Lærer-raden lekker ikke inn (`renderAdminPanel` nuller `APP.klasseVelger`
+   og kaller `oppdaterHeader`, 3323–3324). Admin-raden skal stå urørt — kun innholdet i
+   Skoleinfo-fanen får ny struktur.
+
+e) **Eksisterende utgang — INGEN dedikert kontroll.** Man forlater Profil/Skoleinfo i dag kun
+   ved å klikke en annen fane (lærer-raden / admin-raden) eller via hamburger. Det finnes
+   INGEN «lukk/tilbake»-knapp fra før i noen av de to visningene — ny `.settings-close` («X»)
+   kolliderer ikke med noe eksisterende.
+
+f) **CSS-gjenbruk — finnes byggeklosser.** `.kort` (style.css:377: `bg-kort`, `--radius`,
+   `--skygge`, padding 20px, margin-bottom 16px) er nærmeste eksisterende kort-stil; `.login-kort`
+   (910) og `.subj-config-box` (766) er beslektede ramme-bokser. Skjema-felt-stiler `.felt`
+   (384–399) og `.skjema .felt` (923) gjenbrukes. `.skjema-smal` (920: `max-width:560px`) er
+   dagens smale-skjema-bredde. `.side-wrap` (918: `max-width:1200px; margin:0 auto`) er
+   ytre layout-wrap. Globalt `.skjult { display:none!important }` (88). Print-skjulliste:
+   style.css:841–845. Konklusjon: bygg `.settings-card` som en spesialisering i `.kort`-ånd
+   (samme variabler), ikke et helt nytt fundament — men egne klasser for å unngå å endre
+   `.kort`/`.subj-config-box` som brukes mange andre steder.
+
+### STEG 2 — Delplan (faser)
+
+**Fase 0 — Plan til PLAN.md (denne). Commit. Vent på godkjenning.**
+
+- [ ] **Fase 1 — CSS-mønster** (`v4/style.css`). Nye klasser:
+  - `.settings-page` — sentrert wrapper: `max-width:680px; margin-inline:auto;
+    padding: 24px clamp(16px,4vw,28px) 60px; position:relative` (relativ for «X»-ankring).
+  - `.settings-card` — `background:var(--bg-kort); border:1px solid var(--kant);
+    border-radius:var(--radius); box-shadow:var(--skygge); padding:20px 22px;
+    margin-bottom:18px`. Overskrift `.settings-card > h3` (`font-size:1.05rem;
+    margin-bottom:14px`); felt-gap arves fra `.felt`/`.skjema .felt`. Primærknapp
+    (`.btn-p`) nederst i kortet (eksisterende stil).
+  - `.settings-close` — «X» øverst til høyre i `.settings-page`:
+    `position:absolute; top:14px; right: clamp(16px,4vw,28px);` runding, min
+    treffareal **44×44px** (mobil), `background:var(--bg-kort); border:1px solid var(--kant)`,
+    `font-size:1.3rem; line-height:1; cursor:pointer`. `aria-label="Lukk"`. Synlig fokus-ring
+    (`:focus-visible { outline / box-shadow }`). Hover-tilstand.
+  - Print: legg `.settings-close` i eksisterende print-skjulliste (style.css:841–845).
+  - Mobil (`@media max-width:700px`): `.settings-page { padding-left/right ~16px }`,
+    «X» innen rekkevidde (top/right ~12–14px), kort full bredde.
+
+- [ ] **Fase 2 — «X»-utgang med fast rute** (hjelpefunksjon i `v4/app.js`).
+  Liten helper `lagSettingsLukk()` som returnerer en `.settings-close`-knapp hvis onclick
+  ALLTID navigerer til lærervisning via fast rute:
+  `navigate('#/laerer/' + (APP.laererCtx?.tab || 'klasse'))` om ctx finnes, ellers `#/laerer`.
+  ALDRI `history.back()`. Ingen bekreftelsesdialog ved ulagrede felt (bevisst — feltene krever
+  eksplisitt lagre-trykk). Dokumenteres i DECISIONS.md (Fase 6).
+
+- [ ] **Fase 3 — Migrer Profil** (`renderInnstillingerTab`, app.js:1553). Bygg om til
+  `.settings-page > .settings-card`-struktur: **Profil** (navn/e-post/rolle), **Passord**
+  («Bytt passord»-knapp), **E-post** (form + bekreftelsestekst) blir hvert sitt kort. «X» øverst
+  (`lagSettingsLukk`). ALL funksjonalitet uendret: `visSettPassordModal`, `byttEpost`,
+  `medLagreOverlay`, bekreftelsestekst, feilhåndtering — kun layout/markup endres.
+
+- [ ] **Fase 4 — Skjul lærer-tab-raden på Profil** (`renderLaererView` → `setTab`, app.js:1492).
+  `tabBar.classList.toggle('skjult', slug === 'innstillinger')`. De ekte fanene
+  (Klasse/Alle mine økter/Søk/Klasse-admin) uendret for sine visninger. Påvirker IKKE
+  admin-panelets egen fane-rad (egen funksjon, (d)). Verifiseres.
+
+- [ ] **Fase 5 — Migrer Skoleinfo** (`renderSkoleInfoTab`, app.js:3362). Bygg om til samme
+  `.settings-page/.settings-card`-mønster: Skolenavn / Skoleår / Logo / Fargetema som kort
+  (kan grupperes fornuftig), «X»-utgang (`lagSettingsLukk`). Admin-panelets egen fane-rad
+  blir stående — kun innholdet får ny struktur. Funksjonalitet uendret: lagre skoleinfo,
+  fra/til-uke live dato-hint, fargetema-radio m/live preview, logo-opplasting, `overvakSkjema`.
+
+- [ ] **Fase 6 — Avslutning.** Bump `?v=20260622b` i `v4/index.html` (CSS + JS).
+  Kryss av i PLAN.md, oppdater «Neste steg». Dokumentér i CLAUDE.md (settings-mønsteret som
+  permanent UI-mønster) + DECISIONS.md (X-utgang med fast rute; felles settings-mønster).
+  Commit per fase. Norsk, ikke-teknisk oppsummering til slutt.
+
+### Flagg / risiko
+- Lav–middels kompleksitet. Tab-rad-skjuling = én betinget linje i `setTab` (ikke
+  sammenfiltret, jf. (c)) → ingen blokker forventet.
+- Strengt scope: KUN Profil + Skoleinfo. Skoleår/Fag/Klasser/Brukere/Skolerute/Funfacts
+  migreres i P24. Flagges om noe frister utenfor.
+- `.settings-card`/`.settings-page` er NYE klasser (rører ikke `.kort`/`.subj-config-box`
+  som brukes mange andre steder).
+
+### Sjekkliste (verifiseres før commit/oppsummering)
+- [ ] Profil og Skoleinfo bruker identisk `.settings-page/.settings-card`-mønster (samme bredde, kort, luft)
+- [ ] «X» lukker til lærervisning fra begge sider — også etter hard refresh (ikke avhengig av historikk)
+- [ ] Lærer-tab-raden vises ikke lenger på Profil
+- [ ] Admin-panelets egen fane-rad er uendret og fungerer
+- [ ] All funksjonalitet uendret: bytt passord, endre e-post, lagre skoleinfo, fra/til-uke datovisning, fargetema
+- [ ] Desktop: innhold sentrert i fast spalte; Mobil: full bredde med sidemarg, «X» innen rekkevidde
+- [ ] Hard refresh henger ikke på «Laster…»
+
+---
+
 ## Status: FULLFØRT — merget til main via PR — Økt X (P22): «Alle mine økter» husker scroll-posisjon mellom fanebytter
 Cache-bust: `20260622a`. Branch `claude/determined-pascal-l4kr7z` (mandatert dev-branch;
 bygger på `origin/main`@P21). Delplanen ble godkjent, bygget og merget til main.
