@@ -1494,6 +1494,10 @@ async function renderLaererView() {
     APP.laererCtx.tab = slug   // P21: husk fane for retur fra elevvisning
     history.replaceState(null, '', `#/laerer/${slug}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
+    // P23: Profil (innstillinger) bruker det sentrerte settings-mønsteret med egen
+    // «X»-lukk — skjul lærer-fane-raden her (de ekte fanene er uendret for sine egne
+    // visninger). Påvirker ikke admin-panelets separate fane-rad (egen funksjon).
+    tabBar.classList.toggle('skjult', slug === 'innstillinger')
     clearEl(tabContent)
     if (slug !== 'klasse') { APP.klasseVelger = null; oppdaterHeader() }
     if (slug === 'klasse') renderMinKlasseTab(tabContent, aktivKlasse)
@@ -1551,26 +1555,33 @@ async function renderLaererView() {
 }
 
 async function renderInnstillingerTab(container) {
-  const wrap = el('div', { class: 'skjema-smal' })
-  wrap.appendChild(el('h3', {}, 'Profil'))
+  // P23: felles settings-mønster — sentrert .settings-page med ett kort per
+  // seksjon (Profil / Passord / E-post) og «X»-lukk øverst til høyre.
+  const page = el('div', { class: 'settings-page' })
+  page.appendChild(lagSettingsLukk())
 
   // Kontoinfo
   const { data: { user } } = await sb.auth.getUser()
   const naavaerendeEpost = user?.email || ''
 
-  const info = el('div', { class: 'subj-config-box', style: 'margin-bottom:18px' })
-  info.appendChild(el('div', { style: 'font-weight:600;margin-bottom:2px' }, APP.profile?.full_name || ''))
-  info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.88rem' }, naavaerendeEpost))
+  // Kort 1: Profil (navn / e-post / rolle)
+  const profilKort = el('div', { class: 'settings-card' })
+  profilKort.appendChild(el('h3', {}, 'Profil'))
+  profilKort.appendChild(el('div', { style: 'font-weight:600;margin-bottom:2px' }, APP.profile?.full_name || ''))
+  profilKort.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.88rem' }, naavaerendeEpost))
   const rolleNavn = { laerer: 'Lærer', kontaktlaerer: 'Kontaktlærer', admin: 'Administrator' }
-  info.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:4px' }, rolleNavn[APP.profile?.role] || APP.profile?.role || ''))
-  wrap.appendChild(info)
+  profilKort.appendChild(el('div', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:4px' }, rolleNavn[APP.profile?.role] || APP.profile?.role || ''))
+  page.appendChild(profilKort)
 
-  // Bytt passord
-  wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'Passord'))
-  wrap.appendChild(el('button', { class: 'btn btn-p', title: 'Endre ditt innloggingspassord', onclick: () => visSettPassordModal({ tittel: 'Bytt passord' }) }, 'Bytt passord'))
+  // Kort 2: Passord
+  const passordKort = el('div', { class: 'settings-card' })
+  passordKort.appendChild(el('h3', {}, 'Passord'))
+  passordKort.appendChild(el('button', { class: 'btn btn-p', title: 'Endre ditt innloggingspassord', onclick: () => visSettPassordModal({ tittel: 'Bytt passord' }) }, 'Bytt passord'))
+  page.appendChild(passordKort)
 
-  // Bytt e-post
-  wrap.appendChild(el('div', { class: 'seksjon-tittel', style: 'margin-top:18px' }, 'E-postadresse'))
+  // Kort 3: E-postadresse
+  const epostKort = el('div', { class: 'settings-card' })
+  epostKort.appendChild(el('h3', {}, 'E-postadresse'))
   const epostForm = el('form', { class: 'skjema' })
   const epostFeil = el('p', { class: 'feil-tekst skjult' })
   epostForm.appendChild(epostFeil)
@@ -1594,9 +1605,10 @@ async function renderInnstillingerTab(container) {
       epostFeil.textContent = err.message; epostFeil.classList.remove('skjult')
     }
   })
-  wrap.appendChild(epostForm)
+  epostKort.appendChild(epostForm)
+  page.appendChild(epostKort)
 
-  container.appendChild(wrap)
+  container.appendChild(page)
 }
 
 async function renderMinKlasseTab(container, klasse) {
@@ -3362,7 +3374,13 @@ async function renderAdminPanel() {
 async function renderSkoleInfoTab(container) {
   const school = APP.school
 
-  const form = el('form', { class: 'skjema skjema-smal', onsubmit: async (e) => {
+  // P23: felles settings-mønster — sentrert .settings-page med ett kort per
+  // seksjon og «X»-lukk øverst. Formen wrapper alle kort, så den ene «Lagre
+  // skoleinfo»-knappen fortsatt samler hele skjemaet via FormData.
+  const page = el('div', { class: 'settings-page' })
+  page.appendChild(lagSettingsLukk())
+
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const updates = {
@@ -3385,16 +3403,17 @@ async function renderSkoleInfoTab(container) {
     })
   }})
 
-  // Skolenavn med tegnteller
+  // Kort: Skolenavn (med tegnteller)
   const navnInput = el('input', { name: 'name', type: 'text', class: 'felt input', value: school.name, maxlength: 30, style: 'width:100%' })
   const navnTeller = el('span', { class: 'tegnteller', style: 'float:right;font-size:.8rem;opacity:.6' }, `${(school.name||'').length}/30`)
   navnInput.addEventListener('input', () => { navnTeller.textContent = `${navnInput.value.length}/30` })
-  const navnWrap = el('div')
-  navnWrap.appendChild(navnTeller)
-  navnWrap.appendChild(navnInput)
-  form.appendChild(lagFormRad('Skolenavn', navnWrap))
+  const navnKort = el('div', { class: 'settings-card' })
+  navnKort.appendChild(el('h3', {}, 'Skolenavn'))
+  navnKort.appendChild(navnTeller)
+  navnKort.appendChild(navnInput)
+  form.appendChild(navnKort)
 
-  // Uker på samme linje
+  // Kort: Skoleår (fra/til uke med live datovisning)
   function ukeHint(uke) {
     if (!uke) return ''
     const year = new Date().getFullYear()
@@ -3414,11 +3433,12 @@ async function renderSkoleInfoTab(container) {
   const sluttGrp = el('div', { class: 'uke-grp' })
   sluttGrp.appendChild(el('label', {}, 'Til uke')); sluttGrp.appendChild(sluttInput); sluttGrp.appendChild(sluttHint)
   ukeRad.appendChild(startGrp); ukeRad.appendChild(sluttGrp)
-  form.appendChild(lagFormRad('Skoleår', ukeRad))
+  const skoleaarKort = el('div', { class: 'settings-card' })
+  skoleaarKort.appendChild(el('h3', {}, 'Skoleår'))
+  skoleaarKort.appendChild(ukeRad)
+  form.appendChild(skoleaarKort)
 
-  // Logo
-  const logoRow = el('div', { class: 'felt' })
-  logoRow.appendChild(el('label', {}, 'Logo'))
+  // Kort: Logo
   const logoUrlInput = el('input', { name: 'logo_url', type: 'url', class: 'felt input', value: school.logo_url || '', placeholder: 'https://...' })
   const logoFileInput = el('input', { type: 'file', accept: 'image/*', onchange: async (ev) => {
     const file = ev.target.files[0]
@@ -3429,13 +3449,15 @@ async function renderSkoleInfoTab(container) {
     const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
     logoUrlInput.value = urlData.publicUrl
   }})
-  logoRow.appendChild(logoUrlInput)
-  logoRow.appendChild(logoFileInput)
-  form.appendChild(logoRow)
+  const logoKort = el('div', { class: 'settings-card' })
+  logoKort.appendChild(el('h3', {}, 'Logo'))
+  const logoFelt = el('div', { class: 'felt' })
+  logoFelt.appendChild(logoUrlInput)
+  logoFelt.appendChild(logoFileInput)
+  logoKort.appendChild(logoFelt)
+  form.appendChild(logoKort)
 
-  // Color theme
-  const themeRow = el('div', { class: 'felt' })
-  themeRow.appendChild(el('label', {}, 'Fargetema'))
+  // Kort: Fargetema (radio med live preview)
   const themes = [
     { value: 'standard', label: 'Standard (grønn)', color: '#2d6a4f' },
     { value: 'lys', label: 'Lys (blå)', color: '#0077b6' },
@@ -3454,11 +3476,18 @@ async function renderSkoleInfoTab(container) {
     themeGroup.appendChild(radio)
     themeGroup.appendChild(lbl)
   }
-  themeRow.appendChild(themeGroup)
-  form.appendChild(themeRow)
+  const temaKort = el('div', { class: 'settings-card' })
+  temaKort.appendChild(el('h3', {}, 'Fargetema'))
+  temaKort.appendChild(themeGroup)
+  form.appendChild(temaKort)
 
-  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre skoleinfo'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
-  container.appendChild(form)
+  // Primærknapp nederst (lagrer hele skjemaet)
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p', style: 'margin-top:4px' }, 'Lagre skoleinfo')
+  form.appendChild(lagreKnapp)
+  overvakSkjema(form, lagreKnapp)
+
+  page.appendChild(form)
+  container.appendChild(page)
 }
 
 async function renderSkoleaarTab(container) {
@@ -4853,6 +4882,23 @@ function visFunfactModal(fact, onSave) {
 // ─────────────────────────────────────────
 // FORM HELPERS
 // ─────────────────────────────────────────
+
+// P23: «X»-lukk for settings-sider (Profil + admin Skoleinfo). Navigerer ALLTID
+// til lærervisning via fast rute — aldri history.back(), så den virker også etter
+// hard refresh (uavhengig av nettleserhistorikk). Ingen bekreftelsesdialog ved
+// ulagrede felt (bevisst: feltene krever et eksplisitt lagre-trykk). Faller tilbake
+// til «klasse»-fanen hvis ctx mangler ELLER peker på «innstillinger» (Profil selv),
+// så vi aldri lukker tilbake til siden vi nettopp forlot.
+function lagSettingsLukk() {
+  return el('button', {
+    type: 'button', class: 'settings-close', 'aria-label': 'Lukk', title: 'Lukk',
+    onclick: () => {
+      const tab = APP.laererCtx?.tab
+      const mal = (tab && tab !== 'innstillinger') ? tab : 'klasse'
+      navigate(`#/laerer/${mal}`)
+    },
+  }, '✕')
+}
 
 function lagFormRad(label, ...inputs) {
   const row = el('div', { class: 'felt' })

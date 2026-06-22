@@ -841,7 +841,7 @@ tr:hover td { background: var(--primær-svak); }
   header, .nav-bar, .filter-bar, .bulk-bar,
   .hdr-btn, .btn, .okt-kebab, .okt-handlingsmeny, .okt-checkbox,
   .modal-bg, .lagre-overlay, .ai-overlay, #lastelinje,
-  .elev-filter-panel, .elev-overflow-wrap,
+  .elev-filter-panel, .elev-overflow-wrap, .settings-close,
   footer, .uno-footer { display: none !important; }
   /* P7: vis alle detaljer ved utskrift uavhengig av mobilkollaps */
   .okt-detaljer { display: block !important; }
@@ -918,6 +918,38 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 .side-wrap { padding: 28px clamp(20px, 5vw, 80px) 60px; max-width: 1200px; margin: 0 auto; overflow-wrap: break-word; word-break: break-word; }
 .fane-innhold { padding-top: 8px; }
 .skjema-smal { max-width: 560px; }
+
+/* ── Settings-mønster (Profil + admin Skoleinfo) — P23 ───────────────
+   Felles layout for innstillings-/profilsider: sentrert smal spalte med
+   ett eller flere kort og en «X»-lukk øverst til høyre. Egne klasser (rører
+   ikke .kort/.subj-config-box som brukes mange andre steder). */
+.settings-page {
+  position: relative;
+  max-width: 680px;
+  margin-inline: auto;
+  padding: 56px clamp(16px, 4vw, 28px) 60px;
+}
+.settings-card {
+  background: var(--bg-kort); border: 1px solid var(--kant);
+  border-radius: var(--radius); box-shadow: var(--skygge);
+  padding: 20px 22px; margin-bottom: 18px;
+}
+.settings-card:last-child { margin-bottom: 0; }
+.settings-card > h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 14px; }
+.settings-close {
+  position: absolute; top: 10px; right: clamp(16px, 4vw, 28px);
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--kant); border-radius: 50%;
+  background: var(--bg-kort); color: var(--tekst);
+  font-size: 1.3rem; line-height: 1; cursor: pointer;
+  box-shadow: var(--skygge); transition: background .15s, color .15s;
+}
+.settings-close:hover { background: var(--bg); color: var(--primær); }
+.settings-close:focus-visible {
+  outline: none; border-color: var(--primær-lys);
+  box-shadow: 0 0 0 3px rgba(64,145,108,.30);
+}
 
 /* ── Skjema-rader ────────────────────────────────────────────────── */
 .skjema .felt { margin-bottom: 14px; }
