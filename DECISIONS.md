@@ -54,3 +54,24 @@ Beslutningslogg for designvalg som ikke er åpenbare fra koden alene.
   `slug === 'innstillinger'`), fordi Profil har sin egen `.settings-close`.
   Admin-panelets separate fane-rad er urørt — kun innholdet i Skoleinfo-fanen
   fikk den nye strukturen.
+
+## P24 — «X» på panel-nivå i adminpanelet + kort på alle admin-faner (22.06.2026)
+
+- **«X» hører hjemme på panel-nivå i et fane-panel, ikke inni én fane.** P23 ga
+  Skoleinfo en egen `.settings-close` inni fanen. Det ble feil fordi adminpanelet
+  har flere faner: «X» dukket bare opp på Skoleinfo. Løsning: én `.fane-lukk`-«X»
+  ytterst i adminpanelets fane-rad, synlig på ALLE faner, som lukker hele panelet
+  til lærervisning (samme rute som Profil-X-en via `lagSettingsLukk`).
+  Kontrast: Profil er en frittstående side (fane-raden skjules), så der er en
+  in-page «X» (`.settings-close`) riktig — den er eneste utgang.
+
+- **Alle admin-faner deler samme kort-ramme.** P23 ga kun Skoleinfo kort-layout;
+  de andre fanene var «flate». For å unngå spriket rendres nå alle admin-faner i
+  samme sentrerte `.settings-page--admin` med kort-ramme. De øvrige fanene
+  (Skoleår/Fag/Klasser/Brukere/Skolerute/Funfacts) rendres UENDRET inn i ett
+  felles `.settings-card` via `setTab` — ingen intern endring av fanene, lav
+  regresjonsrisiko. Skoleinfo beholder sine egne flere kort.
+
+- **Admin-spalten er litt bredere enn Profil** (`max-width:920px` vs `680px`)
+  fordi admin-faner har tyngre innhold (lister, tabeller, brukeradministrasjon).
+  Kort-stilen og «X»-en er felles; bredden tilpasses konteksten.
