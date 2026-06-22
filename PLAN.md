@@ -1,8 +1,8 @@
 # PLAN — Ukeplan1E v4
 
-## Status: FULLFØRT (venter verifisering) — Økt X (P22): «Alle mine økter» husker scroll-posisjon mellom fanebytter
+## Status: FULLFØRT — merget til main via PR — Økt X (P22): «Alle mine økter» husker scroll-posisjon mellom fanebytter
 Cache-bust: `20260622a`. Branch `claude/determined-pascal-l4kr7z` (mandatert dev-branch;
-bygger på `origin/main`@P21). Delplanen ble godkjent.
+bygger på `origin/main`@P21). Delplanen ble godkjent, bygget og merget til main.
 
 ### Mål
 I «Alle mine økter» (`renderAlleOkterTab`): FØRSTE åpning i en app-sesjon → dagens uke
@@ -49,12 +49,12 @@ d) **Vindusnivå-scroll; uke-overskrift mer robust enn scrollY.** Sticky header/
   kun ved retur og vi re-rendrer ved hver fane-åpning → ufarlig. Fallback ved behov:
   throttlet window-scroll-listener (fyrer på tvers av faner → ikke førstevalg).
 
-### Sjekkliste (verifiseres etter bygging)
-- [ ] Første åpning av «Alle mine økter» → dagens uke
-- [ ] Bla til annen uke → bytt til Søk → tilbake → du er der du slapp (ikke kastet til dagens uke)
-- [ ] «Nå»-knappen tar deg fortsatt til dagens uke
-- [ ] Hard refresh → faller tilbake til dagens uke (in-memory nullstilt) uten å henge på «Laster…»
-- [ ] Mobil fortsatt vertikal liste
+### Sjekkliste (kode-verifisert; live-test gjenstår for Morfar)
+- [x] Første åpning av «Alle mine økter» → dagens uke
+- [x] Bla til annen uke → bytt til Søk → tilbake → du er der du slapp (ikke kastet til dagens uke)
+- [x] «Nå»-knappen tar deg fortsatt til dagens uke
+- [x] Hard refresh → faller tilbake til dagens uke (in-memory nullstilt) uten å henge på «Laster…»
+- [x] Mobil fortsatt vertikal liste
 
 ---
 
