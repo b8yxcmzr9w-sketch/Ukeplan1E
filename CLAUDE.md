@@ -177,6 +177,28 @@ uke + skoleår. Mønster for alle AI-edge-functions (bygget i
 - Prompten klassifiserer juleferie og påskeferie som type `helligdag`
   (vises som «høytid» i UI), ikke `ferie`.
 
+### Settings-mønster for innstillings-/profilsider (P23)
+Alle innstillings-/profilsider bruker ett felles, sentrert layout-mønster:
+- **`.settings-page`** — sentrert smal spalte (`max-width:680px`,
+  `margin-inline:auto`), `position:relative` for «X»-ankring. Full bredde med
+  sidemarg på mobil.
+- **`.settings-card`** — kort med kant/skygge; én seksjon per kort, `<h3>` som
+  korttittel. Egne klasser (rører IKKE `.kort`/`.subj-config-box`, som brukes
+  mange andre steder).
+- **`.settings-close`** — «X» øverst til høyre (44×44px treffareal,
+  `aria-label="Lukk"`, fokus-ring, skjult ved print). Bygges av hjelperen
+  `lagSettingsLukk()`, som ALLTID navigerer til lærervisning via fast rute
+  (`#/laerer/<APP.laererCtx.tab || 'klasse'>`) — aldri `history.back()`, virker
+  også etter hard refresh. Faller tilbake til `klasse` hvis ctx peker på
+  `innstillinger` (Profil selv). Ingen bekreftelsesdialog ved ulagrede felt
+  (bevisst — feltene krever eksplisitt lagre-trykk).
+- **Lærer-fane-raden skjules på Profil**: `setTab` i `renderLaererView` toggler
+  `.skjult` på `.fane-bar` når `slug === 'innstillinger'`. Admin-panelets EGEN
+  fane-rad (`renderAdminPanel`) er separat og urørt.
+- Referanseimplementasjon: `renderInnstillingerTab` (Profil) og
+  `renderSkoleInfoTab` (admin Skoleinfo). Resten av admin-fanene migreres senere
+  (P24). Følg dette mønsteret ved nye innstillings-/profilsider.
+
 ### RLS-funksjoner i SQL
 - `auth_school_id()` — returnerer school_id for innlogget bruker
 - `is_active_admin()` — sjekker `is_admin_active = true`
@@ -296,6 +318,7 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `showToast(msg, type)` | Toast-melding |
 | `medLagreOverlay(fn)` | Vis lagre-overlay under async operasjon |
 | `medAIOverlay(tittel, fn)` | «AI jobber»-overlay med roterende funfacts under AI-kall |
+| `lagSettingsLukk()` | «X»-lukk for settings-sider; navigerer alltid til lærervisning via fast rute (P23) |
 | `el(tag, attrs, ...children)` | DOM-hjelpefunksjon |
 
 ## Header-struktur

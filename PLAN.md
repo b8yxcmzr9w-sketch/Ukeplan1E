@@ -1,9 +1,11 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PLAN — AVVENTER GODKJENNING — Økt X (P23): Felles settings-mønster (Profil + Skoleinfo)
+## Status: FULLFØRT (venter verifisering) — Økt X (P23): Felles settings-mønster (Profil + Skoleinfo)
 Branch `claude/P23-felles-settings-monster` (fra `origin/main`@P22 etter fetch).
-Cache-bust planlagt: `20260622b`. Scope: `v4/style.css`, `v4/app.js`, `v4/index.html`
+Cache-bust: `20260622b`. Scope: `v4/style.css`, `v4/app.js`, `v4/index.html`
 (cache-bust), `PLAN.md`, `DECISIONS.md`. Ingen DB-/edge-/migrasjonsendringer.
+**Neste steg:** Live-test av Morfar; deretter P24 (resten av admin-fanene til
+samme mønster) + egen økt for header-bredde på mobil.
 
 ### Mål
 Etabler ÉTT gjenkjennbart layout-mønster for innstillings-/profilsider, og migrer
@@ -66,7 +68,7 @@ f) **CSS-gjenbruk — finnes byggeklosser.** `.kort` (style.css:377: `bg-kort`, 
 
 **Fase 0 — Plan til PLAN.md (denne). Commit. Vent på godkjenning.**
 
-- [ ] **Fase 1 — CSS-mønster** (`v4/style.css`). Nye klasser:
+- [x] **Fase 1 — CSS-mønster** (`v4/style.css`). Nye klasser:
   - `.settings-page` — sentrert wrapper: `max-width:680px; margin-inline:auto;
     padding: 24px clamp(16px,4vw,28px) 60px; position:relative` (relativ for «X»-ankring).
   - `.settings-card` — `background:var(--bg-kort); border:1px solid var(--kant);
@@ -83,31 +85,31 @@ f) **CSS-gjenbruk — finnes byggeklosser.** `.kort` (style.css:377: `bg-kort`, 
   - Mobil (`@media max-width:700px`): `.settings-page { padding-left/right ~16px }`,
     «X» innen rekkevidde (top/right ~12–14px), kort full bredde.
 
-- [ ] **Fase 2 — «X»-utgang med fast rute** (hjelpefunksjon i `v4/app.js`).
+- [x] **Fase 2 — «X»-utgang med fast rute** (hjelpefunksjon i `v4/app.js`).
   Liten helper `lagSettingsLukk()` som returnerer en `.settings-close`-knapp hvis onclick
   ALLTID navigerer til lærervisning via fast rute:
   `navigate('#/laerer/' + (APP.laererCtx?.tab || 'klasse'))` om ctx finnes, ellers `#/laerer`.
   ALDRI `history.back()`. Ingen bekreftelsesdialog ved ulagrede felt (bevisst — feltene krever
   eksplisitt lagre-trykk). Dokumenteres i DECISIONS.md (Fase 6).
 
-- [ ] **Fase 3 — Migrer Profil** (`renderInnstillingerTab`, app.js:1553). Bygg om til
+- [x] **Fase 3 — Migrer Profil** (`renderInnstillingerTab`, app.js:1553). Bygg om til
   `.settings-page > .settings-card`-struktur: **Profil** (navn/e-post/rolle), **Passord**
   («Bytt passord»-knapp), **E-post** (form + bekreftelsestekst) blir hvert sitt kort. «X» øverst
   (`lagSettingsLukk`). ALL funksjonalitet uendret: `visSettPassordModal`, `byttEpost`,
   `medLagreOverlay`, bekreftelsestekst, feilhåndtering — kun layout/markup endres.
 
-- [ ] **Fase 4 — Skjul lærer-tab-raden på Profil** (`renderLaererView` → `setTab`, app.js:1492).
+- [x] **Fase 4 — Skjul lærer-tab-raden på Profil** (`renderLaererView` → `setTab`, app.js:1492).
   `tabBar.classList.toggle('skjult', slug === 'innstillinger')`. De ekte fanene
   (Klasse/Alle mine økter/Søk/Klasse-admin) uendret for sine visninger. Påvirker IKKE
   admin-panelets egen fane-rad (egen funksjon, (d)). Verifiseres.
 
-- [ ] **Fase 5 — Migrer Skoleinfo** (`renderSkoleInfoTab`, app.js:3362). Bygg om til samme
+- [x] **Fase 5 — Migrer Skoleinfo** (`renderSkoleInfoTab`, app.js:3362). Bygg om til samme
   `.settings-page/.settings-card`-mønster: Skolenavn / Skoleår / Logo / Fargetema som kort
   (kan grupperes fornuftig), «X»-utgang (`lagSettingsLukk`). Admin-panelets egen fane-rad
   blir stående — kun innholdet får ny struktur. Funksjonalitet uendret: lagre skoleinfo,
   fra/til-uke live dato-hint, fargetema-radio m/live preview, logo-opplasting, `overvakSkjema`.
 
-- [ ] **Fase 6 — Avslutning.** Bump `?v=20260622b` i `v4/index.html` (CSS + JS).
+- [x] **Fase 6 — Avslutning.** Bump `?v=20260622b` i `v4/index.html` (CSS + JS).
   Kryss av i PLAN.md, oppdater «Neste steg». Dokumentér i CLAUDE.md (settings-mønsteret som
   permanent UI-mønster) + DECISIONS.md (X-utgang med fast rute; felles settings-mønster).
   Commit per fase. Norsk, ikke-teknisk oppsummering til slutt.
@@ -120,14 +122,14 @@ f) **CSS-gjenbruk — finnes byggeklosser.** `.kort` (style.css:377: `bg-kort`, 
 - `.settings-card`/`.settings-page` er NYE klasser (rører ikke `.kort`/`.subj-config-box`
   som brukes mange andre steder).
 
-### Sjekkliste (verifiseres før commit/oppsummering)
-- [ ] Profil og Skoleinfo bruker identisk `.settings-page/.settings-card`-mønster (samme bredde, kort, luft)
-- [ ] «X» lukker til lærervisning fra begge sider — også etter hard refresh (ikke avhengig av historikk)
-- [ ] Lærer-tab-raden vises ikke lenger på Profil
-- [ ] Admin-panelets egen fane-rad er uendret og fungerer
-- [ ] All funksjonalitet uendret: bytt passord, endre e-post, lagre skoleinfo, fra/til-uke datovisning, fargetema
-- [ ] Desktop: innhold sentrert i fast spalte; Mobil: full bredde med sidemarg, «X» innen rekkevidde
-- [ ] Hard refresh henger ikke på «Laster…»
+### Sjekkliste (kode-verifisert; live-test gjenstår for Morfar)
+- [x] Profil og Skoleinfo bruker identisk `.settings-page/.settings-card`-mønster (samme bredde, kort, luft)
+- [x] «X» lukker til lærervisning fra begge sider — også etter hard refresh (fast rute, aldri `history.back()`)
+- [x] Lærer-tab-raden vises ikke lenger på Profil (`setTab` toggler `.skjult` ved slug `innstillinger`)
+- [x] Admin-panelets egen fane-rad er uendret og fungerer (egen funksjon, ikke rørt)
+- [x] All funksjonalitet uendret: bytt passord, endre e-post, lagre skoleinfo, fra/til-uke datovisning, fargetema
+- [x] Desktop: innhold sentrert i fast spalte; Mobil: full bredde med sidemarg, «X» innen rekkevidde (44×44px)
+- [x] Hard refresh henger ikke på «Laster…» (renderLaererView/renderAdminPanel sjekker profile+school som før)
 
 ---
 
