@@ -1,5 +1,63 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — merget til main via PR — Økt X (P22): «Alle mine økter» husker scroll-posisjon mellom fanebytter
+Cache-bust: `20260622a`. Branch `claude/determined-pascal-l4kr7z` (mandatert dev-branch;
+bygger på `origin/main`@P21). Delplanen ble godkjent, bygget og merget til main.
+
+### Mål
+I «Alle mine økter» (`renderAlleOkterTab`): FØRSTE åpning i en app-sesjon → dagens uke
+(uendret «Nå»-logikk). SENERE åpninger (retur fra Klasse/Søk) → der brukeren slapp, ikke
+tilbake til dagens uke. «Nå»-knappen er fortsatt veien til dagens uke.
+
+### STEG 1 — Kartlegging (kun lesing, med bevis)
+a) **Auto-scroll til dagens uke — FINNES.** `renderAlleOkterTab(container, autoScroll=true)`
+   (app.js:1890). `naaWeek = gjeldendeSkoleuke` (app.js:1960); nå-overskrift fanges
+   `if (week === naaWeek) naaHeader = weekHeader` (app.js:2051); `anker = naaHeader`
+   m/fallback (app.js:2134–2139); scroll `if (autoScroll) … anker.scrollIntoView` (app.js:2156).
+   `setTab` kaller `renderAlleOkterTab(tabContent)` uten arg (app.js:1500) → `autoScroll=true`
+   ved HVER fane-åpning. Intern `reRender` bruker `false` (app.js:1961).
+b) **Bærer for «hvor var jeg» — FINNES DELVIS.** `APP.laererCtx` (P21, app.js:33) er rett
+   *mønster* (in-memory, nullstilles ved refresh), men `.week` eies av Klasse-fanen
+   (`renderUke` app.js:1694) — gjenbruk ville kollidere. Presedens for funksjons-statisk
+   state finnes: `renderAlleOkterTab._obs` (app.js:2162).
+c) **Skille første/retur — FINNES IKKE.** Ingen flagg; må innføres.
+d) **Vindusnivå-scroll; uke-overskrift mer robust enn scrollY.** Sticky header/fane
+   (`stickyTop = headerH + faneH`, app.js:2153–2160), `scrollIntoView` mot uke-ankre
+   `.min-plan-uke[data-uke]`. Husk uke-nummer, ikke rå scrollY (innholdshøyde varierer).
+
+### STEG 2 — Delplan
+- Ny funksjons-statisk `renderAlleOkterTab._lastTopWeek` (som `_obs`; `undefined` ved start
+  → nullstilles ved refresh). Holder `laererCtx` ren.
+- Ved åpning: `_lastTopWeek` satt og uka finnes → scroll dit (retur); ellers dagens `anker`.
+- `anker` (= naaHeader/nærmeste) UENDRET som mål for «Nå»-knapp + synlighets-observer
+  (P15/P16). Egen `scrollMaal` brukes KUN til initial auto-scroll.
+- Scroll-spy: egen IntersectionObserver `_spyObs` over alle `.min-plan-uke` med ~1px
+  trip-line ved sticky-toppen → `_lastTopWeek = data-uke`. Observer (ikke window-listener)
+  fordi den ikke fyrer på tvers av faner og følger `_obs`-opprydning (disconnect øverst).
+- reRender (`autoScroll=false`) → ingen scroll, blir stående; `_lastTopWeek` røres ikke.
+- Berører ikke P12 (kun leser høyde), P15/P16 (anker/knapp/observer uendret), P21 (`laererCtx` urørt).
+
+**Faser:**
+- [x] Fase 0 — Plan til PLAN.md (denne).
+- [x] Fase 1 — `renderAlleOkterTab`: `_lastTopWeek`-minne, `scrollMaal` ved åpning,
+  scroll-spy `_spyObs` + opprydning. Cache-bust `20260622a`.
+- [x] Fase 2 — Commit per delsteg, kryss av, oppsummering.
+
+**Flagg / risiko:**
+- Lav kompleksitet, kun `v4/app.js` + cache-bump + PLAN.md. Ingen DB/edge/CSS/migrasjoner.
+- Trip-line-`rootMargin` fryses ved render; resize gir lite avvik, men verdien konsumeres
+  kun ved retur og vi re-rendrer ved hver fane-åpning → ufarlig. Fallback ved behov:
+  throttlet window-scroll-listener (fyrer på tvers av faner → ikke førstevalg).
+
+### Sjekkliste (kode-verifisert; live-test gjenstår for Morfar)
+- [x] Første åpning av «Alle mine økter» → dagens uke
+- [x] Bla til annen uke → bytt til Søk → tilbake → du er der du slapp (ikke kastet til dagens uke)
+- [x] «Nå»-knappen tar deg fortsatt til dagens uke
+- [x] Hard refresh → faller tilbake til dagens uke (in-memory nullstilt) uten å henge på «Laster…»
+- [x] Mobil fortsatt vertikal liste
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P21): Bevar klasse + uke (+ fane) ved toggling
 Cache-bust: `20260621f`. Branch `claude/intelligent-tesla-6lfogx` (mandatert dev-branch;
 bygger på `origin/main`@P20). Delplanen ble godkjent og bygget fase 0–4.

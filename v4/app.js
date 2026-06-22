@@ -1888,8 +1888,9 @@ async function renderMinKlasseTab(container, klasse) {
 // Kontinuerlig liste over alle uker, auto-scroll til dagens uke, «Nå»-knapp
 // via IntersectionObserver, og bulk-redigering (marker → rediger/kopier/slett).
 async function renderAlleOkterTab(container, autoScroll = true) {
-  // Rydd opp tidligere observer (unngå lekkasje ved re-render)
+  // Rydd opp tidligere observere (unngå lekkasje ved re-render)
   if (renderAlleOkterTab._obs) { renderAlleOkterTab._obs.disconnect(); renderAlleOkterTab._obs = null }
+  if (renderAlleOkterTab._spyObs) { renderAlleOkterTab._spyObs.disconnect(); renderAlleOkterTab._spyObs = null }
 
   const aktivtSkolear = APP.school?.active_school_year
   const schoolStart = APP.school?.school_year_start_week || 33
@@ -2144,6 +2145,18 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   }, 'Nå')
   container.appendChild(denneUkaBtn)
 
+  // P22: initialt scroll-mål. FØRSTE åpning i sesjonen (intet husket) → dagens «anker»
+  // (uendret «Nå»-logikk). RETUR fra en annen fane → uka brukeren sto på
+  // (`_lastTopWeek`), hvis den fortsatt finnes i lista; ellers fall tilbake til anker.
+  // In-memory og funksjons-statisk → nullstilles ved refresh (samme prinsipp som
+  // APP.laererCtx i P21). «Nå»-knappen (anker) er uendret.
+  let scrollMaal = anker
+  const huketUke = renderAlleOkterTab._lastTopWeek
+  if (huketUke != null) {
+    const huketHeader = container.querySelector(`.min-plan-uke[data-uke="${huketUke}"]`)
+    if (huketHeader) scrollMaal = huketHeader
+  }
+
   if (anker) {
     // Klebrig header + fanerad dekker toppen av viewporten. rootMargin trekker
     // observerens topp-kant ned tilsvarende, så «nå»-uka regnes som skjult når den
@@ -2153,13 +2166,30 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     const headerH = document.getElementById('app-header')?.offsetHeight || 58
     const faneH = document.querySelector('.fane-bar')?.offsetHeight || 0
     const stickyTop = headerH + faneH
-    if (autoScroll) requestAnimationFrame(() => anker.scrollIntoView({ behavior: 'auto', block: 'start' }))
+    if (autoScroll) requestAnimationFrame(() => scrollMaal.scrollIntoView({ behavior: 'auto', block: 'start' }))
     const obs = new IntersectionObserver((entries) => {
       const e = entries[0]
       denneUkaBtn.style.display = e.isIntersecting ? 'none' : 'block'
     }, { threshold: 0, rootMargin: `-${stickyTop}px 0px 0px 0px` })
     obs.observe(anker)
     renderAlleOkterTab._obs = obs
+
+    // P22: scroll-spy — husk hvilken uke-overskrift som ligger øverst (rett under den
+    // klebrige toppen), så retur fra en annen fane lander der brukeren slapp i stedet
+    // for å hoppe til dagens uke. Tynt (~1px) deteksjonsbånd ved sticky-toppen; uka
+    // hvis overskrift krysser båndet blir `_lastTopWeek`. Egen observer (ikke en
+    // window-scroll-listener) → fyrer ikke på tvers av faner og ryddes som `_obs`
+    // øverst i funksjonen.
+    const bandBunn = Math.max(0, window.innerHeight - stickyTop - 1)
+    const spy = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue
+        const w = Number(e.target.getAttribute('data-uke'))
+        if (!Number.isNaN(w)) renderAlleOkterTab._lastTopWeek = w
+      }
+    }, { threshold: 0, rootMargin: `-${stickyTop}px 0px -${bandBunn}px 0px` })
+    for (const h of container.querySelectorAll('.min-plan-uke')) spy.observe(h)
+    renderAlleOkterTab._spyObs = spy
   }
 }
 
