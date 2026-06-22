@@ -3374,7 +3374,13 @@ async function renderAdminPanel() {
 async function renderSkoleInfoTab(container) {
   const school = APP.school
 
-  const form = el('form', { class: 'skjema skjema-smal', onsubmit: async (e) => {
+  // P23: felles settings-mønster — sentrert .settings-page med ett kort per
+  // seksjon og «X»-lukk øverst. Formen wrapper alle kort, så den ene «Lagre
+  // skoleinfo»-knappen fortsatt samler hele skjemaet via FormData.
+  const page = el('div', { class: 'settings-page' })
+  page.appendChild(lagSettingsLukk())
+
+  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const updates = {
@@ -3397,16 +3403,17 @@ async function renderSkoleInfoTab(container) {
     })
   }})
 
-  // Skolenavn med tegnteller
+  // Kort: Skolenavn (med tegnteller)
   const navnInput = el('input', { name: 'name', type: 'text', class: 'felt input', value: school.name, maxlength: 30, style: 'width:100%' })
   const navnTeller = el('span', { class: 'tegnteller', style: 'float:right;font-size:.8rem;opacity:.6' }, `${(school.name||'').length}/30`)
   navnInput.addEventListener('input', () => { navnTeller.textContent = `${navnInput.value.length}/30` })
-  const navnWrap = el('div')
-  navnWrap.appendChild(navnTeller)
-  navnWrap.appendChild(navnInput)
-  form.appendChild(lagFormRad('Skolenavn', navnWrap))
+  const navnKort = el('div', { class: 'settings-card' })
+  navnKort.appendChild(el('h3', {}, 'Skolenavn'))
+  navnKort.appendChild(navnTeller)
+  navnKort.appendChild(navnInput)
+  form.appendChild(navnKort)
 
-  // Uker på samme linje
+  // Kort: Skoleår (fra/til uke med live datovisning)
   function ukeHint(uke) {
     if (!uke) return ''
     const year = new Date().getFullYear()
@@ -3426,11 +3433,12 @@ async function renderSkoleInfoTab(container) {
   const sluttGrp = el('div', { class: 'uke-grp' })
   sluttGrp.appendChild(el('label', {}, 'Til uke')); sluttGrp.appendChild(sluttInput); sluttGrp.appendChild(sluttHint)
   ukeRad.appendChild(startGrp); ukeRad.appendChild(sluttGrp)
-  form.appendChild(lagFormRad('Skoleår', ukeRad))
+  const skoleaarKort = el('div', { class: 'settings-card' })
+  skoleaarKort.appendChild(el('h3', {}, 'Skoleår'))
+  skoleaarKort.appendChild(ukeRad)
+  form.appendChild(skoleaarKort)
 
-  // Logo
-  const logoRow = el('div', { class: 'felt' })
-  logoRow.appendChild(el('label', {}, 'Logo'))
+  // Kort: Logo
   const logoUrlInput = el('input', { name: 'logo_url', type: 'url', class: 'felt input', value: school.logo_url || '', placeholder: 'https://...' })
   const logoFileInput = el('input', { type: 'file', accept: 'image/*', onchange: async (ev) => {
     const file = ev.target.files[0]
@@ -3441,13 +3449,15 @@ async function renderSkoleInfoTab(container) {
     const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
     logoUrlInput.value = urlData.publicUrl
   }})
-  logoRow.appendChild(logoUrlInput)
-  logoRow.appendChild(logoFileInput)
-  form.appendChild(logoRow)
+  const logoKort = el('div', { class: 'settings-card' })
+  logoKort.appendChild(el('h3', {}, 'Logo'))
+  const logoFelt = el('div', { class: 'felt' })
+  logoFelt.appendChild(logoUrlInput)
+  logoFelt.appendChild(logoFileInput)
+  logoKort.appendChild(logoFelt)
+  form.appendChild(logoKort)
 
-  // Color theme
-  const themeRow = el('div', { class: 'felt' })
-  themeRow.appendChild(el('label', {}, 'Fargetema'))
+  // Kort: Fargetema (radio med live preview)
   const themes = [
     { value: 'standard', label: 'Standard (grønn)', color: '#2d6a4f' },
     { value: 'lys', label: 'Lys (blå)', color: '#0077b6' },
@@ -3466,11 +3476,18 @@ async function renderSkoleInfoTab(container) {
     themeGroup.appendChild(radio)
     themeGroup.appendChild(lbl)
   }
-  themeRow.appendChild(themeGroup)
-  form.appendChild(themeRow)
+  const temaKort = el('div', { class: 'settings-card' })
+  temaKort.appendChild(el('h3', {}, 'Fargetema'))
+  temaKort.appendChild(themeGroup)
+  form.appendChild(temaKort)
 
-  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre skoleinfo'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
-  container.appendChild(form)
+  // Primærknapp nederst (lagrer hele skjemaet)
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p', style: 'margin-top:4px' }, 'Lagre skoleinfo')
+  form.appendChild(lagreKnapp)
+  overvakSkjema(form, lagreKnapp)
+
+  page.appendChild(form)
+  container.appendChild(page)
 }
 
 async function renderSkoleaarTab(container) {
