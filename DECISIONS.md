@@ -75,3 +75,30 @@ Beslutningslogg for designvalg som ikke er åpenbare fra koden alene.
 - **Admin-spalten er litt bredere enn Profil** (`max-width:920px` vs `680px`)
   fordi admin-faner har tyngre innhold (lister, tabeller, brukeradministrasjon).
   Kort-stilen og «X»-en er felles; bredden tilpasses konteksten.
+
+## P25 — Mobil header-overflow: redundante toggles flyttes til hamburgeren (23.06.2026)
+
+- **På mobil (≤700px) flyttes «Admin» + «Lærervisning/Elevvisning» ut av header-raden
+  og inn i hamburgeren.** Headeren er én flex-rad uten `flex-wrap`, så på smal skjerm
+  (~390px) ble «Lærervisning» og hamburgeren klippet utenfor høyre kant. Hamburgeren er
+  allerede mobilnavigasjonen, så de to redundante tekstknappene hører hjemme der på mobil.
+  Desktop er uendret (knappene blir i header-raden). Valgt framfor å krympe knappene til
+  ikoner / skjule skoleinfo (mer rot, høyere regresjonsrisiko).
+
+- **Vis/skjul mellom header og hamburger er RENT CSS-styrt, ikke JS-breakpoint.**
+  Header-knappene får `.hdr-pc-only` (skjult `@media max-width:700px`); hamburger-speilene
+  `#hdr-dd-laerer`/`#hdr-dd-admin` får `.hdr-mobile-only` (skjult `@media min-width:701px`).
+  Media-queriene er gjensidig utelukkende → nøyaktig ett sett synlig, ingen blink/duplikat,
+  ingen `resize`-lytter for selve byttet. JS (`oppdaterHeader`) styrer fortsatt rolle/
+  innlogging via `.skjult` på BÅDE settene; CSS avgjør bare hvilket sett breakpoint-en viser.
+
+- **Speil, ikke kopi (identisk adferd).** Lærer/elev-toggelens navigasjon (P21 elev-peek/
+  retur) er trukket ut i én felles `byttLaererElev`-kjerne i `oppdaterHeader` som både
+  header-knappen og hamburger-valget kaller. Hamburger-«Admin» kaller samme `toggleAdminModus`
+  (P10: navigerer ikke) og speiler aktiv-stil/tekst. Tekst/tilstand settes ett sted, så
+  menyvalgene følger header-knappene automatisk. P21-synligheten gjenbrukes (samme
+  `visAdmin`/innlogget-logikk), ikke gjenoppfunnet.
+
+- **`--header-h` upåvirket.** Header-høyden drives av logo (38px) / hamburger (~32px, blir
+  værende på mobil), aldri av de skjulte knappene; dropdownen er `position:absolute`. Den
+  sticky faneraden står dermed rett som før.
