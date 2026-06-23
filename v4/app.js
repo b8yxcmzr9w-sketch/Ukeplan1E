@@ -328,7 +328,8 @@ async function medAIOverlay(tittel, asyncFn) {
       // Tell visning: oppdater lokalt + DB (ikke-blokkerende, omgår RLS via SECURITY DEFINER)
       if (forrige?.id) {
         forrige.view_count = (forrige.view_count || 0) + 1
-        sb.rpc('increment_fact_view', { p_fact_id: forrige.id }).catch(() => {})
+        Promise.resolve(sb.rpc('increment_fact_view', { p_fact_id: forrige.id }))
+          .then(() => {}, () => {})
       }
       return forrige?.fact_text ?? ''
     }

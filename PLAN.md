@@ -1,5 +1,73 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt X (P26): Fiks `increment_fact_view`-krasj i AI-overlay
+Branch: `claude/P26-fiks-increment-fact-view-catch`.
+Cache-bust: `20260623b`.
+Scope: `v4/app.js` (én linje), `v4/index.html` (cache-bust). Ingen DB-/edge-/CSS-/migrasjonsendringer.
+**Neste steg:** Live-test (AI-import uten krasj), deretter PR (tittel **P26**) → merge.
+
+### Problem
+AI-importen («Lim inn økter med AI» og «Lim inn skolerute») krasjer med:
+`sb.rpc('increment_fact_view', { p_fact_id: forrige.id }).catch is not a function`
+Begge importene deler `medAIOverlay`, og krasjet stopper overlayets flytkontroll.
+
+### STEG 1 — Kartlegging (kun lesing, med bevis)
+
+#### 1. Alle forekomster av `increment_fact_view` i `v4/app.js`
+**Kun ÉN forekomst:**
+- **Linje 331**, inne i hjelpefunksjonen `nesteFakta()` (lukket inne i `medAIOverlay`).
+  Pattern: `sb.rpc('increment_fact_view', { p_fact_id: forrige.id }).catch(() => {})` → **FEIL**.
+  `sb.rpc(...)` returnerer en Supabase PromiseLike/query-builder (har `.then()`) men ikke
+  et fullt `Promise` (mangler `.catch()`) → `TypeError: .catch is not a function`.
+  Ingen andre forekomster med verken feil eller riktig mønster.
+
+#### 2. Krasjet er i `medAIOverlay` sin funfacts-rotasjon — BEKREFTET
+`nesteFakta()` kalles (a) ved overlay-oppstart (`visNeste(false)`) og (b) via
+`setInterval(..., 10000)` + «→»-knappen. Hvert kall prøver `.catch()` på rpc-returnverdien.
+Det eksploderer umiddelbart/etter 10 sek — ikke i selve AI-importlogikken (som ligger i
+`asyncFn`-argumentet). Begge importene (`visAIPasteModal` og `visAIPasteSkoleruteModal`)
+bruker `medAIOverlay` → begge rammes.
+
+#### 3. RPC-funksjonen `increment_fact_view` i migrasjoner
+**FINNES** — `v4/supabase/migrations/018_funfacts_view_count.sql` linje 17:
+`CREATE OR REPLACE FUNCTION increment_fact_view(p_fact_id uuid)`.
+Migrasjonen finnes men er ikke listet i kjørte migrasjoner i CLAUDE.md — kan hende den
+ikke er kjørt i prod-databasen ennå. Det endrer ikke fiksen (stille feil svelges uansett).
+
+#### 4. Andre `.catch`-på-rpc-mønster i app.js
+**Ingen andre.** Grep over hele `v4/app.js` for `sb\.rpc\(.*\)\.catch` gir kun linje 331.
+Linje 374 (`sjekkOgFornyFunfacts().catch(() => {})`) kaller en vanlig `async function` →
+fullt Promise → `.catch()` er gyldig der.
+
+---
+
+### STEG 2 — Fiks (venter godkjenning)
+
+**Minimal endring:** `Promise.resolve(...)` wrapper gjør returverdien til et ekte Promise.
+```js
+// FEIL (i dag):
+sb.rpc('increment_fact_view', { p_fact_id: forrige.id }).catch(() => {})
+
+// RIKTIG:
+Promise.resolve(sb.rpc('increment_fact_view', { p_fact_id: forrige.id }))
+  .then(() => {}, () => {})
+```
+Samme semantikk: ikke-blokkerende, svelger feil stille. Ingen endring i hva som telles.
+
+**Faser:**
+- [x] **Fase 1 — Fiks linje 331 i `v4/app.js`** (én linje endret).
+- [x] **Fase 2 — Cache-bust `20260623b` i `v4/index.html`** (JS-linja).
+- [x] **Fase 3 — Commit, push, kryss av, oppsummering.**
+
+### Verifiser
+- [ ] «Lim inn økter med AI» kjører uten krasj (live-test)
+- [ ] «Lim inn skolerute med AI» gir respons (neste skoleår) (live-test)
+- [ ] Funfacts roterer fortsatt i AI-overlayet uten feil (live-test)
+- [ ] Ingen ny feil i konsollen (live-test)
+- [x] Ingen endring utenfor `v4/app.js` + cache-bust
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P25): Mobil header-overflow (flytt redundante toggles til hamburger)
 Branch: `claude/friendly-edison-f6tvex` (systemmandatert dev-branch; identisk med
 `origin/main`@P24/#122 etter fetch — 0 ahead / 0 behind). Cache-bust: `20260623a`.
