@@ -335,6 +335,18 @@ Viser: `[skoleår] [Skolenavn] [klasse X]` — skoleår og klasse er mindre teks
 skolenavn dominerer. Klassevelger (select) for lærer med flere klasser ligger
 utenfor `<a>`-taggen (for å unngå navigasjon ved klikk).
 
+### Header-toggles: PC i raden, hamburger på mobil (P25)
+Headeren er én flex-rad uten `flex-wrap`. «Admin» (`#hdr-admin-toggle`) og
+«Lærervisning/Elevvisning» (`#hdr-laerer-btn`) ligger i raden på PC, men ville klippes
+på smal mobil. Derfor: de to header-knappene har `.hdr-pc-only` (CSS skjuler `≤700px`),
+og hamburgeren (`#hdr-dropdown`) speiler dem på mobil via `#hdr-dd-laerer`/`#hdr-dd-admin`
+med `.hdr-mobile-only` (CSS skjuler `≥701px`). Media-queriene er gjensidig utelukkende →
+nøyaktig ett sett synlig, ingen blink/duplikat, ingen JS-breakpoint. `oppdaterHeader`
+setter tekst/tilstand/`.skjult` på BÅDE settene ut fra samme rolle-/innloggingslogikk
+(P21-synlighet); lærer/elev-navigasjonen deles via felles `byttLaererElev`-kjerne, og
+hamburger-«Admin» kaller samme `toggleAdminModus` (P10). `--header-h` er upåvirket
+(høyde drives av logo/hamburger, dropdown er `position:absolute`).
+
 ## Utskrift
 `utskrift-hode`-div vises kun ved print. Format:
 `25/26 Øksnevad vgs, klasse 1D – Uke X`

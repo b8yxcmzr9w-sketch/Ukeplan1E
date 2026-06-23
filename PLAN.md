@@ -1,5 +1,134 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt X (P25): Mobil header-overflow (flytt redundante toggles til hamburger)
+Branch: `claude/friendly-edison-f6tvex` (systemmandatert dev-branch; identisk med
+`origin/main`@P24/#122 etter fetch — 0 ahead / 0 behind). Cache-bust: `20260623a`.
+Scope: `v4/app.js` (`oppdaterHeader`), `v4/style.css`, `v4/index.html` (markup + cache-bust),
+`PLAN.md`, `DECISIONS.md`. Ingen DB-/edge-/migrasjonsendringer.
+**Neste steg:** Live-test av Morfar (mobil ~390px + desktop), deretter PR (tittel **P25**) → merge.
+
+### Problem
+På smal mobilskjerm (~390px) får ikke header-raden plass til alt på én linje:
+`[skoleår] [Skolenavn] [klasse X]` + «Admin» + «Lærervisning/Elevvisning» + hamburger.
+Headeren er én flex-rad uten `flex-wrap` (style.css:104–111), så overskytende innhold
+klippes mot høyre kant i stedet for å brytes — «Lærervisning» og hamburgeren forsvinner
+utenfor kanten.
+
+### STEG 1 — Kartlegging (kun lesing, med bevis)
+
+a) **Header-knappene i dag.**
+   - **Markup** (index.html:38–40): «Alltid-synlige toggle-brytere» —
+     `#hdr-admin-toggle` («Admin») og `#hdr-laerer-btn` («Lærervisning»), begge
+     `class="hdr-btn skjult"`. Deretter `#hdr-hamburger` («☰», index.html:43).
+   - **`#hdr-admin-toggle`** styres i `oppdaterHeader` (app.js:732–738): vises når
+     `visAdmin = harAdminTilgang()` (app.js:705), tekst «Admin», toggler `.admin-aktiv`
+     fra `APP.isAdminActive`, `onclick = toggleAdminModus` (P10: navigerer IKKE),
+     `title` = «Bytt til lærervisning/adminvisning». Modus-uavhengig synlig for admin.
+   - **`#hdr-laerer-btn`** styres i `oppdaterHeader` (app.js:710–730): ALLTID synlig for
+     innlogget bruker (`laererBtn.classList.remove('skjult')`, app.js:711 — P21 symmetrisk).
+     Tekst = `erILaerer ? 'Elevvisning' : 'Lærervisning'`. `onclick` (app.js:714–728):
+     i lærervisning → sett `APP.elevPeekWeek = APP.laererCtx.week` og naviger til
+     `#/klasse/<klasseNavn>` (fallback `#/`); ellers → `#/laerer/<APP.laererCtx.tab||'klasse'>`.
+   - **Synlighet (P21):** admin ser begge; vanlig lærer ser kun lærer/elev-toggelen;
+     utlogget ser ingen (`else`-grenen app.js:754–755 legger på `.skjult`).
+
+b) **Hamburger-menyen i dag (`#hdr-dropdown`, index.html:44–50) — NØYAKTIG innhold:**
+   - `#hdr-dropdown-navn` (brukernavn) — vises innlogget (app.js:742).
+   - `#hdr-dd-profil` «Profil» → `#/laerer/innstillinger` (app.js:744–747).
+   - `#hdr-dd-innstillinger` «Innstillinger» — KUN admin (`toggle('skjult', !visAdmin)`,
+     app.js:748–751) → `#/admin`.
+   - `#hdr-dd-logout` «Logg ut» → `logout()` (app.js:752).
+   - `#hdr-dd-login` «Logg inn» — kun utlogget → `#/login` (app.js:762).
+   - **BEKREFTET:** «Admin» og «Lærervisning» finnes IKKE i hamburgeren i dag (de ligger
+     som egne header-knapper, jf. a). Ingen duplikater å gjeninnføre. (Merk: CSS-regelen
+     `.hdr-dropdown-btn.admin-aktiv`, style.css:159, er en ubrukt levning — ufarlig.)
+
+c) **Hvordan «alltid synlig» ble satt.** Det finnes INGEN `hdr-pc-only`-klasse igjen
+   (grep i hele `v4/` → 0 treff). P9 fjernet den helt; de to header-knappene har nå bare
+   `hdr-btn skjult`, og synligheten styres utelukkende av JS (`.skjult`-toggling i
+   `oppdaterHeader`). Det finnes ingen CSS-media-query som skjuler dem på mobil i dag —
+   derfor overflyten. → Vi gjeninnfører et CSS-skjul betinget på skjermbredde.
+
+d) **Breakpoint-praksis.** Appens primære mobil-breakpoint er **`max-width: 700px`**
+   (style.css:724 = tabell→kort; style.css:805 = uke-grid→kolonne + alle mobiltilpasninger).
+   `640px` (style.css:568) er kun en lokal skolerute-tilpasning. → Vi gjenbruker **700px**
+   (og komplementet `min-width: 701px` for desktop-skjul av hamburger-duplikatene).
+
+e) **`--header-h`-måling.** `settHeaderHoyde()` (app.js:776–781) setter `--header-h` fra
+   `header.offsetHeight`, kalles sist i `oppdaterHeader` (app.js:770) og på `resize`
+   (app.js:4941). Headeren er én flex-rad uten `flex-wrap` (style.css:108) → høyden er
+   stabil (drevet av logo 38px + 10px padding), uavhengig av antall knapper. Å FJERNE de to
+   tekstknappene på mobil kan ikke ØKE høyden. `#hdr-dropdown` er `position:absolute`
+   (style.css:142–143) → bidrar ikke til `offsetHeight`, så ekstra dropdown-valg endrer
+   ikke `--header-h`. Sticky fane-rad (`top` fra `--header-h`) forblir korrekt.
+
+### STEG 2 — Delplan (anbefaling: Tilnærming A)
+
+**Vurdering A vs B — anbefaler A.** Tilnærming A (flytt redundante toggles inn i
+hamburgeren på mobil) er ryddigst: hamburgeren ER allerede mobilnavigasjonen, headeren
+beholder kun det essensielle (skoleinfo + ☰), og vi rører ikke knappenes adferd. Tilnærming
+B (krymp knappene til ikoner / skjul skoleinfo) gir mer rot og risiko mot skoleinfo-blokka.
+B beholdes kun som fallback hvis A skulle rote til synlighetslogikken.
+
+**Mekanisme (ingen JS-breakpoint-logikk — rent CSS-styrt vis/skjul, unngår blink):**
+De to header-knappene får klassen `hdr-pc-only` (CSS skjuler dem `@media max-width:700px`).
+To NYE hamburger-valg (`#hdr-dd-laerer`, `#hdr-dd-admin`) får klassen `hdr-mobile-only`
+(CSS skjuler dem `@media min-width:701px`). `oppdaterHeader` setter tekst/tilstand/onclick
++ `.skjult` på BÅDE header-knappene OG de nye dropdown-valgene ut fra samme rolle-logikk
+(P21); CSS avgjør hvilket sett som faktisk vises per breakpoint. Media-queriene er gjensidig
+utelukkende (≤700 vs ≥701) → nøyaktig ett sett synlig, ingen blink, ingen duplikat.
+
+- [x] **Fase 1 — Markup** (`v4/index.html`). `hdr-pc-only` lagt på `#hdr-admin-toggle` og
+  `#hdr-laerer-btn`. To nye knapper i `#hdr-dropdown` rett etter `#hdr-dropdown-navn`:
+  `#hdr-dd-laerer` og `#hdr-dd-admin`, begge `class="hdr-dropdown-btn hdr-mobile-only skjult"`.
+  Cache-bust `?v=20260623a` (CSS + JS).
+
+- [x] **Fase 2 — `oppdaterHeader`-logikk** (`v4/app.js`). Lærer-toggelens adferd trukket ut i
+  felles `byttLaererElev`-kjerne (P21 elev-peek/retur) som BÅDE `#hdr-laerer-btn` OG
+  `#hdr-dd-laerer` kaller identisk. `#hdr-dd-laerer` får samme tekst/title, alltid synlig for
+  innlogget bruker. `#hdr-dd-admin` får tekst «Admin», `.toggle('admin-aktiv', …)` og samme
+  `toggleAdminModus` (P10: navigerer ikke), vist kun når `visAdmin`. Utlogget-grenen legger
+  `.skjult` på begge. Header-knappenes egen logikk uendret.
+
+- [x] **Fase 3 — CSS** (`v4/style.css`). `@media (max-width:700px){ .hdr-pc-only{display:none!important} }`
+  og `@media (min-width:701px){ .hdr-mobile-only{display:none!important} }`. Ingen
+  `display`-regel utenfor media-queriene (JS-`.skjult` styrer rolle/innlogging som før).
+  `header` er allerede `display:none` ved print → ingen print-endring.
+
+- [x] **Fase 4 — Verifisert `--header-h` (resonnement).** Headeren er én flex-rad uten
+  `flex-wrap`; høyden drives av logo (38px) eller hamburger (~32px, som blir værende på mobil)
+  — aldri av de skjulte `.hdr-pc-only`-knappene. Dropdownen er `position:absolute` → ekstra
+  valg påvirker ikke `offsetHeight`. `settHeaderHoyde` re-måler etter hver `oppdaterHeader` og
+  på `resize`, så 700px-grensen måles riktig. → `--header-h` uendret, sticky fane-rad intakt.
+
+- [x] **Fase 5 — Avslutning.** PLAN.md krysset av + «Neste steg» oppdatert. DECISIONS.md (P25)
+  + CLAUDE.md (header-mønster) dokumentert. Commit per fase. Norsk oppsummering til slutt.
+
+### Flagg / risiko
+- **Branch-navn:** oppgaven foreslo `claude/P25-mobil-header-overflow`, men systemets «Git
+  Development Branch Requirements» mandaterer `claude/friendly-edison-f6tvex` — jeg blir på
+  den (ingen push til annen branch uten eksplisitt tillatelse), jf. P21-presedens.
+- Strengt scope: KUN header-overflow. Rører IKKE admin-toggelens adferd (P10: navigerer ikke),
+  Profil/Innstillings-mønsteret (P23/P24) eller elev-peek (P21). Flagges om noe frister utenfor.
+- Hvis CSS-vis/skjul gir blink/duplikat i en tilstand: stopp og rapporter (forventet ufarlig —
+  media-queriene er gjensidig utelukkende).
+- Hvis selve skolenavnet alene fortsatt er for bredt på svært smal skjerm (etter at de to
+  knappene er fjernet): noteres som egen oppfølging (la `.hdr-id-blokk` krympe/ellipse) — ikke
+  del av denne økten med mindre verifisering viser at hamburgeren fortsatt klippes.
+
+### Verifiser (kode-verifisert der mulig; visuell live-test gjenstår for Morfar)
+- [ ] Mobil (~390px): ingenting klippes i headeren; hamburger fullt synlig og trykkbar (live)
+- [ ] Mobil: «Admin» og «Lærervisning/Elevvisning» finnes i hamburger-menyen med riktig
+  tekst/tilstand og virker (admin-toggle veksler modus; lærer/elev navigerer + elev-peek) (live)
+- [x] Desktop: header-knappene uendret; ingen duplikate valg i hamburgeren
+  (`.hdr-mobile-only` skjult `≥701px`; header-knappenes JS-logikk urørt)
+- [x] Synlighet intakt (P21): admin ser begge; vanlig lærer kun lærer/elev; utlogget ingen
+  (samme `visAdmin`/innlogget-rollelogikk speiles til hamburger-valgene)
+- [x] Sticky fane-rad sitter fortsatt rett (riktig `--header-h`) — jf. Fase 4
+- [x] Hard refresh henger ikke på «Laster…» (init/`renderLaererView`/`renderAdminPanel` urørt)
+
+---
+
 ## Status: FULLFØRT (venter verifisering) — Økt X (P24): «X» på panel-nivå + kort på alle admin-faner
 Branch `claude/P24-admin-panel-x` (fra `origin/main`@P23 etter fetch).
 Cache-bust: `20260622c`. Scope: `v4/style.css`, `v4/app.js`, `v4/index.html`

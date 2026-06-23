@@ -700,6 +700,9 @@ function oppdaterHeader() {
   const ddInnstillinger  = document.getElementById('hdr-dd-innstillinger')
   const ddLogout         = document.getElementById('hdr-dd-logout')
   const ddLogin          = document.getElementById('hdr-dd-login')
+  // P25: hamburger-speil av header-toggles (kun synlig på mobil via .hdr-mobile-only)
+  const ddLaerer         = document.getElementById('hdr-dd-laerer')
+  const ddAdmin          = document.getElementById('hdr-dd-admin')
 
   if (APP.user && APP.profile) {
     const visAdmin = harAdminTilgang()
@@ -707,28 +710,42 @@ function oppdaterHeader() {
     // Toggle: Elevvisning / Lærervisning. Alltid synlig for innlogget bruker –
     // symmetrisk med Admin-knappen, så en admin kan veksle fritt i alle moduser
     // (P21). Tidligere ble den skjult i admin-modus (asymmetrisk oppførsel).
+    // P25: header-knappen er kun PC; samme valg speiles i hamburgeren på mobil.
+    const erILaerer = APP.currentView === 'laerer'
+    const laererLabel = erILaerer ? 'Elevvisning' : 'Lærervisning'
+    const laererTitle = erILaerer ? 'Bytt til elevvisning' : 'Gå til lærervisning'
+    // Felles adferd – brukes IDENTISK av både header-knapp og hamburger-speil (P21).
+    const byttLaererElev = () => {
+      if (erILaerer) {
+        // P21: åpne elevvisningen for nøyaktig den klassen + uka læreren står i.
+        const navn = APP.laererCtx.klasseNavn
+        if (navn) {
+          APP.elevPeekWeek = APP.laererCtx.week   // transient – leses én gang av renderElevView
+          navigate(`#/klasse/${encodeURIComponent(navn)}`)
+        } else {
+          navigate('#/')
+        }
+      } else {
+        // P21: tilbake til lærervisning på samme fane (klasse + uke seeder fra ctx).
+        navigate(`#/laerer/${APP.laererCtx.tab || 'klasse'}`)
+      }
+    }
     if (laererBtn) {
       laererBtn.classList.remove('skjult')
-      const erILaerer = APP.currentView === 'laerer'
-      laererBtn.textContent = erILaerer ? 'Elevvisning' : 'Lærervisning'
-      laererBtn.onclick = () => {
-        if (erILaerer) {
-          // P21: åpne elevvisningen for nøyaktig den klassen + uka læreren står i.
-          const navn = APP.laererCtx.klasseNavn
-          if (navn) {
-            APP.elevPeekWeek = APP.laererCtx.week   // transient – leses én gang av renderElevView
-            navigate(`#/klasse/${encodeURIComponent(navn)}`)
-          } else {
-            navigate('#/')
-          }
-        } else {
-          // P21: tilbake til lærervisning på samme fane (klasse + uke seeder fra ctx).
-          navigate(`#/laerer/${APP.laererCtx.tab || 'klasse'}`)
-        }
-      }
-      laererBtn.title = erILaerer ? 'Bytt til elevvisning' : 'Gå til lærervisning'
+      laererBtn.textContent = laererLabel
+      laererBtn.onclick = byttLaererElev
+      laererBtn.title = laererTitle
     }
-    // Toggle: Admin av/på (alltid synlig for admin)
+    // Hamburger-speil (mobil): alltid synlig for innlogget bruker, samme tekst/adferd.
+    if (ddLaerer) {
+      ddLaerer.classList.remove('skjult')
+      ddLaerer.textContent = laererLabel
+      ddLaerer.title = laererTitle
+      ddLaerer.onclick = () => { dropdown?.classList.add('skjult'); byttLaererElev() }
+    }
+    // Toggle: Admin av/på (alltid synlig for admin). P25: header-knapp kun PC,
+    // speiles i hamburgeren på mobil – begge kaller SAMME toggleAdminModus (P10:
+    // navigerer ikke) og viser samme aktiv-stil/tekst.
     if (adminToggle && visAdmin) {
       adminToggle.classList.remove('skjult')
       adminToggle.textContent = 'Admin'
@@ -736,6 +753,13 @@ function oppdaterHeader() {
       adminToggle.onclick = toggleAdminModus
       adminToggle.title = APP.isAdminActive ? 'Bytt til lærervisning' : 'Bytt til adminvisning'
     } else if (adminToggle) adminToggle.classList.add('skjult')
+    if (ddAdmin && visAdmin) {
+      ddAdmin.classList.remove('skjult')
+      ddAdmin.textContent = 'Admin'
+      ddAdmin.classList.toggle('admin-aktiv', APP.isAdminActive)
+      ddAdmin.title = APP.isAdminActive ? 'Bytt til lærervisning' : 'Bytt til adminvisning'
+      ddAdmin.onclick = () => { dropdown?.classList.add('skjult'); toggleAdminModus() }
+    } else if (ddAdmin) ddAdmin.classList.add('skjult')
 
     // Hamburger: brukernavn · Profil · Innstillinger (kun admin) · Logg ut
     if (hamburger) { hamburger.classList.remove('skjult'); hamburger.title = 'Åpne meny' }
@@ -753,6 +777,8 @@ function oppdaterHeader() {
   } else {
     if (laererBtn)   laererBtn.classList.add('skjult')
     if (adminToggle) adminToggle.classList.add('skjult')
+    if (ddLaerer)    ddLaerer.classList.add('skjult')   // P25: hamburger-speil
+    if (ddAdmin)     ddAdmin.classList.add('skjult')    // P25: hamburger-speil
 
     if (hamburger) { hamburger.classList.remove('skjult'); hamburger.title = 'Åpne meny' }
     if (ddNavn)          ddNavn.classList.add('skjult')
