@@ -1,10 +1,10 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PLAN KLAR — VENTER GODKJENNING — Økt X (P26): Fiks `increment_fact_view`-krasj i AI-overlay
+## Status: FULLFØRT — Økt X (P26): Fiks `increment_fact_view`-krasj i AI-overlay
 Branch: `claude/P26-fiks-increment-fact-view-catch`.
-Cache-bust: `20260623b` (bumpes ved kodesteg).
+Cache-bust: `20260623b`.
 Scope: `v4/app.js` (én linje), `v4/index.html` (cache-bust). Ingen DB-/edge-/CSS-/migrasjonsendringer.
-**Neste steg:** Morfar godkjenner planen → STEG 2 (fiks + commit + push).
+**Neste steg:** Live-test (AI-import uten krasj), deretter PR (tittel **P26**) → merge.
 
 ### Problem
 AI-importen («Lim inn økter med AI» og «Lim inn skolerute») krasjer med:
@@ -55,16 +55,16 @@ Promise.resolve(sb.rpc('increment_fact_view', { p_fact_id: forrige.id }))
 Samme semantikk: ikke-blokkerende, svelger feil stille. Ingen endring i hva som telles.
 
 **Faser:**
-- [ ] **Fase 1 — Fiks linje 331 i `v4/app.js`** (én linje endret).
-- [ ] **Fase 2 — Cache-bust `20260623b` i `v4/index.html`** (JS-linja).
-- [ ] **Fase 3 — Commit, push, kryss av, oppsummering.**
+- [x] **Fase 1 — Fiks linje 331 i `v4/app.js`** (én linje endret).
+- [x] **Fase 2 — Cache-bust `20260623b` i `v4/index.html`** (JS-linja).
+- [x] **Fase 3 — Commit, push, kryss av, oppsummering.**
 
 ### Verifiser
-- [ ] «Lim inn økter med AI» kjører uten krasj
-- [ ] «Lim inn skolerute med AI» gir respons (neste skoleår)
-- [ ] Funfacts roterer fortsatt i AI-overlayet uten feil
-- [ ] Ingen ny feil i konsollen
-- [ ] Ingen endring utenfor `v4/app.js` + cache-bust
+- [ ] «Lim inn økter med AI» kjører uten krasj (live-test)
+- [ ] «Lim inn skolerute med AI» gir respons (neste skoleår) (live-test)
+- [ ] Funfacts roterer fortsatt i AI-overlayet uten feil (live-test)
+- [ ] Ingen ny feil i konsollen (live-test)
+- [x] Ingen endring utenfor `v4/app.js` + cache-bust
 
 ---
 
