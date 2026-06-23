@@ -1,6 +1,39 @@
 # PLAN — Ukeplan1E v4
 
-## Status: FULLFØRT (venter verifisering) — Økt X (P23): Felles settings-mønster (Profil + Skoleinfo)
+## Status: FULLFØRT (venter verifisering) — Økt X (P24): «X» på panel-nivå + kort på alle admin-faner
+Branch `claude/P24-admin-panel-x` (fra `origin/main`@P23 etter fetch).
+Cache-bust: `20260622c`. Scope: `v4/style.css`, `v4/app.js`, `v4/index.html`
+(cache-bust), `PLAN.md`, `CLAUDE.md`, `DECISIONS.md`. Ingen DB-/edge-/migrasjonsendringer.
+**Neste steg:** Live-test av Morfar; deretter egen økt for header-bredde på mobil.
+
+### Bakgrunn
+P23 ga Skoleinfo en egen «X» inni fanen + kort-layout. Det ble feil: adminpanelet
+har flere faner, så «X» dukket bare opp på Skoleinfo, og bare Skoleinfo hadde kort.
+Morfar godkjente forslaget «én X på panel-nivå + kort på alle faner» (illustrert).
+
+### Endringer
+- **CSS:** `.settings-page--admin` (bredere spalte, 920px, ingen toppluft til in-page-X)
+  og `.fane-lukk` («X» i fane-raden, panel-nivå). `.fane-lukk` lagt i print-skjulliste.
+- **`lagSettingsLukk(klass)`** parametrisert: `.settings-close` (Profil) vs `.fane-lukk` (admin).
+- **`renderAdminPanel`→`setTab`:** alle faner rendres i felles `.settings-page--admin`.
+  Skoleinfo bygger egne kort; de øvrige fanene rendres UENDRET inn i ett felles
+  `.settings-card` (ingen intern endring — lav regresjonsrisiko). Panel-«X» lagt
+  ytterst i fane-raden, synlig på alle faner.
+- **`renderSkoleInfoTab`:** egen `.settings-page` + per-fane-X fjernet (panel-X overtar);
+  appender skjemaet (med kortene) direkte til den medsendte settings-page-en.
+
+### Verifisert (kode)
+- [x] Adminpanelet har én «X» (panel-nivå) synlig på ALLE faner, ikke bare Skoleinfo
+- [x] «X» lukker hele panelet til lærervisning (samme rute som Profil-X)
+- [x] Alle admin-faner har kort-ramme (felles `.settings-page--admin`)
+- [x] Profil uendret (egen `.settings-close`, fungerer som før)
+- [x] Øvrige admin-faner uendret internt (kun innpakket) → all funksjonalitet bevart
+- [x] `node --check` OK
+- [ ] Live-test (Morfar): visuelt + at lagring/brukeradmin/skolerute-AI fungerer
+
+---
+
+## Status: FULLFØRT — merget til main via PR (#121) — Økt X (P23): Felles settings-mønster (Profil + Skoleinfo)
 Branch `claude/P23-felles-settings-monster` (fra `origin/main`@P22 etter fetch).
 Cache-bust: `20260622b`. Scope: `v4/style.css`, `v4/app.js`, `v4/index.html`
 (cache-bust), `PLAN.md`, `DECISIONS.md`. Ingen DB-/edge-/migrasjonsendringer.

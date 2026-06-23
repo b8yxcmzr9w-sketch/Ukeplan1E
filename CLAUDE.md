@@ -177,27 +177,36 @@ uke + skoleår. Mønster for alle AI-edge-functions (bygget i
 - Prompten klassifiserer juleferie og påskeferie som type `helligdag`
   (vises som «høytid» i UI), ikke `ferie`.
 
-### Settings-mønster for innstillings-/profilsider (P23)
+### Settings-mønster for innstillings-/profilsider (P23 + P24)
 Alle innstillings-/profilsider bruker ett felles, sentrert layout-mønster:
 - **`.settings-page`** — sentrert smal spalte (`max-width:680px`,
   `margin-inline:auto`), `position:relative` for «X»-ankring. Full bredde med
-  sidemarg på mobil.
+  sidemarg på mobil. Variant **`.settings-page--admin`** (`max-width:920px`,
+  ingen toppluft reservert til in-page-X) brukes av adminpanelets faner.
 - **`.settings-card`** — kort med kant/skygge; én seksjon per kort, `<h3>` som
   korttittel. Egne klasser (rører IKKE `.kort`/`.subj-config-box`, som brukes
   mange andre steder).
-- **`.settings-close`** — «X» øverst til høyre (44×44px treffareal,
-  `aria-label="Lukk"`, fokus-ring, skjult ved print). Bygges av hjelperen
-  `lagSettingsLukk()`, som ALLTID navigerer til lærervisning via fast rute
-  (`#/laerer/<APP.laererCtx.tab || 'klasse'>`) — aldri `history.back()`, virker
-  også etter hard refresh. Faller tilbake til `klasse` hvis ctx peker på
-  `innstillinger` (Profil selv). Ingen bekreftelsesdialog ved ulagrede felt
-  (bevisst — feltene krever eksplisitt lagre-trykk).
+- **«X»-lukk** bygges av hjelperen `lagSettingsLukk(klass)`, som ALLTID navigerer
+  til lærervisning via fast rute (`#/laerer/<APP.laererCtx.tab || 'klasse'>`) —
+  aldri `history.back()`, virker også etter hard refresh. Faller tilbake til
+  `klasse` hvis ctx peker på `innstillinger` (Profil selv). Ingen
+  bekreftelsesdialog ved ulagrede felt (bevisst — feltene krever eksplisitt
+  lagre-trykk). To varianter:
+  - **`.settings-close`** (default) — «X» øverst til høyre INNI siden (44×44px),
+    for frittstående settings-sider som Profil (der fane-raden skjules).
+  - **`.fane-lukk`** (P24) — «X» på PANEL-nivå, ytterst i en fane-rad, for
+    fane-paneler som adminpanelet. Synlig på alle faner, lukker hele panelet.
+    En in-page-«X» på kun én fane ble feil (jf. DECISIONS P24).
 - **Lærer-fane-raden skjules på Profil**: `setTab` i `renderLaererView` toggler
   `.skjult` på `.fane-bar` når `slug === 'innstillinger'`. Admin-panelets EGEN
-  fane-rad (`renderAdminPanel`) er separat og urørt.
-- Referanseimplementasjon: `renderInnstillingerTab` (Profil) og
-  `renderSkoleInfoTab` (admin Skoleinfo). Resten av admin-fanene migreres senere
-  (P24). Følg dette mønsteret ved nye innstillings-/profilsider.
+  fane-rad (`renderAdminPanel`) har i stedet `.fane-lukk`-«X»-en.
+- **Adminpanelet (P24):** `renderAdminPanel`→`setTab` legger alle faner i en
+  `.settings-page--admin`. Skoleinfo bygger sine egne kort; de øvrige fanene
+  rendres UENDRET inn i ett felles `.settings-card` (ingen intern endring av
+  fane-funksjonene — lav regresjonsrisiko).
+- Referanseimplementasjon: `renderInnstillingerTab` (Profil, `.settings-close`)
+  og `renderAdminPanel` (admin, `.fane-lukk` + felles kort). Følg dette mønsteret
+  ved nye innstillings-/profilsider.
 
 ### RLS-funksjoner i SQL
 - `auth_school_id()` — returnerer school_id for innlogget bruker
@@ -292,7 +301,7 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `router()` | Hash-basert ruting |
 | `renderElevView(klasseNavn)` | Elevvisning |
 | `renderLaererView()` | Lærervisning med tabs |
-| `renderAdminPanel()` | Adminpanel med tabs |
+| `renderAdminPanel()` | Adminpanel med tabs. P24: alle faner i felles `.settings-page--admin` med kort-ramme + panel-nivå «X» (`.fane-lukk`) i fane-raden |
 | `renderMinKlasseTab(container)` | Ukeoversikt for lærer |
 | `renderAlleOkterTab(container)` | Lærerens egne økter, gruppert per uke (desktop: rad-basert tett pakking, mobil: kort-liste). Viser også skoleruten (ferie/høytid/planleggingsdag) per uke — inkl. rene ferieuker uten økter. P22: husker øverste uke mellom fanebytter (in-memory `_lastTopWeek` via scroll-spy-observer `_spyObs`) — første åpning i sesjonen → dagens uke, retur fra annen fane → der du slapp; «Nå»-knappen (anker) uendret. |
 | `visNyOktModal(...)` | Ny økt-modal |
@@ -318,7 +327,7 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `showToast(msg, type)` | Toast-melding |
 | `medLagreOverlay(fn)` | Vis lagre-overlay under async operasjon |
 | `medAIOverlay(tittel, fn)` | «AI jobber»-overlay med roterende funfacts under AI-kall |
-| `lagSettingsLukk()` | «X»-lukk for settings-sider; navigerer alltid til lærervisning via fast rute (P23) |
+| `lagSettingsLukk(klass)` | «X»-lukk for settings-sider; navigerer alltid til lærervisning via fast rute. `.settings-close` (Profil) eller `.fane-lukk` (admin panel-nivå, P24) |
 | `el(tag, attrs, ...children)` | DOM-hjelpefunksjon |
 
 ## Header-struktur

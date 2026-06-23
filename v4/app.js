@@ -3348,14 +3348,25 @@ async function renderAdminPanel() {
     history.replaceState(null, '', `#/admin/${tabSlugs[idx]}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
     clearEl(tabContent)
-    switch (idx) {
-      case 0: renderSkoleInfoTab(tabContent); break
-      case 1: renderSkoleaarTab(tabContent); break
-      case 2: renderFagTab(tabContent); break
-      case 3: renderKlasserTab(tabContent); break
-      case 4: renderBrukereTab(tabContent); break
-      case 5: renderSkolerute(tabContent); break
-      case 6: renderFaktaTab(tabContent); break
+    // P24: alle admin-faner rendres i samme sentrerte settings-page med kort-ramme,
+    // slik at panelet ser likt ut uansett fane. «X»-en ligger på panel-nivå i
+    // fane-raden (ikke inni én fane). Skoleinfo bygger sine egne kort; de øvrige
+    // fanene rendres uendret inn i ett felles kort (lav risiko — ingen intern endring).
+    const page = el('div', { class: 'settings-page settings-page--admin' })
+    tabContent.appendChild(page)
+    if (idx === 0) {
+      renderSkoleInfoTab(page)
+    } else {
+      const card = el('div', { class: 'settings-card' })
+      page.appendChild(card)
+      switch (idx) {
+        case 1: renderSkoleaarTab(card); break
+        case 2: renderFagTab(card); break
+        case 3: renderKlasserTab(card); break
+        case 4: renderBrukereTab(card); break
+        case 5: renderSkolerute(card); break
+        case 6: renderFaktaTab(card); break
+      }
     }
   }
 
@@ -3363,6 +3374,9 @@ async function renderAdminPanel() {
     const btn = el('button', { class: 'fane', title: `Gå til ${t}`, onclick: () => setTab(i) }, t)
     tabBar.appendChild(btn)
   })
+  // P24: «X»-lukk på panel-nivå — synlig på alle admin-faner, lukker hele panelet
+  // til lærervisning (samme rute som Profil-X-en).
+  tabBar.appendChild(lagSettingsLukk('fane-lukk'))
 
   const adminWrap = el('div', { class: 'side-wrap' })
   adminWrap.appendChild(tabBar)
@@ -3374,12 +3388,10 @@ async function renderAdminPanel() {
 async function renderSkoleInfoTab(container) {
   const school = APP.school
 
-  // P23: felles settings-mønster — sentrert .settings-page med ett kort per
-  // seksjon og «X»-lukk øverst. Formen wrapper alle kort, så den ene «Lagre
-  // skoleinfo»-knappen fortsatt samler hele skjemaet via FormData.
-  const page = el('div', { class: 'settings-page' })
-  page.appendChild(lagSettingsLukk())
-
+  // P23/P24: felles settings-mønster — ett kort per seksjon. «X»-lukk ligger nå på
+  // panel-nivå i adminpanelets fane-rad (P24), ikke inni denne fanen. `container` er
+  // settings-page-en fra renderAdminPanel. Formen wrapper alle kort, så den ene
+  // «Lagre skoleinfo»-knappen fortsatt samler hele skjemaet via FormData.
   const form = el('form', { class: 'skjema', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
@@ -3486,8 +3498,7 @@ async function renderSkoleInfoTab(container) {
   form.appendChild(lagreKnapp)
   overvakSkjema(form, lagreKnapp)
 
-  page.appendChild(form)
-  container.appendChild(page)
+  container.appendChild(form)
 }
 
 async function renderSkoleaarTab(container) {
@@ -4889,9 +4900,11 @@ function visFunfactModal(fact, onSave) {
 // ulagrede felt (bevisst: feltene krever et eksplisitt lagre-trykk). Faller tilbake
 // til «klasse»-fanen hvis ctx mangler ELLER peker på «innstillinger» (Profil selv),
 // så vi aldri lukker tilbake til siden vi nettopp forlot.
-function lagSettingsLukk() {
+// P24: `klass` lar adminpanelet bruke en variant (.fane-lukk) som ligger i
+// fane-raden i stedet for absolutt-plassert inni én fane (.settings-close).
+function lagSettingsLukk(klass = 'settings-close') {
   return el('button', {
-    type: 'button', class: 'settings-close', 'aria-label': 'Lukk', title: 'Lukk',
+    type: 'button', class: klass, 'aria-label': 'Lukk', title: 'Lukk',
     onclick: () => {
       const tab = APP.laererCtx?.tab
       const mal = (tab && tab !== 'innstillinger') ? tab : 'klasse'
