@@ -158,6 +158,17 @@ header .spacer { flex: 1; }
 .hdr-dropdown-btn:hover { background: rgba(255,255,255,.15); }
 .hdr-dropdown-btn.admin-aktiv { color: var(--advarsel); font-weight: 700; }
 
+/* P25: header-overflow på mobil. «Admin» + «Lærervisning/Elevvisning» flyttes ut
+   av header-raden og inn i hamburgeren på smal skjerm. Media-queriene er gjensidig
+   utelukkende (≤700 vs ≥701) → nøyaktig ett sett vises, aldri duplikat/blink.
+   Vis/skjul ellers (rolle/innlogging) styres fortsatt av JS via .skjult. */
+@media (max-width: 700px) {
+  .hdr-pc-only { display: none !important; }       /* header-toggles skjules på mobil */
+}
+@media (min-width: 701px) {
+  .hdr-mobile-only { display: none !important; }    /* hamburger-speil skjules på PC */
+}
+
 /* ── Navigasjon ─────────────────────────────────────────────────── */
 .nav-bar {
   display: flex; align-items: center; gap: 8px;
