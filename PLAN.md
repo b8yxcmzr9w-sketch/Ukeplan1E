@@ -1,8 +1,10 @@
 # PLAN — Ukeplan1E v4
 
-## Status: KARTLAGT (v3) — Økt X (P27): Tre admin-skrivefeil — RLS for adminpanelet
-Branch: `claude/focused-mendel-7uyjza` (venter godkjenning — ingen kode ennå).
-**Neste steg:** Godkjenning → implementasjon.
+## Status: FULLFØRT — Økt X (P27): Tre admin-skrivefeil — RLS for adminpanelet
+Branch: `claude/focused-mendel-7uyjza`.
+Cache-bust: `20260624a`.
+Scope: `v4/supabase/migrations/019_admin_panel_rls.sql` (ny, 12 policyer), `v4/app.js` (3 fikser), `v4/index.html` (cache-bust).
+**Neste steg:** Migrasjon 019 kjøres manuelt i Supabase SQL Editor, deretter PR → merge.
 
 ---
 
@@ -66,11 +68,11 @@ Merk `mde_write_kontaktlaerer_or_admin` (#9): `auth_role() = 'kontaktlaerer'`-ar
 
 ### Faser (etter godkjenning)
 
-- [ ] **Fase 1 — SQL-migrasjon `019_admin_panel_rls.sql`** — skriv fil, deploy manuelt i SQL Editor
-- [ ] **Fase 2 — Symptom-fix FEIL 1** (`app.js:3434`)
-- [ ] **Fase 3 — Symptom-fix FEIL 3** (`app.js:3617`)
-- [ ] **Fase 4 — Symptom-fix FEIL 2** (`app.js:4750`)
-- [ ] **Fase 5 — Cache-bust og commit/push**
+- [x] **Fase 1 — SQL-migrasjon `019_admin_panel_rls.sql`** — fil klar, **MANUELT: kjør i Supabase SQL Editor**
+- [x] **Fase 2 — Symptom-fix FEIL 1** (`app.js:3434`)
+- [x] **Fase 3 — Symptom-fix FEIL 3** (`app.js:3617`)
+- [x] **Fase 4 — Symptom-fix FEIL 2** (`app.js:4750`)
+- [x] **Fase 5 — Cache-bust `20260624a` og commit/push**
 
 ---
 
