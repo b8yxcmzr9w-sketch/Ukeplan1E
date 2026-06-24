@@ -4,7 +4,13 @@
 Branch: `claude/focused-mendel-7uyjza`.
 Cache-bust: `20260624a`.
 Scope: `v4/supabase/migrations/019_admin_panel_rls.sql` (ny, 12 policyer), `v4/app.js` (3 fikser), `v4/index.html` (cache-bust).
-**Neste steg:** Migrasjon 019 kjøres manuelt i Supabase SQL Editor, deretter PR → merge.
+**Neste steg:** Migrasjon 019 kjøres manuelt i Supabase SQL Editor.
+
+### Korreksjon (v3 → v4): WITH CHECK på alle FOR ALL-policyer
+
+`FOR ALL`-policyer med kun `USING` default-denyer INSERT i PostgreSQL — `WITH CHECK` er ikke arvet fra `USING`. Migrasjon 019 ble oppdatert til å ha eksplisitt `WITH CHECK (<identisk uttrykk som USING>)` på alle 10 `FOR ALL`-policyer (#1–#10). Policyer #11 (FOR DELETE) og #12 (FOR SELECT) trenger ikke WITH CHECK.
+
+Verifisering mot originaldefinisjonene (002/009/017/018): ingen av de gamle policyene hadde eksplisitt WITH CHECK → ingen regresjon ved drop + recreate. Policyens opprinnelige logikk er uendret bortsett fra den nye `auth_is_admin()`-armen.
 
 ---
 
