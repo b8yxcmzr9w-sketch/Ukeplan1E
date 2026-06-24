@@ -1,6 +1,80 @@
 # PLAN — Ukeplan1E v4
 
-## Status: KARTLAGT (v2) — Økt X (P27): Tre admin-skrivefeil — RLS for adminpanelet
+## Status: KARTLAGT (v3) — Økt X (P27): Tre admin-skrivefeil — RLS for adminpanelet
+Branch: `claude/focused-mendel-7uyjza` (venter godkjenning — ingen kode ennå).
+**Neste steg:** Godkjenning → implementasjon.
+
+---
+
+### Korrigert forståelse
+
+Adminpanelet (`#/admin`) nås via «Innstillinger» i hamburgeren og er **uavhengig av Admin-toggelen**. Toggelen er en P10-rettighetsbryter for ekstra rettigheter i *lærervisningen* (redigere andres timer). En admin som åpner panelet fra hamburgeren uten toggelen er i korrekt og tiltenkt tilstand.
+
+Rotårsak: RLS-skrivepolicyer for adminpanel-tabellene sjekker `is_active_admin()` (= `users.is_admin_active`, toggelflagget). Etter migrasjon 018 er admin et additivt boolsk felt (`users.is_admin`), og enum-verdien `'admin'` i `user_role_enum` brukes ikke lenger. En reell admin har `role = 'laerer'/'kontaktlaerer'` + `is_admin = true`. Riktig funksjon er `auth_is_admin()` (lagt til i 018).
+
+---
+
+### Hva 018 allerede fikset
+
+Migrasjon 018 oppdaterte `auth_is_admin()`-funksjonen og fikset **noen** policyer med mønsteret `is_active_admin() OR auth_is_admin()`:
+
+| Policy | Tabell | Status |
+|---|---|---|
+| `facts_write_admin` | `school_facts` | ✅ fikset i 018 |
+| `sessions_update_kontaktlaerer` | `sessions` | ✅ fikset i 018 |
+| `sessions_delete_kontaktlaerer` | `sessions` | ✅ fikset i 018 |
+| `subject_divisions_write_kontaktlaerer` | `subject_divisions` | ✅ fikset i 018 |
+
+Merk: `sessions`-policyene beholder `is_active_admin()` som *indre* betingelse `(is_contact_teacher_for(class_id) or is_active_admin())` — dette er korrekt og skal ikke røres (P10-toggle for kollegahjelp).
+
+---
+
+### Fullstendig policy-liste for migrasjon 019
+
+Alle under bruker kun `is_active_admin()` og mangler `auth_is_admin()`-armen. Migrasjonsnummer: **019** (`019_admin_panel_rls.sql`).
+
+| # | Policy-navn | Tabell | Nåværende admin-sjekk | Feil obs? |
+|---|---|---|---|---|
+| 1 | `schools_write_admin` | `schools` | `is_active_admin()` | ✗ **FEIL 1 + 3** |
+| 2 | `classes_write_admin` | `classes` | `is_active_admin()` | (ville feilet ved klasseredigering) |
+| 3 | `subjects_write_admin` | `subjects` | `is_active_admin()` | (ville feilet ved fagredigering) |
+| 4 | `subject_divisions_write_admin` | `subject_divisions` | `is_active_admin()` | (ville feilet ved divisjonsredigering) |
+| 5 | `users_write_admin` | `users` | `is_active_admin()` | (ville feilet ved brukeradmin) |
+| 6 | `user_classes_write_admin` | `user_classes` | `is_active_admin()` | (ville feilet ved klassetilknytning) |
+| 7 | `cct_write_admin` | `class_contact_teachers` | `is_active_admin()` | (ville feilet ved kontaktlæreroppsett) |
+| 8 | `csc_write_kontaktlaerer_or_admin` | `class_subject_config` | `is_active_admin() or is_contact_teacher_for(...)` | (admin-arm ville feilet) |
+| 9 | `mde_write_kontaktlaerer_or_admin` | `multi_day_events` | `is_active_admin() or auth_role() = 'kontaktlaerer'` | (admin-arm ville feilet) |
+| 10 | `cal_write_admin` | `school_calendar` | `is_active_admin()` | ✗ **FEIL 2** |
+| 11 | `transfers_delete_sender_or_admin` | `pending_transfers` | `is_active_admin()` | (admin-slettefunksjon) |
+| 12 | `audit_read_admin` | `audit_log` | `is_active_admin()` | (admin-leselogg) |
+
+**Mønster som brukes:** `is_active_admin() OR auth_is_admin()` — identisk med det som allerede er i prod for `school_facts` (migrasjon 018).
+
+Merk `mde_write_kontaktlaerer_or_admin` (#9): `auth_role() = 'kontaktlaerer'`-armen er fortsatt gyldig etter 018 (kontaktlærere har fremdeles `role = 'kontaktlaerer'`). `is_active_admin()` erstattes *ikke* — den legges til med `auth_is_admin()` som ekstra arm.
+
+---
+
+### Symptom-fikser i `app.js` (beholdes uansett)
+
+| Feil | Sted | Endring |
+|---|---|---|
+| FEIL 1 | `app.js:3434` | `.select().single()` → `.select()` + `data?.[0]` + norsk feilmelding |
+| FEIL 3 | `app.js:3617` | Samme |
+| FEIL 2 | `app.js:4750` | Fang feil med PostgreSQL-kode `42501`, vis «Admin-tilgang kreves for å lagre skoleruten» |
+
+---
+
+### Faser (etter godkjenning)
+
+- [ ] **Fase 1 — SQL-migrasjon `019_admin_panel_rls.sql`** — skriv fil, deploy manuelt i SQL Editor
+- [ ] **Fase 2 — Symptom-fix FEIL 1** (`app.js:3434`)
+- [ ] **Fase 3 — Symptom-fix FEIL 3** (`app.js:3617`)
+- [ ] **Fase 4 — Symptom-fix FEIL 2** (`app.js:4750`)
+- [ ] **Fase 5 — Cache-bust og commit/push**
+
+---
+
+## Status: FULLFØRT — Økt X (P26): Fiks `increment_fact_view`-krasj i AI-overlay
 Branch: `claude/focused-mendel-7uyjza` (venter godkjenning — ingen kode ennå).
 **Neste steg:** Godkjenning av valgt alternativ → implementasjon.
 
