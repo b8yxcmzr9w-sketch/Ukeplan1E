@@ -1,5 +1,243 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt X (P27): Tre admin-skrivefeil — RLS for adminpanelet
+Branch: `claude/focused-mendel-7uyjza`.
+Cache-bust: `20260624a`.
+Scope: `v4/supabase/migrations/019_admin_panel_rls.sql` (ny, 12 policyer), `v4/app.js` (3 fikser), `v4/index.html` (cache-bust).
+**Neste steg:** Migrasjon 019 kjøres manuelt i Supabase SQL Editor, deretter PR → merge.
+
+---
+
+### Korrigert forståelse
+
+Adminpanelet (`#/admin`) nås via «Innstillinger» i hamburgeren og er **uavhengig av Admin-toggelen**. Toggelen er en P10-rettighetsbryter for ekstra rettigheter i *lærervisningen* (redigere andres timer). En admin som åpner panelet fra hamburgeren uten toggelen er i korrekt og tiltenkt tilstand.
+
+Rotårsak: RLS-skrivepolicyer for adminpanel-tabellene sjekker `is_active_admin()` (= `users.is_admin_active`, toggelflagget). Etter migrasjon 018 er admin et additivt boolsk felt (`users.is_admin`), og enum-verdien `'admin'` i `user_role_enum` brukes ikke lenger. En reell admin har `role = 'laerer'/'kontaktlaerer'` + `is_admin = true`. Riktig funksjon er `auth_is_admin()` (lagt til i 018).
+
+---
+
+### Hva 018 allerede fikset
+
+Migrasjon 018 oppdaterte `auth_is_admin()`-funksjonen og fikset **noen** policyer med mønsteret `is_active_admin() OR auth_is_admin()`:
+
+| Policy | Tabell | Status |
+|---|---|---|
+| `facts_write_admin` | `school_facts` | ✅ fikset i 018 |
+| `sessions_update_kontaktlaerer` | `sessions` | ✅ fikset i 018 |
+| `sessions_delete_kontaktlaerer` | `sessions` | ✅ fikset i 018 |
+| `subject_divisions_write_kontaktlaerer` | `subject_divisions` | ✅ fikset i 018 |
+
+Merk: `sessions`-policyene beholder `is_active_admin()` som *indre* betingelse `(is_contact_teacher_for(class_id) or is_active_admin())` — dette er korrekt og skal ikke røres (P10-toggle for kollegahjelp).
+
+---
+
+### Fullstendig policy-liste for migrasjon 019
+
+Alle under bruker kun `is_active_admin()` og mangler `auth_is_admin()`-armen. Migrasjonsnummer: **019** (`019_admin_panel_rls.sql`).
+
+| # | Policy-navn | Tabell | Nåværende admin-sjekk | Feil obs? |
+|---|---|---|---|---|
+| 1 | `schools_write_admin` | `schools` | `is_active_admin()` | ✗ **FEIL 1 + 3** |
+| 2 | `classes_write_admin` | `classes` | `is_active_admin()` | (ville feilet ved klasseredigering) |
+| 3 | `subjects_write_admin` | `subjects` | `is_active_admin()` | (ville feilet ved fagredigering) |
+| 4 | `subject_divisions_write_admin` | `subject_divisions` | `is_active_admin()` | (ville feilet ved divisjonsredigering) |
+| 5 | `users_write_admin` | `users` | `is_active_admin()` | (ville feilet ved brukeradmin) |
+| 6 | `user_classes_write_admin` | `user_classes` | `is_active_admin()` | (ville feilet ved klassetilknytning) |
+| 7 | `cct_write_admin` | `class_contact_teachers` | `is_active_admin()` | (ville feilet ved kontaktlæreroppsett) |
+| 8 | `csc_write_kontaktlaerer_or_admin` | `class_subject_config` | `is_active_admin() or is_contact_teacher_for(...)` | (admin-arm ville feilet) |
+| 9 | `mde_write_kontaktlaerer_or_admin` | `multi_day_events` | `is_active_admin() or auth_role() = 'kontaktlaerer'` | (admin-arm ville feilet) |
+| 10 | `cal_write_admin` | `school_calendar` | `is_active_admin()` | ✗ **FEIL 2** |
+| 11 | `transfers_delete_sender_or_admin` | `pending_transfers` | `is_active_admin()` | (admin-slettefunksjon) |
+| 12 | `audit_read_admin` | `audit_log` | `is_active_admin()` | (admin-leselogg) |
+
+**Mønster som brukes:** `is_active_admin() OR auth_is_admin()` — identisk med det som allerede er i prod for `school_facts` (migrasjon 018).
+
+Merk `mde_write_kontaktlaerer_or_admin` (#9): `auth_role() = 'kontaktlaerer'`-armen er fortsatt gyldig etter 018 (kontaktlærere har fremdeles `role = 'kontaktlaerer'`). `is_active_admin()` erstattes *ikke* — den legges til med `auth_is_admin()` som ekstra arm.
+
+---
+
+### Symptom-fikser i `app.js` (beholdes uansett)
+
+| Feil | Sted | Endring |
+|---|---|---|
+| FEIL 1 | `app.js:3434` | `.select().single()` → `.select()` + `data?.[0]` + norsk feilmelding |
+| FEIL 3 | `app.js:3617` | Samme |
+| FEIL 2 | `app.js:4750` | Fang feil med PostgreSQL-kode `42501`, vis «Admin-tilgang kreves for å lagre skoleruten» |
+
+---
+
+### Faser (etter godkjenning)
+
+- [x] **Fase 1 — SQL-migrasjon `019_admin_panel_rls.sql`** — fil klar, **MANUELT: kjør i Supabase SQL Editor**
+- [x] **Fase 2 — Symptom-fix FEIL 1** (`app.js:3434`)
+- [x] **Fase 3 — Symptom-fix FEIL 3** (`app.js:3617`)
+- [x] **Fase 4 — Symptom-fix FEIL 2** (`app.js:4750`)
+- [x] **Fase 5 — Cache-bust `20260624a` og commit/push**
+
+---
+
+## Status: FULLFØRT — Økt X (P26): Fiks `increment_fact_view`-krasj i AI-overlay
+Branch: `claude/focused-mendel-7uyjza` (venter godkjenning — ingen kode ennå).
+**Neste steg:** Godkjenning av valgt alternativ → implementasjon.
+
+---
+
+### Korrigert forståelse (etter tilbakemelding)
+
+Adminpanelet (`#/admin`) nås via «Innstillinger» i hamburgeren og er **uavhengig av Admin-toggelen**. Toggelen i headeren er utelukkende en P10-rettighetsbryter for ekstra rettigheter i *lærervisningen* (redigere andres økter). En admin som åpner adminpanelet fra hamburgeren uten å ha toggelen på er i **korrekt og tiltenkt tilstand**.
+
+Rotårsaken er altså ikke et router-hull, men en **uoverensstemmelse i RLS**: skrive-policyer for adminpanel-tabellene krever `is_active_admin()` (som sjekker `users.is_admin_active`), men det flagget styres av en toggle som aldri er ment å brukes ved adminpanel-arbeid.
+
+---
+
+### Bakgrunn: Presedensen fra migrasjon 006
+
+Migrasjon `006_fix_school_facts_rls.sql` løste **nøyaktig samme problem** for `school_facts` allerede:
+
+```sql
+-- Fra 006_fix_school_facts_rls.sql (kjørt, i prod):
+create policy "facts_write_admin"
+  on school_facts for all
+  using (
+    school_id = auth_school_id()
+    and (
+      is_active_admin()
+      or (select role from users where id = auth.uid() and deleted_at is null) = 'admin'
+    )
+  );
+```
+
+Logikken: `is_active_admin() OR role = 'admin'`. Dvs. enten har du toggelen på, *eller* du er permanent admin etter rolle. **Dette mønsteret er bevisst valgt og allerede godkjent av prosjektet.** Det er konsekvens av den foreliggende situasjonen at de resterende adminpanel-tabellene mangler det samme.
+
+---
+
+### Berørte RLS-policyer per tabell
+
+Fra `002_rls.sql` og etterfølgende migrasjoner, sortert etter type:
+
+#### Gruppe 1 — Rene adminpanel-tabeller (skriver til DB kun fra adminpanelet)
+Disse mangler `or role = 'admin'`-armen og feiler når toggle er av:
+
+| Tabell | Feilende policy | Gjeldende sjekk |
+|---|---|---|
+| `schools` | `schools_write_admin` | `id = auth_school_id() and is_active_admin()` |
+| `classes` | (navnløs for all) | `school_id = auth_school_id() and is_active_admin()` |
+| `subjects` | (navnløs for all) | `school_id = auth_school_id() and is_active_admin()` |
+| `subject_divisions` | to policyer | `is_active_admin() and …` / `auth_role() = 'kontaktlaerer' and …` |
+| `users` (admin) | (navnløs for all) | `school_id = auth_school_id() and is_active_admin()` |
+| `user_classes` | (navnløs for all) | `is_active_admin() and …` |
+| `class_contact_teachers` | (navnløs for all) | `is_active_admin()` |
+| `school_calendar` | (navnløs for all) | `school_id = auth_school_id() and is_active_admin()` |
+| `school_facts` | `facts_write_admin` | **ALLEREDE FIKSET i mig. 006** |
+
+`class_subject_config` har `is_active_admin() or is_contact_teacher_for(class_id)` — kontaktlærer-armen er OK, men admin-armen mangler rolle-alternativet.
+
+`multi_day_events` har `is_active_admin() or auth_role() = 'kontaktlaerer'` — admin kan lage MDE fra adminpanelet uten toggle. Bør inkluderes.
+
+`audit_log` og `pending_transfers` bruker også `is_active_admin()`, men disse er interne/systemtabeller uten direkte brukerinteraksjon fra adminpanelet — kan utsettes.
+
+#### Gruppe 2 — Sessions-relaterte policyer (P10-toggle — skal IKKE endres)
+`sessions`-tabellens skriveolicyer bruker `is_active_admin()` bevisst for å styre P10-rettigheten (redigere andres timer). Disse røres **ikke**.
+
+---
+
+### Tre alternativers med fordeler/ulemper
+
+---
+
+#### Alternativ A — Konsistent `or auth_role() = 'admin'` på alle adminpanel-tabeller (anbefalt)
+
+Samme mønster som migrasjon 006, rullet ut til alle gjenværende tabeller i én ny migrasjon.
+
+**Ny migrasjon (019_admin_panel_rls.sql):**
+- For `schools`, `classes`, `subjects`, `subject_divisions`, `users` (admin-all), `user_classes`, `class_contact_teachers`, `school_calendar`, `class_subject_config`, `multi_day_events`:
+  - Drop eksisterende policy
+  - Lag ny med `is_active_admin() OR auth_role() = 'admin'` i admin-sjekken
+- `school_facts` allerede fikset — skip
+
+**Fordeler:**
+- Konsistent: alle adminpanel-tabeller følger samme mønster
+- Bruker `auth_role()` som allerede finnes som `SECURITY DEFINER`-funksjon — ingen ny funksjon trengs
+- Identisk logikk som det som allerede er godkjent og i prod for `school_facts`
+- Toggle forblir uberørt for sessions (P10 intakt)
+- Admin med toggle *av* kan nå skrive fra adminpanelet — korrekt oppførsel
+- Admin med toggle *på* (f.eks. fordi de jobber med timer) kan fortsatt skrive — bakoverkompatibelt
+
+**Ulemper:**
+- En admin i *elev-visning* eller *lærer-visning* (toggle av) kan teknisk sett gjøre rå API-kall som redigerer klasser/fag osv. — men dette er ikke eksponert i UI, og er akseptabelt sidennde allerede har lese-tilgang til alt via Supabase-anon-nøkkel
+- Noe større migrasjon (10–12 policy-dropp og -rekreasjoner)
+
+---
+
+#### Alternativ B — Minimale to tabeller (schools + school_calendar)
+
+Fikser kun de to tabellene der feilene er observert (FEIL 1/3 og FEIL 2). Samme OR-mønster som 006, men kun der det trengs akutt.
+
+**Fordeler:**
+- Minimal migrasjon (4 linjer SQL)
+- Lavest risiko
+
+**Ulemper:**
+- Ufullstendig: admin vil feile på `classes`, `subjects`, `subject_divisions`, `users`-oppdateringer (bruker-admin-fanen), `user_classes`, `class_contact_teachers` — alt dette er adminpanel-operasjoner som vil gi samme feil
+- Skaper teknisk gjeld: vi vet vi må tilbake og gjøre resten
+- Inkonsistens: noen tabeller har OR-mønster, andre ikke
+
+---
+
+#### Alternativ C — Ny dedikert `is_school_admin()`-funksjon, bytt alle policyer
+
+Introduser en ny SQL-funksjon `is_school_admin()` = `role = 'admin'`, og erstatt `is_active_admin()` med den i alle adminpanel-policyer.
+
+```sql
+create or replace function is_school_admin()
+returns boolean language sql security definer stable as $$
+  select coalesce((select role = 'admin' from users where id = auth.uid() and deleted_at is null), false);
+$$;
+```
+
+**Fordeler:**
+- Semantisk renere navnsetting for fremtiden
+
+**Ulemper:**
+- Bryter med OR-mønsteret fra 006 (som beholder bakoverkompatibilitet med toggle-on)
+- En admin med toggle *på* og gammel kode som stol på `is_active_admin()` for adminpanel-tilgang ville teknisk sett ikke trenge toggle lenger — subtil atferdsendring
+- Mer migrasjonskode enn alternativ A uten klart pluss
+- `auth_role()` finnes allerede — ingen ny funksjon trengs for A
+
+---
+
+### Anbefaling
+
+**Alternativ A** — konsistent `or auth_role() = 'admin'` på alle adminpanel-tabeller.
+
+Begrunnelse:
+1. Identisk logikk som mig. 006 (allerede i prod, allerede godkjent).
+2. Bruker `auth_role()` som allerede finnes — ingen ny infrastruktur.
+3. Fikser alle tre feilene *og* forebygger tilsvarende feil i resten av adminpanelet.
+4. Toggle-semantikken for sessions/P10 berøres ikke.
+
+---
+
+### Symptom-fikser i `app.js` (beholdes uansett valg)
+
+Disse gjøres parallelt med SQL-migrasjonen og gir gode feilmeldinger hvis RLS-blokkering likevel oppstår:
+
+- **FEIL 1** (`app.js:3434`): `.select().single()` → `.select()` + `data?.[0]` med norsk feilmelding
+- **FEIL 3** (`app.js:3617`): Samme
+- **FEIL 2** (`app.js:4750`): Fang feil med `code === '42501'` og vis «Admin-tilgang kreves for å lagre skoleruten»
+
+---
+
+### Faser (etter godkjenning)
+
+- [ ] **Fase 1 — SQL-migrasjon `019_admin_panel_rls.sql`** (kjøres manuelt i SQL Editor)
+- [ ] **Fase 2 — Symptom-fix FEIL 1** (`app.js:3434`)
+- [ ] **Fase 3 — Symptom-fix FEIL 3** (`app.js:3617`)
+- [ ] **Fase 4 — Symptom-fix FEIL 2** (`app.js:4750`)
+- [ ] **Fase 5 — Cache-bust og commit/push**
+
+---
+
 ## Status: FULLFØRT — Økt X (P26): Fiks `increment_fact_view`-krasj i AI-overlay
 Branch: `claude/P26-fiks-increment-fact-view-catch`.
 Cache-bust: `20260623b`.

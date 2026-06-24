@@ -3431,9 +3431,10 @@ async function renderSkoleInfoTab(container) {
     const logoUrl = fd.get('logo_url')
     if (logoUrl) updates.logo_url = logoUrl
     await medLagreOverlay(async () => {
-      const { data: oppdatert, error } = await sb
-        .from('schools').update(updates).eq('id', APP.school.id).select().single()
+      const { data: rader, error } = await sb
+        .from('schools').update(updates).eq('id', APP.school.id).select()
       if (error) throw error
+      const oppdatert = rader?.[0]
       if (!oppdatert) throw new Error('Ingen rader ble oppdatert – sjekk admin-tilgang i databasen')
       APP.school = oppdatert
       document.getElementById('hdr-skolenavn').textContent = oppdatert.name
@@ -3614,9 +3615,10 @@ async function renderSkoleaarTab(container) {
         ? `\n\n⚠️ Advarsel: Forventet neste år er ${forventet}, du valgte ${nytt}.` : ''
       if (!confirm(`Bytte aktivt skoleår fra ${aktivt} til ${nytt}?${advarsel}\n\nElevenes visning endres umiddelbart. Eksisterende økter beholdes.\n\nTips: Last ned en eksport av ${aktivt} fra eksport-seksjonen nedenfor før du bytter.`)) return
       await medLagreOverlay(async () => {
-        const { data: oppdatert, error } = await sb
-          .from('schools').update({ active_school_year: nytt }).eq('id', school.id).select().single()
+        const { data: rader, error } = await sb
+          .from('schools').update({ active_school_year: nytt }).eq('id', school.id).select()
         if (error) throw error
+        const oppdatert = rader?.[0]
         if (!oppdatert) throw new Error('Ingen rader ble oppdatert – sjekk admin-tilgang i databasen')
         APP.school = oppdatert
       })
@@ -4747,7 +4749,10 @@ function visSkoleruteForhandsvisning(events, warnings, onSave, skolear) {
             end_date: r.til.value,
             type: r.type.value,
           })
-          if (error) throw error
+          if (error) {
+            if (error.code === '42501') throw new Error('Admin-tilgang kreves for å lagre skoleruten. Aktiver admin-modus og prøv igjen.')
+            throw error
+          }
         }
       })
       modal.remove()
