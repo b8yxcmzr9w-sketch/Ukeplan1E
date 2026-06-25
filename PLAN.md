@@ -1,8 +1,10 @@
 # PLAN — Ukeplan1E v4
 
-## Økt X (P28): Planleggingsmodus — skolerute og dublett-feil (KARTLEGGING)
+## Økt X (P28): Planleggingsmodus — type-render og skoleår-filter
 
 **Branch:** `claude/bold-volta-c6bdmz`
+**Cache-bust:** `20260625a`
+**Scope:** `v4/app.js` (4 linjer: 2 × Feil A, 2 × Feil B), `v4/index.html` (cache-bust). Ingen SQL.
 
 ### Bakgrunn
 P27 (migrasjon 019 + symptom-fikser) er kjørt og verifisert. Admin kan nå lagre skoleinfo/skolerute/skoleår uten RLS-feil. Etter dette observerte bruker to feil i planleggingsmodus (lærervisning, valgt skoleår 26/27 mens aktivt er 25/26):
@@ -92,10 +94,12 @@ Legg til `.eq('school_year', skoleAar)` i begge spørringene. Én linje per sjek
 
 ---
 
-### Filer som berøres (estimat)
-- `v4/app.js`: ~4 linjer (2 for Feil A, 2 for Feil B)
-- `v4/index.html`: cache-bust
-- Ingen SQL-migrasjoner
+### Faser
+
+- [x] **Fase 1 — Feil A: type-render (app.js:1248 + 1862)** — `ferie` og `planleggingsdag` inkludert i `find()`-filteret i begge visningene
+- [x] **Fase 2 — Feil B: skoleår-filter (app.js:2359 + 2370)** — `.eq('school_year', skoleAar)` lagt til i dup- og konfliktsjekk
+- [x] **Fase 3 — Cache-bust `20260625a` og PLAN.md**
+- [x] **Fase 4 — Commit og push**
 
 ---
 
@@ -178,6 +182,10 @@ Merk `mde_write_kontaktlaerer_or_admin` (#9): `auth_role() = 'kontaktlaerer'`-ar
 - [x] **Fase 3 — Symptom-fix FEIL 3** (`app.js:3617`)
 - [x] **Fase 4 — Symptom-fix FEIL 2** (`app.js:4750`)
 - [x] **Fase 5 — Cache-bust `20260624a` og commit/push**
+
+---
+
+## Status: FULLFØRT — Økt X (P28): Planleggingsmodus — type-render og skoleår-filter
 
 ---
 
