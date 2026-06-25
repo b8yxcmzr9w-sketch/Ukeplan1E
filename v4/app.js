@@ -3488,8 +3488,9 @@ async function renderSkoleInfoTab(container) {
     const file = ev.target.files[0]
     if (!file) return
     const ext = file.name.split('.').pop()
-    const path = `logos/${school.id}.${ext}`
-    await sb.storage.from('logos').upload(path, file, { upsert: true })
+    const path = `${school.id}.${ext}`
+    const { error: opplErr } = await sb.storage.from('logos').upload(path, file, { upsert: true })
+    if (opplErr) { showToast('Logo-opplasting feilet: ' + opplErr.message, 'error'); return }
     const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
     logoUrlInput.value = urlData.publicUrl
   }})

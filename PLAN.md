@@ -103,7 +103,7 @@ Legg til `.eq('school_year', skoleAar)` i begge spørringene. Én linje per sjek
 
 ---
 
-## Status: ETTERFORSKNING FULLFØRT — Økt X (P28): Logo-opplasting gir 404
+## Status: FULLFØRT — Økt X (P28): Logo-opplasting gir 404
 Branch: `claude/P28-logo-opplasting-404`.
 **Neste steg:** Godkjenning av foreslått fiks → implementasjon.
 
@@ -195,9 +195,9 @@ Cache-bust: `20260625a`.
 
 ### Faser (venter godkjenning)
 
-- [ ] **Fase 1 — Fiks path + error-sjekk** (`app.js:3487–3490`)
-- [ ] **Fase 2 — Cache-bust `20260625a`** (`index.html`)
-- [ ] **Fase 3 — Commit + push**
+- [x] **Fase 1 — Fiks path + error-sjekk** (`app.js:3487–3490`)
+- [x] **Fase 2 — Cache-bust `20260625a`** (`index.html`)
+- [x] **Fase 3 — Commit + push**
 
 ---
 
