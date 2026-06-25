@@ -1245,7 +1245,7 @@ async function renderElevView(klasseNavn) {
       // Check holiday for this day
       const dayStr = dateForDay.toISOString().slice(0, 10)
       if (calEvents) {
-        const dayHoliday = calEvents.find(e => e.start_date <= dayStr && e.end_date >= dayStr && e.type === 'helligdag')
+        const dayHoliday = calEvents.find(e => e.start_date <= dayStr && e.end_date >= dayStr && (e.type === 'helligdag' || e.type === 'ferie' || e.type === 'planleggingsdag'))
         if (dayHoliday) {
           dayCol.classList.add('day-col--holiday')
           dayCol.appendChild(el('div', { class: 'holiday-label' }, dayHoliday.title))
@@ -1859,7 +1859,7 @@ async function renderMinKlasseTab(container, klasse) {
       dayHeader.appendChild(el('span', { class: 'dag-dato' }, ` ${formatDatoNO(dayStrL)}`))
       dayCol.appendChild(dayHeader)
 
-      const dayHoliday = (calEvents || []).find(e => e.start_date <= dayStrL && e.end_date >= dayStrL && e.type === 'helligdag')
+      const dayHoliday = (calEvents || []).find(e => e.start_date <= dayStrL && e.end_date >= dayStrL && (e.type === 'helligdag' || e.type === 'ferie' || e.type === 'planleggingsdag'))
       if (dayHoliday) {
         dayCol.classList.add('day-col--holiday')
         dayCol.appendChild(el('div', { class: 'holiday-label' }, dayHoliday.title))
@@ -2356,22 +2356,26 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
     const dagOfWeek = parseInt(fd.get('day_of_week'))
 
     // Duplicate check
-    const { data: dup } = await sb.from('sessions')
+    let dupQuery = sb.from('sessions')
       .select('id')
       .eq('class_id', klassId)
       .eq('subject_id', subjId)
       .eq('week_nr', weekNr)
       .eq('day_of_week', dagOfWeek)
+    if (skoleAar) dupQuery = dupQuery.eq('school_year', skoleAar)
+    const { data: dup } = await dupQuery
     if (dup && dup.length) {
       if (!confirm('Det finnes allerede en lignende økt. Fortsette likevel?')) return
     }
 
     // Conflict check
-    const { data: conflict } = await sb.from('sessions')
+    let conflictQuery = sb.from('sessions')
       .select('id')
       .eq('teacher_id', fd.get('teacher_id'))
       .eq('week_nr', weekNr)
       .eq('day_of_week', dagOfWeek)
+    if (skoleAar) conflictQuery = conflictQuery.eq('school_year', skoleAar)
+    const { data: conflict } = await conflictQuery
     if (conflict && conflict.length) {
       if (!confirm('Du har allerede en økt denne dagen. Fortsette likevel?')) return
     }

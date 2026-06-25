@@ -1,5 +1,108 @@
 # PLAN — Ukeplan1E v4
 
+## Økt X (P28): Planleggingsmodus — type-render og skoleår-filter
+
+**Branch:** `claude/bold-volta-c6bdmz`
+**Cache-bust:** `20260625a`
+**Scope:** `v4/app.js` (4 linjer: 2 × Feil A, 2 × Feil B), `v4/index.html` (cache-bust). Ingen SQL.
+
+### Bakgrunn
+P27 (migrasjon 019 + symptom-fikser) er kjørt og verifisert. Admin kan nå lagre skoleinfo/skolerute/skoleår uten RLS-feil. Etter dette observerte bruker to feil i planleggingsmodus (lærervisning, valgt skoleår 26/27 mens aktivt er 25/26):
+1. Sommerferie (uke 33) vises ikke i ukenettet, Juleferie (uke 52) vises korrekt.
+2. «Ny økt» i 26/27 uke 34 onsdag advarte om dublett, selv om 26/27 var tomt.
+
+---
+
+### Funn (kartlegging, kun kode — ingen kode skrevet)
+
+#### Punkt 1 — Skolerute i ukenettet (`renderMinKlasseTab`→`renderUke`, `app.js:1730`)
+
+**ROTÅRSAK FUNNET — men IKKE år-beregning.**
+
+Hypotesen om feil kalenderår er avkreftet:
+- `app.js:1813`: `const visKalenderaarL = skoleaarKalenderaar(valgtSkolear, ...)` — bruker korrekt `valgtSkolear` (f.eks. '26/27') ✓
+- Dato-intervallet (`weekStartL`/`weekEndL`) beregnes fra `valgtSkolear` ✓
+- `school_calendar`-spørringen (linje 1817–1819) bruker korrekte datoer ✓
+
+**Ekte rotårsak — type-filter i renderingen:**
+- `app.js:1862`: `calEvents.find(e => ... && e.type === 'helligdag')` — kun `helligdag`-rader vises som fridagsfarge + etikett i dagkolonnene.
+- `ferie`-rader (Sommerferie, Høstferie, Vinterferie) er i `calEvents` men rendres **ikke** i ukenettet — de faller stille gjennom.
+- Juleferie er lagret som type `helligdag` (AI-parsereglene i CLAUDE.md) → treffer filteret → vises ✓
+- Sommerferie er lagret som type `ferie` → treffer ikke filteret → vises ikke ✗
+
+Samme gap finnes i elevvisningens `renderUke` (`app.js:1248`): identisk `type === 'helligdag'`-filter.
+
+**Sammenlignet med admin-panelets `renderSkolerute` (`app.js:4475`):**
+Admin-panelet filtrerer på dato-intervall (`skoleaarIntervall`) uten type-filter → viser alle typer korrekt. Det er derfor bruker ser alle 26/27-rader i Skolerute-fanen, men ikke Sommerferie i ukenettet.
+
+#### Punkt 2 — Kalenderår-beregning i renderUke
+
+**KORREKT — ingen feil her.** `skoleaarKalenderaar(valgtSkolear, ...)` bruker valgt skoleår. Ukenettet beregner riktige datoer for 26/27.
+
+#### Punkt 3 — `renderFlerdagsBjelkeRad` og `finnFridag`
+
+**KORREKT:**
+- `app.js:1908`: `isoWeekToDate(visKalenderaarL, ...)` — bruker år fra `valgtSkolear` ✓
+- `visNyOktModal` → `finnFridag(weekNr, dagOfWeek, skoleAar)` (`app.js:2380`): `skoleAar` er `valgtSkolear` sendt fra linje 1707 ✓
+- `finnFridag` (`app.js:922–934`): beregner dato fra sendt skoleår ✓
+
+Ingen feil her.
+
+#### Punkt 4 — Fantom-dublett i «Ny økt» (`visNyOktModal`, `app.js:2341`)
+
+**ROTÅRSAK FUNNET.**
+
+To sjekker mangler `school_year`-filter:
+
+| Sjekk | Linje | SQL-filter | Problem |
+|---|---|---|---|
+| Dup-sjekk (samme fag+dag) | 2359–2366 | `class_id + subject_id + week_nr + day_of_week` | Mangler `.eq('school_year', skoleAar)` |
+| Konfliktsjekk (samme lærer+dag) | 2370–2376 | `teacher_id + week_nr + day_of_week` | Mangler `.eq('school_year', skoleAar)` |
+
+Begge spørringer søker på tvers av **alle skoleår**. Når 26/27 er tomt men 25/26 har en økt i uke 34 onsdag, finner konfliktsjekken denne 25/26-økten og viser «Du har allerede en økt denne dagen» — en falsk alarm.
+
+`skoleAar`-parameteren er korrekt sendt inn fra linje 1707: `visNyOktModal(aktivKlasse, currentWeek, renderUke, valgtSkolear)` → linje 2380 `finnFridag(..., skoleAar)` bruker den riktig. Men linjene 2359–2376 bruker den ikke.
+
+#### Punkt 5 — P-C: school_year ved lagring
+
+**BEKREFTET KORREKT — P-C lukkes.**
+- `app.js:2405`: `school_year: skoleAar || APP.school?.active_school_year` — `skoleAar` = `valgtSkolear` ✓
+- `app.js:1707`: `visNyOktModal(..., valgtSkolear)` sender valgt skoleår inn ✓
+- Økt lagret i 26/27 havner i 26/27. Koden er riktig.
+
+---
+
+### Deler punkt 1–4 én rotårsak?
+
+**Nei — to separate feil:**
+- **Feil A (Punkt 1):** Type-filter i renderingen: `type === 'helligdag'` ekskluderer `ferie`-hendelser fra ukenettet. Gjelder begge visningene (lærer + elev). Ikke et planleggingsmodus-spesifikt problem — samme gap finnes i 25/26 (men ikke like synlig der, siden Sommerferie er utenfor normale navigasjons-uker).
+- **Feil B (Punkt 4):** Manglende `school_year`-filter i to sjekker i `visNyOktModal` → falske kollisjonsvarsler i planleggingsmodus.
+
+Hypotesen «leser aktivt år i stedet for valgt» gjelder kun Feil B (indirekte — leser alle år). For Feil A er år-beregningen riktig; feilen er i hva som rendres.
+
+---
+
+### Forslag til fiks (etter godkjenning)
+
+**Feil A — Fiks i `app.js:1862` (lærer) og `app.js:1248` (elev):**
+Utvid `find()`-filteret til å også matche `ferie` og `planleggingsdag`. Mulige alternativer:
+- **Alt 1 (anbefalt):** Fjern `e.type === 'helligdag'`-sjekken → vis alle skolerute-typer (unntatt `annet`) som fridagsfarge + etikett. Enklest og konsekvent.
+- **Alt 2:** Vis `helligdag` som i dag, men legg til et separat `ferie`-banner (annen CSS-klasse) for `ferie`-rader. Gir visuell distinksjon.
+
+**Feil B — Fiks i `app.js:2359` og `app.js:2370`:**
+Legg til `.eq('school_year', skoleAar)` i begge spørringene. Én linje per sjekk.
+
+---
+
+### Faser
+
+- [x] **Fase 1 — Feil A: type-render (app.js:1248 + 1862)** — `ferie` og `planleggingsdag` inkludert i `find()`-filteret i begge visningene
+- [x] **Fase 2 — Feil B: skoleår-filter (app.js:2359 + 2370)** — `.eq('school_year', skoleAar)` lagt til i dup- og konfliktsjekk
+- [x] **Fase 3 — Cache-bust `20260625a` og PLAN.md**
+- [x] **Fase 4 — Commit og push**
+
+---
+
 ## Status: FULLFØRT — Økt X (P27): Tre admin-skrivefeil — RLS for adminpanelet
 Branch: `claude/focused-mendel-7uyjza`.
 Cache-bust: `20260624a`.
@@ -79,6 +182,10 @@ Merk `mde_write_kontaktlaerer_or_admin` (#9): `auth_role() = 'kontaktlaerer'`-ar
 - [x] **Fase 3 — Symptom-fix FEIL 3** (`app.js:3617`)
 - [x] **Fase 4 — Symptom-fix FEIL 2** (`app.js:4750`)
 - [x] **Fase 5 — Cache-bust `20260624a` og commit/push**
+
+---
+
+## Status: FULLFØRT — Økt X (P28): Planleggingsmodus — type-render og skoleår-filter
 
 ---
 
