@@ -3492,7 +3492,7 @@ async function renderSkoleInfoTab(container) {
     const { error: opplErr } = await sb.storage.from('logos').upload(path, file, { upsert: true })
     if (opplErr) { showToast('Logo-opplasting feilet: ' + opplErr.message, 'error'); return }
     const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
-    logoUrlInput.value = urlData.publicUrl
+    logoUrlInput.value = `${urlData.publicUrl}?t=${Date.now()}`
   }})
   const logoKort = el('div', { class: 'settings-card' })
   logoKort.appendChild(el('h3', {}, 'Logo'))
