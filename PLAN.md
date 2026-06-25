@@ -103,6 +103,104 @@ Legg til `.eq('school_year', skoleAar)` i begge spørringene. Én linje per sjek
 
 ---
 
+## Status: ETTERFORSKNING FULLFØRT — Økt X (P28): Logo-opplasting gir 404
+Branch: `claude/P28-logo-opplasting-404`.
+**Neste steg:** Godkjenning av foreslått fiks → implementasjon.
+
+### Symptom
+Admin lastet opp `logo.jpg`. Ingen feilmelding. Logo-URL i Skoleinfo:
+`https://zstjfatkeqbbekqgbsgb.supabase.co/storage/v1/object/public/logos/logos/f37cb8d2-da76-453a-ba27-d7cd6bbb235f.jpg`
+→ `404 not_found` i nettleser. Logofeltet er blankt.
+
+### Etterforskning: kode-feil bekreftet (app.js:3486–3490)
+
+```js
+// app.js linje 3486–3490
+const ext = file.name.split('.').pop()
+const path = `logos/${school.id}.${ext}`                     // ← BUG A
+await sb.storage.from('logos').upload(path, file, { upsert: true })  // ← BUG B (usjekket)
+const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
+logoUrlInput.value = urlData.publicUrl                        // ← satt uansett om upload feilet
+```
+
+#### Hypotese A og B — begge bekreftet i kode
+
+**Hypotese B (path-mismatch) — BEKREFTET:**
+`sb.storage.from('logos')` peker på bucket `logos`.
+`path = 'logos/${school.id}.${ext}'` er object-path *inni bucketen*.
+Supabase-js bygger public URL som:
+```
+<SUPABASE_URL>/storage/v1/object/public/<bucket>/<path>
+= .../public/logos/logos/<uuid>.jpg
+```
+Det doble `logos/logos/` i URL-en er et direkte avtrykk av denne buggen.
+Filen ble lastet opp til bucket `logos`, object-path `logos/<uuid>.jpg` — men
+for å nå den krever URL-en `/public/logos/logos/<uuid>.jpg`, ikke `/public/logos/<uuid>.jpg`.
+
+**Hypotese A (stille feil) — BEKREFTET I KODE:**
+`.upload(...)` sin returverdi destructureres ikke (`await` uten `const { error }`).
+Feil fra Supabase Storage (RLS, manglende bucket-policy, nettverksfeil) passerer
+stille. `getPublicUrl` gjør IKKE en HTTP-sjekk — den bygger bare URL-strengen
+basert på path. Dermed oppdateres `logoUrlInput.value` alltid, enten filen
+kom inn i bucketen eller ikke.
+
+Hva som faktisk skjedde (A eller B) avgjøres av om filen ligger i bucketen:
+- Hvis filen LIGGER ved path `logos/<uuid>.jpg` i bucket `logos` → B dominerer
+  (feil path i URL, men upload lyktes)
+- Hvis filen IKKE finnes → A dominerer (upload feilet stille, URL lagret uansett)
+
+**Anbefalt manuelt sjekk:** Gå til Supabase Dashboard → Storage → bucket `logos`
+→ se om det finnes en mappe `logos/` og filen `logos/f37cb8d2-...jpg` der inne.
+Svaret avgjør om kun URL-en må fikses, eller om opplastes-logikken aldri fungerte.
+
+#### Tilleggsbugg: URL lagres i feil felt
+
+Skoleinfo-formen lagrer full URL i `schools.logo_url` (linje 3431–3432).
+Header-koden (linje 677–680) prioriterer `logo_file_path` over `logo_url`:
+```js
+logo.src = APP.school.logo_file_path
+  ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
+  : APP.school.logo_url
+```
+`logo_file_path` er IKKE satt av opplastingsflyten. Dermed faller den til
+`logo_url` (direktebruk av den ødelagte URL-en). Samme gjelder favicon (linje 682)
+og velkomst-logo (linje 995–996). Alle tre blankes om URL-en er 404.
+
+### Foreslått fiks (minimal — kun linjene som er feil)
+
+**Fil:** `v4/app.js` linje 3486–3490
+
+```js
+// FØR:
+const path = `logos/${school.id}.${ext}`
+await sb.storage.from('logos').upload(path, file, { upsert: true })
+const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
+logoUrlInput.value = urlData.publicUrl
+
+// ETTER:
+const path = `${school.id}.${ext}`
+const { error: opplErr } = await sb.storage.from('logos').upload(path, file, { upsert: true })
+if (opplErr) { showToast('Logo-opplasting feilet: ' + opplErr.message, 'error'); return }
+const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
+logoUrlInput.value = urlData.publicUrl
+```
+
+Endringer:
+1. `path` mister `logos/`-prefikset → URL blir `.../public/logos/<uuid>.jpg` (korrekt)
+2. `opplErr` fanges og vises som toast → stille feil er borte
+3. `logoUrlInput` oppdateres kun ved vellykket opplasting
+
+**Ingen endring i DB-skjema, ingen migrasjon, ingen edge-function-deploy.**
+Cache-bust: `20260625a`.
+
+### Faser (venter godkjenning)
+
+- [ ] **Fase 1 — Fiks path + error-sjekk** (`app.js:3487–3490`)
+- [ ] **Fase 2 — Cache-bust `20260625a`** (`index.html`)
+- [ ] **Fase 3 — Commit + push**
+
+---
+
 ## Status: FULLFØRT — Økt X (P27): Tre admin-skrivefeil — RLS for adminpanelet
 Branch: `claude/focused-mendel-7uyjza`.
 Cache-bust: `20260624a`.
