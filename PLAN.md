@@ -45,6 +45,12 @@ holder `auth_is_admin()` alene (enklere, ingen historisk bagasje).
 **Idempotens:** `DROP POLICY IF EXISTS` før hver `CREATE POLICY`.
 **Berører ikke:** andre buckets eller eksisterende policies utenfor `logos`.
 
+**Fallback hvis SQL Editor gir rettighetsfeil** («must be owner of table objects» e.l.):
+Supabase tillater ikke alltid DDL på `storage.objects` via SQL Editor. Hvis `CREATE POLICY`
+feiler, opprett de fire policyene manuelt:
+`Dashboard → Storage → logos → Policies → New policy`
+Bruk «For full customization» og lim inn betingelsene fra SQL-en over.
+
 ### Eksakt SQL — revidert (klar til å lime i Supabase SQL Editor)
 
 ```sql
@@ -119,8 +125,8 @@ using (
 6. Hard refresh i nettleseren (Cmd+Shift+R / Ctrl+Shift+R) → ny logo vises i headeren.
 
 ### Sjekkliste
-- [ ] Skriv `020_storage_policy_logos.sql`
-- [ ] Commit + push til branch
+- [x] Skriv `020_storage_policy_logos.sql`
+- [x] Commit + push til branch
 - [ ] Kjør migrasjonen manuelt i Supabase SQL Editor (brukeren gjør dette)
 
 ### Neste steg
