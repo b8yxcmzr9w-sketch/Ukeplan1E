@@ -193,11 +193,46 @@ Endringer:
 **Ingen endring i DB-skjema, ingen migrasjon, ingen edge-function-deploy.**
 Cache-bust: `20260625a`.
 
-### Faser (venter godkjenning)
+### Faser
 
 - [x] **Fase 1 — Fiks path + error-sjekk** (`app.js:3487–3490`)
-- [x] **Fase 2 — Cache-bust `20260625a`** (`index.html`)
-- [x] **Fase 3 — Commit + push**
+- [x] **Fase 2 — Cache-bust `20260625b`** (`index.html`)
+- [x] **Fase 3 — Commit + push + merge til main** (#130)
+
+---
+
+### Post-merge-diagnose (fortsatt 404 etter merge)
+
+**Verifisert på `origin/main` (`21ad909`):**
+
+1. P28 ER på main — commit `21ad909` ✅
+2. Koden på main er korrekt:
+   ```js
+   // app.js linje 3491–3495 (origin/main)
+   const path = `${school.id}.${ext}`                          // ✅ ingen logos/-prefiks
+   const { error: opplErr } = await sb.storage.from('logos').upload(path, file, { upsert: true })
+   if (opplErr) { showToast(...); return }
+   const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
+   logoUrlInput.value = `${urlData.publicUrl}?t=${Date.now()}` // ✅ cache-bust
+   ```
+3. Cache-bust på main er `20260625b` ✅
+4. Kun ÉN `.upload()`-kall i app.js (ingen skjult andre opplastingsvei) ✅
+5. Ingen `randomUUID` eller UUID-basert path i logo-koden ✅
+
+**Rotårsak til at gammel URL fortsatt vises:**
+
+**(C) Nettlesercache — bruker kjører gammel app.js + gammel URL i DB**
+
+- Brukeren har ikke gjort hard refresh → nettleseren kjører gammel app.js (før `20260625b`) som fortsatt har den buggy upload-koden → ny opplasting produserer den gamle ødelagte URL-en
+- I tillegg: `schools.logo_url` i databasen inneholder fortsatt den gamle ødelagte URL-en (`logos/logos/<uuid>.jpg`) fra den opprinnelige (feilede) opplastingen. Selv etter hard refresh vil denne URL-en vises i input-feltet inntil en ny opplasting overskriver den.
+
+**Handling som trengs (ingen kodeendring):**
+
+1. **Hard refresh** i nettleser: `Cmd+Shift+R` (Mac) / `Ctrl+Shift+R` (Windows/Linux) — tvinger ny app.js (`20260625b`)
+2. **Last opp logo på nytt** i Admin → Skoleinfo → velg fil → ny korrekt URL genereres
+3. **Klikk «Lagre skoleinfo»** — ny URL lagres i DB og overskriver den gamle ødelagte
+
+Ingen ytterligere kodeendringer, ingen migrasjon.
 
 ---
 
