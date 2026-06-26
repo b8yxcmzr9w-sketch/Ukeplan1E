@@ -1,5 +1,116 @@
 # PLAN — Ukeplan1E v4
 
+## Økt X (P29): Storage-policies for logos-bucketen
+
+**Branch:** `claude/P29-storage-policy-logos`
+**Scope:** Én SQL-migrasjon (`020_storage_policy_logos.sql`). Ingen app.js-endring.
+
+### Bakgrunn og rotårsak (bekreftet manuelt i Supabase)
+- `logos`-bucketen er PUBLIC men har **0 storage-policies**.
+- Bucketen er tom — ingen logo-opplasting har noensinne lyktes.
+- Supabase Storage RLS: selv om en bucket er public, krever **skriving** (INSERT/UPDATE)
+  eksplisitte policies på `storage.objects`. Uten policies avvises opplasting.
+- P28 fikset path-formatet (`<school-id>.<ext>`, feilsjekk, cache-bust) — det var
+  symptomet. P29 fikser rotårsaken: manglende policies.
+
+### Migrasjonsplan: `020_storage_policy_logos.sql`
+
+**Hjelpefunksjoner brukt (bevis fra `002_rls.sql`):**
+- `auth_school_id()` — linje 8: returnerer `school_id` for innlogget bruker
+- `is_active_admin()` — linje 20: returnerer `true` hvis `is_admin_active = true`
+
+**Policies som opprettes (alle scoped til `bucket_id = 'logos'`):**
+
+1. **INSERT** — «Admin kan laste opp logo for sin skole»
+   - Betingelse: `is_active_admin() AND (storage.foldername(name))[1] IS DISTINCT FROM name`
+     ... nei — P28 lagrer som `<school-id>.<ext>` i bucket-roten (ingen undermappe).
+   - Vi binder INSERT til at objektnavnet starter med skolens id:
+     `is_active_admin() AND name LIKE (auth_school_id()::text || '.%')`
+   - Dette tillater `<uuid>.jpg`, `<uuid>.png`, `<uuid>.svg`, `<uuid>.webp` osv.,
+     men avviser andre skolers filer.
+
+2. **UPDATE** — «Admin kan overskrive egen skoles logo» (for upsert)
+   - Samme betingelse som INSERT.
+
+3. **SELECT** — Public-bucketen gir allerede offentlig lesing via CDN uten policy.
+   Supabase public buckets eksponerer filer via `/storage/v1/object/public/<bucket>/<path>`
+   uten å evaluere RLS for anonym lesing. **Ingen SELECT-policy nødvendig.**
+
+4. **DELETE** — Logoopplasting i P28 bruker `upsert: true` og overskriver filen;
+   eksplisitt sletting er ikke implementert i frontend. Vi legger til DELETE likevel
+   for fremtidig opprydding, med samme betingelse som INSERT/UPDATE.
+
+**Idempotens:** `DROP POLICY IF EXISTS` før hver `CREATE POLICY`.
+
+**Berører ikke:** andre buckets, eksisterende policies utenfor `logos`.
+
+### Eksakt SQL (klar til å lime i Supabase SQL Editor)
+
+```sql
+-- 020_storage_policy_logos.sql
+-- Storage-policies for logos-bucketen.
+-- Forutsetning: bucketen 'logos' finnes og er satt til public.
+-- Hjelpefunksjoner: auth_school_id() og is_active_admin() fra 002_rls.sql.
+
+-- Rydd opp (idempotens)
+drop policy if exists "Admin kan laste opp logo" on storage.objects;
+drop policy if exists "Admin kan overskrive logo" on storage.objects;
+drop policy if exists "Admin kan slette logo" on storage.objects;
+
+-- INSERT: admin laster opp logo for sin skole
+create policy "Admin kan laste opp logo"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'logos'
+  and is_active_admin()
+  and name like (auth_school_id()::text || '.%')
+);
+
+-- UPDATE: admin overskriver (upsert) logo for sin skole
+create policy "Admin kan overskrive logo"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'logos'
+  and is_active_admin()
+  and name like (auth_school_id()::text || '.%')
+);
+
+-- DELETE: admin kan slette logo for sin skole (fremtidig bruk)
+create policy "Admin kan slette logo"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'logos'
+  and is_active_admin()
+  and name like (auth_school_id()::text || '.%')
+);
+```
+
+### Manuell verifiseringsoppskrift
+
+1. Kjør `020_storage_policy_logos.sql` i Supabase Dashboard → SQL Editor.
+2. Verifiser at 3 nye policies dukker opp under Storage → Policies → `objects`-tabellen
+   (søk på «logo»).
+3. Logg inn som admin i appen → Admin → Skoleinfo → last opp en ny logo.
+4. Forvent: **ingen feilmelding**, og filen dukker opp i Storage → logos-bucketen
+   som `<school-uuid>.jpg` (eller tilsvarende ext).
+5. Verifiser at `logo_url` i `schools`-tabellen (SQL Editor: `select logo_url from schools`)
+   har ett enkelt `logos/`-segment og en `?t=`-cache-bust-parameter.
+6. Hard refresh i nettleseren (Cmd+Shift+R / Ctrl+Shift+R) → ny logo vises i headeren.
+
+### Sjekkliste
+- [ ] Skriv `020_storage_policy_logos.sql`
+- [ ] Commit + push til branch
+- [ ] Kjør migrasjonen manuelt i Supabase SQL Editor (brukeren gjør dette)
+
+### Neste steg
+Etter at brukeren har kjørt migrasjonen og verifisert at logo-opplasting fungerer:
+avslutt P29, lag PR til main.
+
+---
+
 ## Økt X (P28): Planleggingsmodus — type-render og skoleår-filter
 
 **Branch:** `claude/bold-volta-c6bdmz`
