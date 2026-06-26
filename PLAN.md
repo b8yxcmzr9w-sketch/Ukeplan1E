@@ -1,5 +1,140 @@
 # PLAN — Ukeplan1E v4
 
+## Økt X (P29): Storage-policies for logos-bucketen
+
+**Branch:** `claude/P29-storage-policy-logos`
+**Scope:** Én SQL-migrasjon (`020_storage_policy_logos.sql`). Ingen app.js-endring.
+
+### Bakgrunn og rotårsak (bekreftet manuelt i Supabase)
+- `logos`-bucketen er PUBLIC men har **0 storage-policies**.
+- Bucketen er tom — ingen logo-opplasting har noensinne lyktes.
+- Supabase Storage RLS: selv om en bucket er public, krever **skriving** (INSERT/UPDATE)
+  eksplisitte policies på `storage.objects`. Uten policies avvises opplasting.
+- P28 fikset path-formatet (`<school-id>.<ext>`, feilsjekk, cache-bust) — det var
+  symptomet. P29 fikser rotårsaken: manglende policies.
+
+### Migrasjonsplan: `020_storage_policy_logos.sql` (revidert)
+
+**Hjelpefunksjoner — verifisert mot migrasjoner:**
+
+| Funksjon | Definert i | Sjekker | Egnet for opplasting? |
+|---|---|---|---|
+| `auth_school_id()` | `002_rls.sql` linje 8 | `users.school_id` | Ja — returnerer UUID |
+| `is_active_admin()` | `002_rls.sql` linje 20 | `users.is_admin_active` (visningstoggle) | **NEI** — nullstilles ved login |
+| `auth_is_admin()` | `018_admin_additiv.sql` linje 30 | `users.is_admin` (permanent kolonne) | **JA** — uavhengig av visningsbryter |
+
+**Konklusjon:** Bruk `auth_is_admin()` alene. `is_active_admin()` ville hindre opplasting
+når admin er i lærervisning (toggle = false). Mønsteret `(is_active_admin() OR auth_is_admin())`
+brukes i 019 for bakoverkompatibilitet, men for logoopplasting — som er ren admin-funksjon —
+holder `auth_is_admin()` alene (enklere, ingen historisk bagasje).
+
+**Klausuler per operasjon (PostgreSQL-krav):**
+- INSERT: kun `WITH CHECK` (raden eksisterer ikke ennå)
+- UPDATE: `USING` (hvilke rader kan oppdateres) + `WITH CHECK` (ny tilstand godkjent)
+- DELETE: kun `USING`
+- SELECT: kun `USING`
+
+**Policies som opprettes (alle scoped til `bucket_id = 'logos'`):**
+
+1. **INSERT** — `WITH CHECK` — admin for sin skole, filnavn `<uuid>.<ext>`
+2. **UPDATE** — `USING` + `WITH CHECK` — samme betingelse
+3. **DELETE** — `USING` — fremtidig opprydding
+4. **SELECT** — `USING` — public bucket serverer via CDN uten policy, men legges til
+   som forsikring siden lese-404 har vært et faktisk symptom
+
+**Idempotens:** `DROP POLICY IF EXISTS` før hver `CREATE POLICY`.
+**Berører ikke:** andre buckets eller eksisterende policies utenfor `logos`.
+
+**Fallback hvis SQL Editor gir rettighetsfeil** («must be owner of table objects» e.l.):
+Supabase tillater ikke alltid DDL på `storage.objects` via SQL Editor. Hvis `CREATE POLICY`
+feiler, opprett de fire policyene manuelt:
+`Dashboard → Storage → logos → Policies → New policy`
+Bruk «For full customization» og lim inn betingelsene fra SQL-en over.
+
+### Eksakt SQL — revidert (klar til å lime i Supabase SQL Editor)
+
+```sql
+-- 020_storage_policy_logos.sql
+-- Storage-policies for logos-bucketen.
+-- Forutsetning: bucketen 'logos' finnes og er satt til public.
+-- Hjelpefunksjoner:
+--   auth_school_id() — 002_rls.sql: users.school_id for innlogget bruker
+--   auth_is_admin()  — 018_admin_additiv.sql: users.is_admin (permanent, ikke toggle)
+
+-- ── Idempotens: fjern eksisterende policies ──────────────────────
+drop policy if exists "Admin kan laste opp logo"   on storage.objects;
+drop policy if exists "Admin kan overskrive logo"  on storage.objects;
+drop policy if exists "Admin kan slette logo"      on storage.objects;
+drop policy if exists "Public kan lese logo"       on storage.objects;
+
+-- ── INSERT: WITH CHECK (raden finnes ikke ennå) ──────────────────
+create policy "Admin kan laste opp logo"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'logos'
+  and auth_is_admin()
+  and name like (auth_school_id()::text || '.%')
+);
+
+-- ── UPDATE: USING + WITH CHECK ───────────────────────────────────
+create policy "Admin kan overskrive logo"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'logos'
+  and auth_is_admin()
+  and name like (auth_school_id()::text || '.%')
+)
+with check (
+  bucket_id = 'logos'
+  and auth_is_admin()
+  and name like (auth_school_id()::text || '.%')
+);
+
+-- ── DELETE: USING ────────────────────────────────────────────────
+create policy "Admin kan slette logo"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'logos'
+  and auth_is_admin()
+  and name like (auth_school_id()::text || '.%')
+);
+
+-- ── SELECT: USING — forsikring mot lese-404 ──────────────────────
+-- Public bucket serverer normalt uten policy via CDN, men eksplisitt
+-- SELECT-policy sikrer at authenticated-kall (f.eks. signed URLs) også virker.
+create policy "Public kan lese logo"
+on storage.objects for select
+using (
+  bucket_id = 'logos'
+);
+```
+
+### Manuell verifiseringsoppskrift
+
+1. Kjør `020_storage_policy_logos.sql` i Supabase Dashboard → SQL Editor.
+2. Verifiser at 3 nye policies dukker opp under Storage → Policies → `objects`-tabellen
+   (søk på «logo»).
+3. Logg inn som admin i appen → Admin → Skoleinfo → last opp en ny logo.
+4. Forvent: **ingen feilmelding**, og filen dukker opp i Storage → logos-bucketen
+   som `<school-uuid>.jpg` (eller tilsvarende ext).
+5. Verifiser at `logo_url` i `schools`-tabellen (SQL Editor: `select logo_url from schools`)
+   har ett enkelt `logos/`-segment og en `?t=`-cache-bust-parameter.
+6. Hard refresh i nettleseren (Cmd+Shift+R / Ctrl+Shift+R) → ny logo vises i headeren.
+
+### Sjekkliste
+- [x] Skriv `020_storage_policy_logos.sql`
+- [x] Commit + push til branch
+- [ ] Kjør migrasjonen manuelt i Supabase SQL Editor (brukeren gjør dette)
+
+### Neste steg
+Etter at brukeren har kjørt migrasjonen og verifisert at logo-opplasting fungerer:
+avslutt P29, lag PR til main.
+
+---
+
 ## Økt X (P28): Planleggingsmodus — type-render og skoleår-filter
 
 **Branch:** `claude/bold-volta-c6bdmz`
