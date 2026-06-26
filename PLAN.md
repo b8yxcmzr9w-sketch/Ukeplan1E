@@ -135,6 +135,75 @@ avslutt P29, lag PR til main.
 
 ---
 
+### Favicon-diagnose (oppfølging)
+
+**Spørsmål:** Settes faviconen fra logoen, og er den korrekt?
+
+#### 1. Settes faviconen fra logoen? JA
+
+`index.html` linje 7: statisk fallback:
+```html
+<link rel="icon" id="favicon" href="unoicon.png">
+```
+(`unoicon.png` finnes i `v4/` ✅ — korrekt relativ sti)
+
+`app.js` linje 676–684 i `oppdaterHeader()`:
+```js
+const favicon = document.getElementById('favicon')
+if (logo && APP.school && (APP.school.logo_url || APP.school.logo_file_path)) {
+  logo.src = APP.school.logo_file_path
+    ? `${SUPABASE_URL}/storage/v1/object/public/logos/${APP.school.logo_file_path}`
+    : APP.school.logo_url
+  logo.classList.remove('skjult')
+  if (favicon) favicon.href = logo.src   // ← favicon = logo-URL
+} else {
+  if (favicon) favicon.href = 'unoicon.png'
+}
+```
+
+#### 2. Er kilden korrekt? JA
+
+`favicon.href = logo.src` — bruker IDENTISK URL som header-logoen.
+`logo.src` = `APP.school.logo_url` = `…/public/logos/<school-id>.jpg?t=<timestamp>`.
+Ingen dobbel `logos/`-prefiks; ingen ny path-beregning.
+
+#### 3. Timing — er det en rekkefølgefeil? NEI
+
+`init()` kaller `oppdaterHeader()` to ganger:
+- Linje 5005: FØR skoledata → `APP.school` er null → favicon = `unoicon.png`
+- Linje 5024: ETTER `APP.school = schools[0]` → favicon = logo-URL ✅
+
+Faviconen oppdateres korrekt etter at skoledata er lastet.
+
+#### 4. Konklusjon: FINNES OG ER KORREKT — blank favicon skyldes nettlesercache
+
+Koden er riktig. Blank favicon skyldes at nettleseren har cachet **det feilede favicon-kallet** fra den gamle ødelagte URL-en (`logos/logos/<uuid>.jpg` → 404). Favicon-cache er særlig hardnakket i Chrome og Safari — den overlever vanlig reload og ofte også hard refresh.
+
+Én potensiell svakhet: å sette `.href` på et eksisterende `<link>`-element er ikke garantert å trigge favicon-refresh i Safari. Den robuste løsningen er remove-and-reinsert av `<link>`-elementet.
+
+#### Foreslått minimal fiks (venter godkjenning)
+
+Bytt ut linje 682:
+```js
+// FØR:
+if (favicon) favicon.href = logo.src
+
+// ETTER:
+if (favicon) {
+  favicon.remove()
+  const nyttFavicon = document.createElement('link')
+  nyttFavicon.rel = 'icon'
+  nyttFavicon.id = 'favicon'
+  nyttFavicon.href = logo.src
+  document.head.appendChild(nyttFavicon)
+}
+```
+Dette fjerner det gamle elementet (med cachet 404-tilstand) og insererer et nytt — tvinger alle nettlesere til å hente favicon på nytt.
+
+**Alternativ hvis fiks ikke ønskes:** Lukk alle faner til domenet og åpne på nytt — dette tømmer vanligvis favicon-cache for det domenet.
+
+---
+
 ## Økt X (P28): Planleggingsmodus — type-render og skoleår-filter
 
 **Branch:** `claude/bold-volta-c6bdmz`
