@@ -127,11 +127,10 @@ using (
 ### Sjekkliste
 - [x] Skriv `020_storage_policy_logos.sql`
 - [x] Commit + push til branch
-- [ ] Kjør migrasjonen manuelt i Supabase SQL Editor (brukeren gjør dette)
-
-### Neste steg
-Etter at brukeren har kjørt migrasjonen og verifisert at logo-opplasting fungerer:
-avslutt P29, lag PR til main.
+- [x] Kjør migrasjonen manuelt i Supabase SQL Editor (brukeren gjør dette)
+- [x] Verifisert: logo-opplasting fungerer, favicon vises (bekreftet i tredje nettleser)
+- [x] DECISIONS.md oppdatert med storage-policy-lærdom
+- [x] Merget til main
 
 ---
 
