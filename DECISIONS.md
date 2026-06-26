@@ -2,6 +2,25 @@
 
 Beslutningslogg for designvalg som ikke er åpenbare fra koden alene.
 
+## P29 — Storage-policies for logos-bucketen kreves eksplisitt (26.06.2026)
+
+Supabase Storage sitt «public»-flagg på en bucket gir kun **lesing** (GET) uten
+autentisering. Det gir IKKE skrivetilgang. INSERT, UPDATE og DELETE på
+`storage.objects` krever egne RLS-policyer på objektnivå selv om bucketen er
+public. Uten disse policyene feiler `.upload()` stille (ingen toast, ingen feil i
+UI) fordi koden ikke sjekket returverdien — da ble en ødelagt URL lagret i DB.
+
+**Konkret for logos-bucketen:**
+- `INSERT` og `UPDATE` er bundet til `auth_is_admin()` — kun aktiv admin kan laste
+  opp. Filnavn = `<school-id>.<ext>` (ett objekt per skole, upsert-vennlig).
+- `DELETE` er bundet til `auth_is_admin()`.
+- `SELECT` er åpen (bucketen er public) — men eksplisitt SELECT-policy er lagt til
+  som forsikring i tilfelle bucket-innstillingen endres.
+
+**Fellen ved ny skole:** Hvis en ny skole settes opp og logo-opplasting «bare ikke
+virker» (ingen feilmelding, men bildet er blankt), er sannsynlig årsak manglende
+storage-policies — kjør `020_storage_policy_logos.sql` i SQL Editor.
+
 ## P8 — Klassevelger som fane (19.06.2026)
 
 - **Native `<select>` med `<optgroup>` valgt som dropdown-løsning.**
