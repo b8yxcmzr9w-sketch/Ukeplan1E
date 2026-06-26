@@ -13,78 +13,96 @@
 - P28 fikset path-formatet (`<school-id>.<ext>`, feilsjekk, cache-bust) — det var
   symptomet. P29 fikser rotårsaken: manglende policies.
 
-### Migrasjonsplan: `020_storage_policy_logos.sql`
+### Migrasjonsplan: `020_storage_policy_logos.sql` (revidert)
 
-**Hjelpefunksjoner brukt (bevis fra `002_rls.sql`):**
-- `auth_school_id()` — linje 8: returnerer `school_id` for innlogget bruker
-- `is_active_admin()` — linje 20: returnerer `true` hvis `is_admin_active = true`
+**Hjelpefunksjoner — verifisert mot migrasjoner:**
+
+| Funksjon | Definert i | Sjekker | Egnet for opplasting? |
+|---|---|---|---|
+| `auth_school_id()` | `002_rls.sql` linje 8 | `users.school_id` | Ja — returnerer UUID |
+| `is_active_admin()` | `002_rls.sql` linje 20 | `users.is_admin_active` (visningstoggle) | **NEI** — nullstilles ved login |
+| `auth_is_admin()` | `018_admin_additiv.sql` linje 30 | `users.is_admin` (permanent kolonne) | **JA** — uavhengig av visningsbryter |
+
+**Konklusjon:** Bruk `auth_is_admin()` alene. `is_active_admin()` ville hindre opplasting
+når admin er i lærervisning (toggle = false). Mønsteret `(is_active_admin() OR auth_is_admin())`
+brukes i 019 for bakoverkompatibilitet, men for logoopplasting — som er ren admin-funksjon —
+holder `auth_is_admin()` alene (enklere, ingen historisk bagasje).
+
+**Klausuler per operasjon (PostgreSQL-krav):**
+- INSERT: kun `WITH CHECK` (raden eksisterer ikke ennå)
+- UPDATE: `USING` (hvilke rader kan oppdateres) + `WITH CHECK` (ny tilstand godkjent)
+- DELETE: kun `USING`
+- SELECT: kun `USING`
 
 **Policies som opprettes (alle scoped til `bucket_id = 'logos'`):**
 
-1. **INSERT** — «Admin kan laste opp logo for sin skole»
-   - Betingelse: `is_active_admin() AND (storage.foldername(name))[1] IS DISTINCT FROM name`
-     ... nei — P28 lagrer som `<school-id>.<ext>` i bucket-roten (ingen undermappe).
-   - Vi binder INSERT til at objektnavnet starter med skolens id:
-     `is_active_admin() AND name LIKE (auth_school_id()::text || '.%')`
-   - Dette tillater `<uuid>.jpg`, `<uuid>.png`, `<uuid>.svg`, `<uuid>.webp` osv.,
-     men avviser andre skolers filer.
-
-2. **UPDATE** — «Admin kan overskrive egen skoles logo» (for upsert)
-   - Samme betingelse som INSERT.
-
-3. **SELECT** — Public-bucketen gir allerede offentlig lesing via CDN uten policy.
-   Supabase public buckets eksponerer filer via `/storage/v1/object/public/<bucket>/<path>`
-   uten å evaluere RLS for anonym lesing. **Ingen SELECT-policy nødvendig.**
-
-4. **DELETE** — Logoopplasting i P28 bruker `upsert: true` og overskriver filen;
-   eksplisitt sletting er ikke implementert i frontend. Vi legger til DELETE likevel
-   for fremtidig opprydding, med samme betingelse som INSERT/UPDATE.
+1. **INSERT** — `WITH CHECK` — admin for sin skole, filnavn `<uuid>.<ext>`
+2. **UPDATE** — `USING` + `WITH CHECK` — samme betingelse
+3. **DELETE** — `USING` — fremtidig opprydding
+4. **SELECT** — `USING` — public bucket serverer via CDN uten policy, men legges til
+   som forsikring siden lese-404 har vært et faktisk symptom
 
 **Idempotens:** `DROP POLICY IF EXISTS` før hver `CREATE POLICY`.
+**Berører ikke:** andre buckets eller eksisterende policies utenfor `logos`.
 
-**Berører ikke:** andre buckets, eksisterende policies utenfor `logos`.
-
-### Eksakt SQL (klar til å lime i Supabase SQL Editor)
+### Eksakt SQL — revidert (klar til å lime i Supabase SQL Editor)
 
 ```sql
 -- 020_storage_policy_logos.sql
 -- Storage-policies for logos-bucketen.
 -- Forutsetning: bucketen 'logos' finnes og er satt til public.
--- Hjelpefunksjoner: auth_school_id() og is_active_admin() fra 002_rls.sql.
+-- Hjelpefunksjoner:
+--   auth_school_id() — 002_rls.sql: users.school_id for innlogget bruker
+--   auth_is_admin()  — 018_admin_additiv.sql: users.is_admin (permanent, ikke toggle)
 
--- Rydd opp (idempotens)
-drop policy if exists "Admin kan laste opp logo" on storage.objects;
-drop policy if exists "Admin kan overskrive logo" on storage.objects;
-drop policy if exists "Admin kan slette logo" on storage.objects;
+-- ── Idempotens: fjern eksisterende policies ──────────────────────
+drop policy if exists "Admin kan laste opp logo"   on storage.objects;
+drop policy if exists "Admin kan overskrive logo"  on storage.objects;
+drop policy if exists "Admin kan slette logo"      on storage.objects;
+drop policy if exists "Public kan lese logo"       on storage.objects;
 
--- INSERT: admin laster opp logo for sin skole
+-- ── INSERT: WITH CHECK (raden finnes ikke ennå) ──────────────────
 create policy "Admin kan laste opp logo"
 on storage.objects for insert
 to authenticated
 with check (
   bucket_id = 'logos'
-  and is_active_admin()
+  and auth_is_admin()
   and name like (auth_school_id()::text || '.%')
 );
 
--- UPDATE: admin overskriver (upsert) logo for sin skole
+-- ── UPDATE: USING + WITH CHECK ───────────────────────────────────
 create policy "Admin kan overskrive logo"
 on storage.objects for update
 to authenticated
 using (
   bucket_id = 'logos'
-  and is_active_admin()
+  and auth_is_admin()
+  and name like (auth_school_id()::text || '.%')
+)
+with check (
+  bucket_id = 'logos'
+  and auth_is_admin()
   and name like (auth_school_id()::text || '.%')
 );
 
--- DELETE: admin kan slette logo for sin skole (fremtidig bruk)
+-- ── DELETE: USING ────────────────────────────────────────────────
 create policy "Admin kan slette logo"
 on storage.objects for delete
 to authenticated
 using (
   bucket_id = 'logos'
-  and is_active_admin()
+  and auth_is_admin()
   and name like (auth_school_id()::text || '.%')
+);
+
+-- ── SELECT: USING — forsikring mot lese-404 ──────────────────────
+-- Public bucket serverer normalt uten policy via CDN, men eksplisitt
+-- SELECT-policy sikrer at authenticated-kall (f.eks. signed URLs) også virker.
+create policy "Public kan lese logo"
+on storage.objects for select
+using (
+  bucket_id = 'logos'
 );
 ```
 
