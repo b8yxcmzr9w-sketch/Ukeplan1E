@@ -565,6 +565,7 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
   font-size: .78rem; font-weight: 600; color: var(--tekst-svak);
   margin-bottom: 2px;
 }
+.skolerute-prev-legg-til { padding: 8px 0 4px; }
 .skolerute-prev-bunn {
   flex: none; border-top: 1px solid var(--kant); margin-top: 12px;
 }

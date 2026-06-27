@@ -1,7 +1,22 @@
 # PLAN — Ukeplan1E v4
 
-## Status: FULLFØRT — Økt X (P30): Fullt redigerbar økt-import
-Branch: `claude/P30-redigerbar-okt-import`. Ingen manuelle steg nødvendig.
+## Status: FULLFØRT — Økt X (P31): «+ Legg til rad» i skolerute-forhåndsvisning
+Branch: `claude/P31-skolerute-legg-til-rad`. Ingen manuelle steg nødvendig.
+
+---
+
+## Økt X (P31): «+ Legg til rad» i skolerute-forhåndsvisning
+
+**Branch:** `claude/P31-skolerute-legg-til-rad`
+**Scope:** `v4/app.js` (`visSkoleruteForhandsvisning`), `v4/style.css`, `v4/index.html` (cache-bust), `PLAN.md`.
+
+### Sjekkliste
+- [x] «+ Legg til rad» finnes i skolerute-forhåndsvisningen
+- [x] Klikk gir en ny tom, redigerbar rad med alle felt + stryk-🗑️
+- [x] Uke-hint på den nye raden oppdateres når dato fylles
+- [x] Den nye raden lagres sammen med de andre ved «Lagre»
+- [x] Tom tittel/dato på en lagt-til rad fanges av eksisterende validering (ingen egen vei)
+- [x] Resten av skolerute-importen uendret (AI, warnings, erstatt/legg-til-modus)
 
 ---
 
