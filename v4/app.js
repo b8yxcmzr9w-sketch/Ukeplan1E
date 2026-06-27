@@ -4993,11 +4993,12 @@ function visSkoleruteForhandsvisning(events, warnings, onSave, skolear) {
   liste.appendChild(el('div', { class: 'skolerute-prev-rad skolerute-prev-hode' },
     el('span', {}, 'Tittel'), el('span', {}, 'Fra'), el('span', {}, 'Til'),
     el('span', {}, 'Uke'), el('span', {}, 'Type'), el('span', {}, '')))
-  for (const ev of events) {
+
+  function byggRad(ev) {
     const rad = { fjernet: false }
-    rad.tittel = el('input', { type: 'text', class: 'felt input', maxlength: 30, value: ev.title })
-    rad.fra = el('input', { type: 'date', class: 'felt input', value: ev.start_date, onchange: () => visUke() })
-    rad.til = el('input', { type: 'date', class: 'felt input', value: ev.end_date, onchange: () => visUke() })
+    rad.tittel = el('input', { type: 'text', class: 'felt input', maxlength: 30, value: ev.title || '' })
+    rad.fra = el('input', { type: 'date', class: 'felt input', value: ev.start_date || '', onchange: () => visUke() })
+    rad.til = el('input', { type: 'date', class: 'felt input', value: ev.end_date || '', onchange: () => visUke() })
     rad.uke = el('span', { class: 'skolerute-prev-uke' })
     const visUke = () => { rad.uke.textContent = ukeTekst(rad.fra.value, rad.til.value) }
     visUke()
@@ -5007,10 +5008,23 @@ function visSkoleruteForhandsvisning(events, warnings, onSave, skolear) {
     rad.el = el('div', { class: 'skolerute-prev-rad' }, rad.tittel, rad.fra, rad.til, rad.uke, rad.type,
       el('button', { type: 'button', class: 'btn btn-ikon btn-f', title: 'Stryk denne raden',
         onclick: () => { rad.fjernet = true; rad.el.remove() } }, '🗑️'))
+    return rad
+  }
+
+  for (const ev of events) {
+    const rad = byggRad(ev)
     rader.push(rad)
     liste.appendChild(rad.el)
   }
   box.appendChild(liste)
+
+  box.appendChild(el('div', { class: 'skolerute-prev-legg-til' },
+    el('button', { type: 'button', class: 'btn btn-s', onclick: () => {
+      const rad = byggRad({ type: 'ferie' })
+      rader.push(rad)
+      liste.appendChild(rad.el)
+      rad.tittel.focus()
+    }}, '+ Legg til rad')))
 
   const erstattRadio = el('input', { type: 'radio', name: 'skolerute-modus', checked: 'true' })
   const leggTilRadio = el('input', { type: 'radio', name: 'skolerute-modus' })
