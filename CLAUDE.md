@@ -70,6 +70,11 @@ v4/
       014_import_npt_2526.sql     # Ekte NPT-plan 25/26 fra prod (erstatter syntetiske NPT-økter; lærermapping på fornavn)
       015_import_nna_2526.sql     # Ekte NNA-plan 25/26 fra prod (samme mønster som 014)
       016_import_fag_2526.sql     # Ekte fellesfag-plan 25/26 fra prod (Plan_Fag; kun Naturfag, mapper fag-kolonne mot subjects)
+      017_parti_per_klasse.sql    # Parti per klasse: session_divisions-koblingstabell + subject_divisions per klasse (KJØRT)
+      018_admin_additiv.sql       # Admin som additivt flagg: is_admin-kolonne, auth_is_admin()-helper, RLS-oppdatering (KJØRT)
+      018_funfacts_view_count.sql # view_count for funfacts-rotasjon + increment_fact_view()-funksjon (KJØRT)
+      019_admin_panel_rls.sql     # RLS-fix: adminpanel-skriving tillatt med auth_is_admin() uten toggle (KJØRT)
+      020_storage_policy_logos.sql # Storage-policies for logos-bucketen: INSERT/UPDATE/DELETE (admin) + SELECT (public) (KJØRT)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini

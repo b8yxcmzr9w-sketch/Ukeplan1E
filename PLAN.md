@@ -1,5 +1,10 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt X (P29): Storage-policies for logos-bucketen
+Branch: `claude/P29-storage-policy-logos`. Migrasjon 020 kjørt i Supabase SQL Editor. Logo lastet opp og bekreftet i bucketen.
+
+---
+
 ## Økt X (P29): Storage-policies for logos-bucketen
 
 **Branch:** `claude/P29-storage-policy-logos`
