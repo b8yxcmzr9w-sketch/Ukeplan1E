@@ -2947,132 +2947,429 @@ async function visBulkKopierModal(valgte, onSave) {
 
 async function visAIPasteModal(defaultKlasse, onSave) {
   const modal = el('div', { class: 'modal-bg' })
-  const box = el('div', { class: 'modal modal-xl' })
+  const box = el('div', { class: 'modal modal-xl okt-import-modal' })
   box.appendChild(el('h3', {}, 'Importer økter med AI'))
 
+  const skolear = APP.school?.active_school_year
+  const klasseId = defaultKlasse?.id
+
+  // Last inn kontekstdata (subjects, teachers, alle divisjoner for klassen, eksisterende sessions)
+  const [{ data: allSubjects }, { data: allTeachers }, { data: allDivs }, { data: eksisterendeSessions }] = await Promise.all([
+    sb.from('subjects').select('id, name, short_code').eq('school_id', APP.school.id).is('deleted_at', null).order('name'),
+    sb.from('users').select('id, full_name').eq('school_id', APP.school.id).is('deleted_at', null).order('full_name'),
+    klasseId
+      ? sb.from('subject_divisions').select('id, name, subject_id, division_type, class_id')
+          .or(`class_id.is.null,class_id.eq.${klasseId}`)
+          .is('deleted_at', null).order('sort_order')
+      : { data: [] },
+    klasseId
+      ? sb.from('sessions')
+          .select('id, subject_id, week_nr, day_of_week, session_divisions(division_id)')
+          .eq('class_id', klasseId).eq('school_year', skolear).is('deleted_at', null)
+      : { data: [] },
+  ])
+
+  const subjects = allSubjects || []
+  const teachers = allTeachers || []
+  const divs = allDivs || []
+  const eksisterende = eksisterendeSessions || []
+
+  // Oppslag-kart
+  const subjectById = Object.fromEntries(subjects.map(s => [s.id, s]))
+  const teacherById = Object.fromEntries(teachers.map(t => [t.id, t]))
+  const divById     = Object.fromEntries(divs.map(d => [d.id, d]))
+
+  // Forhåndsmatching-hjelper: fag
+  function matchFag(aiId, aiTekst) {
+    if (aiId && subjectById[aiId]) return aiId
+    if (!aiTekst) return ''
+    const norm = aiTekst.trim().toLowerCase()
+    const treff = subjects.filter(s =>
+      s.name.toLowerCase() === norm || (s.short_code || '').toLowerCase() === norm)
+    return treff.length === 1 ? treff[0].id : ''
+  }
+
+  // Forhåndsmatching-hjelper: lærer (fornavn-match)
+  function matchLaerer(aiId, aiTekst) {
+    if (aiId && teacherById[aiId]) return aiId
+    if (aiTekst) {
+      const norm = aiTekst.trim().toLowerCase()
+      const treff = teachers.filter(t => (t.full_name || '').split(' ')[0].toLowerCase() === norm)
+      if (treff.length === 1) return treff[0].id
+    }
+    return APP.profile?.id || ''
+  }
+
+  // Forhåndsmatching-hjelper: divisjon
+  function matchDiv(aiId, aiTekst, subjId) {
+    if (aiId) {
+      const d = divById[aiId]
+      if (d && d.subject_id === subjId) return aiId
+    }
+    if (!aiTekst || !subjId) return ''
+    const norm = aiTekst.trim().toLowerCase()
+    const tilgjengelig = divs.filter(d => d.subject_id === subjId)
+    const treff = tilgjengelig.filter(d => d.name.toLowerCase() === norm)
+    return treff.length === 1 ? treff[0].id : ''
+  }
+
+  // Divisjoner for et fag (for dropdown-bygging)
+  function divsForFag(subjId) {
+    if (!subjId) return []
+    return divs.filter(d => d.subject_id === subjId)
+  }
+
+  // Kollisjonssjekk: eksakt match på uke+dag+fag+divisjon-sett
+  function sjekkKollisjon(weekNr, dagOfWeek, subjId, divId) {
+    if (!weekNr || !dagOfWeek || !subjId) return false
+    return eksisterende.some(s => {
+      if (s.week_nr !== weekNr || s.day_of_week !== dagOfWeek || s.subject_id !== subjId) return false
+      const eksDiv = (s.session_divisions || []).map(sd => sd.division_id).filter(Boolean).sort().join(',')
+      const nyDiv = divId ? [divId].sort().join(',') : ''
+      return eksDiv === nyDiv
+    })
+  }
+
+  // Valideringstilstand for en rad
+  function validerRad(rad) {
+    const merknader = []
+    let roed = false
+    if (!rad.fagSel.value) { merknader.push('Mangler fag'); roed = true }
+    const uke = parseInt(rad.ukeFelt.value)
+    if (!uke || uke < 1 || uke > 53) { merknader.push('Mangler uke'); roed = true }
+    const dag = parseInt(rad.dagSel.value)
+    if (!dag) { merknader.push('Mangler dag'); roed = true }
+    return { roed, merknader, uke, dag }
+  }
+
+  // Bygg en rad i tabellen
+  function byggRad(s, rader, liste) {
+    const rad = { fjernet: false, fridagAdvarsel: null, kollisjon: false }
+
+    // Fag-dropdown
+    rad.fagSel = el('select', { class: 'felt select okt-import-felt' })
+    rad.fagSel.appendChild(el('option', { value: '' }, '— velg fag —'))
+    for (const subj of subjects)
+      rad.fagSel.appendChild(el('option', { value: subj.id }, subj.name))
+
+    // Divisjon-dropdown
+    rad.divSel = el('select', { class: 'felt select okt-import-felt' })
+    const divWrap = el('div', { class: 'okt-import-div-wrap' })
+    const okKnapp = el('button', { type: 'button', class: 'btn btn-s okt-import-ok-knapp', style: 'display:none' }, 'OK')
+    divWrap.appendChild(rad.divSel)
+    divWrap.appendChild(okKnapp)
+
+    function fyllDivDropdown(subjId, velgId, foreslatt) {
+      clearEl(rad.divSel)
+      rad.divSel.appendChild(el('option', { value: '' }, '—'))
+      const tilgjengelig = divsForFag(subjId)
+      for (const d of tilgjengelig) {
+        const opt = el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`)
+        rad.divSel.appendChild(opt)
+      }
+      if (velgId) rad.divSel.value = velgId
+      if (foreslatt && rad.divSel.value === velgId) {
+        rad.divSel.classList.add('okt-import-foreslatt')
+        okKnapp.style.display = ''
+      } else {
+        rad.divSel.classList.remove('okt-import-foreslatt')
+        okKnapp.style.display = 'none'
+      }
+    }
+
+    okKnapp.addEventListener('click', () => {
+      rad.divSel.classList.remove('okt-import-foreslatt')
+      okKnapp.style.display = 'none'
+    })
+    rad.divSel.addEventListener('change', () => {
+      rad.divSel.classList.remove('okt-import-foreslatt')
+      okKnapp.style.display = 'none'
+      oppdaterRadStatus()
+    })
+
+    // Uke-input
+    rad.ukeFelt = el('input', { type: 'number', class: 'felt input okt-import-felt okt-import-uke', min: 1, max: 53, placeholder: 'uke' })
+
+    // Dag-dropdown
+    rad.dagSel = el('select', { class: 'felt select okt-import-felt' })
+    rad.dagSel.appendChild(el('option', { value: '' }, '—'))
+    for (let i = 1; i <= 5; i++) rad.dagSel.appendChild(el('option', { value: i }, dagNavn(i)))
+
+    // Lærer-dropdown
+    rad.laererSel = el('select', { class: 'felt select okt-import-felt' })
+    for (const t of teachers) {
+      const opt = el('option', { value: t.id }, t.full_name)
+      rad.laererSel.appendChild(opt)
+    }
+
+    // Fritekstfelt
+    rad.aktivitetFelt  = el('input', { type: 'text', class: 'felt input okt-import-felt', placeholder: 'aktivitet' })
+    rad.oppmoteFelt    = el('input', { type: 'text', class: 'felt input okt-import-felt', placeholder: 'møtested' })
+    rad.infoFelt       = el('input', { type: 'text', class: 'felt input okt-import-felt', placeholder: 'info' })
+
+    // Merknadscelle
+    const merknadCelle = el('span', { class: 'okt-import-merknad' })
+
+    // «Importer likevel»-hake for kollisjoner
+    const kollisjonHake = el('input', { type: 'checkbox', class: 'okt-import-kollisjon-hake', title: 'Importer likevel (kolliderer med eksisterende økt)' })
+    const kollisjonWrap = el('span', { class: 'okt-import-kollisjon-wrap', style: 'display:none' }, kollisjonHake, ' importer likevel')
+
+    // Fyll inn forhåndsmatchede verdier
+    const initFagId = matchFag(s?.subject_id, s?.activity)
+    if (initFagId) rad.fagSel.value = initFagId
+    fyllDivDropdown(initFagId, matchDiv(s?.division_id, null, initFagId), false)
+    rad.laererSel.value = matchLaerer(s?.teacher_id, null)
+    if (s?.week_nr) rad.ukeFelt.value = s.week_nr
+    if (s?.day_of_week) rad.dagSel.value = s.day_of_week
+    rad.aktivitetFelt.value = s?.activity || ''
+    rad.oppmoteFelt.value   = s?.meeting_point || ''
+    rad.infoFelt.value      = s?.info || ''
+
+    // Fagbytte → oppdater divisjon-dropdown
+    rad.fagSel.addEventListener('change', () => {
+      const nySubjId = rad.fagSel.value
+      const forrigeDiv = rad.divSel.value
+      const forrigeNavn = forrigeDiv ? (divById[forrigeDiv]?.name || '') : ''
+      const nyeDivs = divsForFag(nySubjId)
+      const sammeNavn = forrigeNavn ? nyeDivs.find(d => d.name === forrigeNavn) : null
+      fyllDivDropdown(nySubjId, sammeNavn?.id || '', !!sammeNavn)
+      oppdaterRadStatus()
+    })
+
+    // Live-validering
+    async function oppdaterRadStatus() {
+      const { roed, merknader } = validerRad(rad)
+      const uke = parseInt(rad.ukeFelt.value)
+      const dag = parseInt(rad.dagSel.value)
+      const subjId = rad.fagSel.value
+      const divId = rad.divSel.value
+
+      // Fridag-sjekk
+      rad.fridagAdvarsel = null
+      if (uke && dag && !roed) {
+        const fridag = await finnFridag(uke, dag, skolear)
+        if (fridag) {
+          rad.fridagAdvarsel = `På fridag: ${fridag.title}`
+        }
+      }
+
+      // Kollisjon-sjekk
+      rad.kollisjon = !roed && sjekkKollisjon(uke, dag, subjId, divId)
+
+      const allemerknader = [...merknader]
+      if (rad.fridagAdvarsel) allemerknader.push(rad.fridagAdvarsel)
+      if (rad.kollisjon) allemerknader.push('Kollisjon: finnes allerede')
+
+      merknadCelle.textContent = allemerknader.join(' · ')
+      kollisjonWrap.style.display = rad.kollisjon ? '' : 'none'
+      if (!rad.kollisjon) kollisjonHake.checked = false
+
+      if (roed) {
+        rad.el.classList.add('okt-import-rad--roed')
+        rad.el.classList.remove('okt-import-rad--gul')
+      } else if (rad.fridagAdvarsel || rad.kollisjon) {
+        rad.el.classList.add('okt-import-rad--gul')
+        rad.el.classList.remove('okt-import-rad--roed')
+      } else {
+        rad.el.classList.remove('okt-import-rad--roed', 'okt-import-rad--gul')
+      }
+    }
+
+    rad.ukeFelt.addEventListener('change', oppdaterRadStatus)
+    rad.dagSel.addEventListener('change', oppdaterRadStatus)
+    rad.fagSel.addEventListener('change', oppdaterRadStatus)
+
+    // Stryk-knapp
+    const strykKnapp = el('button', { type: 'button', class: 'btn btn-ikon btn-f', title: 'Stryk denne raden',
+      onclick: () => { rad.fjernet = true; rad.el.remove() } }, '🗑️')
+
+    rad.el = el('div', { class: 'okt-import-rad' },
+      el('div', { class: 'okt-import-celle okt-import-celle--fag' }, rad.fagSel),
+      el('div', { class: 'okt-import-celle okt-import-celle--div' }, divWrap),
+      el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, rad.laererSel),
+      el('div', { class: 'okt-import-celle okt-import-celle--uke' }, rad.ukeFelt),
+      el('div', { class: 'okt-import-celle okt-import-celle--dag' }, rad.dagSel),
+      el('div', { class: 'okt-import-celle okt-import-celle--akt' }, rad.aktivitetFelt),
+      el('div', { class: 'okt-import-celle okt-import-celle--opp' }, rad.oppmoteFelt),
+      el('div', { class: 'okt-import-celle okt-import-celle--info' }, rad.infoFelt),
+      el('div', { class: 'okt-import-celle okt-import-celle--merknad' }, merknadCelle, kollisjonWrap),
+      el('div', { class: 'okt-import-celle okt-import-celle--stryk' }, strykKnapp),
+    )
+    rad._kollisjonHake = kollisjonHake
+    rader.push(rad)
+    liste.appendChild(rad.el)
+
+    // Kjør innledende validering
+    oppdaterRadStatus()
+    return rad
+  }
+
+  // ─── Tekstfelt-seksjon ───
   const textarea = el('textarea', { class: 'felt textarea textarea-large', placeholder: 'Lim inn tekst her…' })
   box.appendChild(textarea)
 
-  const preview = el('div', { class: 'ai-preview' })
-  box.appendChild(preview)
+  const analyserKnapp = el('button', { class: 'btn btn-p', type: 'button' }, 'Analyser med AI')
+  box.appendChild(analyserKnapp)
 
-  box.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+  // ─── Forhåndsvisning ───
+  const prevSeksjon = el('div', { class: 'okt-import-prev', style: 'display:none' })
+
+  // Kolonneoverskrifter
+  prevSeksjon.appendChild(el('div', { class: 'okt-import-rad okt-import-hode' },
+    el('div', { class: 'okt-import-celle okt-import-celle--fag' }, 'Fag'),
+    el('div', { class: 'okt-import-celle okt-import-celle--div' }, 'Parti/gruppe'),
+    el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, 'Lærer'),
+    el('div', { class: 'okt-import-celle okt-import-celle--uke' }, 'Uke'),
+    el('div', { class: 'okt-import-celle okt-import-celle--dag' }, 'Dag'),
+    el('div', { class: 'okt-import-celle okt-import-celle--akt' }, 'Aktivitet'),
+    el('div', { class: 'okt-import-celle okt-import-celle--opp' }, 'Møtested'),
+    el('div', { class: 'okt-import-celle okt-import-celle--info' }, 'Info'),
+    el('div', { class: 'okt-import-celle okt-import-celle--merknad' }, 'Merknad'),
+    el('div', { class: 'okt-import-celle okt-import-celle--stryk' }, ''),
+  ))
+
+  const liste = el('div', { class: 'okt-import-liste' })
+  prevSeksjon.appendChild(liste)
+  box.appendChild(prevSeksjon)
+
+  const rader = []
+
+  // «+ Legg til rad»-knapp og fast bunnfelt
+  const leggTilBtn = el('button', { type: 'button', class: 'btn btn-s okt-import-legg-til', style: 'display:none',
+    onclick: () => byggRad(null, rader, liste) }, '+ Legg til rad')
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  const importKnapp = el('button', { type: 'button', class: 'btn btn-p', style: 'display:none' }, 'Importer')
+  bunn.appendChild(importKnapp)
+
+  const bunnWrap = el('div', { class: 'okt-import-bunn' })
+  bunnWrap.appendChild(leggTilBtn)
+  bunnWrap.appendChild(bunn)
+  box.appendChild(bunnWrap)
+
+  // ─── Analyser-handler ───
+  analyserKnapp.addEventListener('click', async () => {
     if (!textarea.value.trim()) return
-    clearEl(preview)
+    clearEl(liste)
+    rader.length = 0
 
     try {
-      // Hent kontekstdata for AI-en
-      const [{ data: subjects }, { data: klasser }, { data: teachers }, { data: divisions }] = await Promise.all([
-        sb.from('subjects').select('id, name, short_code').eq('school_id', APP.school.id),
-        sb.from('classes').select('id, name').eq('school_id', APP.school.id),
-        sb.from('users').select('id, full_name').eq('school_id', APP.school.id).eq('role', 'teacher'),
-        sb.from('divisions').select('id, name, subject_id, division_type').eq('school_id', APP.school.id),
-      ])
-
       const { data, error } = await medAIOverlay('AI tolker teksten til økter …', () =>
         sb.functions.invoke('ai-parse-sessions', {
           body: {
             text: textarea.value,
-            context: { subjects: subjects || [], classes: klasser || [], teachers: teachers || [], divisions: divisions || [] },
+            context: {
+              subjects: subjects.map(s => ({ id: s.id, name: s.name, short_code: s.short_code })),
+              classes: klasseId ? [{ id: klasseId, name: defaultKlasse.name }] : [],
+              teachers: teachers.map(t => ({ id: t.id, full_name: t.full_name })),
+              divisions: divs.map(d => ({ id: d.id, name: d.name, subject_id: d.subject_id, division_type: d.division_type })),
+            },
           }
         }))
       if (error) throw error
 
-      clearEl(preview)
-      const parsed = (data.sessions || data || [])
-      if (!parsed.length) { preview.appendChild(el('p', {}, 'Ingen økter funnet.')); return }
-
+      const parsed = data.sessions || data || []
       if (data.warnings?.length) {
-        preview.appendChild(el('p', { class: 'advarsel-tekst' }, `⚠️ ${data.warnings.join(' | ')}`))
+        const varsler = data.warnings.map(rensVarsel).filter(Boolean)
+        if (varsler.length) {
+          const eksisterende = prevSeksjon.querySelector('.advarsel-tekst')
+          if (eksisterende) eksisterende.remove()
+          prevSeksjon.insertBefore(
+            el('p', { class: 'advarsel-tekst' }, `⚠️ ${varsler.join(' | ')}`),
+            liste
+          )
+        }
       }
 
-      // Slå opp navn fra kontekst
-      const subjectMap = Object.fromEntries((subjects || []).map(s => [s.id, s.name]))
-      const klassMap   = Object.fromEntries((klasser || []).map(k => [k.id, k.name]))
-
-      const table = el('table', { class: 'preview-table' })
-      const thead = el('thead')
-      thead.appendChild(el('tr', {},
-        el('th', {}, ''),
-        el('th', {}, 'Klasse'),
-        el('th', {}, 'Fag'),
-        el('th', {}, 'Uke'),
-        el('th', {}, 'Dag'),
-        el('th', {}, 'Aktivitet'),
-        el('th', {}, 'Sikkerhet'),
-        el('th', {}, 'Merknad'),
-      ))
-      table.appendChild(thead)
-      const tbody = el('tbody')
-
-      const selected = new Set(parsed.map((_, i) => i))
-
-      for (let i = 0; i < parsed.length; i++) {
-        const s = parsed[i]
-        const tr = el('tr', {})
-        const cb = el('input', { type: 'checkbox' })
-        cb.checked = true
-        cb.addEventListener('change', () => { if (cb.checked) selected.add(i); else selected.delete(i) })
-        tr.appendChild(el('td', {}, cb))
-        tr.appendChild(el('td', {}, klassMap[s.class_id] || (defaultKlasse?.name || '')))
-        tr.appendChild(el('td', {}, subjectMap[s.subject_id] || ''))
-        tr.appendChild(el('td', {}, String(s.week_nr || '')))
-        tr.appendChild(el('td', {}, dagNavn(s.day_of_week) || ''))
-        tr.appendChild(el('td', {}, s.activity || ''))
-        const conf = s._confidence || 'low'
-        tr.appendChild(el('td', { class: `conf--${conf}` }, conf === 'high' ? 'Høy' : conf === 'medium' ? 'Middels' : 'Lav'))
-        tr.appendChild(el('td', {}, s._note || ''))
-        tbody.appendChild(tr)
+      if (!parsed.length) {
+        liste.appendChild(el('p', {}, 'Ingen økter funnet i teksten.'))
+      } else {
+        for (const s of parsed) byggRad(s, rader, liste)
       }
-      table.appendChild(tbody)
-      preview.appendChild(table)
 
-      preview.appendChild(el('button', { class: 'btn btn-p', style: 'margin-top:10px', onclick: async () => {
-        const valgteOkter = parsed.filter((_, i) => selected.has(i))
-        // Fridagssjekk: hopp over økter som lander på fridag i skoleruten
-        const toImport = []
-        const hoppetOver = []
-        for (const s of valgteOkter) {
-          const fridag = await finnFridag(s.week_nr, s.day_of_week, APP.school?.active_school_year)
-          if (fridag) hoppetOver.push(`uke ${s.week_nr} ${dagNavn(s.day_of_week)} (${fridag.title})`)
-          else toImport.push(s)
-        }
-        if (!toImport.length) {
-          showToast(`Ingen økter importert – alle treffer fridag: ${[...new Set(hoppetOver)].join(', ')}`, 'error')
-          return
-        }
-        await medLagreOverlay(async () => {
-          for (const s of toImport) {
-            await sb.from('sessions').insert({
-              school_id: APP.school.id,
-              class_id: s.class_id || defaultKlasse?.id,
-              subject_id: s.subject_id || null,
-              division_id: s.division_id || null,
-              week_nr: s.week_nr,
-              day_of_week: s.day_of_week,
-              teacher_id: APP.profile.id,
-              activity: s.activity || '',
-              meeting_point: s.meeting_point || '',
-              info: s.info || '',
-              school_year: APP.school?.active_school_year,
-              created_by: APP.profile.id,
-              version: 1,
-            })
-          }
-        })
-        if (hoppetOver.length) {
-          showToast(`${toImport.length} økt(er) importert. ${hoppetOver.length} hoppet over pga. fridag: ${[...new Set(hoppetOver)].join(', ')}`, 'info')
-        }
-        modal.remove()
-        if (onSave) onSave()
-      }}, 'Importer valgte'))
+      prevSeksjon.style.display = ''
+      leggTilBtn.style.display = ''
+      importKnapp.style.display = ''
     } catch (err) {
-      clearEl(preview)
-      preview.appendChild(el('p', { class: 'feil-tekst' }, `Feil: ${err.message}`))
+      prevSeksjon.style.display = ''
+      liste.appendChild(el('p', { class: 'feil-tekst' }, `Feil: ${err.message}`))
     }
-  }}, 'Analyser med AI'))
+  })
 
-  box.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  // ─── Import-handler ───
+  importKnapp.addEventListener('click', async () => {
+    const aktive = rader.filter(r => !r.fjernet)
+    const skalImporteres = []
+    const blirStaaende = []
+
+    for (const rad of aktive) {
+      const { roed } = validerRad(rad)
+      if (roed) { blirStaaende.push(rad); continue }
+      if (rad.kollisjon && !rad._kollisjonHake.checked) { blirStaaende.push(rad); continue }
+      skalImporteres.push(rad)
+    }
+
+    if (!skalImporteres.length) {
+      showToast('Ingen rader klare til import. Rett røde felt eller hak av kollisjoner.', 'error')
+      return
+    }
+
+    try {
+      await medLagreOverlay(async () => {
+        for (const rad of skalImporteres) {
+          const weekNr = parseInt(rad.ukeFelt.value)
+          const dagOfWeek = parseInt(rad.dagSel.value)
+          const subjId = rad.fagSel.value
+          const divId = rad.divSel.value || null
+
+          const { data: inserted, error: insErr } = await sb.from('sessions').insert({
+            school_id: APP.school.id,
+            class_id: klasseId,
+            subject_id: subjId,
+            division_id: null,
+            week_nr: weekNr,
+            day_of_week: dagOfWeek,
+            teacher_id: rad.laererSel.value || APP.profile.id,
+            activity: rad.aktivitetFelt.value.trim(),
+            meeting_point: rad.oppmoteFelt.value.trim(),
+            info: rad.infoFelt.value.trim(),
+            school_year: skolear,
+            created_by: APP.profile.id,
+            version: 1,
+          }).select('id')
+          if (insErr) throw insErr
+
+          if (divId && inserted?.[0]?.id) {
+            const { error: sdErr } = await sb.from('session_divisions')
+              .insert({ session_id: inserted[0].id, division_id: divId })
+            if (sdErr) throw sdErr
+          }
+        }
+      })
+
+      // Fjern importerte rader fra visningen
+      for (const rad of skalImporteres) {
+        rad.fjernet = true
+        rad.el.remove()
+        const idx = rader.indexOf(rad)
+        if (idx !== -1) rader.splice(idx, 1)
+      }
+
+      const gjenstar = blirStaaende.filter(r => !r.fjernet).length
+      if (gjenstar) {
+        showToast(`${skalImporteres.length} økt(er) importert. ${gjenstar} rad(er) står igjen — rett eller stryk dem.`, 'info')
+        if (onSave) onSave()
+      } else {
+        showToast(`${skalImporteres.length} økt(er) importert!`, 'ok')
+        if (onSave) onSave()
+        modal.remove()
+      }
+    } catch (err) {
+      showToast(`Importfeil: ${err.message}`, 'error')
+    }
+  })
+
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })

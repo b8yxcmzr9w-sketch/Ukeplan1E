@@ -1,5 +1,104 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt X (P30): Fullt redigerbar økt-import
+Branch: `claude/P30-redigerbar-okt-import`. Ingen manuelle steg nødvendig.
+
+---
+
+## Økt X (P30): Fullt redigerbar økt-import
+
+**Branch:** `claude/P30-redigerbar-okt-import`
+**Scope:** `v4/app.js` (primært `visAIPasteModal`), `v4/style.css`, `v4/index.html` (cache-bust), `PLAN.md`. Ingen migrasjoner. Ingen edge-function-endringer.
+
+### Kartlegging og funn
+
+#### Dagens `visAIPasteModal` (app.js:2948–3079)
+- Laster kontekst med 4 parallelle queries, kaller `ai-parse-sessions`, viser resultat i en tabell.
+- **Feil 1 BEKREFTET** (app.js:2969): Henter fra `divisions` — tabellen finnes ikke. Riktig navn er `subject_divisions`. Gir Supabase-feil og tom divisjons-kontekst til AI.
+- **Feil 2 BEKREFTET** (app.js:2968): Filtrerer lærere på `role = 'teacher'` — enum-verdien er `'laerer'`. Gir tom lærerliste til AI og tom lærer-dropdown.
+- Forhåndsvisning: kun checkbox per rad (avhuk/forkast) — ingen feltredigering.
+- Lagring: inserter valgte rader som sessions, `division_id: null` (ingen `session_divisions`-innsetting). Fridagssjekk blokkerer — rader på fridag hoppes over og telles.
+- Kollisjonssjekk: FINNES IKKE i dag.
+
+#### AI-felter returnert av `ai-parse-sessions`
+`class_id`, `subject_id`, `division_id`, `week_nr`, `day_of_week`, `activity`, `meeting_point`, `info`, `_confidence`, `_note`
+
+#### Mønster fra `visSkoleruteForhandsvisning` (app.js:4681–4778)
+- `rad`-objekt der felt ER input-elementene selv (direkte verdi-lesing ved lagring).
+- `rad.fjernet = true` + `rad.el.remove()` for stryk-rad (🗑️).
+- Fast bunnfelt (`.skolerute-prev-bunn` / `.modal-bunn`) utenfor scrollelisten — alltid synlig.
+- Validering med tidlig retur og `showToast` på feil.
+- `medLagreOverlay(async () => {...})` rundt insert.
+
+#### Divisjonshenting (eksisterende session-modaler, app.js:2482–2494)
+```js
+sb.from('subject_divisions')
+  .select('*')
+  .eq('subject_id', subjectId)
+  .or(`class_id.is.null,class_id.eq.${classId}`)
+  .is('deleted_at', null)
+  .order('sort_order')
+```
+Grupper (`class_id IS NULL`) + partier for klassen (`class_id = <klasse>`).
+
+#### Lærerhenting (korrekt mønster fra visRedigerOktModal, app.js:2543)
+```js
+sb.from('users').select('*').eq('school_id', APP.school.id)
+```
+(ingen role-filter — viser alle brukere; alternativt role in ['laerer', 'kontaktlaerer', 'admin'])
+
+#### `finnFridag(weekNr, dayOfWeek, schoolYear)` (app.js:922) — gjenbrukbar, async.
+
+#### `session_divisions` — insert-mønster (app.js:2417–2418, 2583–2585):
+```js
+await sb.from('session_divisions').insert(divIds.map(did => ({ session_id: s.id, division_id: did })))
+```
+
+### Delplan
+
+- [x] **Steg 1 — Kartlegging og plan** (denne filen)
+- [x] **Steg 2 — Dataoppsett og forhåndsmatching**
+  - Rettet `divisions` → `subject_divisions` og `role='teacher'` → ingen role-filter (alle brukere ved skolen)
+  - Henter eksisterende sessions for klassen ved modal-åpning (kollisjonssjekk)
+  - Forhåndsmatching: gyldig AI-ID → navnematch (fag på name+short_code, lærer på fornavn, div på name) → tomt/default
+- [x] **Steg 3 — Redigerbar tabellvisning**
+  - Rader med select/input for hvert felt (fag, parti/gruppe, lærer, dag som dropdown; uke som tall; aktivitet/oppmøte/info som fritekst)
+  - Fagbytte → oppdater parti-dropdown live; samme navn → gul markering + OK-knapp
+  - Stryk-rad (🗑️), «+ Legg til rad»
+- [x] **Steg 4 — Flagging og merknader**
+  - Rød rad (mangler fag/dag/uke), gul (fridag/kollisjon); rød vinner ved begge
+  - Merknadskolonne i klarspråk («Mangler fag», «På fridag: …», «Kollisjon: finnes allerede»)
+  - «Importer likevel»-hake på kollisjon-rader
+  - Live oppdatering (async) ved feltendringer (uke, dag, fag, divisjon)
+- [x] **Steg 5 — Importlogikk**
+  - Rød alltid utelatt; kollisjon uten hake utelatt; fridag og «importer likevel» tas med
+  - Insert sessions + session_divisions (division_id=null på sessions, kobling i session_divisions)
+  - Pakket i `medLagreOverlay`
+  - Fjerner importerte rader fra visning, beholder røde/ubekreftede, toast med antall
+- [x] **Steg 6 — CSS og cache-bust**
+  - Nye stiler: `.okt-import-*` for modal, rader, farger, merknadkolonne, foreslatt-markering
+  - Bumped `?v=20260627a` i index.html
+- [x] **Steg 7 — Verifisering**
+  - Alle sjekkliste-punkter bekreftet ved kodegjennomgang
+
+### Verifiser før merge
+- [x] Fag/parti/lærer/dag er dropdowns; uke er tall; aktivitet/oppmøte/info er fritekst — alle redigerbare
+- [x] Forhåndsmatching: gyldig AI-ID brukes direkte; navnematch som fallback; usikre felt tomme
+- [x] Lærer default = innlogget bruker når ingen treff
+- [x] Fagbytte oppdaterer parti-dropdown; samme navn → forhåndsvalgt + gul + OK-knapp; ellers nullstilt
+- [x] Rød rad (mangler fag/dag/uke) importeres aldri; merknad forklarer
+- [x] Fridag → gul, importeres likevel; kollisjon → gul, krever «importer likevel»
+- [x] Kollisjon respekterer nøyaktig parti/gruppe-likhet (P1 vs P2 ≠ kollisjon, via divisjon-ID-sammenligning)
+- [x] Import fjerner importerte rader, beholder røde + ubekreftede kollisjoner, toast med antall
+- [x] «+ Legg til rad» gir ny redigerbar rad
+- [x] Verifisert/rettet: `subject_divisions` (ikke `divisions`) og ingen feil role-filter
+
+### Mulige senere utvidelser (IKKE med nå)
+- Uke-spenn per rad (én rad = én uke nå)
+- Uke-først i `ai-parse-sessions` edge-function
+
+---
+
 ## Status: FULLFØRT — Økt X (P29): Storage-policies for logos-bucketen
 Branch: `claude/P29-storage-policy-logos`. Migrasjon 020 kjørt i Supabase SQL Editor. Logo lastet opp og bekreftet i bucketen.
 
