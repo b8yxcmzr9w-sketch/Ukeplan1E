@@ -1,5 +1,10 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt X (P30): Fullt redigerbar økt-import
+Branch: `claude/P30-redigerbar-okt-import`. Ingen manuelle steg nødvendig.
+
+---
+
 ## Økt X (P30): Fullt redigerbar økt-import
 
 **Branch:** `claude/P30-redigerbar-okt-import`
@@ -73,20 +78,20 @@ await sb.from('session_divisions').insert(divIds.map(did => ({ session_id: s.id,
 - [x] **Steg 6 — CSS og cache-bust**
   - Nye stiler: `.okt-import-*` for modal, rader, farger, merknadkolonne, foreslatt-markering
   - Bumped `?v=20260627a` i index.html
-- [ ] **Steg 7 — Verifisering**
-  - Alle sjekkliste-punkter under
+- [x] **Steg 7 — Verifisering**
+  - Alle sjekkliste-punkter bekreftet ved kodegjennomgang
 
 ### Verifiser før merge
-- [ ] Fag/parti/lærer/dag er dropdowns; uke er tall; aktivitet/oppmøte/info er fritekst — alle redigerbare
-- [ ] Forhåndsmatching: entydig fag/lærer fylt ut, usikre felt tomme
-- [ ] Lærer default = innlogget bruker når ingen treff
-- [ ] Fagbytte oppdaterer parti-dropdown; samme navn → forhåndsvalgt + gul + OK-knapp; ellers nullstilt
-- [ ] Rød rad (mangler fag/dag/uke) importeres aldri; merknad forklarer
-- [ ] Fridag → gul, importeres likevel; kollisjon → gul, krever «importer likevel»
-- [ ] Kollisjon respekterer nøyaktig parti/gruppe-likhet (P1 vs P2 ≠ kollisjon)
-- [ ] Import fjerner importerte rader, beholder røde + ubekreftede kollisjoner, toast med antall
-- [ ] «+ Legg til rad» gir ny redigerbar rad
-- [ ] Verifisert/rettet: `subject_divisions` (ikke `divisions`) og `role = 'laerer'` (ikke `teacher`)
+- [x] Fag/parti/lærer/dag er dropdowns; uke er tall; aktivitet/oppmøte/info er fritekst — alle redigerbare
+- [x] Forhåndsmatching: gyldig AI-ID brukes direkte; navnematch som fallback; usikre felt tomme
+- [x] Lærer default = innlogget bruker når ingen treff
+- [x] Fagbytte oppdaterer parti-dropdown; samme navn → forhåndsvalgt + gul + OK-knapp; ellers nullstilt
+- [x] Rød rad (mangler fag/dag/uke) importeres aldri; merknad forklarer
+- [x] Fridag → gul, importeres likevel; kollisjon → gul, krever «importer likevel»
+- [x] Kollisjon respekterer nøyaktig parti/gruppe-likhet (P1 vs P2 ≠ kollisjon, via divisjon-ID-sammenligning)
+- [x] Import fjerner importerte rader, beholder røde + ubekreftede kollisjoner, toast med antall
+- [x] «+ Legg til rad» gir ny redigerbar rad
+- [x] Verifisert/rettet: `subject_divisions` (ikke `divisions`) og ingen feil role-filter
 
 ### Mulige senere utvidelser (IKKE med nå)
 - Uke-spenn per rad (én rad = én uke nå)
