@@ -52,27 +52,27 @@ await sb.from('session_divisions').insert(divIds.map(did => ({ session_id: s.id,
 ### Delplan
 
 - [x] **Steg 1 — Kartlegging og plan** (denne filen)
-- [ ] **Steg 2 — Dataoppsett og forhåndsmatching**
-  - Rette `divisions` → `subject_divisions` og `role='teacher'` → riktig filter
-  - Hente eksisterende sessions for klassen (kollisjonssjekk)
-  - Bygge forhåndsmatching-logikk (fag, lærer, divisjon)
-- [ ] **Steg 3 — Redigerbar tabellvisning**
-  - Rader med select/input for hvert felt
-  - Fagbytte → oppdater parti-dropdown live; samme navn → gul + OK-knapp
+- [x] **Steg 2 — Dataoppsett og forhåndsmatching**
+  - Rettet `divisions` → `subject_divisions` og `role='teacher'` → ingen role-filter (alle brukere ved skolen)
+  - Henter eksisterende sessions for klassen ved modal-åpning (kollisjonssjekk)
+  - Forhåndsmatching: gyldig AI-ID → navnematch (fag på name+short_code, lærer på fornavn, div på name) → tomt/default
+- [x] **Steg 3 — Redigerbar tabellvisning**
+  - Rader med select/input for hvert felt (fag, parti/gruppe, lærer, dag som dropdown; uke som tall; aktivitet/oppmøte/info som fritekst)
+  - Fagbytte → oppdater parti-dropdown live; samme navn → gul markering + OK-knapp
   - Stryk-rad (🗑️), «+ Legg til rad»
-- [ ] **Steg 4 — Flagging og merknader**
-  - Rød rad (mangler fag/dag/uke), gul (fridag/kollisjon)
-  - Merknadskolonne i klarspråk
+- [x] **Steg 4 — Flagging og merknader**
+  - Rød rad (mangler fag/dag/uke), gul (fridag/kollisjon); rød vinner ved begge
+  - Merknadskolonne i klarspråk («Mangler fag», «På fridag: …», «Kollisjon: finnes allerede»)
   - «Importer likevel»-hake på kollisjon-rader
-  - Live oppdatering ved feltendringer
-- [ ] **Steg 5 — Importlogikk**
+  - Live oppdatering (async) ved feltendringer (uke, dag, fag, divisjon)
+- [x] **Steg 5 — Importlogikk**
   - Rød alltid utelatt; kollisjon uten hake utelatt; fridag og «importer likevel» tas med
-  - Insert sessions + session_divisions (multi-select-mønster: division_id=null + kobling)
-  - Pakk i `medLagreOverlay`
-  - Fjern importerte rader fra visning, behold røde/ubekreftede, toast med antall
-- [ ] **Steg 6 — CSS og cache-bust**
-  - Nye stiler for rad-flagging (rød/gul), merknadskolonne, OK-knapp
-  - Bump `?v=` i index.html
+  - Insert sessions + session_divisions (division_id=null på sessions, kobling i session_divisions)
+  - Pakket i `medLagreOverlay`
+  - Fjerner importerte rader fra visning, beholder røde/ubekreftede, toast med antall
+- [x] **Steg 6 — CSS og cache-bust**
+  - Nye stiler: `.okt-import-*` for modal, rader, farger, merknadkolonne, foreslatt-markering
+  - Bumped `?v=20260627a` i index.html
 - [ ] **Steg 7 — Verifisering**
   - Alle sjekkliste-punkter under
 
