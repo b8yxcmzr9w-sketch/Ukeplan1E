@@ -1706,7 +1706,7 @@ async function renderMinKlasseTab(container, klasse) {
 
   const nyOktBtn = el('button', { class: 'btn btn-p', title: 'Legg til en ny økt denne uken', onclick: () => visNyOktModal(aktivKlasse, currentWeek, renderUke, valgtSkolear) }, '+ Ny økt')
   topRow.appendChild(nyOktBtn)
-  topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Lim inn ukeplan som tekst og la AI tolke den', onclick: () => visAIPasteModal(aktivKlasse, renderUke) }, '🤖 Lim inn med AI'))
+  topRow.appendChild(el('button', { class: 'btn btn-s', title: 'Lim inn ukeplan som tekst og la AI tolke den', onclick: () => visAIPasteModal(aktivKlasse, renderUke, valgtSkolear) }, '🤖 Lim inn med AI'))
 
   const delWrapper = el('div', { class: 'del-dropdown-wrapper' })
   const delBtn = el('button', { class: 'btn btn-s', title: 'Del eller skriv ut' }, '🔗 Del elevlenke ▾')
@@ -2945,12 +2945,12 @@ async function visBulkKopierModal(valgte, onSave) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
-async function visAIPasteModal(defaultKlasse, onSave) {
+async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal modal-xl okt-import-modal' })
   box.appendChild(el('h3', {}, 'Importer økter med AI'))
 
-  const skolear = APP.school?.active_school_year
+  const skolear = skoleAar || APP.school?.active_school_year
   const klasseId = defaultKlasse?.id
 
   // Last inn kontekstdata (subjects, teachers, alle divisjoner for klassen, eksisterende sessions)

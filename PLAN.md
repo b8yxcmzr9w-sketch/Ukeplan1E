@@ -1,13 +1,21 @@
 # PLAN — Ukeplan1E v4
 
-## Status: KARTLEGGING FULLFØRT — Økt X (P32): AI-import skriver feil skoleår
-Venter på godkjenning før koding starter.
+## Status: FULLFØRT — Økt X (P32): AI-import skriver feil skoleår
+Branch: `claude/ai-import-school-year-bug-enyxos`. Ingen manuelle steg nødvendig (opprydding i DB gjøres separat av Morfar).
 
 ---
 
 ## Økt X (P32): AI-import skriver feil skoleår (kartlegging)
 
-**Neste steg:** Godkjenning → implementer fiks (kun app.js).
+**Branch:** `claude/ai-import-school-year-bug-enyxos`
+**Scope:** `v4/app.js` (3 linjer), `v4/index.html` (cache-bust → `20260628a`).
+
+### Sjekkliste
+- [x] Kallet linje 1709: `valgtSkolear` sendes med som tredje argument
+- [x] Signatur linje 2948: `skoleAar`-parameter lagt til
+- [x] Bruk linje 2953: `skoleAar || APP.school?.active_school_year` (fallback beholder retning b)
+- [x] Cache-bust bumped: `20260628a`
+- [x] PLAN.md oppdatert
 
 ### Funn 1 — Rotårsak: FUNNET (app.js:2948 + 1709)
 
