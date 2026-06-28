@@ -1,5 +1,66 @@
 # PLAN — Ukeplan1E v4
 
+## Status: KARTLEGGING FULLFØRT — Økt X (P32): AI-import skriver feil skoleår
+Venter på godkjenning før koding starter.
+
+---
+
+## Økt X (P32): AI-import skriver feil skoleår (kartlegging)
+
+**Neste steg:** Godkjenning → implementer fiks (kun app.js).
+
+### Funn 1 — Rotårsak: FUNNET (app.js:2948 + 1709)
+
+**`visAIPasteModal` tar ikke imot `valgtSkolear` som parameter, og hardkoder aktivt skoleår.**
+
+Tre linjer forteller hele historien:
+
+| Linje | Kode | Problem |
+|---|---|---|
+| 2948 | `async function visAIPasteModal(defaultKlasse, onSave)` | Ingen `skoleAar`-parameter |
+| 1709 | `visAIPasteModal(aktivKlasse, renderUke)` | `valgtSkolear` sendes ikke med |
+| 2953 | `const skolear = APP.school?.active_school_year` | Bruker alltid aktivt år (25/26) |
+| 3337 | `school_year: skolear` | Lagrer med feil år |
+
+**Sammenlign med «+ Ny økt» som P28 bekreftet er korrekt:**
+- Kall (linje 1707): `visNyOktModal(aktivKlasse, currentWeek, renderUke, valgtSkolear)` — `valgtSkolear` sendes med
+- Signatur (linje 2341): `async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar)` — tar imot
+- Lagring (linje 2409): `school_year: skoleAar || APP.school?.active_school_year` — bruker valgt år
+
+**Konklusjon:** Fiksen hører utelukkende i **app.js** (to endringer: kallet linje 1709 + signaturen + `const skolear`-linjen linje 2953).
+
+### Funn 2 — Edge function returnerer skoleår? AVKLART
+
+`ai-parse-sessions` returnerer **kun uke+dag** — ingen `school_year` i output. Feltet finnes ikke i JSON-skjemaet i prompten (linje 84–96 i index.ts). Feilen er 100 % ved lagring i app.js; edge-funksjonen er ikke årsaken.
+
+Edge-funksjonen får heller ikke `school_year` som input i request-body (den får kun `text` + `context`). Men siden den ikke returnerer skoleår, er dette irrelevant for rotårsaken — skoleåret settes utelukkende av app.js.
+
+### Funn 3 — Sekundærfunn: Ferie blir til økter (BEKREFTET, separat vurdering)
+
+Prompten i `ai-parse-sessions/index.ts` (linje 75–99) har **ingen instruksjoner om å hoppe over ferie-/fri-rader**. Den ser kun fag/klasse/lærer/divisjoner, ikke skoleruten. Når læreren limer inn tekst med «Vinterferie» eller «Høstferie», gjetter AI-en at det er en undervisningsøkt og setter fag = `null` og aktivitet = «Vinterferie» / «Aktivitet».
+
+**Hvordan `ai-parse-skolerute` løste det:** Den har en annen prompt med eksplisitt type-klassifisering (`ferie|helligdag|planleggingsdag|annet`) og returnerer perioder, ikke enkeltøkter. Mønsteret kan ikke direkte overføres siden `ai-parse-sessions` er en annen oppgave. En mulig fix er å sende eksisterende skolerute i konteksten og be AI-en om å hoppe over uker der det er ferie — men dette er et eget tiltak (P33?), ikke del av skoleår-fiksen.
+
+### Funn 4 — Opprydding (Morfars manuelle steg, INGEN KODE)
+
+Feillagrede rader ble importert med `school_year = '25/26'` selv om de hørte til 26/27-planen. Søkekriterier for å finne dem manuelt i Supabase SQL Editor:
+
+```sql
+-- Identifiser kandidater: sessions med activity='Aktivitet' ELLER subject_id=null,
+-- lærernavn Geir, i 25/26, på uker som logisk tilhører 26/27-perioden (uke 33+)
+SELECT id, class_id, week_nr, day_of_week, activity, school_year, created_by
+FROM sessions
+WHERE school_year = '25/26'
+  AND deleted_at IS NULL
+  AND week_nr >= 33
+  AND (activity ILIKE '%aktivitet%' OR subject_id IS NULL)
+ORDER BY week_nr, day_of_week;
+```
+
+Merk: Uten nøyaktig importtidspunkt er det vanskelig å avgrense presist. Morfar bør verifisere radene visuelt før eventuell sletting.
+
+---
+
 ## Status: FULLFØRT — Økt X (P31): «+ Legg til rad» i skolerute-forhåndsvisning
 Branch: `claude/P31-skolerute-legg-til-rad`. Ingen manuelle steg nødvendig.
 
