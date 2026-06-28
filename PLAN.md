@@ -5,6 +5,27 @@ Branch: `claude/ai-import-school-year-bug-enyxos`. Ingen manuelle steg nødvendi
 
 ---
 
+## Gjenstår — utsatt (etter P32)
+
+### P-E: Ferie-filtrering i AI-økt-import
+`ai-parse-sessions` lager fortsatt «Aktivitet»-økter av ferieuker (f.eks. «Sommerferie» uke 33 → økt med merknad «På fridag: Sommerferie»). Skal hoppe over fri-/ferie-rader, slik `ai-parse-skolerute` allerede gjør (milepæl-/ferie-filtrering).
+
+Vurder samtidig opprydding av AI-import-forhåndsvisningen: «Merknad»/«Møtested»-kolonner og om elevinfo vises riktig. («Sikkerhet»-kolonnen er allerede fjernet.)
+
+### P-D: Kopier økter til neste skoleår + skoleår-skille i «Alle mine økter»
+- **Ny funksjon:** kopiere en klasses økter fra ett skoleår til neste som utgangspunkt for planlegging. Krever designrunde — åpne valg: kopier-enhet (hel klasse / fag / utvalg uker), håndtering av ferier som flytter seg mellom år, hva som kopieres (lærer/parti/info eller bare skjelett), dublett-håndtering.
+- **«Alle mine økter»:** tydelig skille mellom skoleår + mulighet til å lukke/kollapse gamle år så listen ikke blir for lang.
+
+### Uke-navigasjon (kan tas som én økt — to feil, samme flate):
+
+#### 1. Enter registreres ikke i uke-input
+I ukenavigasjonen (renderMinKlasseTab/renderUke, evt. renderElevView): skriver man et ukenummer og trykker Enter, hopper ikke visningen til den uka. Trolig manglende Enter-/change-handler på input-feltet.
+
+#### 2. Default-uke i ikke-aktivt skoleår
+Gjelder Klasse-visningen. Når et annet skoleår enn aktivt åpnes (f.eks. 26/27 i planleggingsmodus), bør visningen lande på uka nærmest i tid innenfor det valgte året: skoleårsstart (uke 33) hvis hele året ligger i fremtiden, dagens uke hvis vi er inni året. I dag lander den på «nå»-uka fra dagens dato, som ikke passer i et fremtidig år.
+
+---
+
 ## Økt X (P32): AI-import skriver feil skoleår (kartlegging)
 
 **Branch:** `claude/ai-import-school-year-bug-enyxos`
