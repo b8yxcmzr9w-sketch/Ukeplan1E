@@ -2987,3 +2987,14 @@ på vegne av skolen.
 
 **Status:** Egen oppgave. Tas etter at elevfilter + admin-navngiving av
 parti/grupper er ferdig. IKKE bland inn i den pågående elevfilter-sessionen.
+
+### Backlogg: Felles lagre-knapp for inndelingsnavn (grupper/partier)
+
+I dag har hver navnerad i admin-panelets Fag-fane sitt eget 💾 — lett å glemme,
+endringer går tapt i stillhet. Erstattes med én felles «Lagre»-knapp for alle
+navnefeltene: passiv/deaktivert som standard, aktiveres når ett eller flere
+felt er endret, lagrer alle endrede rader i ett trykk. Slett per rad virker
+umiddelbart som i dag. Samme mønster vurderes for parti-editoren i
+klasse-admin-fanen (identisk rad-oppsett). Ingen DB-endring nødvendig.
+
+**Status:** Egen oppgave senere. Ikke bygg nå.
