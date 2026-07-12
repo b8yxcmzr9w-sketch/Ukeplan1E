@@ -142,12 +142,24 @@ function ukePosisjon(uke, startWeek = 33) {
 // Inneværende uke klemt inn i skoleåret, korrekt over årsskiftet. Erstatter den
 // naive tallklampen Math.min(Math.max(w, start), end), som for skoleår der
 // start > end (f.eks. 33→24) alltid kollapser til `end`. Returnerer faktisk uke
-// når vi er i skoleåret, ellers nærmeste ende (sommergapet etter slutt / før start).
-function gjeldendeSkoleuke(schoolStart, schoolEnd) {
+// når vi er i skoleåret. I sommergapet avgjøres valget mellom start og slutt
+// KALENDERMESSIG når skoleåret er kjent: dagens dato før skoleårets startdato
+// (mandag i startuka) → schoolStart; etter sluttdatoen (fredag i sluttuka)
+// → schoolEnd. Uke-avstand alene kan ikke skille «sommeren før» fra «sommeren
+// etter» (uke 28 i gapet før 26/27 er nærmere uke 24 i tall, men uke 24 av
+// 26/27 er juni 2027). Uten gyldig skoleår: gammel avstandslogikk som fallback.
+function gjeldendeSkoleuke(schoolStart, schoolEnd, skoleAar) {
   const w = getCurrentISOWeek()
   const pos = ukePosisjon(w, schoolStart)
   const sluttPos = ukePosisjon(schoolEnd, schoolStart)
   if (pos <= sluttPos) return w
+  if (skoleAar && /^\d{2}\/\d{2}$/.test(skoleAar)) {
+    const startDato = isoWeekToDate(skoleaarKalenderaar(skoleAar, schoolStart, schoolStart), schoolStart, 1)
+    const sluttDato = isoWeekToDate(skoleaarKalenderaar(skoleAar, schoolEnd, schoolStart), schoolEnd, 5)
+    const naa = new Date()
+    if (naa < startDato) return schoolStart
+    if (naa > sluttDato) return schoolEnd
+  }
   return (pos - sluttPos) <= (52 - pos) ? schoolEnd : schoolStart
 }
 
@@ -1019,10 +1031,9 @@ async function renderElevView(klasseNavn) {
   // Week state
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
-  // P21: lærer-peek åpner på samme uke som i lærervisningen; ellers «nå»-uka.
-  let currentWeek = peekWeek ?? gjeldendeSkoleuke(schoolStart, schoolEnd)
-
   const aktivtSkolear = APP.school?.active_school_year
+  // P21: lærer-peek åpner på samme uke som i lærervisningen; ellers «nå»-uka.
+  let currentWeek = peekWeek ?? gjeldendeSkoleuke(schoolStart, schoolEnd, aktivtSkolear)
 
   // Filter state – leses fra localStorage, lagres som JSON-array av division-UUIDs
   const filterKey = `ukeplan_elevfilter_${klasse.name}`
@@ -1166,7 +1177,7 @@ async function renderElevView(klasseNavn) {
     }}, 'Neste →')
     if (ukePosisjon(weekNr, schoolStart) >= ukePosisjon(schoolEnd, schoolStart)) nextBtn.setAttribute('disabled', 'true')
 
-    const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
+    const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd, aktivtSkolear)
     const naaBtn = el('button', { class: 'btn btn-s', title: 'Gå til gjeldende uke', onclick: () => {
       currentWeek = naaWeek; renderUke(currentWeek)
     }}, 'Nå')
@@ -1649,15 +1660,16 @@ async function renderMinKlasseTab(container, klasse) {
 
   const schoolStart = APP.school?.school_year_start_week || 1
   const schoolEnd = APP.school?.school_year_end_week || 52
-  // P21: seed uke fra lagret kontekst (bevares gjennom admin-/elev-toggle).
-  // Fallback til «nå»-uka når ingen kontekst finnes.
-  let currentWeek = APP.laererCtx.week ?? gjeldendeSkoleuke(schoolStart, schoolEnd)
 
   // Hent tilgjengelige skoleår for denne skolen (for skoleår-velger)
   const aktivtSkolear = APP.school?.active_school_year || null
   const nesteAar = nesteSkolear(aktivtSkolear)
   // P21: seed valgt skoleår fra kontekst (fallback til aktivt år).
   let valgtSkolear = APP.laererCtx.skolear ?? aktivtSkolear
+
+  // P21: seed uke fra lagret kontekst (bevares gjennom admin-/elev-toggle).
+  // Fallback til «nå»-uka når ingen kontekst finnes.
+  let currentWeek = APP.laererCtx.week ?? gjeldendeSkoleuke(schoolStart, schoolEnd, valgtSkolear)
   let tilgjengeligeSkolear = aktivtSkolear ? [aktivtSkolear] : []
   try {
     const { data: aarRows } = await sb.from('sessions')
@@ -1769,7 +1781,7 @@ async function renderMinKlasseTab(container, klasse) {
       }
     })
 
-    const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
+    const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd, valgtSkolear)
     const naaBtn = el('button', { class: 'btn btn-s', title: 'Gå til gjeldende uke', onclick: () => {
       currentWeek = naaWeek; renderUke()
     }}, 'Nå')
@@ -1997,7 +2009,7 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     .sort((a, b) => ukePosisjon(a, schoolStart) - ukePosisjon(b, schoolStart))
 
   // Samme «nå»-uke som Klasse-/elev-visningen (korrekt over årsskiftet)
-  const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)
+  const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd, aktivtSkolear)
   const reRender = () => renderAlleOkterTab(container, false)
 
   const DAGKORT = ['Man', 'Tir', 'Ons', 'Tor', 'Fre']

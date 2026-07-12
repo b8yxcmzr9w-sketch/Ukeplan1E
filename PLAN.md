@@ -1,7 +1,132 @@
 # PLAN — Ukeplan1E v4
 
-## Status: FULLFØRT — Økt X (P32): AI-import skriver feil skoleår
-Branch: `claude/ai-import-school-year-bug-enyxos`. Ingen manuelle steg nødvendig (opprydding i DB gjøres separat av Morfar).
+## Status: FULLFØRT (venter manuell verifisering) — Økt X (P33): «Nå»-knappen lander feil i sommergapet før skolestart
+Branch: `claude/summer-gap-week-nav-5m8l44`. Plan godkjent, kode implementert og pushet.
+Cache-bust: `20260712a`. Logikken maskinverifisert med 9 dato-scenarier (alle PASS) —
+gjenstår kun manuell verifisering i nettleser (sjekkpunktene under P33).
+
+---
+
+## Økt X (P33): «Nå»-knappen lander feil i sommergapet før skolestart
+
+**Branch:** `claude/summer-gap-week-nav-5m8l44`
+**Scope (forventet):** `v4/app.js` (`gjeldendeSkoleuke()` + 5 kallsteder), `v4/index.html` (cache-bust → `20260708a`). Ingen DB-/CSS-/edge-function-endringer forventet.
+
+### Problem
+`gjeldendeSkoleuke(schoolStart, schoolEnd)` (bygget i P15, app.js:146–152) velger
+«nærmeste ende» av skoleåret målt i **uke-avstand** når inneværende uke er utenfor
+skoleåret: `(pos - sluttPos) <= (52 - pos) ? schoolEnd : schoolStart`. I sommergapet
+FØR skolestart (f.eks. uke 25–28, aktivt skoleår 26/27 som starter uke 33) vinner
+`schoolEnd` (24) — men uke 24 av 26/27 er juni **2027**, nesten et helt år frem i
+tid. Brukeren havner på siste uke i skoleåret med «Neste →» korrekt deaktivert, og
+det oppleves som at navigasjonen er låst og skolestart i august er utilgjengelig.
+
+**Ønsket oppførsel:** I gapet skal valget mellom `schoolStart` og `schoolEnd`
+avgjøres **kalendermessig** (dagens dato vs. skoleårets faktiske start-/sluttdato),
+ikke etter uke-avstand.
+
+### STEG 1 — Kartlegging (kun lesing, med bevis)
+
+#### a) `gjeldendeSkoleuke()` og ALLE call sites
+
+Definisjon — **app.js:146–152**:
+```js
+function gjeldendeSkoleuke(schoolStart, schoolEnd) {
+  const w = getCurrentISOWeek()
+  const pos = ukePosisjon(w, schoolStart)
+  const sluttPos = ukePosisjon(schoolEnd, schoolStart)
+  if (pos <= sluttPos) return w
+  return (pos - sluttPos) <= (52 - pos) ? schoolEnd : schoolStart
+}
+```
+
+Nøyaktig **5 call sites** i hele filen (bekreftet via grep — ingen flere):
+
+| # | Linje | Sted | Bruk av returverdi | Skoleår i kall-kontekst? |
+|---|---|---|---|---|
+| 1 | **1023** | `renderElevView` — `let currentWeek = peekWeek ?? gjeldendeSkoleuke(schoolStart, schoolEnd)` | Seeder initiell uke i elevvisning | `aktivtSkolear` finnes, men defineres FØRST på **linje 1025** (2 linjer under) — må flyttes opp |
+| 2 | **1169** | Inni `renderUke()`-lukningen i `renderElevView` — `const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)` | «Nå»-knapp-mål + disabled-sjekk (elevvisning) | `aktivtSkolear` (linje 1025) er i scope via closure — ingen flytting nødvendig |
+| 3 | **1654** | `renderMinKlasseTab` — `let currentWeek = APP.laererCtx.week ?? gjeldendeSkoleuke(schoolStart, schoolEnd)` | Seeder initiell uke i lærervisning (uten kontekst fra P21) | `aktivtSkolear`/`valgtSkolear` defineres FØRST på **linje 1657–1660** (3–6 linjer under) — må flyttes opp |
+| 4 | **1772** | Inni `renderUke()`-lukningen i `renderMinKlasseTab` — `const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)` | «Nå»-knapp-mål + disabled-sjekk (lærervisning) | `valgtSkolear` (linje 1660, oppdateres ved årsvalg i planleggingsmodus) er i scope via closure — ingen flytting nødvendig, og er **riktig** år å bruke (viste år, ikke nødvendigvis aktivt år) |
+| 5 | **2000** | `renderAlleOkterTab` — `const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd)` | Scroll-anker + «Nå»-knapp-mål i «Alle mine økter» | `aktivtSkolear` (linje 1934) er definert FØR dette kallet — ingen flytting nødvendig |
+
+Alle 5 steder har altså tilgang til skoleåret i kall-konteksten; to av dem (#1, #3)
+krever kun en enkel omrokkering av eksisterende linjer (ingen ny datahenting).
+
+#### b) `skoleaarIntervall(sy)` — finnes, men IKKE egnet som gap-anker alene
+
+`skoleaarIntervall` (app.js:191–196) gir `{ aar1, aar2, fra: 'aar1-08-01', til:
+'aar2-07-31' }` — bekreftet identisk med CLAUDE.md-beskrivelsen. Problemet: dette
+er et **fast kalenderårs-intervall** (1. aug–31. jul), som IKKE er justert etter
+`schoolEnd`. `schoolEnd` (uke 24) faller i midten/slutten av **juni**, altså flere
+uker FØR intervallets `til` (31. juli). Hvis vi bruker `skoleaarIntervall` direkte
+som gap-anker, vil datoer mellom skoleslutt (juni) og 31. juli feilaktig telle som
+«innenfor skoleåret» — nøyaktig det andre verifiseringspunktet (etter skoleslutt i
+juli) ville da IKKE bli fikset.
+
+**Konklusjon:** Bruk i stedet de eksisterende hjelperne `skoleaarKalenderaar()` +
+`isoWeekToDate()` (samme mønster som allerede brukes på app.js:1120–1122 og
+1813–1815) til å beregne de FAKTISKE grensedatoene:
+- Skoleårets startdato = mandag i `schoolStart`-uken
+- Skoleårets sluttdato = fredag i `schoolEnd`-uken
+
+Disse grensene treffer nøyaktig samme uker som selve navigasjonen (`ukePosisjon`
+mot `schoolStart`/`schoolEnd`), i motsetning til `skoleaarIntervall`s faste
+kalenderdatoer. `skoleaarIntervall` røres ikke og brukes fortsatt uendret der den
+allerede brukes i dag (kalenderhendelse-spørringer m.m.).
+
+#### c) Bruker noen call sites returverdien til annet enn «Nå»/initiell uke?
+
+Nei. Gjennomgått alle 5 treff — returverdien brukes utelukkende til å sette
+`currentWeek` (initiell) eller `naaWeek` (mål for «Nå»-knappen + disabled-sjekk
+`weekNr === naaWeek`). Ingen andre forbrukere funnet.
+
+### STEG 2 — Delplan (venter godkjenning før koding)
+
+1. **Utvid `gjeldendeSkoleuke(schoolStart, schoolEnd, skoleAar)`** med en tredje
+   parameter:
+   - Uendret gren: `if (pos <= sluttPos) return w` (innenfor skoleåret → faktisk
+     uke — P15-oppførsel intakt).
+   - Ny gap-gren: hvis `skoleAar` er gyldig (`/^\d{2}\/\d{2}$/`), beregn
+     start-/sluttdato via `skoleaarKalenderaar` + `isoWeekToDate` (se punkt b) og
+     sammenlign med dagens lokale dato:
+     - dato FØR skoleårets startdato → `schoolStart`
+     - dato ETTER skoleårets sluttdato → `schoolEnd`
+   - **Fallback** (uendret dagens avstandslogikk): brukes hvis `skoleAar` mangler
+     eller er ugyldig (f.eks. skole/kontekst uten skoleår), ELLER i det
+     usannsynlige tilfellet dagens dato havner mellom grensene til tross for at
+     `pos > sluttPos` — ren sikkerhetsnett, ingen kjent vei dit i dag.
+2. **Oppdater alle 5 call sites** til å sende skoleåret:
+   - Linje 1023: flytt `aktivtSkolear`-utledningen (i dag linje 1025) til FØR
+     `currentWeek`-seedingen; send den inn.
+   - Linje 1169: send `aktivtSkolear` (allerede i scope).
+   - Linje 1654: flytt skoleår-utledningen (i dag linje 1657–1660) til FØR
+     `currentWeek`-seedingen; bruk `APP.laererCtx.skolear ?? aktivtSkolear` (det
+     som blir `valgtSkolear`) som argument.
+   - Linje 1772: send `valgtSkolear` (allerede i scope — riktig, følger visning
+     i planleggingsmodus).
+   - Linje 2000: send `aktivtSkolear` (allerede i scope).
+3. **Kun `v4/app.js` + cache-bust i `v4/index.html`** (`20260708a`). Ingen
+   migrasjoner, ingen edge-function- eller CSS-endringer — bekreftet av
+   kartleggingen.
+
+### Sjekkliste (etter godkjenning)
+- [x] Fase 1 — Utvid `gjeldendeSkoleuke()` med `skoleAar`-parameter + kalenderbasert gap-avgjørelse (app.js:151–163)
+- [x] Fase 2 — Oppdater de 5 call sites (inkl. omrokkering på linje ~1023 og ~1654) — nye linjer: 1036, 1180, 1672, 1784, 2012
+- [x] Fase 3 — Cache-bust `20260712a` (`v4/index.html`) — dagens dato brukt, ikke `20260708a` fra planutkastet
+- [x] Fase 4 — Commit + push til `claude/summer-gap-week-nav-5m8l44`
+- [ ] Fase 5 — Manuell verifisering (sjekkpunktene under)
+
+**Maskinverifisert (node, 9 scenarier — alle PASS):** sommergap 2026 med 26/27
+aktivt → 33; juli 2027 → 24; innenfor skoleåret (uke 41 og uke 10 over nyttår) →
+faktisk uke; fallback uten skoleår → gammel avstandslogikk; grensedagene mandag i
+uke 33 og mandag i uke 24 → faktisk uke (innenfor-grenen, uendret).
+
+### Verifiser før merge
+- [ ] I sommergapet (nå, uke ~28, aktivt skoleår 26/27): «Nå» lander på uke 33 av 26/27, «Neste →» er aktiv videre
+- [ ] Etter skoleslutt (f.eks. juli 2027 med 26/27 aktivt): «Nå» lander på uke 24
+- [ ] Innenfor skoleåret: «Nå» gir faktisk inneværende uke (uendret fra P15)
+- [ ] «Alle mine økter»-ankeret følger samme logikk
 
 ---
 
