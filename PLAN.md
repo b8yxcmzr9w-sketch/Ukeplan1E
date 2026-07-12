@@ -1,7 +1,9 @@
 # PLAN — Ukeplan1E v4
 
-## Status: VENTER GODKJENNING — Økt X (P33): «Nå»-knappen lander feil i sommergapet før skolestart
-Branch: `claude/summer-gap-week-nav-5m8l44`. Kartlegging + delplan skrevet — INGEN kode skrevet ennå. Venter på godkjenning.
+## Status: FULLFØRT (venter manuell verifisering) — Økt X (P33): «Nå»-knappen lander feil i sommergapet før skolestart
+Branch: `claude/summer-gap-week-nav-5m8l44`. Plan godkjent, kode implementert og pushet.
+Cache-bust: `20260712a`. Logikken maskinverifisert med 9 dato-scenarier (alle PASS) —
+gjenstår kun manuell verifisering i nettleser (sjekkpunktene under P33).
 
 ---
 
@@ -109,11 +111,16 @@ Nei. Gjennomgått alle 5 treff — returverdien brukes utelukkende til å sette
    kartleggingen.
 
 ### Sjekkliste (etter godkjenning)
-- [ ] Fase 1 — Utvid `gjeldendeSkoleuke()` med `skoleAar`-parameter + kalenderbasert gap-avgjørelse (app.js:146–152)
-- [ ] Fase 2 — Oppdater de 5 call sites (inkl. omrokkering på linje ~1023 og ~1654)
-- [ ] Fase 3 — Cache-bust `20260708a` (`v4/index.html`)
-- [ ] Fase 4 — Commit + push til `claude/summer-gap-week-nav-5m8l44`
+- [x] Fase 1 — Utvid `gjeldendeSkoleuke()` med `skoleAar`-parameter + kalenderbasert gap-avgjørelse (app.js:151–163)
+- [x] Fase 2 — Oppdater de 5 call sites (inkl. omrokkering på linje ~1023 og ~1654) — nye linjer: 1036, 1180, 1672, 1784, 2012
+- [x] Fase 3 — Cache-bust `20260712a` (`v4/index.html`) — dagens dato brukt, ikke `20260708a` fra planutkastet
+- [x] Fase 4 — Commit + push til `claude/summer-gap-week-nav-5m8l44`
 - [ ] Fase 5 — Manuell verifisering (sjekkpunktene under)
+
+**Maskinverifisert (node, 9 scenarier — alle PASS):** sommergap 2026 med 26/27
+aktivt → 33; juli 2027 → 24; innenfor skoleåret (uke 41 og uke 10 over nyttår) →
+faktisk uke; fallback uten skoleår → gammel avstandslogikk; grensedagene mandag i
+uke 33 og mandag i uke 24 → faktisk uke (innenfor-grenen, uendret).
 
 ### Verifiser før merge
 - [ ] I sommergapet (nå, uke ~28, aktivt skoleår 26/27): «Nå» lander på uke 33 av 26/27, «Neste →» er aktiv videre
