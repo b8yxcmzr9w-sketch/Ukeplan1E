@@ -22,6 +22,13 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 - Ved JS/CSS-endringer: bump alltid `?v=YYYYMMDDx` i `v4/index.html`.
 - Commit etter hver fullførte deloppgave, med beskrivende melding.
 - Hold deg til oppgavens omfang — ikke endre kode utenfor det som er avtalt.
+- **Sjekkliste-lukking er del av økten, ikke oppfølging** — PLAN.md sin
+  sjekkliste og statuslinje skal krysses av / oppdateres til «verifisert»
+  FØR økten regnes som avsluttet, i samme commit/økt som koden merges til
+  main. En PR skal aldri merges med sjekklistepunkter hengende uavkrysset
+  uten at det er eksplisitt begrunnet (f.eks. et punkt som ikke kan testes
+  før en fremtidig dato). Dette hindrer at dokumentasjonen sier noe annet
+  enn hva som faktisk er verifisert i produksjon.
 
 ## Fast prosedyre for hver Code-økt
 - **Kjør `git fetch` FØR du sammenligner mot eller brancher fra origin/main.**

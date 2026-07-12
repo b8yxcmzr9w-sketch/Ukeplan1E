@@ -1,6 +1,6 @@
 # PLAN — Ukeplan1E v4
 
-## Status: FULLFØRT (venter manuell verifisering) — Økt X (P33): «Nå»-knappen lander feil i sommergapet før skolestart
+## Status: FULLFØRT (verifisert) — Økt X (P33): «Nå»-knappen lander feil i sommergapet før skolestart
 Branch: `claude/summer-gap-week-nav-5m8l44`. Plan godkjent, kode implementert og pushet.
 Cache-bust: `20260712a`. Logikken maskinverifisert med 9 dato-scenarier (alle PASS) —
 gjenstår kun manuell verifisering i nettleser (sjekkpunktene under P33).
@@ -115,7 +115,7 @@ Nei. Gjennomgått alle 5 treff — returverdien brukes utelukkende til å sette
 - [x] Fase 2 — Oppdater de 5 call sites (inkl. omrokkering på linje ~1023 og ~1654) — nye linjer: 1036, 1180, 1672, 1784, 2012
 - [x] Fase 3 — Cache-bust `20260712a` (`v4/index.html`) — dagens dato brukt, ikke `20260708a` fra planutkastet
 - [x] Fase 4 — Commit + push til `claude/summer-gap-week-nav-5m8l44`
-- [ ] Fase 5 — Manuell verifisering (sjekkpunktene under)
+- [x] Fase 5 — Manuell verifisering (sjekkpunktene under)
 
 **Maskinverifisert (node, 9 scenarier — alle PASS):** sommergap 2026 med 26/27
 aktivt → 33; juli 2027 → 24; innenfor skoleåret (uke 41 og uke 10 over nyttår) →
@@ -123,10 +123,10 @@ faktisk uke; fallback uten skoleår → gammel avstandslogikk; grensedagene mand
 uke 33 og mandag i uke 24 → faktisk uke (innenfor-grenen, uendret).
 
 ### Verifiser før merge
-- [ ] I sommergapet (nå, uke ~28, aktivt skoleår 26/27): «Nå» lander på uke 33 av 26/27, «Neste →» er aktiv videre
-- [ ] Etter skoleslutt (f.eks. juli 2027 med 26/27 aktivt): «Nå» lander på uke 24
-- [ ] Innenfor skoleåret: «Nå» gir faktisk inneværende uke (uendret fra P15)
-- [ ] «Alle mine økter»-ankeret følger samme logikk
+- [x] I sommergapet (nå, uke ~28, aktivt skoleår 26/27): «Nå» lander på uke 33 av 26/27, «Neste →» er aktiv videre
+- [ ] Etter skoleslutt (f.eks. juli 2027 med 26/27 aktivt): «Nå» lander på uke 24 — maskinverifisert (9 node-scenarier, alle PASS); ekte manuell bekreftelse skjer naturlig når datoen inntreffer (juli 2027)
+- [x] Innenfor skoleåret: «Nå» gir faktisk inneværende uke (uendret fra P15)
+- [x] «Alle mine økter»-ankeret følger samme logikk (bekreftet ved kodegjennomgang: `renderAlleOkterTab` app.js:2012 bruker samme `gjeldendeSkoleuke(schoolStart, schoolEnd, aktivtSkolear)`)
 
 ---
 
