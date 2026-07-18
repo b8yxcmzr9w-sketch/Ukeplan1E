@@ -1,13 +1,14 @@
 # PLAN — Ukeplan1E v4
 
-## Status: KARTLAGT, VENTER GODKJENNING — Økt 1 (P34): Supabase keep-alive workflow feiler
+## Status: FULLFØRT (verifisert) — Økt 1 (P34): Supabase keep-alive workflow feiler
 Branch: `claude/p34-keep-alive-fix-r86ja2` (miljøets tildelte branch — oppgaveteksten sa
 `claude/P34-fiks-keep-alive`, men dette Code-miljøet er låst til branchnavnet over).
-Rotårsak FUNNET: begge repo-secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) ekspanderer til
-tom streng i workflow-loggen — de er aldri satt (eller feilnavngitt). Rettelsen er et
-MANUELT steg for Morfar i GitHub Settings; ingen kodeendring nødvendig i workflow-filen.
-**Neste steg:** Morfar godkjenner delplanen → legger inn de to secrets → Code trigger
-workflow_dispatch og bekrefter grønn kjøring.
+Rotårsak: begge repo-secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) manglet — de
+ekspanderte til tom streng i alle 9 kjøringer. Morfar la inn begge 18. juli; manuell
+workflow_dispatch-kjøring (run #10, 2026-07-18) ga **grønn status, HTTP 200,
+«✅ Supabase er våken»**. Ingen kodeendring var nødvendig.
+**Gjenstår kun:** neste schedule-kjøring (21. juli) bekrefter stabilitet — kan ikke
+testes før datoen inntreffer.
 
 ---
 
@@ -97,10 +98,12 @@ er den reelle testen.
 ### Sjekkliste
 - [x] Kartlegging: workflow-fil, kjøringshistorikk, jobb-logg, rotårsak
 - [x] Delplan skrevet og pushet til branch
-- [ ] Morfar: godkjenn delplan («kjør»)
-- [ ] Morfar: legg inn `SUPABASE_URL` + `SUPABASE_ANON_KEY` i Actions-secrets
-- [ ] Code: trigger workflow_dispatch og bekreft grønn kjøring med HTTP 200
-- [ ] Notert: neste schedule-kjøring (21. juli) bekrefter stabilitet
+- [x] Morfar: godkjent delplan
+- [x] Morfar: la inn `SUPABASE_URL` + `SUPABASE_ANON_KEY` i Actions-secrets (18. juli)
+- [x] Code: workflow_dispatch trigget — run #10 (id 29634357377) GRØNN, `HTTP status: 200`,
+      «✅ Supabase er våken». Secrets vises maskert (`***`) i loggen = de eksisterer og leses
+- [ ] Neste schedule-kjøring (21. juli 2026) bekrefter stabilitet — kan ikke krysses av før
+      datoen inntreffer (eksplisitt begrunnet, jf. sjekkliste-regelen i CLAUDE.md)
 
 ---
 
