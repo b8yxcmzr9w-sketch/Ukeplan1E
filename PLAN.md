@@ -1,5 +1,113 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (verifisert) — Økt 1 (P34): Supabase keep-alive workflow feiler
+Branch: `claude/p34-keep-alive-fix-r86ja2` (miljøets tildelte branch — oppgaveteksten sa
+`claude/P34-fiks-keep-alive`, men dette Code-miljøet er låst til branchnavnet over).
+Rotårsak: begge repo-secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) manglet — de
+ekspanderte til tom streng i alle 9 kjøringer. Morfar la inn begge 18. juli; manuell
+workflow_dispatch-kjøring (run #10, 2026-07-18) ga **grønn status, HTTP 200,
+«✅ Supabase er våken»**. Ingen kodeendring var nødvendig.
+Merget til main via PR. **Gjenstår kun:** neste schedule-kjøring (21. juli) bekrefter
+stabilitet — kan ikke testes før datoen inntreffer; bekrefter seg selv i Actions-fanen.
+
+---
+
+## Økt 1 (P34): Supabase keep-alive workflow feiler på alle kjøringer
+
+**Branch:** `claude/p34-keep-alive-fix-r86ja2`
+**Scope (forventet):** Ingen kodeendring. Kun manuelt secrets-steg (Morfar) + manuell
+workflow-kjøring (verifisering) + PLAN.md. Ingen cache-bust (ingen frontend-endring).
+
+### STEG 1 — Kartlegging (kun lesing) — FULLFØRT
+
+#### a) Workflow-filen (`.github/workflows/supabase-keepalive.yml`)
+
+Lest i sin helhet (25 linjer). Logikken er korrekt:
+- `cron: '0 6 */5 * *'` → kjører dag 1, 6, 11, 16, 21, 26, 31 i måneden kl. 06:00 UTC.
+  Kjøringshistorikken (6/6, 11/6, 16/6 … 16/7) matcher nøyaktig — cron fungerer.
+- `workflow_dispatch` finnes → manuell kjøring mulig (brukes i verifiseringen).
+- curl-ping mot `${{ secrets.SUPABASE_URL }}/rest/v1/schools?select=id&limit=1` med
+  `apikey`- og `Authorization: Bearer`-headere fra `${{ secrets.SUPABASE_ANON_KEY }}`,
+  etterfulgt av HTTP-statussjekk (2xx = OK). Riktig oppsett — ingen kodefeil.
+
+#### b) Kjøringshistorikk (GitHub Actions API)
+
+Nøyaktig **9 kjøringer**, alle `schedule`-utløst på `main`, alle `failure`:
+run #1 (2026-06-06) → run #9 (2026-07-16). Stemmer med oppgavebeskrivelsen.
+
+#### c) Full jobb-logg fra siste feilede kjøring (run #9, id 29482217237) — SMOKING GUN
+
+GitHub rendrer steget med secrets-verdiene interpolert FØR kjøring. Loggen viser:
+
+```
+-H "apikey: "                          ← TOM verdi
+-H "Authorization: Bearer "            ← TOM verdi
+"/rest/v1/schools?select=id&limit=1"   ← URL uten vertsnavn/skjema
+##[error]Process completed with exit code 3.
+```
+
+**Exit code 3 fra curl = «URL malformed»** — curl når aldri nettverket. Det forklarer
+både ~4-sekunders varighet (ingen timeout, umiddelbar feil) og at det ikke er nettverks-
+eller Supabase-feil. Begge `${{ secrets.* }}`-referansene ekspanderer til tom streng,
+som er GitHubs oppførsel når en secret **ikke finnes** under det navnet.
+
+#### d) Secret-navn i repo-settings
+
+Kan ikke listes fra dette miljøet (ingen `gh`-CLI, ingen MCP-verktøy for secrets) —
+men loggbeviset i (c) er entydig: ingen secret med navnene `SUPABASE_URL` eller
+`SUPABASE_ANON_KEY` er tilgjengelig for workflowen. Morfar bekrefter i
+Settings → Secrets and variables → Actions om listen er helt tom eller om det ligger
+varianter med avvikende navn/case der.
+
+### STEG 2 — Rotårsaker: bekreftet/avkreftet
+
+| Hypotese | Status |
+|---|---|
+| Secret mangler helt (aldri satt siden 4. juni) | **MEST SANNSYNLIG** — begge tomme i alle 9 kjøringer, fra aller første run |
+| Feil navn på secret (case/skrivefeil) | MULIG — gir identisk symptom (tom ekspansjon); skilles fra forrige kun ved å se i Settings |
+| Utløpt/rotert nøkkel som ikke matcher appen | **AVKREFTET** som årsak — forespørselen når aldri Supabase (curl exit 3, ingen HTTP-status). Appen i prod bruker nøkkelen daglig uten problem |
+| URL-secret mangler `https://` / har trailing slash | **AVKREFTET** som årsak — URL-en er helt tom, ikke feilformatert. Men relevant som instruks når secreten SETTES (se Steg 3) |
+
+App-sidens tilkobling (app.js:4–5) er ubekreftet friskt vann: produksjonen fungerer
+normalt → nøkkel og URL er gyldige. Ingen frontend-endring, ingen cache-bust.
+
+### STEG 3 — Rettelse: MANUELT steg for Morfar (ingen kodeendring)
+
+Workflow-filen er korrekt og røres ikke. I GitHub:
+**Settings → Secrets and variables → Actions → New repository secret**, to stykker:
+
+| Navn (eksakt, store bokstaver) | Verdi |
+|---|---|
+| `SUPABASE_URL` | `https://zstjfatkeqbbekqgbsgb.supabase.co` — MED `https://`, UTEN trailing slash |
+| `SUPABASE_ANON_KEY` | Publishable-nøkkelen fra `v4/app.js` linje 5 (`sb_publishable_…`) — samme som appen bruker; den er offentlig i frontend-koden, så det er trygt å kopiere derfra |
+
+Hvis det allerede ligger secrets med lignende navn (feil case/skrivefeil): slett/gi nytt
+navn så de matcher tabellen eksakt — GitHub-secrets er case-sensitive i praksis her.
+
+### STEG 4 — Verifisering etter fix
+
+1. Morfar sier fra når secrets er lagt inn.
+2. Code trigger workflowen manuelt (`workflow_dispatch` via GitHub API) og henter loggen:
+   forventet `HTTP status: 200` + `✅ Supabase er våken` + grønn konklusjon.
+3. Neste planlagte kjøring (21. juli 2026, 5-dagers syklus) bekrefter stabilitet videre.
+
+Merk: endepunktet kunne ikke pre-testes fra Code-miljøet (utgående proxy blokkerer
+`supabase.co`) — verifiseringen skjer derfor i selve workflow-kjøringen, som uansett
+er den reelle testen.
+
+### Sjekkliste
+- [x] Kartlegging: workflow-fil, kjøringshistorikk, jobb-logg, rotårsak
+- [x] Delplan skrevet og pushet til branch
+- [x] Morfar: godkjent delplan
+- [x] Morfar: la inn `SUPABASE_URL` + `SUPABASE_ANON_KEY` i Actions-secrets (18. juli)
+- [x] Code: workflow_dispatch trigget — run #10 (id 29634357377) GRØNN, `HTTP status: 200`,
+      «✅ Supabase er våken». Secrets vises maskert (`***`) i loggen = de eksisterer og leses
+- [x] PR opprettet og merget til main
+- [ ] Neste schedule-kjøring (21. juli 2026) bekrefter stabilitet — kan ikke krysses av før
+      datoen inntreffer (eksplisitt begrunnet, jf. sjekkliste-regelen i CLAUDE.md)
+
+---
+
 ## Status: FULLFØRT (verifisert) — Økt X (P33): «Nå»-knappen lander feil i sommergapet før skolestart
 Branch: `claude/summer-gap-week-nav-5m8l44`. Plan godkjent, kode implementert og pushet.
 Cache-bust: `20260712a`. Logikken maskinverifisert med 9 dato-scenarier (alle PASS) —
