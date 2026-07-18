@@ -7,8 +7,8 @@ Rotårsak: begge repo-secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) manglet — 
 ekspanderte til tom streng i alle 9 kjøringer. Morfar la inn begge 18. juli; manuell
 workflow_dispatch-kjøring (run #10, 2026-07-18) ga **grønn status, HTTP 200,
 «✅ Supabase er våken»**. Ingen kodeendring var nødvendig.
-**Gjenstår kun:** neste schedule-kjøring (21. juli) bekrefter stabilitet — kan ikke
-testes før datoen inntreffer.
+Merget til main via PR. **Gjenstår kun:** neste schedule-kjøring (21. juli) bekrefter
+stabilitet — kan ikke testes før datoen inntreffer; bekrefter seg selv i Actions-fanen.
 
 ---
 
@@ -102,6 +102,7 @@ er den reelle testen.
 - [x] Morfar: la inn `SUPABASE_URL` + `SUPABASE_ANON_KEY` i Actions-secrets (18. juli)
 - [x] Code: workflow_dispatch trigget — run #10 (id 29634357377) GRØNN, `HTTP status: 200`,
       «✅ Supabase er våken». Secrets vises maskert (`***`) i loggen = de eksisterer og leses
+- [x] PR opprettet og merget til main
 - [ ] Neste schedule-kjøring (21. juli 2026) bekrefter stabilitet — kan ikke krysses av før
       datoen inntreffer (eksplisitt begrunnet, jf. sjekkliste-regelen i CLAUDE.md)
 
