@@ -1,3 +1,5 @@
+Se PROSEDYRER.md for oppstarts- og avslutningsrutiner.
+
 # Ukeplan1E – Prosjektbeskrivelse for Claude
 
 Se FUNKSJONELL-BESKRIVELSE.md for hva tjenesten skal gjøre funksjonelt.
