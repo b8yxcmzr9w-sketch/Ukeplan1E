@@ -61,6 +61,8 @@ v4/
   app.js                          # All frontend-logikk
   style.css
   index.html
+  uno-footer.js                   # Uno-logo + © årstall i footeren (selvstendig, lastes fra index.html; fra PR #88, før P-nummereringen)
+  unoicon.png                     # Favicon (index.html + fallback i app.js når skolen mangler logo)
   supabase/
     migrations/                   # SQL-migrasjoner (kjøres manuelt i Supabase SQL Editor)
       001_initial_schema.sql
