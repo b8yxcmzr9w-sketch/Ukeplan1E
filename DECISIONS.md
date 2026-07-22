@@ -121,3 +121,28 @@ storage-policies — kjør `020_storage_policy_logos.sql` i SQL Editor.
 - **`--header-h` upåvirket.** Header-høyden drives av logo (38px) / hamburger (~32px, blir
   værende på mobil), aldri av de skjulte knappene; dropdownen er `position:absolute`. Den
   sticky faneraden står dermed rett som før.
+
+## P35 — Felles «Lagre»-knapp for inndelingsnavn (22.07.2026)
+
+- **Én felles «Lagre»-knapp per liste erstatter per-rad 💾** for parti- og
+  gruppenavn (klasse-admin + Fag-fanen). Knappen er dirty-styrt (deaktivert +
+  `.btn-passiv` til minst ett felt avviker fra opprinnelig verdi) og lagrer kun
+  endrede rader. Slett per rad er bevisst beholdt umiddelbar (uendret).
+
+- **Delvis feil håndteres per rad, ikke alt-eller-ingenting.** Supabase har
+  ingen transaksjon over flere `update`-kall fra frontend, så atomisk lagring
+  ville krevd DB-endring (RPC). I stedet samles feil per rad: vellykkede rader
+  får ny basislinje, feilede vises i `medLagreOverlay` sitt eksisterende
+  feiloverlay («Kunne ikke lagre: <navn>») og forblir dirty, slik at «Lagre»
+  kan trykkes på nytt for kun de feilede. Ingen nye feedback-mønstre innført.
+
+- **`{ error }` sjekkes nå per rad.** Den gamle 💾-lagringen destrukturerte
+  ikke returverdien fra supabase-js (som ikke kaster selv), så feilet lagring
+  viste «Lagret!». Ikke gjeninnfør mønsteret `medLagreOverlay(() => sb.from(...)
+  .update(...))` uten feilsjekk.
+
+- **Egen lett dirty-sjekk (`lagInndelingNavnLagring`), ikke `overvakSkjema`.**
+  `overvakSkjema` har én frossen snapshot-basislinje for hele skjemaet;
+  P35 trenger basislinje PER RAD som oppdateres etter vellykket lagring
+  (delvis feil-scenarioet). Samme visuelle mønster (disabled + `.btn-passiv`),
+  annen mekanikk.
