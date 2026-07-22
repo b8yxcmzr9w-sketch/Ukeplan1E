@@ -66,12 +66,11 @@ feil, en oppgradering, eller bare å fortsette der vi slapp.
 
 0. **Hent alltid fersk versjon.** Filene leses fra GitHub raw, som kan levere
    hurtiglagret innhold. Legg derfor på en cache-bryter i URL-en
-   (`?cb=<dagens dato og klokkeslett>`) ved hver henting. Kryss deretter av mot
-   virkeligheten: sammenlign siste P-nummer og statuslinjen i PLAN.md med det du
-   husker fra forrige økt — avviker de ikke i det hele tatt etter en økt du vet
-   har vært kjørt, er filen sannsynligvis gammel. Hent på nytt før du
-   oppsummerer. Rapporter alltid hvilket P-nummer du faktisk leste, ikke hva du
-   husker.
+   (`?cb=<dagens dato og klokkeslett>`) ved hver henting. Les deretter
+   STATUSLINJE-blokken øverst i PLAN.md og rapporter alltid det P-nummeret du
+   faktisk leste der — aldri det du husker fra forrige økt. Backloggen leses
+   fra Backlogg-seksjonen i PLAN.md (og `BACKLOGG-UX-MOBIL.md`, som den peker
+   til) — aldri fra hukommelse eller prosjektminne.
 1. Les `CLAUDE.md`, `PLAN.md` og `DECISIONS.md`.
 2. Gi Morfar en kort norsk oppsummering, uten teknisk sjargong:
    - Hvor står vi (siste fullførte P-nummer)?
@@ -102,7 +101,9 @@ feil, en oppgradering, eller bare å fortsette der vi slapp.
 Kjøres i Claude Code når arbeidet på en økt er ferdig. Fast rekkefølge:
 
 1. **Oppdater .md-filene** som er berørt:
-   - `PLAN.md`: kryss av fullført punkt / oppdater status.
+   - `PLAN.md`: kryss av fullført punkt / oppdater status. STATUSLINJE-blokken
+     og Backlogg-seksjonen øverst skal ALLTID oppdateres i SAMME commit som
+     resten av PLAN.md — ellers råtner de og gir feil statusbilde neste økt.
    - `DECISIONS.md`: legg til beslutning med begrunnelse hvis en ble tatt
      (spesielt bevisste forenklinger – hindrer at de foreslås på nytt).
    - `FUNKSJONELL-BESKRIVELSE.md`: oppdater avkrysning hvis et avvik ble lukket.

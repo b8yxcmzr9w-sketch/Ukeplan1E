@@ -57,6 +57,7 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 ## Filstruktur
 
 ```
+BACKLOGG-UX-MOBIL.md              # UX/mobil-backlogg (egen fil; Backlogg-seksjonen i PLAN.md peker hit)
 v4/
   app.js                          # All frontend-logikk
   style.css
