@@ -1,5 +1,16 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt 4 (P37): Ny seksjon «Én sak per chat» i PROSEDYRER.md
+Branch: `claude/p37-en-sak-per-chat-tcst4l` (miljøets tildelte branch —
+oppgaveteksten sa `claude/P37-en-sak-per-chat`, samme situasjon som P34/P35/P36).
+Seksjonen «Én sak per chat» er lagt inn ordrett i PROSEDYRER.md mellom
+«Grunnregel» og «Status: Før live / Etter live». Duplikatsjekk: «én oppgave per
+Code-økt» fantes ikke formulert andre steder i PROSEDYRER.md/CLAUDE.md — ingen
+duplisering, ingenting å vise til. Kun dokumentendring — ingen kode i v4/,
+ingen cache-bust. Verifisert med git diff: kun PROSEDYRER.md + PLAN.md berørt.
+
+---
+
 ## Økt 4 (P37): Ny seksjon «Én sak per chat» i PROSEDYRER.md
 
 **Branch:** `claude/p37-en-sak-per-chat-tcst4l` (miljøets tildelte branch —
@@ -34,11 +45,11 @@ andre formuleringer (det finnes ingen å vise til).
 3. Oppdater PLAN.md (sjekkliste + statuslinje) og commit/push.
 
 ### Sjekkliste
-- [ ] Ny seksjon «Én sak per chat» lagt inn ordrett mellom «Grunnregel» og «Status: Før live / Etter live»
-- [ ] Duplikatsjekk rapportert (ingen eksisterende formulering funnet — ingenting å vise til)
-- [ ] Verifisert: ingen endringer utenfor PROSEDYRER.md + PLAN.md (git diff --stat)
-- [ ] Commit + push til branch
-- [ ] PLAN.md: sjekkliste krysset av + status oppdatert
+- [x] Ny seksjon «Én sak per chat» lagt inn ordrett mellom «Grunnregel» og «Status: Før live / Etter live»
+- [x] Duplikatsjekk rapportert (ingen eksisterende formulering funnet — ingenting å vise til)
+- [x] Verifisert: ingen endringer utenfor PROSEDYRER.md + PLAN.md (git diff --stat)
+- [x] Commit + push til branch
+- [x] PLAN.md: sjekkliste krysset av + status oppdatert
 
 ---
 
