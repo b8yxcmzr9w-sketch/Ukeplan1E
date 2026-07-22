@@ -1,9 +1,12 @@
 # PLAN — Ukeplan1E v4
 
-## Status: PÅGÅR — Økt 3 (P36): Bekreftelse før prosedyrer + ferske filer
+## Status: FULLFØRT — Økt 3 (P36): Bekreftelse før prosedyrer + ferske filer
 Branch: `claude/p36-bekreftelse-og-ferske-filer-uzqtsq` (miljøets tildelte branch —
 oppgaveteksten sa `claude/P36-bekreftelse-og-ferske-filer`, samme situasjon som P34/P35).
-Sub-plan skrevet, venter på «kjør» før PROSEDYRER.md endres.
+Begge tekstene (A: «Prosedyrer startes ikke på antydning» under Grunnregel,
+B: punkt 0 «Hent alltid fersk versjon» i del A) er lagt inn ordrett i PROSEDYRER.md.
+Kun dokumentendring — ingen kode i v4/, ingen cache-bust. Verifisert med git diff:
+kun PROSEDYRER.md + PLAN.md berørt.
 
 ---
 
@@ -40,11 +43,11 @@ ingen cache-bust, ingen migrasjon, ingen edge functions.
 3. Oppdater PLAN.md (denne sjekklisten + statuslinjen) og commit/push.
 
 ### Sjekkliste
-- [ ] A: Nytt avsnitt «Prosedyrer startes ikke på antydning» under «Grunnregel» i PROSEDYRER.md
-- [ ] B: Nytt punkt 0 «Hent alltid fersk versjon» øverst i «A. I planleggingschat» (punkt 1–4 uendret nummerering)
-- [ ] Verifisert: ingen endringer utenfor PROSEDYRER.md + PLAN.md (git diff --stat)
-- [ ] Commit + push til branch
-- [ ] PLAN.md: sjekkliste krysset av + status oppdatert
+- [x] A: Nytt avsnitt «Prosedyrer startes ikke på antydning» under «Grunnregel» i PROSEDYRER.md
+- [x] B: Nytt punkt 0 «Hent alltid fersk versjon» øverst i «A. I planleggingschat» (punkt 1–4 uendret nummerering)
+- [x] Verifisert: ingen endringer utenfor PROSEDYRER.md + PLAN.md (git diff --stat)
+- [x] Commit + push til branch
+- [x] PLAN.md: sjekkliste krysset av + status oppdatert
 
 ---
 
