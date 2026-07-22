@@ -1,5 +1,126 @@
 # PLAN — Ukeplan1E v4
 
+## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
+
+- **Siste fullførte P-nummer:** P39
+- **Neste ledige P-nummer:** P40
+- **Dato sist oppdatert:** 22. juli 2026
+- **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
+  «Nå»-knappen etter skoleslutt (juli 2027 med 26/27 aktivt); maskinverifisert,
+  ekte manuell bekreftelse skjer naturlig når datoen inntreffer (se P33s
+  «Verifiser før merge»)
+
+---
+
+## Backlogg (leses herfra — aldri fra hukommelse eller prosjektminne)
+
+> Verifisert mot koden på main 22. juli 2026 (P39). UX/mobil-ønsker ligger i
+> egen fil: `BACKLOGG-UX-MOBIL.md` (der er punkt 1 delvis tatt av P6 og punkt 4
+> lukket som P7; punkt 2 «parti-filter i elevfilter» og punkt 3
+> «faner/Min plan-omstrukturering» står åpne). Innholdet dupliseres ikke hit.
+
+### Klar til bygging
+
+- **Ferie-filtrering i AI-økt-import** (sekundærfunn under P32). Prompten i
+  `ai-parse-sessions` har ingen ferie-instruks og mottar ikke skoleruten — AI
+  lager økter av «Vinterferie»-tekst. Delvis avbøtet av P30-forhåndsvisningen
+  (fridag-rader flagges gule, rader uten fag blir røde og importeres aldri),
+  men kjernen står.
+- **Uke-navigator: Enter-tast registreres ikke.** Begge uke-feltene har kun
+  `onchange` og står ikke i et skjema (app.js ~1209 elev, ~1819 lærer);
+  tooltip sier likevel «trykk Enter».
+- **Default-uke lander feil ved åpning av ikke-aktivt skoleår.** Årsvelgeren
+  bytter år uten å beregne uke på nytt (app.js ~1759); uke-seedingen bruker
+  lagret uke uansett år. Bytte fra 25/26 uke 30 til 26/27 → står på uke 30.
+- **Kopiere økter mellom skoleår + skoleår-skille i «Alle mine økter».**
+  Kopiering går alltid inn i aktivt skoleår, ingen målårsvelger (app.js ~2712,
+  ~2938); «Alle mine økter» er låst til aktivt år (app.js ~2000).
+- **Fargekoding per klasse** — egen planleggingsrunde før bygging. Farge
+  finnes i dag kun på fag (`subjects.color_hex`) og fargetema; ingen
+  klassefarge i skjema eller app.js.
+
+### Venter på svar fra Morfar
+
+- **Funfacts-forenkling** — ÅPENT SPØRSMÅL til Morfar: (a) fritekst eller
+  auto-kontekst i emnefeltet, (b) erstatt-mest-viste eller tøm-alt ved
+  fornying. Ingenting bygget: `generate-facts` har hardkodet temablanding,
+  fornying via `fornyFunfactsRotasjon` + `view_count` (migrasjon 018).
+- **Skoleår-dimensjon for fag/klasser/subject_divisions** — status
+  «utredning, ikke bygg», 5 åpne punkter, se UTREDNING-skolear-oppsett.md
+  (seksjonen «Åpne punkter (avklares før bygging)»).
+
+### Lav prioritet / ikke aktiv
+
+- **Cosmetic: boks-i-boks i Skoleår-fanen** (lav prioritet). P24 legger fanen
+  i felles `.settings-card`, og `renderSkoleaarTab` bygger i tillegg egen
+  `.subj-config-box` inni → boks i boks.
+- **Preview-deployments Cloudflare/Netlify** (backlogg, ikke aktiv). Ingen
+  deploy-konfig i repoet i dag.
+
+---
+
+## Status: FULLFØRT — Økt 6 (P39): Statuslinje og backlogg i PLAN.md + prosedyre-oppdatering
+Branch: `claude/plan-status-backlog-9dlu9k` (miljøets tildelte branch —
+oppgaveteksten sa `claude/P39-statuslinje-og-backlogg`, samme situasjon som
+P34–P38). Statuslinje-blokk og Backlogg-seksjon lagt inn øverst i PLAN.md
+(backloggen verifisert punkt for punkt mot koden på main FØR skriving —
+scroll-posisjons-minne utgikk fordi P22 alt dekker det). PROSEDYRER.md:
+punkt 0 i del A skrevet om (les statuslinjen, rapporter faktisk lest P-nummer,
+backlogg leses fra fil — cache-bryteren `?cb=` uendret) og avslutningsprosedyren
+punkt 1 utvidet (statuslinje + backlogg oppdateres i samme commit).
+BACKLOGG-UX-MOBIL.md lagt inn i filstrukturen i CLAUDE.md. Kun .md-endringer —
+ingen kode, ingen cache-bust.
+
+---
+
+## Økt 6 (P39): Statuslinje og backlogg i PLAN.md + prosedyre-oppdatering
+
+**Branch:** `claude/plan-status-backlog-9dlu9k` (miljøets tildelte branch —
+oppgaveteksten sa `claude/P39-statuslinje-og-backlogg`).
+**Scope:** KUN `PLAN.md` + `PROSEDYRER.md` + `CLAUDE.md` (filstruktur-linje).
+Ingen kode i `v4/`, ingen cache-bust, ingen migrasjon, ingen edge functions.
+
+### Bakgrunn
+
+Planleggingschatten ga feil statusbilde to ganger: (1) hurtiglagrede filer fra
+GitHub raw (løst med punkt 0 i P36/P37), (2) punkt 0 ba om kryss-sjekk mot «det
+du husker», og backloggen fantes ikke i repoet — begge tvang chatten til å
+gjette fra hukommelse. P39 fjerner behovet for å huske: status og backlogg står
+i PLAN.md og leses derfra.
+
+### DEL 2-verifisering (rapportert til Morfar før skriving, «kjør» mottatt)
+
+| Punkt | Status | Bevis |
+|---|---|---|
+| Ferie-filtrering i AI-økt-import | GJENSTÅR (delvis avbøtet av P30) | `ai-parse-sessions/index.ts:75–99` (ingen ferie-instruks); app.js:3206–3208 (fridag-flagging) |
+| Uke-navigator Enter-tast | GJENSTÅR | app.js:1209–1217, 1819–1826 (kun `onchange`) |
+| Default-uke ved ikke-aktivt skoleår | GJENSTÅR | app.js:1759 (årsbytte uten uke-reberegning), 1716 |
+| Scroll-posisjons-minne i økt-oversikten | FINNES (P22) — UTGÅR fra backlogg | app.js:1988, 2245–2287 (`_lastTopWeek` + `_spyObs`) |
+| Funfacts-forenkling | VENTER PÅ SVAR | `generate-facts/index.ts:58–68`; app.js:449 |
+| Skoleår-dimensjon | VENTER (utredning finnes) | UTREDNING-skolear-oppsett.md:116–140 (5 åpne punkter) |
+| Kopiere økter mellom skoleår + årsskille i «Alle mine økter» | GJENSTÅR | app.js:2712, 2938, 2000 |
+| Fargekoding per klasse | GJENSTÅR (egen planrunde) | kun `subjects.color_hex` finnes |
+| Boks-i-boks i Skoleår-fanen | GJENSTÅR (lav prio) | app.js:3745–3752 (felles kort) + `subj-config-box` i `renderSkoleaarTab` (3889) |
+| Preview-deployments | GJENSTÅR (ikke aktiv) | ingen netlify-/wrangler-konfig; eneste workflow er supabase-keepalive.yml |
+
+I tillegg godkjent av Morfar: henvisningslinje til BACKLOGG-UX-MOBIL.md (ikke
+duplisering) + fila inn i CLAUDE.md-filstrukturen; kun P33s langtidssjekk i
+statuslinjen (gamle uavkryssede bokser fra før sjekkliste-lukkeregelen røres
+ikke); statuslinjen skrives med P39 som siste fullførte / P40 som neste ledige.
+
+### Sjekkliste
+
+- [x] DEL 2-verifisering rapportert til Morfar FØR skriving; «kjør» mottatt
+- [x] DEL 1: Statuslinje-blokk øverst i PLAN.md (siste fullførte, neste ledige, dato, åpne sjekkpunkter)
+- [x] DEL 2: Backlogg-seksjon rett under statuslinjen — kun gjenstående punkter, delt i «klar til bygging» / «venter på svar» / «lav prioritet/ikke aktiv», åpne spørsmål ordrett, henvisning til BACKLOGG-UX-MOBIL.md
+- [x] DEL 3: PROSEDYRER.md punkt 0 skrevet om (statuslinje i stedet for hukommelse; `?cb=` uendret; backlogg leses fra PLAN.md)
+- [x] DEL 3: Avslutningsprosedyren punkt 1 utvidet (statuslinje + backlogg i samme commit)
+- [x] CLAUDE.md: BACKLOGG-UX-MOBIL.md inn i filstrukturen
+- [x] Verifisert: kun PLAN.md + PROSEDYRER.md + CLAUDE.md berørt (git diff --stat), ingen cache-bust
+- [x] Commit + push til branch
+
+---
+
 ## Status: FULLFØRT — Økt 5 (P38): Rekonstruksjons-revisjon av plandokumentasjon P33→i dag
 Branch: `claude/p36-rekonstruer-plandokumentasjon-p4s026` (miljøets tildelte branch —
 oppgaven ble bestilt som «P36: rekonstruer plandokumentasjon», men P36 og P37 var
