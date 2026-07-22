@@ -1,10 +1,12 @@
 # PLAN — Ukeplan1E v4
 
-## Status: FULLFØRT (venter verifisering) — Økt 2 (P35): Felles «Lagre»-knapp for inndelingsnavn
+## Status: FULLFØRT (verifisert) — Økt 2 (P35): Felles «Lagre»-knapp for inndelingsnavn
 Branch: `claude/p35-felles-lagre-inndelingsnavn-irqftj` (miljøets tildelte branch —
 oppgaveteksten sa `claude/P35-felles-lagre-inndelingsnavn`, samme situasjon som P34).
-Kode implementert og pushet. Cache-bust: `20260722a`.
-**Gjenstår kun:** manuell verifisering i nettleser (siste sjekklistepunkt under P35).
+Merget til main via PR #140 (squash). Cache-bust: `20260722a`.
+Maskinverifisert i ekte Chromium (23/23 sjekker PASS): selve app.js fra main kjørt mot
+mocket Supabase-klient — dirty-sjekk, kun-endrede-rader, delvis feil m/retry, toast,
+slett beholdt. Morfar har bekreftet i produksjon (22. juli). Ingenting gjenstår.
 
 ---
 
@@ -55,8 +57,11 @@ Ny felles lagring sjekker `{ error }` per rad.
 - [x] Sted 2 (gruppenavn, Fag-fanen): 💾 fjernet, felles «Lagre» nederst i faglisten
 - [x] CSS for knapperad (`.div-lagre-rad`), cache-bust `20260722a`
 - [x] Commit + push til branch
-- [ ] Manuell verifisering (Morfar): knapp deaktivert til endring, ett trykk lagrer alle
-      endrede, uendrede rader røres ikke, slett virker som før
+- [x] Maskinverifisert i Chromium (23/23 PASS, mocket Supabase): 💾 borte i begge visninger,
+      knapp deaktivert til endring (og re-deaktivert ved tilbakestilt verdi), ett trykk lagrer
+      kun endrede rader, delvis feil viser feiloverlay med radnavn og lar feilet rad prøves
+      på nytt alene, «Lagret»-toast ved suksess, slett-knapper beholdt
+- [x] Morfars sjekk i produksjon (ekte Supabase/RLS) — bekreftet OK 22. juli
 
 ---
 
