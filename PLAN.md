@@ -1,5 +1,58 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt 4 (P37): Ny seksjon «Én sak per chat» i PROSEDYRER.md
+Branch: `claude/p37-en-sak-per-chat-tcst4l` (miljøets tildelte branch —
+oppgaveteksten sa `claude/P37-en-sak-per-chat`, samme situasjon som P34/P35/P36).
+Seksjonen «Én sak per chat» er lagt inn ordrett i PROSEDYRER.md mellom
+«Grunnregel» og «Status: Før live / Etter live». Duplikatsjekk: «én oppgave per
+Code-økt» fantes ikke formulert andre steder i PROSEDYRER.md/CLAUDE.md — ingen
+duplisering, ingenting å vise til. Kun dokumentendring — ingen kode i v4/,
+ingen cache-bust. Verifisert med git diff: kun PROSEDYRER.md + PLAN.md berørt.
+
+---
+
+## Økt 4 (P37): Ny seksjon «Én sak per chat» i PROSEDYRER.md
+
+**Branch:** `claude/p37-en-sak-per-chat-tcst4l` (miljøets tildelte branch —
+oppgaveteksten sa `claude/P37-en-sak-per-chat`, samme situasjon som P34/P35/P36).
+**Scope:** KUN dokumentendring — `PROSEDYRER.md` + `PLAN.md`. Ingen kode i `v4/`,
+ingen cache-bust, ingen migrasjon, ingen edge functions.
+
+### Kartlegging
+
+`PROSEDYRER.md` er lest. Innsettingspunktet er entydig: seksjonen «Grunnregel»
+slutter med `---` på linje 26, og «## Status: Før live / Etter live» starter på
+linje 28. Den nye seksjonen «## Én sak per chat» legges mellom disse, med egen
+`---`-skillelinje etter, slik at seksjonsmønsteret i fila beholdes.
+
+**Duplikatsjekk («én oppgave per Code-økt» andre steder):**
+- `PROSEDYRER.md`: ingen eksisterende formulering. Malen nederst («ØKT X
+  (plan-punkt PN)») *impliserer* ett P-nummer per økt, men sier det ikke
+  eksplisitt — ingen duplisering.
+- `CLAUDE.md`: nærmeste er «Hold deg til oppgavens omfang — ikke endre kode
+  utenfor det som er avtalt» (Arbeidsrutiner). Det handler om omfang innenfor
+  en oppgave, ikke om én oppgave per økt — ingen duplisering.
+
+Konklusjon: teksten legges inn ordrett som spesifisert, uten henvisninger til
+andre formuleringer (det finnes ingen å vise til).
+
+### Delplan
+
+1. Sett inn seksjonen «## Én sak per chat» (ordrett fra oppgaven) i
+   `PROSEDYRER.md`, rett etter «Grunnregel»-seksjonens avsluttende `---` og
+   før «## Status: Før live / Etter live», med `---` etter den nye seksjonen.
+2. Verifiser med `git diff` at kun `PROSEDYRER.md` + `PLAN.md` er berørt.
+3. Oppdater PLAN.md (sjekkliste + statuslinje) og commit/push.
+
+### Sjekkliste
+- [x] Ny seksjon «Én sak per chat» lagt inn ordrett mellom «Grunnregel» og «Status: Før live / Etter live»
+- [x] Duplikatsjekk rapportert (ingen eksisterende formulering funnet — ingenting å vise til)
+- [x] Verifisert: ingen endringer utenfor PROSEDYRER.md + PLAN.md (git diff --stat)
+- [x] Commit + push til branch
+- [x] PLAN.md: sjekkliste krysset av + status oppdatert
+
+---
+
 ## Status: FULLFØRT — Økt 3 (P36): Bekreftelse før prosedyrer + ferske filer
 Branch: `claude/p36-bekreftelse-og-ferske-filer-uzqtsq` (miljøets tildelte branch —
 oppgaveteksten sa `claude/P36-bekreftelse-og-ferske-filer`, samme situasjon som P34/P35).

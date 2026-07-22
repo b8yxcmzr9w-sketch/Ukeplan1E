@@ -25,6 +25,27 @@ bekreftelse.
 
 ---
 
+## Én sak per chat
+
+**Claude Code:** én oppgave (ett P-nummer) per økt. Kontekst fra forrige
+oppgave får Code til å blande filer og utvide omfanget.
+
+**Planleggingschat:** én sak per chat. En sak varer fra kartlegging og
+planlegging, via ferdig Code-prompt, til sluttoppsummeringen er limt tilbake.
+Da er chatten ferdig — neste sak starter i ny chat.
+
+Grunnen er at gammel kontekst blir utdatert underveis: filer endres i repoet
+mens chatten står stille, og Claude husker den gamle versjonen. Prosjektminnet
+følger med til den nye chatten, så det store bildet går ikke tapt.
+
+**Etter en sluttoppsummering skal Claude derfor ikke foreslå å sette i gang
+neste punkt i samme chat.** Å peke på hva som står for tur (oppstartsprosedyren
+punkt 3) er riktig; å begynne planleggingen av det er det ikke. Riktig
+avslutning er: kvitter for oppsummeringen, nevn neste punkt i backloggen, og la
+Morfar starte ny chat.
+
+---
+
 ## Status: Før live / Etter live
 
 **Nå (før 1. august 2026):** Siden er ikke i aktiv bruk. Merge til `main`
