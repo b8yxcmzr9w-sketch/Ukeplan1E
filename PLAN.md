@@ -1,5 +1,56 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt 3 (P36): Bekreftelse før prosedyrer + ferske filer
+Branch: `claude/p36-bekreftelse-og-ferske-filer-uzqtsq` (miljøets tildelte branch —
+oppgaveteksten sa `claude/P36-bekreftelse-og-ferske-filer`, samme situasjon som P34/P35).
+Begge tekstene (A: «Prosedyrer startes ikke på antydning» under Grunnregel,
+B: punkt 0 «Hent alltid fersk versjon» i del A) er lagt inn ordrett i PROSEDYRER.md.
+Kun dokumentendring — ingen kode i v4/, ingen cache-bust. Verifisert med git diff:
+kun PROSEDYRER.md + PLAN.md berørt.
+
+---
+
+## Økt 3 (P36): Bekreftelse før prosedyrer + ferske filer i planleggingschat
+
+**Branch:** `claude/p36-bekreftelse-og-ferske-filer-uzqtsq`
+**Scope:** KUN dokumentendring — `PROSEDYRER.md` + `PLAN.md`. Ingen kode i `v4/`,
+ingen cache-bust, ingen migrasjon, ingen edge functions.
+
+### Kartlegging
+
+`PROSEDYRER.md` er lest. To innsettingspunkter er identifisert:
+
+- **A)** Seksjonen «Grunnregel» (etter avsnittet «**Morfar er igangsetteren.** …»,
+  før neste `---`). Teksten gjelder både planleggingschat og Code, og
+  Grunnregel-seksjonen er felles for begge — riktig plassering iht. oppgaven.
+- **B)** Listen under «A. I planleggingschat» starter i dag på punkt 1
+  («Les CLAUDE.md, PLAN.md og DECISIONS.md»). Nytt punkt 0 legges ØVERST;
+  punktene 1–4 beholder dagens nummerering uendret.
+
+### Delplan
+
+1. **A — nytt avsnitt under «Grunnregel»:** «Prosedyrer startes ikke på
+   antydning.» Claude skal spørre «Skal jeg kjøre oppstartsprosedyren?» /
+   «Skal jeg kjøre avslutningsprosedyren?» og vente på ja før prosedyren
+   kjøres — også ved kortformer («oppstart», «avslutt», «da er vi ferdige»).
+   Kun ordrett «kjør oppstartsprosedyre» / «kjør avslutningsprosedyre» starter
+   uten bekreftelse. Teksten limes inn ordrett som spesifisert i oppgaven.
+2. **B — nytt punkt 0 i «A. I planleggingschat»:** «Hent alltid fersk versjon.»
+   Cache-bryter (`?cb=<dagens dato og klokkeslett>`) på GitHub raw-URL-er ved
+   hver henting, kryssjekk av siste P-nummer/statuslinje mot forrige økt, hent
+   på nytt ved mistanke om gammel fil, og rapporter alltid faktisk lest
+   P-nummer. Teksten limes inn ordrett som spesifisert i oppgaven.
+3. Oppdater PLAN.md (denne sjekklisten + statuslinjen) og commit/push.
+
+### Sjekkliste
+- [x] A: Nytt avsnitt «Prosedyrer startes ikke på antydning» under «Grunnregel» i PROSEDYRER.md
+- [x] B: Nytt punkt 0 «Hent alltid fersk versjon» øverst i «A. I planleggingschat» (punkt 1–4 uendret nummerering)
+- [x] Verifisert: ingen endringer utenfor PROSEDYRER.md + PLAN.md (git diff --stat)
+- [x] Commit + push til branch
+- [x] PLAN.md: sjekkliste krysset av + status oppdatert
+
+---
+
 ## Status: FULLFØRT (verifisert) — Økt 2 (P35): Felles «Lagre»-knapp for inndelingsnavn
 Branch: `claude/p35-felles-lagre-inndelingsnavn-irqftj` (miljøets tildelte branch —
 oppgaveteksten sa `claude/P35-felles-lagre-inndelingsnavn`, samme situasjon som P34).

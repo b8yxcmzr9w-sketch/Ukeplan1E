@@ -15,6 +15,14 @@
 lages eller endres – også utkast og dokumenter, ikke bare kode. Foreslå og
 spør; ikke sett i gang selv.
 
+**Prosedyrer startes ikke på antydning.** Før oppstarts- eller
+avslutningsprosedyren kjøres, skal Claude spørre «Skal jeg kjøre
+oppstartsprosedyren?» / «Skal jeg kjøre avslutningsprosedyren?» og vente på ja.
+Dette gjelder også når Morfar skriver noe som ligner («oppstart», «avslutt», «da
+er vi ferdige») — kortformer er et signal om hensikt, ikke et klarsignal. Kun
+ordrett «kjør oppstartsprosedyre» / «kjør avslutningsprosedyre» kan startes uten
+bekreftelse.
+
 ---
 
 ## Status: Før live / Etter live
@@ -35,6 +43,14 @@ feil, en oppgradering, eller bare å fortsette der vi slapp.
 
 ### A. I planleggingschat («kjør oppstartsprosedyre»)
 
+0. **Hent alltid fersk versjon.** Filene leses fra GitHub raw, som kan levere
+   hurtiglagret innhold. Legg derfor på en cache-bryter i URL-en
+   (`?cb=<dagens dato og klokkeslett>`) ved hver henting. Kryss deretter av mot
+   virkeligheten: sammenlign siste P-nummer og statuslinjen i PLAN.md med det du
+   husker fra forrige økt — avviker de ikke i det hele tatt etter en økt du vet
+   har vært kjørt, er filen sannsynligvis gammel. Hent på nytt før du
+   oppsummerer. Rapporter alltid hvilket P-nummer du faktisk leste, ikke hva du
+   husker.
 1. Les `CLAUDE.md`, `PLAN.md` og `DECISIONS.md`.
 2. Gi Morfar en kort norsk oppsummering, uten teknisk sjargong:
    - Hvor står vi (siste fullførte P-nummer)?
