@@ -784,6 +784,7 @@ tr:hover td { background: var(--primær-svak); }
 .days-row { display: flex; gap: 14px; margin: 8px 0 4px; flex-wrap: wrap; align-items: center; }
 .days-row label { font-size: .88rem; display: flex; align-items: center; gap: 4px; }
 .div-list { margin-top: 10px; border-top: 1px solid var(--kant); padding-top: 8px; }
+.div-lagre-rad { margin: 10px 0 16px; }
 .div-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .input-sm { width: 180px !important; }
 .div-checkboxes { display: flex; flex-direction: column; gap: 6px; min-height: 1.2rem; }
