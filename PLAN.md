@@ -1,5 +1,65 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT (venter verifisering) — Økt 2 (P35): Felles «Lagre»-knapp for inndelingsnavn
+Branch: `claude/p35-felles-lagre-inndelingsnavn-irqftj` (miljøets tildelte branch —
+oppgaveteksten sa `claude/P35-felles-lagre-inndelingsnavn`, samme situasjon som P34).
+Kode implementert og pushet. Cache-bust: `20260722a`.
+**Gjenstår kun:** manuell verifisering i nettleser (siste sjekklistepunkt under P35).
+
+---
+
+## Økt 2 (P35): Felles «Lagre»-knapp for inndelingsnavn (partier/grupper)
+
+**Branch:** `claude/p35-felles-lagre-inndelingsnavn-irqftj`
+**Scope:** `v4/app.js`, litt `v4/style.css`, cache-bust `v4/index.html` (→ `20260722a`).
+Ingen DB-endring, ingen migrasjon, ingen manuelle Supabase-steg.
+
+### Kartlegging (fullført, rapportert og godkjent)
+
+To steder redigerer inndelingsnavn med per-rad 💾, begge med identisk mønster:
+
+| Sted | Funksjon | Rader | 💾-lagring |
+|---|---|---|---|
+| Partinavn, klasse-admin (lærervisning) | `renderKlasseAdminInnhold` (app.js:3446–3493) | `.div-row` per parti i `.div-list` per fag med `has_parti` | `medLagreOverlay(() => sb.from('subject_divisions').update({ name }).eq('id', p.id))` + `showToast('Lagret')` |
+| Gruppenavn, admin-panelets Fag-fane | `renderFagTab`→`refresh` (app.js:4114–4144) | `.div-row` per gruppe i `.admin-grupper-rad` per fag med `has_gruppe` | Samme mønster (app.js:4121–4124) |
+
+Feedback-mønster ellers: `medLagreOverlay` (suksess «✓ Lagret!», kastet feil → feiloverlay
+med Lukk), `showToast`, og dirty-sjekk-mønsteret `overvakSkjema` (disabled + `.btn-passiv`
+til snapshot avviker). **Latent svakhet i dagens 💾:** `{ error }` fra Supabase-kallet
+sjekkes ikke — supabase-js kaster ikke selv, så feilet lagring viser i dag «Lagret!».
+Ny felles lagring sjekker `{ error }` per rad.
+
+### Delplan
+
+1. Ny hjelper `lagInndelingNavnLagring()` (plasseres ved `overvakSkjema`):
+   kalleren registrerer hvert navnefelt med original verdi; én «Lagre»-knapp
+   (`btn btn-p`, deaktivert + `.btn-passiv` som `overvakSkjema`-mønsteret) aktiveres
+   først når minst ett felt avviker fra original. Egen lett dirty-sjekk (ikke
+   `overvakSkjema` direkte) fordi basislinjen per rad må kunne oppdateres etter lagring.
+2. Ett trykk lagrer kun endrede rader: én `medLagreOverlay` rundt sekvensielle
+   `update`-kall, `{ error }` sjekkes per rad.
+3. **Delvis feil:** Supabase har ingen transaksjon over flere `update`-kall herfra
+   (alt-eller-ingenting krever DB-endring — utenfor scope), så feil samles per rad:
+   vellykkede rader får ny basislinje (ikke lenger dirty); ved feil kastes `Error`
+   med radnavnene («Kunne ikke lagre: …») slik at `medLagreOverlay` sitt eksisterende
+   feiloverlay viser den. Feilede rader forblir dirty → «Lagre» forblir aktiv for nytt
+   forsøk. Full suksess → «Lagret»-toast som i dag. Ingen nye feedback-mønstre.
+4. Sted 1: én knapp nederst i Partier-seksjonen (dekker alle fag for valgt klasse).
+   Sted 2: én knapp nederst i faglisten i Fag-fanen (dekker alle gruppenavn).
+   Knappen rendres kun når det finnes navnerader.
+5. Slett per rad beholdes uendret (umiddelbar soft-delete + re-render som i dag).
+
+### Sjekkliste
+- [x] Hjelper `lagInndelingNavnLagring()` med dirty-sjekk og delvis-feil-håndtering (app.js, etter `overvakSkjema`)
+- [x] Sted 1 (partinavn, klasse-admin): 💾 fjernet, felles «Lagre» nederst i Partier-seksjonen
+- [x] Sted 2 (gruppenavn, Fag-fanen): 💾 fjernet, felles «Lagre» nederst i faglisten
+- [x] CSS for knapperad (`.div-lagre-rad`), cache-bust `20260722a`
+- [x] Commit + push til branch
+- [ ] Manuell verifisering (Morfar): knapp deaktivert til endring, ett trykk lagrer alle
+      endrede, uendrede rader røres ikke, slett virker som før
+
+---
+
 ## Status: FULLFØRT (verifisert) — Økt 1 (P34): Supabase keep-alive workflow feiler
 Branch: `claude/p34-keep-alive-fix-r86ja2` (miljøets tildelte branch — oppgaveteksten sa
 `claude/P34-fiks-keep-alive`, men dette Code-miljøet er låst til branchnavnet over).

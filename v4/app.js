@@ -265,6 +265,50 @@ function overvakSkjema(form, lagreKnapp) {
   form.addEventListener('change', sjekk)
 }
 
+// P35: felles «Lagre»-knapp for navneredigering av inndelinger (partier/grupper).
+// Kalleren registrerer hvert navnefelt; knappen er deaktivert til minst ett felt
+// avviker fra opprinnelig verdi, og lagrer kun endrede rader. Ved delvis feil
+// beholder feilede rader dirty-status slik at knappen forblir aktiv for nytt forsøk.
+function lagInndelingNavnLagring() {
+  const rader = [] // { id, input, original }
+  const knapp = el('button', { class: 'btn btn-p btn-passiv', title: 'Lagre endrede navn' }, 'Lagre')
+  knapp.disabled = true
+
+  function sjekk() {
+    const endret = rader.some(r => r.input.value !== r.original)
+    knapp.disabled = !endret
+    knapp.classList.toggle('btn-passiv', !endret)
+  }
+
+  function registrer(id, input) {
+    rader.push({ id, input, original: input.value })
+    input.addEventListener('input', sjekk)
+  }
+
+  knapp.addEventListener('click', async () => {
+    const endrede = rader.filter(r => r.input.value !== r.original)
+    if (!endrede.length) return
+    try {
+      await medLagreOverlay(async () => {
+        const feilet = []
+        for (const r of endrede) {
+          const { error } = await sb.from('subject_divisions')
+            .update({ name: r.input.value }).eq('id', r.id)
+          if (error) feilet.push(r)
+          else r.original = r.input.value
+        }
+        if (feilet.length) throw new Error(`Kunne ikke lagre: ${feilet.map(r => r.input.value).join(', ')}`)
+      })
+      showToast('Lagret', 'success')
+    } catch (_) {
+      // Feilen er allerede vist i medLagreOverlay sitt feiloverlay
+    }
+    sjekk()
+  })
+
+  return { knapp, registrer, harRader: () => rader.length > 0 }
+}
+
 // ─────────────────────────────────────────
 // SAVE OVERLAY
 // ─────────────────────────────────────────
@@ -3445,6 +3489,7 @@ async function renderKlasseAdminTab(container) {
 
     if ((fagMedParti || []).length > 0) {
       innhold.appendChild(el('h3', {}, 'Partier'))
+      const partiLagring = lagInndelingNavnLagring()
       for (const subj of fagMedParti) {
         const subjBox = el('div', { class: 'subj-config-box' })
         subjBox.appendChild(el('strong', {}, subj.name))
@@ -3461,10 +3506,7 @@ async function renderKlasseAdminTab(container) {
           const divRow = el('div', { class: 'div-row' })
           const nameInput = el('input', { type: 'text', class: 'felt input input-sm', value: p.name })
           divRow.appendChild(nameInput)
-          divRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Lagre navn på parti', onclick: async () => {
-            await medLagreOverlay(() => sb.from('subject_divisions').update({ name: nameInput.value }).eq('id', p.id))
-            showToast('Lagret', 'success')
-          }}, '💾'))
+          partiLagring.registrer(p.id, nameInput)
           divRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett parti', onclick: async () => {
             if (!confirm(`Slette partiet «${p.name}»?`)) return
             await medLagreOverlay(() => sb.from('subject_divisions')
@@ -3490,6 +3532,7 @@ async function renderKlasseAdminTab(container) {
         subjBox.appendChild(divList)
         innhold.appendChild(subjBox)
       }
+      if (partiLagring.harRader()) innhold.appendChild(el('div', { class: 'div-lagre-rad' }, partiLagring.knapp))
     }
 
     // Backup
@@ -4096,6 +4139,7 @@ async function renderFagTab(container) {
     }
 
     container.appendChild(el('h3', {}, 'Fag'))
+    const gruppeLagring = lagInndelingNavnLagring()
     for (const s of subjects || []) {
       const blokk = el('div', { class: 'admin-fag-blokk' })
       const row = el('div', { class: 'admin-rad' })
@@ -4118,10 +4162,7 @@ async function renderFagTab(container) {
           const gRow = el('div', { class: 'div-row' })
           const gInput = el('input', { type: 'text', class: 'felt input input-sm', value: g.name })
           gRow.appendChild(gInput)
-          gRow.appendChild(el('button', { class: 'btn btn-ikon', title: 'Lagre gruppenavn', onclick: async () => {
-            await medLagreOverlay(() => sb.from('subject_divisions').update({ name: gInput.value }).eq('id', g.id))
-            showToast('Lagret', 'success')
-          }}, '💾'))
+          gruppeLagring.registrer(g.id, gInput)
           gRow.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: `Slett gruppen ${g.name}`, onclick: async () => {
             if (!confirm(`Slette gruppen «${g.name}»?`)) return
             await medLagreOverlay(() => sb.from('subject_divisions')
@@ -4145,6 +4186,7 @@ async function renderFagTab(container) {
 
       container.appendChild(blokk)
     }
+    if (gruppeLagring.harRader()) container.appendChild(el('div', { class: 'div-lagre-rad' }, gruppeLagring.knapp))
     container.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til nytt fag', onclick: () => visRedigerFagModal(null, refresh) }, '+ Nytt fag'))
   }
   await refresh()
