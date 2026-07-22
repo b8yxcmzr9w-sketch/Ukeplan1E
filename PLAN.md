@@ -1,5 +1,61 @@
 # PLAN — Ukeplan1E v4
 
+## Status: FULLFØRT — Økt 5 (P38): Rekonstruksjons-revisjon av plandokumentasjon P33→i dag
+Branch: `claude/p36-rekonstruer-plandokumentasjon-p4s026` (miljøets tildelte branch —
+oppgaven ble bestilt som «P36: rekonstruer plandokumentasjon», men P36 og P37 var
+allerede brukt av prosedyre-øktene 22. juli; denne økten er derfor P38).
+Revisjon av git-loggen P33-mergen (PR #137) → HEAD viste at premisset var utdatert:
+PLAN.md på main inneholdt allerede komplette oppføringer for P34–P37, P33 var alt
+markert verifisert (commit `246a39a`, 12. juli), og P35-beslutningene sto i
+DECISIONS.md. `v4/uno-footer.js` var IKKE P34 (P34 = keep-alive-fiksen) — fila er fra
+PR #88 (tidlig v4-bygging, før P-nummereringen) og manglet bare i CLAUDE.md.
+Reelle hull lukket i denne økten: P34s siste sjekkpunkt (schedule-kjøring 21. juli,
+run #11, grønn — bekreftet i Actions-fanen) og `uno-footer.js`/`unoicon.png` inn i
+filstrukturen i CLAUDE.md. Kun .md-endringer — ingen kode, ingen cache-bust.
+
+---
+
+## Økt 5 (P38): Rekonstruksjons-revisjon av plandokumentasjon P33→i dag
+
+**Branch:** `claude/p36-rekonstruer-plandokumentasjon-p4s026` (bestilt som P36 —
+nummeret var allerede brukt; se statuslinjen over).
+**Scope:** KUN `PLAN.md` + `CLAUDE.md`. Ingen kode i `v4/`, ingen cache-bust,
+ingen migrasjon, ingen edge functions.
+
+### Kartlegging (git-logg fra P33-mergen til HEAD)
+
+| Commit/PR | Økt | Innhold |
+|---|---|---|
+| `246a39a` (direkte på main, 12. juli) | P33-oppfølging | P33 markert «FULLFØRT (verifisert)» + ny sjekkliste-lukkeregel i CLAUDE.md |
+| PR #138 (18. juli) | P34 | Keep-alive-workflow: rotårsak manglende secrets; kun PLAN.md endret |
+| PR #139 (18. juli) | unummerert | PROSEDYRER.md opprettet + henvisning i CLAUDE.md |
+| PR #140–142 (22. juli) | P35 | Felles «Lagre»-knapp inndelingsnavn; sjekkliste lukket; DECISIONS.md ført |
+| PR #143 (22. juli) | P36 | Prosedyrejustering: bekreftelse før prosedyrer + ferske filer |
+| PR #144 (22. juli) | P37 | Ny seksjon «Én sak per chat» i PROSEDYRER.md |
+
+**Avklaring `v4/uno-footer.js`:** kandidaten «uno-footer = P34» er AVKREFTET mot
+loggen. Fila kom i commit `4a9205b` («feat: add app.js, footer and update
+prompt/styles», branch `claude/wonderful-thompson-2gdcy4`, PR #88) tidlig i
+v4-byggingen, sist endret via PR #93 (P2, juni). Den viser Uno-logo + © årstall i
+footeren (lastes fra `v4/index.html:80`); søsterfila `v4/unoicon.png` er favicon
+(`index.html:7`, fallback i `app.js:740`). Ingen av dem sto i CLAUDE.md.
+
+**Uavkryssede sjekkpunkter i perioden:** kun to, begge eksplisitt fremtidsdaterte.
+P33s (juli 2027) står korrekt åpent. P34s («neste schedule-kjøring 21. juli 2026»)
+kunne nå lukkes: run #11 (schedule, 21. juli 08:21 UTC) fullførte grønt.
+
+### Sjekkliste
+- [x] Git-logg P33→HEAD kartlagt; alle økter identifisert med P-nummer, branch og innhold
+- [x] Funn rapportert til Morfar FØR skriving; «kjør» mottatt
+- [x] Bekreftet: P34–P37 allerede komplett dokumentert i PLAN.md — ingen rekonstruksjon nødvendig
+- [x] P34s siste sjekkpunkt lukket (run #11 grønn, verifisert i Actions-fanen) + P34-statuslinje oppdatert
+- [x] `uno-footer.js` + `unoicon.png` lagt inn i filstrukturen i CLAUDE.md
+- [x] DECISIONS.md uendret — ingen udokumentert beslutning i P34/P35 (P35s er alt ført inn via PR #142)
+- [x] Verifisert: kun PLAN.md + CLAUDE.md berørt (git diff --stat)
+- [x] Commit + push til branch
+
+---
+
 ## Status: FULLFØRT — Økt 4 (P37): Ny seksjon «Én sak per chat» i PROSEDYRER.md
 Branch: `claude/p37-en-sak-per-chat-tcst4l` (miljøets tildelte branch —
 oppgaveteksten sa `claude/P37-en-sak-per-chat`, samme situasjon som P34/P35/P36).
@@ -176,8 +232,8 @@ Rotårsak: begge repo-secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) manglet — 
 ekspanderte til tom streng i alle 9 kjøringer. Morfar la inn begge 18. juli; manuell
 workflow_dispatch-kjøring (run #10, 2026-07-18) ga **grønn status, HTTP 200,
 «✅ Supabase er våken»**. Ingen kodeendring var nødvendig.
-Merget til main via PR. **Gjenstår kun:** neste schedule-kjøring (21. juli) bekrefter
-stabilitet — kan ikke testes før datoen inntreffer; bekrefter seg selv i Actions-fanen.
+Merget til main via PR. Schedule-kjøringen 21. juli (run #11) fullførte grønt —
+bekreftet i Actions-fanen 22. juli (lukket i P38). Ingenting gjenstår.
 
 ---
 
@@ -272,8 +328,8 @@ er den reelle testen.
 - [x] Code: workflow_dispatch trigget — run #10 (id 29634357377) GRØNN, `HTTP status: 200`,
       «✅ Supabase er våken». Secrets vises maskert (`***`) i loggen = de eksisterer og leses
 - [x] PR opprettet og merget til main
-- [ ] Neste schedule-kjøring (21. juli 2026) bekrefter stabilitet — kan ikke krysses av før
-      datoen inntreffer (eksplisitt begrunnet, jf. sjekkliste-regelen i CLAUDE.md)
+- [x] Neste schedule-kjøring (21. juli 2026) bekrefter stabilitet — run #11 (schedule,
+      21. juli 08:21 UTC) fullførte grønt; bekreftet i Actions-fanen 22. juli (lukket i P38)
 
 ---
 
