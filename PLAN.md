@@ -61,19 +61,6 @@
 - **Skoleår-dimensjon for fag/klasser/subject_divisions** — status
   «utredning, ikke bygg», 5 åpne punkter, se UTREDNING-skolear-oppsett.md
   (seksjonen «Åpne punkter (avklares før bygging)»).
-- **Opprydding etter P32-feilimporten — er dette ryddet?** (P40). AI-importen
-  lagret 26/27-økter med `school_year = '25/26'` i prod før P32-fiksen.
-  Manuelt Morfar-steg i Supabase SQL Editor; verifiser radene visuelt før
-  eventuell sletting:
-
-  ```sql
-  SELECT id, class_id, week_nr, day_of_week, activity, school_year
-  FROM sessions
-  WHERE school_year = '25/26' AND deleted_at IS NULL AND week_nr >= 33
-    AND (activity ILIKE '%aktivitet%' OR subject_id IS NULL)
-  ORDER BY week_nr, day_of_week;
-  ```
-
 ### Lav prioritet / ikke aktiv
 
 - **Cosmetic: boks-i-boks i Skoleår-fanen** (lav prioritet). P24 legger fanen
