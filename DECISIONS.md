@@ -146,3 +146,79 @@ storage-policies — kjør `020_storage_policy_logos.sql` i SQL Editor.
   P35 trenger basislinje PER RAD som oppdateres etter vellykket lagring
   (delvis feil-scenarioet). Samme visuelle mønster (disabled + `.btn-passiv`),
   annen mekanikk.
+
+## P10 — Admin-toggelen er en rettighetsbryter, ikke navigasjon (20.06.2026)
+
+- «Admin»-toggelen i headeren (`toggleAdminModus`) veksler KUN
+  admin-rettigheter av/på i visningen brukeren står i: den oppdaterer
+  `is_admin_active` og re-rendrer gjeldende hash via `router()` — den
+  navigerer ALDRI. Adminpanelet (`#/admin`) nås utelukkende via
+  «Innstillinger» i hamburgeren. Senere økter refererer dette som
+  «P10 intakt» — ikke gjeninnfør navigasjon i toggelen.
+
+## 018 — Admin som additivt flagg (19.06.2026)
+
+- `role = 'admin'` som admin-markør var ødelagt: brukerredigerings-skjemaene
+  overskrev `role` til `laerer`/`kontaktlaerer`, og admin-menyen forsvant ved
+  neste login. Derfor tre adskilte begreper:
+  - `users.is_admin` (boolsk, permanent) = admin-tilgang. En bruker er
+    `laerer` ELLER `kontaktlaerer` som basisrolle, og kan i tillegg være admin.
+  - `users.is_admin_active` = visningstoggle («ser på adminvisning nå»),
+    nullstilles ved login. Brukes av P10-toggelen.
+  - Enum-verdien `'admin'` i `user_role_enum` beholdes (kan ikke trygt
+    fjernes fra en enum i bruk) men brukes ikke for nye/redigerte brukere.
+- Maks 3 admin per skole, håndhevet av trigger (`enforce_max_admins` teller
+  `is_admin = true`).
+
+## P27 — RLS for adminpanelet + WITH CHECK-fellen (24.06.2026)
+
+- **Adminpanelet er uavhengig av admin-toggelen.** En admin som åpner
+  panelet uten toggelen på er i korrekt tilstand. Skrive-policyene for
+  adminpanel-tabellene bruker derfor mønsteret
+  `is_active_admin() OR auth_is_admin()` (migrasjon 019, samme mønster som
+  006/018) — ikke `is_active_admin()` alene.
+- **`sessions`-policyene beholder bevisst `is_active_admin()`** som indre
+  betingelse: toggelen ER rettighetsbryteren for kollegahjelp i
+  lærervisningen (P10). Disse skal ikke «fikses» til `auth_is_admin()`.
+- **PostgreSQL-felle:** `FOR ALL`-policyer med kun `USING` default-denyer
+  INSERT — `WITH CHECK` arves IKKE fra `USING`. Skriv alltid eksplisitt
+  `WITH CHECK` (identisk uttrykk) på `FOR ALL`-policyer.
+
+## P33 — «Nå» i sommergapet avgjøres kalendermessig (12.07.2026)
+
+- `gjeldendeSkoleuke(schoolStart, schoolEnd, skoleAar)`: når inneværende uke
+  er utenfor skoleåret, velges start- eller sluttuke ut fra dagens dato mot
+  skoleårets FAKTISKE grensedatoer (mandag i startuken / fredag i sluttuken,
+  via `skoleaarKalenderaar` + `isoWeekToDate`) — ikke etter uke-avstand.
+  Avstandslogikken (P15) sendte brukeren i sommergapet til uke 24 av det NYE
+  skoleåret, nesten et år frem i tid, og navigasjonen opplevdes låst.
+- **`skoleaarIntervall` er IKKE egnet som gap-anker:** den dekker fast
+  1. aug–31. jul, mens skoleslutt (uke 24) er i juni. Med den ville juli
+  feilaktig telle som «innenfor skoleåret». Uendret der den brukes i dag
+  (kalenderhendelse-spørringer).
+
+## P12 — `overflow-x: clip`, aldri `hidden`, på html/body/main (20.06.2026)
+
+- `overflow-x: hidden` gjør elementet til en scroll-container (`overflow-y`
+  beregnes til `auto`) → `position: sticky` fester seg til feil container og
+  IntersectionObserver mot viewport slutter å virke, mens selve scrollingen
+  fortsatt skjer på vinduet. Bruk `overflow-x: clip` (klipper uten å lage
+  scroll-container). Subtil felle som lett gjeninnføres ved CSS-opprydding.
+
+## Tidligere runder — stående valg (juni 2026, flyttet fra PLAN.md ved P40)
+
+- **Edge functions returnerer håndterte feil som `200 + { error }`.**
+  supabase-js skjuler response-body ved non-2xx, så en feilmelding sendt med
+  4xx/5xx når aldri brukeren. Gjelder alle edge functions kalt fra browser.
+- **Elevtilgang: åpen klasseliste** (bevisst valg — elever logger ikke inn).
+- **Konflikthåndtering: enkel melding med navn/tidspunkt** — ingen
+  endringsvisning, fletting eller kopiering (bevisst forenkling; ikke
+  foreslå på nytt uten ny begrunnelse).
+
+## Import 014–016 — ingen lærerbrukere opprettet (12.06.2026)
+
+- Alle importerte 25/26-økter fra prod eies av Morfars egen konto
+  (fallback-eier); lærernavnet er bevart i info-feltet som «[Lærer: X]».
+  Lærermapping skjer på fornavn mot `users.full_name`; migrasjonene er
+  re-kjørbare — opprettes lærerbrukere senere, mapper en ny kjøring
+  eierskapet riktig. Forklarer hvorfor prod-data ser ut som de gjør.
