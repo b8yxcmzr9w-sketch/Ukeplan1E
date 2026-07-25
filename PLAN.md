@@ -8,9 +8,7 @@
 - **Dato sist oppdatert:** 25. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
   «Nå»-knappen etter skoleslutt (juli 2027 med 26/27 aktivt); maskinverifisert,
-  ekte manuell bekreftelse skjer naturlig når datoen inntreffer.
-  P41s prod-test av frontenden — kan først gjøres ETTER merge (ingen
-  preview-deploy); migrasjon 021 og ny generate-facts er allerede ute.
+  ekte manuell bekreftelse skjer naturlig når datoen inntreffer
 
 ---
 
@@ -109,10 +107,10 @@ som ikke sto i DECISIONS.md er flyttet dit.
 
 **Branch:** `claude/p41-funfacts-forenkling-9hx7zx` (miljøets tildelte branch —
 oppgaveteksten sa `claude/p41-funfacts-forenkling`, samme situasjon som P34–P40).
-**Status:** FULLFØRT 25. juli 2026 — kode merget til main (squash), Morfars
-manuelle steg (migrasjon 021 + deploy av generate-facts) gjennomført. Eneste
-åpne punkt: prod-test av frontenden, som først kan gjøres etter merge (ingen
-preview-deploy) — se statuslinjen.
+**Status:** FULLFØRT OG VERIFISERT 25. juli 2026 — kode merget til main
+(squash, PR #149), Morfars manuelle steg (migrasjon 021 + deploy av
+generate-facts) gjennomført, og frontenden verifisert i produksjon av Morfar
+etter merge.
 
 ### Mål
 
@@ -211,11 +209,10 @@ Supabase Dashboard etter kode-endring i repo):**
 **D. Verifisering (etter Morfars manuelle steg A + B):**
 - [x] Migrasjon 021 kjørt i SQL Editor (Morfar, 25. juli 2026)
 - [x] Ny `generate-facts` deployet i Dashboard (Morfar, 25. juli 2026)
-- [ ] Test i prod: «Erstatt alle» gir 20 nye; «Fyll opp med nye» fyller
+- [x] Test i prod: «Erstatt alle» gir 20 nye; «Fyll opp med nye» fyller
       nøyaktig opp til 20 uten å røre eksisterende (og er deaktivert ved full
       pool); tellerkolonnen vises og listen sorteres mest-sett-øverst;
       temafeltet påvirker innholdet; manuell +/rediger/slett virker.
-      (BEGRUNNET ÅPEN ved merge: frontenden kan ikke verifiseres visuelt før
-      den er merget til main — ingen preview-deploy. Lukkes av Morfar etter
-      merge; står også i statuslinjen.)
+      (Sto begrunnet åpen ved merge — ingen preview-deploy; verifisert i
+      produksjon av Morfar 25. juli 2026 etter merge.)
 - [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
