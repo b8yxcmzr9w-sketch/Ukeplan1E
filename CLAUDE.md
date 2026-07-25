@@ -87,6 +87,7 @@ v4/
       018_funfacts_view_count.sql # view_count for funfacts-rotasjon + increment_fact_view()-funksjon (KJØRT)
       019_admin_panel_rls.sql     # RLS-fix: adminpanel-skriving tillatt med auth_is_admin() uten toggle (KJØRT)
       020_storage_policy_logos.sql # Storage-policies for logos-bucketen: INSERT/UPDATE/DELETE (admin) + SELECT (public) (KJØRT)
+      021_funfacts_tema.sql       # facts_theme-kolonne på schools: fritekst temastyring for funfacts (P41)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini
@@ -241,7 +242,7 @@ UUID som primærnøkkel overalt. Soft-delete via `deleted_at`; cron sletter perm
 etter 30 dager.
 
 ```
-schools          – id, name, logo_url, logo_file_path, school_year_start_week, school_year_end_week, color_theme(standard|lys|mork), active_school_year
+schools          – id, name, logo_url, logo_file_path, school_year_start_week, school_year_end_week, color_theme(standard|lys|mork), active_school_year, facts_theme (fritekst temastyring for funfacts, migrasjon 021)
 classes          – id, school_id, name, sort_order, deleted_at
 subjects         – id, school_id, name, short_code, color_hex, has_parti, has_gruppe, max_divisions, deleted_at
 subject_divisions– id, subject_id, division_type(parti|gruppe), name, sort_order, deleted_at
@@ -250,7 +251,7 @@ user_classes     – user_id, class_id
 sessions         – id, school_id, class_id, subject_id, division_id, week_nr, day_of_week(1-5), teacher_id, activity, meeting_point, info, school_year, version, created_by, last_modified_at, last_modified_by, shared_group_id (fellesundervisning, migrasjon 010), deleted_at, ...
 multi_day_events – id, school_id, class_id(null=alle), title, description, start_date, end_date, school_year, deleted_at
 school_calendar  – id, school_id, title, start_date, end_date, type(ferie|helligdag|planleggingsdag|annet), deleted_at (migrasjon 011). NB: `helligdag` vises for bruker som «høytid» (kun visningstekst via kalenderTypeNavn — DB-verdien er alltid `helligdag`)
-school_facts     – id, school_id, fact_text, created_at, deleted_at (created_at/deleted_at fra migrasjon 011)
+school_facts     – id, school_id, fact_text, view_count (migrasjon 018_funfacts_view_count), created_at, deleted_at (created_at/deleted_at fra migrasjon 011). Pool maks 20 aktive (FUNFACTS_MAKS, P41); eneste genereringsvei er «Forny» i adminfanen (Erstatt alle / Fyll opp med nye via fornyFunfacts + edge function generate-facts med count 1–20)
 audit_log, pending_transfers
 ```
 

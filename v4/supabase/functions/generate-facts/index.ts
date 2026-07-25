@@ -52,8 +52,15 @@ async function kallGemini(prompt: string, generationConfig?: Record<string, unkn
 }
 
 // Prompten bygges per skole – tjenesten er skolenøytral.
-function byggPrompt(skoleNavn: string): string {
-  return `Lag 40 korte og underholdende funfacts på norsk. Faktasetningene skal være sanne, enkle å forstå og passe for ungdom på videregående skole.
+// P41: antall styres av count fra request-body; temaOnske er fritekst fra
+// schools.facts_theme (leses fra DB, aldri fra body) og flettes inn som
+// ekstra instruksjon — ingen annen skoleinfo blandes inn automatisk.
+function byggPrompt(skoleNavn: string, antall: number, temaOnske: string): string {
+  const minstLokale = Math.min(10, Math.max(1, Math.round(antall / 4)))
+  const temaBlokk = temaOnske
+    ? `\nEkstra ønske fra skolen (vektlegg dette i utvalget av temaer):\n«${temaOnske}»\n`
+    : ''
+  return `Lag ${antall} korte og underholdende funfacts på norsk. Faktasetningene skal være sanne, enkle å forstå og passe for ungdom på videregående skole.
 
 Skolen heter «${skoleNavn}». Temaene skal være en blanding av:
 - Skolen og stedet/regionen der den ligger (utled dette fra skolenavnet)
@@ -61,7 +68,7 @@ Skolen heter «${skoleNavn}». Temaene skal være en blanding av:
 - Fagområder og linjer som er vanlige på en slik skole
 - Vitenskap, dyr og natur
 - Historie og arkeologi
-
+${temaBlokk}
 Krav:
 - Maks 1 kort setning per funfact.
 - Ingen overskrifter, nummerering eller punktlister – bare én setning per linje.
@@ -72,9 +79,9 @@ Krav:
 - Språket skal være lett og muntlig.
 - Ikke bruk emojis.
 - Ikke gjenta samme type fakta.
-- Minst 10 av faktaene skal ha lokal tilknytning til skolen eller området rundt, så sant du kjenner stedet godt nok.
+- Minst ${minstLokale} av faktaene skal ha lokal tilknytning til skolen eller området rundt, så sant du kjenner stedet godt nok.
 
-Svar kun med de 40 faktasetningene, én per linje, ingenting annet.`
+Svar kun med de ${antall} faktasetningene, én per linje, ingenting annet.`
 }
 
 serve(async (req) => {
@@ -95,14 +102,20 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Krever admin-tilgang' }), { status: 403, headers: corsHeaders })
     }
 
-    // Hent skolenavn fra innlogget brukers egen skole (ikke fra request body)
-    const { data: school } = await adminClient.from('schools').select('name').eq('id', profile.school_id).single()
+    // P41: count fra body styrer antall — heltall 1–20, ellers default 20.
+    const body = await req.json().catch(() => ({}))
+    let count = Number(body?.count)
+    if (!Number.isInteger(count) || count < 1 || count > 20) count = 20
+
+    // Hent skolenavn + temaønske fra innlogget brukers egen skole (ikke fra request body)
+    const { data: school } = await adminClient.from('schools').select('name, facts_theme').eq('id', profile.school_id).single()
     if (!school?.name) throw new Error('Fant ikke skolen til brukeren')
+    const temaOnske = (school.facts_theme || '').trim()
 
     // maxOutputTokens er fjernet: gemini-2.5-flash bruker tenke-tokens som
     // teller mot grensen, og 2048 ville kuttet svaret før alle faktaene kom.
-    const raw = await kallGemini(byggPrompt(school.name), { temperature: 0.9 })
-    const facts = raw.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 5)
+    const raw = await kallGemini(byggPrompt(school.name, count, temaOnske), { temperature: 0.9 })
+    const facts = raw.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 5).slice(0, count)
 
     return new Response(JSON.stringify({ facts }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

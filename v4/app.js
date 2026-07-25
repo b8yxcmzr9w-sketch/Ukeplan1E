@@ -427,41 +427,32 @@ async function medAIOverlay(tittel, asyncFn) {
     clearInterval(intervall)
     clearTimeout(fadeTimer)
     overlay.remove()
-    // Ikke-blokkerende etterspill: forny funfacts-pølja om terskelen er nådd
-    sjekkOgFornyFunfacts().catch(() => {})
   }
 }
 
-// Sjekk om funfacts-pølja bør fornyes (terskel: ≥ 3 visninger på én setning).
-// Krever admin-tilgang siden generate-facts er adminbeskyttet. Feil svelges stille.
-async function sjekkOgFornyFunfacts() {
-  if (!APP.school || !APP.facts.length) return
-  if (!APP.profile?.is_admin_active && !harAdminTilgang()) return
-  if (!APP.facts.some(f => (f.view_count || 0) >= 3)) return
-  try {
-    await fornyFunfactsRotasjon()
-  } catch (e) {
-    console.warn('[funfacts] Automatisk fornyelse feilet (ufarlig):', e.message)
-  }
-}
+// P41: poolen holder maks 20 aktive funfacts; «Forny» er eneste genereringsvei.
+const FUNFACTS_MAKS = 20
 
-// Bytt ut de 5 mest viste aktive setningene med 5 nye AI-genererte.
-async function fornyFunfactsRotasjon() {
-  const { data, error } = await sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } })
+// Forny funfacts-poolen. modus 'alle': soft-delete alle aktive og generer 20
+// nye. modus 'fyll': behold alt urørt og generer akkurat nok til å nå 20.
+// Returnerer antall nye som ble satt inn.
+async function fornyFunfacts(modus) {
+  const aktive = APP.facts
+  const antall = modus === 'alle' ? FUNFACTS_MAKS : FUNFACTS_MAKS - aktive.length
+  if (antall < 1) return 0
+  const { data, error } = await sb.functions.invoke('generate-facts',
+    { body: { school_id: APP.school.id, count: antall } })
   if (error || !data?.facts?.length) throw new Error(error?.message || 'Tomt svar fra generate-facts')
-  const nyeFakta = data.facts.slice(0, 5)
-  const sortert = [...APP.facts].sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
-  const skalSlettes = sortert.slice(0, Math.min(5, sortert.length)).map(f => f.id)
-  if (skalSlettes.length) {
+  const nyeFakta = data.facts.slice(0, antall)
+  if (modus === 'alle' && aktive.length) {
     const { error: delErr } = await sb.from('school_facts')
-      .update({ deleted_at: new Date().toISOString() }).in('id', skalSlettes)
+      .update({ deleted_at: new Date().toISOString() }).in('id', aktive.map(f => f.id))
     if (delErr) throw new Error(delErr.message)
   }
   const { error: insErr } = await sb.from('school_facts')
     .insert(nyeFakta.map(txt => ({ school_id: APP.school.id, fact_text: txt })))
   if (insErr) throw new Error(insErr.message)
-  APP.facts = APP.facts.filter(f => !skalSlettes.includes(f.id))
-  console.log('[funfacts] Fornyet: 5 sett ut, 5 nye inn.')
+  return nyeFakta.length
 }
 
 // ─────────────────────────────────────────
@@ -5145,96 +5136,61 @@ function visSkoleruteForhandsvisning(events, warnings, onSave, skolear) {
 async function renderFaktaTab(container) {
   async function refresh() {
     clearEl(container)
+    // P41: mest sette øverst; likt antall → eldste først (nyeste sist) som før
     const { data: facts } = await sb.from('school_facts').select('*')
       .eq('school_id', APP.school.id).is('deleted_at', null)
+      .order('view_count', { ascending: false })
       .order('created_at', { ascending: true }).order('id', { ascending: true })
     APP.facts = facts || []
 
     const wrap = el('div', { class: 'skjema-smal' })
     const antall = facts?.length || 0
-    wrap.appendChild(el('h3', {}, `Funfacts (${antall}/100)`))
+    wrap.appendChild(el('h3', {}, `Funfacts (${antall}/${FUNFACTS_MAKS})`))
     wrap.appendChild(el('p', { class: 'tekst-svak', style: 'margin:4px 0 14px; font-size:.9rem' },
-      'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe.'))
+      'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe. ' +
+      'Øyet viser hvor mange ganger hver setning er vist — de mest sette øverst.'))
 
-    // Knapper øverst
-    const knappeRad = el('div', { class: 'knapper-rad' })
+    // P41: temastyring — fritekst som generate-facts flettes inn i prompten
+    const temaFelt = el('textarea', {
+      class: 'felt textarea', rows: 2, maxlength: 300,
+      style: 'width:100%; resize:vertical',
+      placeholder: 'F.eks. «mer om landbruk og traktorer, gjerne litt humor» — brukes ved neste Forny',
+    })
+    temaFelt.value = APP.school.facts_theme || ''
+    const temaLagre = el('button', { class: 'btn btn-s', title: 'Lagre temaønsket', onclick: async () => {
+      const tekst = temaFelt.value.trim()
+      await medLagreOverlay(async () => {
+        const { error } = await sb.from('schools').update({ facts_theme: tekst || null }).eq('id', APP.school.id)
+        if (error) throw error
+      })
+      APP.school.facts_theme = tekst || null
+    }}, 'Lagre tema')
+    wrap.appendChild(el('label', { class: 'felt-label' }, 'Temastyring (fritekst)'))
+    wrap.appendChild(temaFelt)
+    wrap.appendChild(el('p', { class: 'tekst-svak', style: 'margin:2px 0 8px; font-size:.85rem' },
+      'Sendes med som ekstra ønske når nye funfacts genereres. Tomt felt = vanlig blanding.'))
+    wrap.appendChild(temaLagre)
+
+    // Knapper
+    const knappeRad = el('div', { class: 'knapper-rad', style: 'margin-top:14px' })
     knappeRad.appendChild(el('button', { class: 'btn btn-p', title: 'Legg til nytt funfact manuelt', onclick: () => visFunfactModal(null, refresh) }, '+ Legg til'))
-    const aiBtn = el('button', { class: 'btn btn-s', title: 'Generer ~40 funfacts automatisk med AI', onclick: async () => {
-      if (!confirm('Generer ~40 nye funfacts med AI og legg dem til listen?')) return
-      aiBtn.disabled = true; aiBtn.textContent = 'Genererer…'
-      try {
-        const { data, error } = await medAIOverlay('AI lager nye funfacts …', () =>
-          sb.functions.invoke('generate-facts', { body: { school_id: APP.school.id } }))
-        if (error) throw new Error(error.message || JSON.stringify(error))
-        const ny = data?.facts || []
-        if (!ny.length) { showToast('Ingen fakta generert', 'info'); return }
-
-        // Maks 100: soft-delete de eldste (FIFO) for å gi plass til de nye
-        const MAKS = 100
-        const skalLeggesTil = ny.slice(0, MAKS)
-        const overskytende = Math.max(0, (facts?.length || 0) + skalLeggesTil.length - MAKS)
-
-        await medLagreOverlay(async () => {
-          if (overskytende > 0) {
-            const { data: eldste, error: selErr } = await sb.from('school_facts')
-              .select('id')
-              .eq('school_id', APP.school.id)
-              .is('deleted_at', null)
-              .order('created_at', { ascending: true })
-              .order('id', { ascending: true })
-              .limit(overskytende)
-            if (selErr) throw new Error(selErr.message)
-            const { error: delErr } = await sb.from('school_facts')
-              .update({ deleted_at: new Date().toISOString() })
-              .in('id', (eldste || []).map(f => f.id))
-            if (delErr) throw new Error(delErr.message)
-          }
-          const rows = skalLeggesTil.map(txt => ({ school_id: APP.school.id, fact_text: txt }))
-          const { error: insErr } = await sb.from('school_facts').insert(rows)
-          if (insErr) throw new Error(insErr.message)
-        })
-        if (overskytende > 0) {
-          showToast(`${skalLeggesTil.length} funfacts lagt til. Maks antall er nådd – de ${overskytende} eldste ble erstattet med nye.`, 'info')
-        } else {
-          showToast(`${skalLeggesTil.length} funfacts lagt til!`, 'ok')
-        }
-        refresh()
-      } catch (err) {
-        showToast(err.message, 'error')
-      } finally {
-        aiBtn.disabled = false; aiBtn.textContent = '✨ Generer med AI'
-      }
-    }}, '✨ Generer med AI')
-    knappeRad.appendChild(aiBtn)
-
-    const fornyBtn = el('button', { class: 'btn btn-s', title: 'Bytt ut de 5 mest viste setningene med 5 nye AI-genererte', onclick: async () => {
-      if (!APP.facts.length) { showToast('Ingen funfacts å fornye', 'info'); return }
-      if (!confirm('Generer 5 nye funfacts og bytt ut de 5 mest viste? De utgåtte slettes mykt.')) return
-      fornyBtn.disabled = true; fornyBtn.textContent = 'Genererer…'
-      try {
-        await fornyFunfactsRotasjon()
-        showToast('5 nye funfacts generert – de 5 mest viste er byttet ut.', 'ok')
-        await refresh()
-      } catch (err) {
-        showToast(err.message || 'Noe gikk galt', 'error')
-      } finally {
-        fornyBtn.disabled = false; fornyBtn.textContent = '🔄 Generer nye funfacts nå'
-      }
-    }}, '🔄 Generer nye funfacts nå')
-    knappeRad.appendChild(fornyBtn)
-
+    knappeRad.appendChild(el('button', { class: 'btn btn-s', title: 'Erstatt alle eller fyll opp poolen med nye AI-genererte funfacts', onclick: () => visFornyModal(refresh) }, '🔄 Forny'))
     wrap.appendChild(knappeRad)
 
     // Tom-tilstand
     if (!(facts && facts.length)) {
       wrap.appendChild(el('p', { class: 'ai-tip' },
-        'Ingen funfacts ennå. Legg til manuelt eller generer med AI.'))
+        'Ingen funfacts ennå. Legg til manuelt eller trykk Forny.'))
     }
 
-    // Liste
+    // Liste (mest sette øverst)
     for (const f of facts || []) {
       const row = el('div', { class: 'admin-rad' })
       row.appendChild(el('span', { style: 'flex:1; font-size:.92rem' }, f.fact_text))
+      row.appendChild(el('span', {
+        class: 'tekst-svak', title: 'Antall ganger vist',
+        style: 'font-size:.85rem; white-space:nowrap',
+      }, `👁 ${f.view_count || 0}`))
       row.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger funfact', onclick: () => visFunfactModal(f, refresh) }, '✏️'))
       row.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett funfact', onclick: async () => {
         if (!confirm('Slette denne funfacten?')) return
@@ -5246,6 +5202,59 @@ async function renderFaktaTab(container) {
     container.appendChild(wrap)
   }
   await refresh()
+}
+
+// P41: valg-modal for «Forny» — de to valgene er eneste genereringsvei.
+function visFornyModal(onSave) {
+  const modal = el('div', { class: 'modal-bg' })
+  const box   = el('div', { class: 'modal' })
+  box.appendChild(el('h3', {}, 'Forny funfacts'))
+
+  const antallAktive = APP.facts.length
+  const mangler = Math.max(0, FUNFACTS_MAKS - antallAktive)
+
+  async function kjoer(modus) {
+    modal.remove()
+    try {
+      const n = await medAIOverlay('AI lager nye funfacts …', () => fornyFunfacts(modus))
+      showToast(modus === 'alle'
+        ? `${n} nye funfacts generert – alle de gamle er byttet ut.`
+        : `${n} nye funfacts generert – poolen er fylt opp.`, 'ok')
+      if (onSave) onSave()
+    } catch (err) {
+      showToast(err.message || 'Noe gikk galt', 'error')
+    }
+  }
+
+  const valg = el('div', { class: 'knapper-rad', style: 'flex-direction:column; align-items:stretch; gap:10px; margin:14px 0' })
+
+  const alleBtn = el('button', { class: 'btn btn-p', onclick: () => {
+    if (!confirm(`Slette alle ${antallAktive} aktive funfacts og generere ${FUNFACTS_MAKS} helt nye? De gamle slettes mykt.`)) return
+    kjoer('alle')
+  }}, 'Erstatt alle')
+  valg.appendChild(alleBtn)
+  valg.appendChild(el('p', { class: 'tekst-svak', style: 'margin:-4px 0 6px; font-size:.85rem' },
+    `Alle dagens funfacts byttes ut med ${FUNFACTS_MAKS} nye.`))
+
+  const fyllBtn = el('button', { class: 'btn btn-s', onclick: () => {
+    if (!confirm(`Generere ${mangler} nye funfacts slik at poolen blir full (${FUNFACTS_MAKS})? Eksisterende beholdes.`)) return
+    kjoer('fyll')
+  }}, `Fyll opp med nye (${mangler})`)
+  if (!mangler) fyllBtn.disabled = true
+  valg.appendChild(fyllBtn)
+  valg.appendChild(el('p', { class: 'tekst-svak', style: 'margin:-4px 0 0; font-size:.85rem' },
+    mangler
+      ? 'Beholder dagens funfacts og fyller bare hullene. Slett uønskede først, så fyller AI opp.'
+      : 'Poolen er full — slett noen funfacts først, så kan du fylle opp med nye.'))
+
+  box.appendChild(valg)
+
+  const bunn = el('div', { class: 'modal-bunn' })
+  bunn.appendChild(el('button', { class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+  box.appendChild(bunn)
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
 function visFunfactModal(fact, onSave) {

@@ -3,7 +3,8 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P40
-- **Pågående:** P41 (delplan skrevet, venter på godkjenning fra Morfar)
+- **Pågående:** P41 (kode bygget og pushet — gjenstår: Morfars manuelle steg
+  A/B + prod-test, se D-sjekklisten i P41-seksjonen)
 - **Neste ledige P-nummer:** P42
 - **Dato sist oppdatert:** 25. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
@@ -107,7 +108,8 @@ som ikke sto i DECISIONS.md er flyttet dit.
 
 **Branch:** `claude/p41-funfacts-forenkling-9hx7zx` (miljøets tildelte branch —
 oppgaveteksten sa `claude/p41-funfacts-forenkling`, samme situasjon som P34–P40).
-**Status:** Delplan skrevet — VENTER PÅ GODKJENNING fra Morfar før koding.
+**Status:** Godkjent («kjør» 25. juli 2026) — kode bygget og pushet. Gjenstår:
+Morfars manuelle steg (migrasjon 021 FØR deploy av generate-facts) + prod-test.
 
 ### Mål
 
@@ -161,47 +163,47 @@ oppgaveteksten sa `claude/p41-funfacts-forenkling`, samme situasjon som P34–P4
 ### Delplan
 
 **A. DB-migrasjon — ⚠️ MANUELT STEG (Morfar kjører i Supabase SQL Editor):**
-- [ ] Ny fil `v4/supabase/migrations/021_funfacts_tema.sql`:
+- [x] Ny fil `v4/supabase/migrations/021_funfacts_tema.sql`:
       `alter table schools add column if not exists facts_theme text;`
       (nullable fritekst; idempotent). INGEN RLS-endring — eksisterende
       `schools_write_admin` + `schools_read_public` dekker skriving/lesing.
 
 **B. Edge function `generate-facts` — ⚠️ MANUELT STEG (Morfar deployer i
 Supabase Dashboard etter kode-endring i repo):**
-- [ ] Antall styres av `count` i request-body (20 for «Erstatt alle»,
+- [x] Antall styres av `count` i request-body (20 for «Erstatt alle»,
       `20 − antall aktive` for «Fyll opp med nye»), validert i koden
       (heltall 1–20, default 20).
-- [ ] Funksjonen leser `facts_theme` selv fra `schools` (samme spørring som
+- [x] Funksjonen leser `facts_theme` selv fra `schools` (samme spørring som
       i dag henter `name`) og fletter det inn i prompten som en egen
       «Ekstra ønske fra skolen»-instruksjon når feltet er utfylt. Kun
       tekstens innhold — ingen annen skoleinfo blandes inn automatisk.
       (Skolenavnet brukes som i dag, uendret.)
 
 **C. Frontend `v4/app.js` + cache-bust (ingen manuelle steg):**
-- [ ] Pool-konstant `FUNFACTS_MAKS = 20`; overskrift «Funfacts (X/20)».
-- [ ] De to genereringsknappene fjernes; ny knapp «🔄 Forny» åpner en liten
+- [x] Pool-konstant `FUNFACTS_MAKS = 20`; overskrift «Funfacts (X/20)».
+- [x] De to genereringsknappene fjernes; ny knapp «🔄 Forny» åpner en liten
       valg-modal med to valg, begge med bekreftelse og `medAIOverlay` som i dag:
       - «Erstatt alle»: ALLE aktive soft-deletes, 20 nye genereres og settes inn.
       - «Fyll opp med nye»: eksisterende beholdes URØRT; genererer
         `20 − antall aktive` nye. Er poolen allerede full (≥ 20), er valget
         deaktivert med kort forklaring («Poolen er full — slett noen først»).
-- [ ] `fornyFunfactsRotasjon` skrives om til én hjelpefunksjon med
+- [x] `fornyFunfactsRotasjon` skrives om til én hjelpefunksjon med
       modus-parameter (erstatt-alle / fyll-opp) som begge valgene bruker.
-- [ ] Liste-visningen i `renderFaktaTab`: ny kolonne med `view_count` per rad
+- [x] Liste-visningen i `renderFaktaTab`: ny kolonne med `view_count` per rad
       (f.eks. «👁 12»), og sortering synkende på `view_count` (mest sette
       øverst; likt antall → nyeste sist som i dag). Rediger/slett per rad
       beholdes uendret.
-- [ ] Automatisk stille fornying fjernes: `sjekkOgFornyFunfacts` + kallet i
+- [x] Automatisk stille fornying fjernes: `sjekkOgFornyFunfacts` + kallet i
       `medAIOverlay` sin finally (app.js:431) tas bort — «Forny» blir eneste
       genereringsvei (selve poenget med forenklingen).
-- [ ] Nytt fritekst-felt «Temastyring» øverst i Funfacts-fanen med egen
+- [x] Nytt fritekst-felt «Temastyring» øverst i Funfacts-fanen med egen
       lagre-knapp → `schools.facts_theme` (oppdaterer også `APP.school`).
       Hjelpetekst forklarer at det brukes ved neste «Forny».
-- [ ] Beholdes uendret: «+ Legg til» (manuell), rediger/slett per rad,
+- [x] Beholdes uendret: «+ Legg til» (manuell), rediger/slett per rad,
       `view_count`-telling og `increment_fact_view` (trengs for tellerkolonnen
       og sorteringen). Manuelle tillegg kan midlertidig overstige 20 —
       «Erstatt alle» bringer poolen tilbake til 20.
-- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS ved behov + JS).
+- [x] Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS ved behov + JS).
 
 **D. Verifisering (etter Morfars manuelle steg A + B):**
 - [ ] Migrasjon 021 kjørt i SQL Editor (Morfar)
