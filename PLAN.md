@@ -56,8 +56,9 @@
 ### Venter på svar fra Morfar
 
 - ~~**Funfacts-forenkling**~~ — AVKLART 25. juli 2026: (a) fritekst,
-  (b) brukeren velger selv mellom «Erstatt alt» og «Erstatt 50 % (de mest
-  sette)». Se «Økt (P41)» nederst.
+  (b) brukeren velger selv mellom «Erstatt alle» og «Fyll opp med nye»
+  (revidert samme dag: «Erstatt 50 % (de mest sette)» utgikk).
+  Se «Økt (P41)» nederst.
 - **Skoleår-dimensjon for fag/klasser/subject_divisions** — status
   «utredning, ikke bygg», 5 åpne punkter, se UTREDNING-skolear-oppsett.md
   (seksjonen «Åpne punkter (avklares før bygging)»).
@@ -113,10 +114,17 @@ oppgaveteksten sa `claude/p41-funfacts-forenkling`, samme situasjon som P34–P4
 1. Poolen settes til 20 funfacts (i dag 100).
 2. De to genereringsmåtene («✨ Generer med AI» ~40 additivt + «🔄 Generer nye
    funfacts nå» bytt-5-mest-viste) slås sammen til ÉN «Forny»-handling der
-   brukeren velger: **«Erstatt alt»** eller **«Erstatt 50 % (de mest sette)»**.
+   brukeren velger: **«Erstatt alle»** (alt ut, 20 nye inn) eller
+   **«Fyll opp med nye»** (behold alt, generer `20 − antall aktive`).
+   (Revidert 25. juli 2026: tidligere forslag «Erstatt 50 % (de mest sette)»
+   UTGÅR — det slettet nettopp de mest populære faktaene, som var uønsket.)
 3. Nytt fritekst-felt i admin (Funfacts-fanen) for temastyring, som sendes med
    til `generate-facts` som ekstra instruksjon. Kun fritekst — ingen automatisk
    innblanding av skoleinfo.
+4. Synlig visningsteller i admin: `view_count` (finnes allerede, migrasjon 018)
+   vises som kolonne per funfact i Funfacts-fanen, og listen sorteres synkende
+   på `view_count` (mest sette øverst). Ingen ny sporing — admin sletter
+   uønskede per rad manuelt som i dag (soft delete).
 
 ### Kartlegging (dagens tilstand, verifisert 25. juli 2026)
 
@@ -160,8 +168,9 @@ oppgaveteksten sa `claude/p41-funfacts-forenkling`, samme situasjon som P34–P4
 
 **B. Edge function `generate-facts` — ⚠️ MANUELT STEG (Morfar deployer i
 Supabase Dashboard etter kode-endring i repo):**
-- [ ] Antall styres av `count` i request-body (20 for «Erstatt alt», 10 for
-      «Erstatt 50 %»), validert i koden (heltall 1–40, default 20).
+- [ ] Antall styres av `count` i request-body (20 for «Erstatt alle»,
+      `20 − antall aktive` for «Fyll opp med nye»), validert i koden
+      (heltall 1–20, default 20).
 - [ ] Funksjonen leser `facts_theme` selv fra `schools` (samme spørring som
       i dag henter `name`) og fletter det inn i prompten som en egen
       «Ekstra ønske fra skolen»-instruksjon når feltet er utfylt. Kun
@@ -171,11 +180,17 @@ Supabase Dashboard etter kode-endring i repo):**
 **C. Frontend `v4/app.js` + cache-bust (ingen manuelle steg):**
 - [ ] Pool-konstant `FUNFACTS_MAKS = 20`; overskrift «Funfacts (X/20)».
 - [ ] De to genereringsknappene fjernes; ny knapp «🔄 Forny» åpner en liten
-      valg-modal: «Erstatt alt» (20 nye; ALLE gamle soft-deletes) /
-      «Erstatt 50 % (de mest sette)» (10 nye; de 10 med høyest `view_count`
-      soft-deletes). Begge med bekreftelse og `medAIOverlay` som i dag.
+      valg-modal med to valg, begge med bekreftelse og `medAIOverlay` som i dag:
+      - «Erstatt alle»: ALLE aktive soft-deletes, 20 nye genereres og settes inn.
+      - «Fyll opp med nye»: eksisterende beholdes URØRT; genererer
+        `20 − antall aktive` nye. Er poolen allerede full (≥ 20), er valget
+        deaktivert med kort forklaring («Poolen er full — slett noen først»).
 - [ ] `fornyFunfactsRotasjon` skrives om til én hjelpefunksjon med
-      modus-parameter (alt / halvparten) som begge valgene bruker.
+      modus-parameter (erstatt-alle / fyll-opp) som begge valgene bruker.
+- [ ] Liste-visningen i `renderFaktaTab`: ny kolonne med `view_count` per rad
+      (f.eks. «👁 12»), og sortering synkende på `view_count` (mest sette
+      øverst; likt antall → nyeste sist som i dag). Rediger/slett per rad
+      beholdes uendret.
 - [ ] Automatisk stille fornying fjernes: `sjekkOgFornyFunfacts` + kallet i
       `medAIOverlay` sin finally (app.js:431) tas bort — «Forny» blir eneste
       genereringsvei (selve poenget med forenklingen).
@@ -183,14 +198,16 @@ Supabase Dashboard etter kode-endring i repo):**
       lagre-knapp → `schools.facts_theme` (oppdaterer også `APP.school`).
       Hjelpetekst forklarer at det brukes ved neste «Forny».
 - [ ] Beholdes uendret: «+ Legg til» (manuell), rediger/slett per rad,
-      `view_count`-telling og `increment_fact_view` (trengs for «mest sette»).
-      Manuelle tillegg kan midlertidig overstige 20 — «Erstatt alt» bringer
-      poolen tilbake til 20.
+      `view_count`-telling og `increment_fact_view` (trengs for tellerkolonnen
+      og sorteringen). Manuelle tillegg kan midlertidig overstige 20 —
+      «Erstatt alle» bringer poolen tilbake til 20.
 - [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS ved behov + JS).
 
 **D. Verifisering (etter Morfars manuelle steg A + B):**
 - [ ] Migrasjon 021 kjørt i SQL Editor (Morfar)
 - [ ] Ny `generate-facts` deployet i Dashboard (Morfar)
-- [ ] Test i prod: «Erstatt alt» gir 20 nye; «Erstatt 50 %» bytter de 10 mest
-      sette; temafeltet påvirker innholdet; manuell +/rediger/slett virker.
+- [ ] Test i prod: «Erstatt alle» gir 20 nye; «Fyll opp med nye» fyller
+      nøyaktig opp til 20 uten å røre eksisterende (og er deaktivert ved full
+      pool); tellerkolonnen vises og listen sorteres mest-sett-øverst;
+      temafeltet påvirker innholdet; manuell +/rediger/slett virker.
 - [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
