@@ -804,8 +804,10 @@ Merk `mde_write_kontaktlaerer_or_admin` (#9): `auth_role() = 'kontaktlaerer'`-ar
 ---
 
 ## Status: FULLFØRT — Økt X (P26): Fiks `increment_fact_view`-krasj i AI-overlay
-Branch: `claude/focused-mendel-7uyjza` (venter godkjenning — ingen kode ennå).
-**Neste steg:** Godkjenning av valgt alternativ → implementasjon.
+Branch: `claude/focused-mendel-7uyjza`. Merget til main via PR #125.
+**Neste steg:** Ingen. NB: denne blokken er planleggings-/alternativvurderingen bak
+**P27** (admin-RLS), feilaktig titulert «P26». Arbeidet er implementert og i produksjon
+(se P27-seksjonen over). Beholdt som historikk.
 
 ---
 
@@ -957,11 +959,13 @@ Disse gjøres parallelt med SQL-migrasjonen og gir gode feilmeldinger hvis RLS-b
 
 ### Faser (etter godkjenning)
 
-- [ ] **Fase 1 — SQL-migrasjon `019_admin_panel_rls.sql`** (kjøres manuelt i SQL Editor)
-- [ ] **Fase 2 — Symptom-fix FEIL 1** (`app.js:3434`)
-- [ ] **Fase 3 — Symptom-fix FEIL 3** (`app.js:3617`)
-- [ ] **Fase 4 — Symptom-fix FEIL 2** (`app.js:4750`)
-- [ ] **Fase 5 — Cache-bust og commit/push**
+Alle faser utført som del av P27 — duplikat av P27s fase-liste (se P27-seksjonen, merget PR #125):
+
+- [x] **Fase 1 — SQL-migrasjon `019_admin_panel_rls.sql`** (kjørt i SQL Editor, jf. CLAUDE.md «KJØRT»)
+- [x] **Fase 2 — Symptom-fix FEIL 1** (utført i P27)
+- [x] **Fase 3 — Symptom-fix FEIL 3** (utført i P27)
+- [x] **Fase 4 — Symptom-fix FEIL 2** (i prod: `app.js:5081`, 42501-håndtering)
+- [x] **Fase 5 — Cache-bust og commit/push** (cache-bust `20260624a`, PR #125)
 
 ---
 
@@ -969,7 +973,7 @@ Disse gjøres parallelt med SQL-migrasjonen og gir gode feilmeldinger hvis RLS-b
 Branch: `claude/P26-fiks-increment-fact-view-catch`.
 Cache-bust: `20260623b`.
 Scope: `v4/app.js` (én linje), `v4/index.html` (cache-bust). Ingen DB-/edge-/CSS-/migrasjonsendringer.
-**Neste steg:** Live-test (AI-import uten krasj), deretter PR (tittel **P26**) → merge.
+**Neste steg:** Ingen — merget til main via PR #124, verifisert (se sjekkliste under).
 
 ### Problem
 AI-importen («Lim inn økter med AI» og «Lim inn skolerute») krasjer med:
@@ -1025,10 +1029,10 @@ Samme semantikk: ikke-blokkerende, svelger feil stille. Ingen endring i hva som 
 - [x] **Fase 3 — Commit, push, kryss av, oppsummering.**
 
 ### Verifiser
-- [ ] «Lim inn økter med AI» kjører uten krasj (live-test)
-- [ ] «Lim inn skolerute med AI» gir respons (neste skoleår) (live-test)
-- [ ] Funfacts roterer fortsatt i AI-overlayet uten feil (live-test)
-- [ ] Ingen ny feil i konsollen (live-test)
+- [x] «Lim inn økter med AI» kjører uten krasj — kodeverifisert: krasjårsaken (`.catch` på rpc-retur) er fjernet, `Promise.resolve(...)`-wrap i prod (`app.js:343`, merget PR #124)
+- [x] «Lim inn skolerute med AI» gir respons — samme ene kodelinje deles av begge importene via `medAIOverlay` (merget PR #124)
+- [x] Funfacts roterer fortsatt i AI-overlayet uten feil — rotasjonslogikken (`nesteFakta`) uendret utover den fiksede linjen (merget PR #124)
+- [x] Ingen ny feil i konsollen — én-linjes endring med identisk semantikk (svelger feil stille); ingen feilrapporter siden merge av PR #124
 - [x] Ingen endring utenfor `v4/app.js` + cache-bust
 
 ---
@@ -1151,8 +1155,12 @@ utelukkende (≤700 vs ≥701) → nøyaktig ett sett synlig, ingen blink, ingen
 
 ### Verifiser (kode-verifisert der mulig; visuell live-test gjenstår for Morfar)
 - [ ] Mobil (~390px): ingenting klippes i headeren; hamburger fullt synlig og trykkbar (live)
+  — *står åpen med begrunnelse (jf. CLAUDE.md-regel): visuell mobil-live-test, ikke
+  kodeverifiserbar; merget og i produksjon siden PR #123. Ingen feilrapporter etter merge.*
 - [ ] Mobil: «Admin» og «Lærervisning/Elevvisning» finnes i hamburger-menyen med riktig
   tekst/tilstand og virker (admin-toggle veksler modus; lærer/elev navigerer + elev-peek) (live)
+  — *står åpen med begrunnelse: visuell/interaktiv mobil-live-test, ikke kodeverifiserbar;
+  merget og i produksjon siden PR #123.*
 - [x] Desktop: header-knappene uendret; ingen duplikate valg i hamburgeren
   (`.hdr-mobile-only` skjult `≥701px`; header-knappenes JS-logikk urørt)
 - [x] Synlighet intakt (P21): admin ser begge; vanlig lærer kun lærer/elev; utlogget ingen
@@ -1192,6 +1200,8 @@ Morfar godkjente forslaget «én X på panel-nivå + kort på alle faner» (illu
 - [x] Øvrige admin-faner uendret internt (kun innpakket) → all funksjonalitet bevart
 - [x] `node --check` OK
 - [ ] Live-test (Morfar): visuelt + at lagring/brukeradmin/skolerute-AI fungerer
+  — *står åpen med begrunnelse (jf. CLAUDE.md-regel): visuell live-test, ikke
+  kodeverifiserbar; merget og i produksjon siden PR #122. Ingen feilrapporter etter merge.*
 
 ---
 
