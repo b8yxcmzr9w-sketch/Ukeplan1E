@@ -2,14 +2,15 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P40
-- **Pågående:** P41 (kode bygget og pushet — gjenstår: Morfars manuelle steg
-  A/B + prod-test, se D-sjekklisten i P41-seksjonen)
+- **Siste fullførte P-nummer:** P41
+- **Pågående:** ingen
 - **Neste ledige P-nummer:** P42
 - **Dato sist oppdatert:** 25. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
   «Nå»-knappen etter skoleslutt (juli 2027 med 26/27 aktivt); maskinverifisert,
-  ekte manuell bekreftelse skjer naturlig når datoen inntreffer
+  ekte manuell bekreftelse skjer naturlig når datoen inntreffer.
+  P41s prod-test av frontenden — kan først gjøres ETTER merge (ingen
+  preview-deploy); migrasjon 021 og ny generate-facts er allerede ute.
 
 ---
 
@@ -108,8 +109,10 @@ som ikke sto i DECISIONS.md er flyttet dit.
 
 **Branch:** `claude/p41-funfacts-forenkling-9hx7zx` (miljøets tildelte branch —
 oppgaveteksten sa `claude/p41-funfacts-forenkling`, samme situasjon som P34–P40).
-**Status:** Godkjent («kjør» 25. juli 2026) — kode bygget og pushet. Gjenstår:
-Morfars manuelle steg (migrasjon 021 FØR deploy av generate-facts) + prod-test.
+**Status:** FULLFØRT 25. juli 2026 — kode merget til main (squash), Morfars
+manuelle steg (migrasjon 021 + deploy av generate-facts) gjennomført. Eneste
+åpne punkt: prod-test av frontenden, som først kan gjøres etter merge (ingen
+preview-deploy) — se statuslinjen.
 
 ### Mål
 
@@ -206,10 +209,13 @@ Supabase Dashboard etter kode-endring i repo):**
 - [x] Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS ved behov + JS).
 
 **D. Verifisering (etter Morfars manuelle steg A + B):**
-- [ ] Migrasjon 021 kjørt i SQL Editor (Morfar)
-- [ ] Ny `generate-facts` deployet i Dashboard (Morfar)
+- [x] Migrasjon 021 kjørt i SQL Editor (Morfar, 25. juli 2026)
+- [x] Ny `generate-facts` deployet i Dashboard (Morfar, 25. juli 2026)
 - [ ] Test i prod: «Erstatt alle» gir 20 nye; «Fyll opp med nye» fyller
       nøyaktig opp til 20 uten å røre eksisterende (og er deaktivert ved full
       pool); tellerkolonnen vises og listen sorteres mest-sett-øverst;
       temafeltet påvirker innholdet; manuell +/rediger/slett virker.
-- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
+      (BEGRUNNET ÅPEN ved merge: frontenden kan ikke verifiseres visuelt før
+      den er merget til main — ingen preview-deploy. Lukkes av Morfar etter
+      merge; står også i statuslinjen.)
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
