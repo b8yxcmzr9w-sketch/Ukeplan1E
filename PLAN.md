@@ -3,8 +3,9 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P41
-- **Pågående:** ingen
-- **Neste ledige P-nummer:** P42
+- **Pågående:** P42 (kompakt «Alle mine økter»-lærervisning — delplan skrevet,
+  venter på Morfars godkjenning før implementasjon)
+- **Neste ledige P-nummer:** P43
 - **Dato sist oppdatert:** 25. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
   «Nå»-knappen etter skoleslutt (juli 2027 med 26/27 aktivt); maskinverifisert,
@@ -216,3 +217,129 @@ Supabase Dashboard etter kode-endring i repo):**
       (Sto begrunnet åpen ved merge — ingen preview-deploy; verifisert i
       produksjon av Morfar 25. juli 2026 etter merge.)
 - [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
+
+---
+
+## Økt (P42): Kompakt «Alle mine økter»-lærervisning
+
+**Branch:** `claude/pn-kompakt-laerervisning-05evwh` (miljøets tildelte branch —
+oppgaveteksten sa `claude/P42-kompakt-laerervisning`, samme situasjon som P34–P41).
+**Scope:** KUN `v4/app.js`, `v4/style.css` og cache-bust i `v4/index.html`.
+Ingen DB-migrasjon, ingen edge functions.
+**Status:** DELPLAN — venter på Morfars godkjenning før implementasjon.
+
+### Kartlegging (FASE 1, verifisert 25. juli 2026)
+
+- **Render-funksjon:** `renderAlleOkterTab(container, autoScroll)`
+  (app.js:1976–2280), montert fra `setTab` i `renderLaererView`
+  (app.js:1577). Henter lærerens økter (aktivt skoleår) + skoleruten,
+  grupperer per uke og sorterer i skoleår-rekkefølge via `ukePosisjon`.
+- **Ukeoverskrifter i dag:** én `h3.min-plan-uke[data-uke=N]` per uke
+  («Uke N», app.js:2136). Overskriftene er ANKRE for tre mekanismer:
+  «Nå»-knappens scroll-mål (app.js:2221–2260), P22-scroll-spy
+  `_lastTopWeek` (app.js:2263–2278) og `scroll-margin-top` (style.css:664).
+- **Økt-rader i dag:** desktop = `div.min-plan-rad` (flex, app.js:2182–2198)
+  med kolonner ☑ / klasse+dag+dato / fagkode-pill, deretter innholds-huggende
+  P/G / aktivitet / oppmøte / info + kebab (style.css:683–723; radhøyde
+  drives av `padding: 7px 4px`). Mobil (≤700px) = kort-liste med
+  `renderSessionCard` (app.js:2203–2214).
+- **Feltkilder:** fagkode = `subjects.short_code` (fallback `name`) +
+  `subjects.color_hex` (app.js:2188–2189); dato beregnes fra uke + skoleår
+  via `skoleaarKalenderaar` + `isoWeekToDate` + `formatDatoNO`
+  (app.js:2172–2174); «tittel» = `sessions.activity` (app.js:2191);
+  eget kapittel-felt FINNES IKKE i skjemaet — kandidaten til kapittelhint
+  er `sessions.info` (app.js:2193) eller kapittel skrevet inn i
+  aktivitetsteksten. Avklares (åpent spørsmål 2).
+- **Ferie/fri i dag:** `lagFridagMerke` (app.js:2073–2087) → blokk-rad
+  `div.min-plan-fridag` sortert inn på dagsposisjon; rene ferieuker får
+  merket rett under ukeoverskriften (app.js:2144–2147).
+- **Sticky i dag:** `.fane-bar` er allerede sticky (style.css:419–424);
+  klassevelgeren (fane 0) ligger i den. Bulk-baren (app.js:2111) og en
+  eventuell modusvelger er IKKE sticky i dag.
+
+### Mål (fra oppgaven)
+
+Kompakt listevisning med faste kolonner per rad — tomrom er informasjon,
+IKKE auto-fit grid:
+
+1. **Uke-kolonne** (primær tidsenhet): ukenummer kun på ukas FØRSTE rad,
+   tom celle (fast bredde) på resten av ukas rader.
+2. **Ukedag + dato**-kolonne, deretter **fagkode-pill**, deretter
+   **tittel** på én linje med **kapittelhint inline i dempet farge**.
+3. Tittel avkortes til én linje med ellipse. «mer…» vises inline til
+   høyre KUN når teksten faktisk overflyter (målt `scrollWidth >
+   clientWidth`, re-måles ved resize); klikk folder ut/inn.
+4. Hover viser full tekst via `title`-attributt — kun på enheter med
+   ekte hover (`@media (hover: hover)`-vakt i JS/CSS).
+5. Halvert radhøyde i forhold til dagens rader.
+6. Ferie/fri som TYNN markør-rad med ukenummer i samme uke-kolonne —
+   ingen egen overskriftsrad.
+7. «Kompakt»/«Detaljer»-toggle: Detaljer fjerner avkortingen.
+8. Sticky klasse-/modusvelger.
+
+### Delplan
+
+**A. Kompakt rad-layout (app.js + style.css):**
+- [ ] Ukeoverskriftene `h3.min-plan-uke` erstattes i kompaktmodus av en
+      uke-KOLONNE: fast smal første kolonne som viser ukenummeret kun på
+      ukas første rad (økt eller fridag), tom ellers. `data-uke` flyttes
+      til ukas første rad slik at «Nå»-knapp, P22-scroll-spy og
+      `scroll-margin-top` fortsatt har ankre (samme selektor-mønster,
+      justert til rad-elementet).
+- [ ] Faste kolonner (flex med faste bredder, IKKE auto-fit grid):
+      ☑ · uke · dag+dato · fagkode-pill · tittel(+kapittelhint dempet,
+      inline) · kebab ytterst til høyre. Tomme celler beholder bredden.
+- [ ] Halvert radhøyde: `padding` ~3px vertikalt, én tekstlinje,
+      `white-space: nowrap` + `text-overflow: ellipsis` på tittelfeltet.
+- [ ] Fridager: tynn markør-rad i samme kolonne-oppsett (ukenummer i
+      uke-kolonnen når fridagen er ukas første rad), med ikon + tittel +
+      type i tittel-kolonnen. Rene ferieuker = én slik tynn rad.
+- [ ] Klassenavn i kompaktraden: avklares mot prototypen (åpent
+      spørsmål 3) — forslag: liten dempet klasse-etikett mellom dato og
+      fagkode-pill.
+
+**B. «mer…»-utfoldning + hover-title (app.js):**
+- [ ] Etter render: mål `scrollWidth > clientWidth` per tittelfelt;
+      kun da vises inline «mer…»-knapp til høyre. Klikk toggler
+      utfoldet (fjerner nowrap → full tekst, «mer…» → «mindre»).
+      Re-måling ved `resize` (debounced, ryddes ved re-render som
+      `_obs`/`_spyObs`).
+- [ ] `title`-attributt med full tekst settes kun under
+      `matchMedia('(hover: hover)')`.
+
+**C. Kompakt/Detaljer-toggle + sticky (app.js + style.css):**
+- [ ] Toggle «Kompakt | Detaljer» øverst i fanen. Kompakt = ny visning
+      (standard); Detaljer = dagens rad-layout UENDRET (gjenbrukes som
+      egen modus — lav regresjonsrisiko) og uten avkorting som i dag.
+      Valget huskes funksjons-statisk i sesjonen (samme prinsipp som
+      `_lastTopWeek`, P22).
+- [ ] Togglen gjøres sticky rett under den allerede stickye `.fane-bar`
+      (klassevelgeren ligger der fra før → «sticky klasse-/modusvelger»
+      oppnås uten å røre fane-raden).
+- [ ] Bulk-valg (☑ + bulk-bar), kebab-meny og høyreklikk beholdes i
+      begge moduser.
+- [ ] Mobil (≤700px): kort-listen beholdes som i dag i denne økten
+      (kompaktmodus er en desktop-forbedring; åpent spørsmål 4).
+- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS + JS) ved merge.
+
+**D. Verifisering:**
+- [ ] «Nå»-knapp + auto-scroll + P22-retur («der du slapp») virker i
+      begge moduser.
+- [ ] «mer…» vises kun ved faktisk overflyt, forsvinner/kommer ved
+      resize, folder ut/inn ved klikk.
+- [ ] Fridager/rene ferieuker vises som tynne markører med riktig
+      ukenummer i uke-kolonnen.
+- [ ] Uke-kolonnen viser ukenummer kun på ukas første rad; tomrommet
+      står (ingen kollaps).
+- [ ] PLAN.md-sjekkliste + statuslinje oppdateres i samme økt som merge.
+
+### Åpne spørsmål til Morfar (før implementasjon)
+
+1. **Referanse-prototypen:** lim gjerne inn den løse HTML-en — kolonnerekkefølge,
+   bredder og «mer…»-utseende justeres etter den.
+2. **Kapittelhint:** øktene har feltene `activity` (Aktivitet), `info` og
+   `meeting_point` — ikke noe eget kapittel-felt. Er kapittelhintet
+   `info`-feltet vist dempet etter tittelen, eller kapittel skrevet inn i
+   aktivitetsteksten (og skal `info`/📍 oppmøte da utelates i kompaktmodus)?
+3. **Klassenavn** i kompaktraden — hvor/om (se A siste punkt)?
+4. **Mobil:** OK at kort-listen beholdes uendret i denne økten?
