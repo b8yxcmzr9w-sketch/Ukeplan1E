@@ -95,6 +95,17 @@
 - **Komprimert kort-innhold på mobil:** vis kun **Klasse, Fag og Aktivitet**;
   kort trykk utvider resten.
 
+## 5. Kompaktmodus på mobil i «Alle mine økter» (fra P42)
+
+> Notert juli 2026 under P42 (kompakt lærervisning). Besluttet av Morfar:
+> mobil-kortlisten ble bevisst holdt UENDRET i P42 — kompaktmodusen med faste
+> kolonner gjelder kun desktop (≥701px), og modusvelgeren er skjult på mobil.
+
+- Vurder en mobil-tilpasset kompaktvisning av «Alle mine økter» (én linje per
+  økt er neppe realistisk på smal skjerm — trolig en tettere kortvariant).
+- Gjenbruk prinsippene fra P42: uke som primær tidsenhet, «vis kun ved første
+  forekomst» for uke/dato, tomrom er informasjon.
+
 ## Foreslått rekkefølge (til diskusjon)
 
 1. Plassbruk på mobil (punkt 1) — rask gevinst, ren CSS/layout.

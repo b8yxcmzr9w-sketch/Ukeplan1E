@@ -3,10 +3,10 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P41
-- **Pågående:** P42 (kompakt «Alle mine økter»-lærervisning — delplan skrevet,
-  venter på Morfars godkjenning før implementasjon)
+- **Pågående:** P42 (kompakt «Alle mine økter»-lærervisning — implementert og
+  maskinverifisert headless; venter på PR-merge + Morfars sjekk i produksjon)
 - **Neste ledige P-nummer:** P43
-- **Dato sist oppdatert:** 25. juli 2026
+- **Dato sist oppdatert:** 27. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
   «Nå»-knappen etter skoleslutt (juli 2027 med 26/27 aktivt); maskinverifisert,
   ekte manuell bekreftelse skjer naturlig når datoen inntreffer
@@ -226,7 +226,24 @@ Supabase Dashboard etter kode-endring i repo):**
 oppgaveteksten sa `claude/P42-kompakt-laerervisning`, samme situasjon som P34–P41).
 **Scope:** KUN `v4/app.js`, `v4/style.css` og cache-bust i `v4/index.html`.
 Ingen DB-migrasjon, ingen edge functions.
-**Status:** DELPLAN — venter på Morfars godkjenning før implementasjon.
+**Status:** IMPLEMENTERT 27. juli 2026 (delplan godkjent av Morfar samme dag).
+Maskinverifisert med headless Chromium-røyktest (desktop 24 sjekker + mobil
+7 sjekker, alle OK); gjenstår PR-merge og Morfars visuelle sjekk i produksjon.
+
+**Morfars svar på de åpne spørsmålene (27. juli 2026):**
+1. Prototypen godkjent som den er, med justeringene under.
+2. Kapittelhint = `info`-feltet, dempet inline etter tittelen (ikke ny
+   funksjon — den grå teksten visningen alt viser). 📍 oppmøte utelates i
+   kompaktmodus.
+3. Liten dempet klasse-etikett mellom dato og fagkode-pill.
+4. Mobil-kortlisten uendret i denne økten; kompakt-på-mobil lagt som punkt 5 i
+   `BACKLOGG-UX-MOBIL.md`.
+
+**Ekstra regel (Morfar):** «vis kun ved første forekomst» gjelder uke, dato OG
+klasse — ukenummer på ukas første rad, dato på dagens første økt, klasse ved
+klassebytte innen dagen. Tomme celler beholder fast bredde (tomrom er
+informasjon). Implementert med klasse-gruppering innen dagen i sorteringen
+(dag → fridag først → klasse → fag) så mønsteret blir meningsfullt.
 
 ### Kartlegging (FASE 1, verifisert 25. juli 2026)
 
@@ -280,66 +297,55 @@ IKKE auto-fit grid:
 ### Delplan
 
 **A. Kompakt rad-layout (app.js + style.css):**
-- [ ] Ukeoverskriftene `h3.min-plan-uke` erstattes i kompaktmodus av en
-      uke-KOLONNE: fast smal første kolonne som viser ukenummeret kun på
-      ukas første rad (økt eller fridag), tom ellers. `data-uke` flyttes
-      til ukas første rad slik at «Nå»-knapp, P22-scroll-spy og
-      `scroll-margin-top` fortsatt har ankre (samme selektor-mønster,
-      justert til rad-elementet).
-- [ ] Faste kolonner (flex med faste bredder, IKKE auto-fit grid):
-      ☑ · uke · dag+dato · fagkode-pill · tittel(+kapittelhint dempet,
-      inline) · kebab ytterst til høyre. Tomme celler beholder bredden.
-- [ ] Halvert radhøyde: `padding` ~3px vertikalt, én tekstlinje,
-      `white-space: nowrap` + `text-overflow: ellipsis` på tittelfeltet.
-- [ ] Fridager: tynn markør-rad i samme kolonne-oppsett (ukenummer i
-      uke-kolonnen når fridagen er ukas første rad), med ikon + tittel +
-      type i tittel-kolonnen. Rene ferieuker = én slik tynn rad.
-- [ ] Klassenavn i kompaktraden: avklares mot prototypen (åpent
-      spørsmål 3) — forslag: liten dempet klasse-etikett mellom dato og
-      fagkode-pill.
+- [x] Uke-KOLONNE i kompaktmodus: fast smal første kolonne med ukenummer kun
+      på ukas første rad (økt eller fridag), tom ellers. h3-overskriftene
+      beholdes i DOM (mobil-ankre) men skjules på desktop via CSS;
+      `data-uke` + `.mp-anker` ligger på ukas første rad, så «Nå»-knapp,
+      P22-scroll-spy og `scroll-margin-top` har ankre i begge moduser.
+- [x] Faste kolonner (flex med faste bredder, IKKE auto-fit grid):
+      ☑ · uke · dag+dato · klasse (dempet) · fagkode-pill · tittel
+      (+kapittelhint = `info` dempet inline i parentes; P/G-parti tas med i
+      hintet) · kebab ytterst til høyre. Tomme celler beholder bredden.
+      «Første forekomst»-regelen for uke/dato/klasse (se over).
+- [x] Halvert radhøyde: målt 22px kompakt mot 43px detaljer (headless).
+      Én tekstlinje, `white-space: nowrap` + `text-overflow: ellipsis`.
+- [x] Fridager: tynn markør-rad (`.mpk-fridag`) i samme kolonne-oppsett med
+      ikon + tittel + type + datospenn dempet. Rene ferieuker = én slik rad
+      (mobilen beholder P18-merket via `.mp-kun-mobil`).
+- [x] Klasse-etikett mellom dato og fagkode-pill (Morfars svar 3).
 
 **B. «mer…»-utfoldning + hover-title (app.js):**
-- [ ] Etter render: mål `scrollWidth > clientWidth` per tittelfelt;
-      kun da vises inline «mer…»-knapp til høyre. Klikk toggler
-      utfoldet (fjerner nowrap → full tekst, «mer…» → «mindre»).
-      Re-måling ved `resize` (debounced, ryddes ved re-render som
-      `_obs`/`_spyObs`).
-- [ ] `title`-attributt med full tekst settes kun under
-      `matchMedia('(hover: hover)')`.
+- [x] `maalOverflyt()` måler `scrollWidth > clientWidth` per tittelfelt etter
+      layout; «mer…» vises kun da, inline til høyre. Klikk toggler utfoldet
+      (`.utvidet` fjerner nowrap → full tekst, knapp → «mindre»). Debounced
+      `resize`-lytter re-måler, ryddes ved re-render som `_obs`/`_spyObs`
+      (+ sentinel som fjerner lytteren når en annen fane tar containeren).
+      Kryssing av 700px-brekkpunktet re-rendrer fanen (ankervalg avhenger
+      av det; posisjon bevares via `_lastTopWeek`).
+- [x] `title`-attributt med full tekst kun under `matchMedia('(hover: hover)')`.
 
 **C. Kompakt/Detaljer-toggle + sticky (app.js + style.css):**
-- [ ] Toggle «Kompakt | Detaljer» øverst i fanen. Kompakt = ny visning
-      (standard); Detaljer = dagens rad-layout UENDRET (gjenbrukes som
-      egen modus — lav regresjonsrisiko) og uten avkorting som i dag.
-      Valget huskes funksjons-statisk i sesjonen (samme prinsipp som
-      `_lastTopWeek`, P22).
-- [ ] Togglen gjøres sticky rett under den allerede stickye `.fane-bar`
-      (klassevelgeren ligger der fra før → «sticky klasse-/modusvelger»
-      oppnås uten å røre fane-raden).
-- [ ] Bulk-valg (☑ + bulk-bar), kebab-meny og høyreklikk beholdes i
-      begge moduser.
-- [ ] Mobil (≤700px): kort-listen beholdes som i dag i denne økten
-      (kompaktmodus er en desktop-forbedring; åpent spørsmål 4).
-- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS + JS) ved merge.
+- [x] Toggle «Kompakt | Detaljer» øverst i fanen. Kompakt = standard;
+      Detaljer = dagens rad-layout UENDRET (inkl. 📍 oppmøte, uten
+      avkorting som i dag). Valget huskes funksjons-statisk
+      (`renderAlleOkterTab._modus`, samme prinsipp som `_lastTopWeek`).
+- [x] Togglen er sticky rett under den stickye `.fane-bar` (px-topp måles i
+      JS); klassevelgeren ligger i faneraden fra før → «sticky klasse-/
+      modusvelger» uten å røre fane-raden. Skjult på mobil.
+- [x] Bulk-valg (☑ + bulk-bar), kebab-meny og høyreklikk beholdes i
+      begge moduser (felles `lagCheckbox`-synk som før).
+- [x] Mobil (≤700px): kort-listen uendret (verifisert headless; kompakt-på-
+      mobil → `BACKLOGG-UX-MOBIL.md` punkt 5).
+- [x] Bump `?v=20260727a` i `v4/index.html` (CSS + JS).
 
 **D. Verifisering:**
-- [ ] «Nå»-knapp + auto-scroll + P22-retur («der du slapp») virker i
-      begge moduser.
-- [ ] «mer…» vises kun ved faktisk overflyt, forsvinner/kommer ved
-      resize, folder ut/inn ved klikk.
-- [ ] Fridager/rene ferieuker vises som tynne markører med riktig
-      ukenummer i uke-kolonnen.
-- [ ] Uke-kolonnen viser ukenummer kun på ukas første rad; tomrommet
-      står (ingen kollaps).
-- [ ] PLAN.md-sjekkliste + statuslinje oppdateres i samme økt som merge.
-
-### Åpne spørsmål til Morfar (før implementasjon)
-
-1. **Referanse-prototypen:** lim gjerne inn den løse HTML-en — kolonnerekkefølge,
-   bredder og «mer…»-utseende justeres etter den.
-2. **Kapittelhint:** øktene har feltene `activity` (Aktivitet), `info` og
-   `meeting_point` — ikke noe eget kapittel-felt. Er kapittelhintet
-   `info`-feltet vist dempet etter tittelen, eller kapittel skrevet inn i
-   aktivitetsteksten (og skal `info`/📍 oppmøte da utelates i kompaktmodus)?
-3. **Klassenavn** i kompaktraden — hvor/om (se A siste punkt)?
-4. **Mobil:** OK at kort-listen beholdes uendret i denne økten?
+- [x] Maskinverifisert (headless Chromium med stubbet Supabase, desktop
+      1200px + mobil 480px): uke/dato/klasse kun ved første forekomst med
+      bevart tomrom; fridager som tynne markører med riktig ukenummer;
+      «mer…» kun ved faktisk overflyt + folder ut/inn; title-attributt;
+      modusbytte begge veier; mobil-kortliste uendret; ingen JS-feil.
+- [ ] Morfars sjekk i produksjon etter merge: «Nå»-knapp + auto-scroll +
+      P22-retur («der du slapp») i begge moduser, «mer…» ved vindus-resize,
+      og generelt utseende mot prototypen. (Står begrunnet åpen ved push —
+      ingen preview-deploy; samme mønster som P41.)
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt.
