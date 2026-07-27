@@ -3,8 +3,8 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P42
-- **Pågående:** ingen
-- **Neste ledige P-nummer:** P43
+- **Pågående:** P43 (delplan skrevet, venter på Morfars godkjenning)
+- **Neste ledige P-nummer:** P44
 - **Dato sist oppdatert:** 27. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
   «Nå»-knappen etter skoleslutt (juli 2027 med 26/27 aktivt); maskinverifisert,
@@ -349,3 +349,95 @@ IKKE auto-fit grid:
       og generelt utseende mot prototypen. (Verifisert i produksjon av
       Morfar 27. juli 2026 — «godkjent!».)
 - [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt.
+
+---
+
+## Økt (P43): Dobbel parentes i kompaktmodus + «planleggingsdag» → «undervisningsfri»
+
+**Branch:** `claude/pn-doble-parentes-planleggingsdag-0bh4ly` (miljøets tildelte
+branch — oppgaveteksten sa `claude/PN-kort-beskrivelse`, samme situasjon som
+P34–P42).
+**Scope:** KUN `v4/app.js` + cache-bust i `v4/index.html`. Ingen DB-migrasjon,
+ingen edge functions, ingen manuelle Supabase-steg.
+**Status:** delplan skrevet, venter på Morfars godkjenning.
+
+### Kartlegging (FASE 1, verifisert 27. juli 2026)
+
+**Funn 1 — dobbel parentes i kompaktmodus:**
+- **Kompakt:** `lagKompaktRad` (app.js:2101–2141) bygger
+  `hint = [partitekst, s.info].join(' · ')` (app.js:2107) og pakker HELE
+  hintet i parentes: `(${hint})` (app.js:2113, samme i hover-tooltip
+  app.js:2116). Info lagret som «(Klær til naturbruk, kap. 2)» blir dermed
+  «((Klær til naturbruk, kap. 2))».
+- **Detaljer:** desktop-raden viser `s.info` RÅTT uten innpakking
+  (app.js:2362, `.mp-info`). Mobil-kortlisten bruker `renderSessionCard`
+  (delt med elevvisningen, app.js:1406/1447) — også rå visning.
+- **Datanivå:** koden legger ALDRI til parentes ved lagring (økt-modalene
+  sender tekstfeltet rått, AI-importen likeså). Importmigrasjonene 014–016
+  har ingen info-verdier med omsluttende parentes (015:86 har f.eks.
+  `'Klær til naturbruk, kap. 2'` uten). Konklusjon: parentesene er skrevet
+  inn manuelt av lærer i enkelte prod-rader → lagringen er INKONSEKVENT
+  (noen med, noen uten). Robust fiks må derfor normalisere ved VISNING —
+  ingen SQL-opprydding nødvendig.
+
+**Funn 2 — «Planleggingsdag · planleggingsdag»:**
+- Kategoriteksten i fridag-merket kommer fra `kalenderTypeNavn(t)`
+  (app.js:172–174) som i dag KUN mapper `helligdag` → «høytid»; alle andre
+  typer returneres rått. Merket rendrer «tittel · kategori» i
+  `lagFridagMerke` (Detaljer, app.js:2094) og `lagKompaktFridagRad`
+  (kompakt, app.js:2160). Rader med tittel «Planleggingsdag» + type
+  `planleggingsdag` gir dermed dobbelvisningen.
+- **Datanivå:** `school_calendar.type` er enum
+  `ferie|helligdag|planleggingsdag|annet` (migrasjon 012). Dette er et RENT
+  RENDRINGSPROBLEM — samme mønster som helligdag→«høytid» (kun visningstekst,
+  DB-verdien beholdes). Ingen migrasjon, ingen endring av eksisterende rader.
+- **Andre steder `planleggingsdag` brukes (alle på DB-verdien, uendret):**
+  spørringsfiltre app.js:980 (`finnFridag`), 1294/1909 (fridag-sjekk i
+  elev-/klassevisning), 1998 («Alle mine økter»); ikon-fallback app.js:2077;
+  admin-skolerutefanen: badge app.js:5036 + type-dropdowns app.js:5190/5251
+  (begge bruker alt `kalenderTypeNavn` som etikett → får ny tekst gratis);
+  `ai-parse-skolerute` (GYLDIGE_TYPER + prompt, index.ts:60/131/140 — DB-verdi,
+  trenger INGEN endring); migrasjonene 012/013 (historiske, røres ikke).
+- Elevvisningens fridag-etikett (app.js:1297) viser kun TITTEL, aldri
+  kategori — upåvirket.
+
+### Delplan
+
+**A. Info konsekvent med enkel parentes i begge moduser (app.js):**
+- [ ] Ny hjelpefunksjon `utenYtreParentes(t)`: fjerner ETT omsluttende
+      parentespar hvis (trimmet) tekst både starter med `(` og slutter med
+      `)` og parene er balanserte — ellers uendret. (Rører ikke parenteser
+      inne i teksten, f.eks. «Overnatte ute (kap. 1,2,3,6)».)
+- [ ] `lagKompaktRad`: bruk `utenYtreParentes(s.info)` i hintet
+      (app.js:2107) — så innpakkingen `(${hint})` (2113/2116) alltid gir
+      nøyaktig ÉN parentes.
+- [ ] Detaljer-raden (app.js:2362): vis info som `(…)` med samme hjelper —
+      `(utenYtreParentes(s.info))` når info finnes — så begge moduser viser
+      samme enkel-parentes-form.
+- [ ] UTENFOR scope (uendret): mobil-kortlisten/`renderSessionCard` deles
+      med elevvisningen og beholder rå info-visning som i dag.
+
+**B. «planleggingsdag» vises som «undervisningsfri» (app.js):**
+- [ ] `kalenderTypeNavn` (app.js:172): legg til mapping
+      `planleggingsdag` → «undervisningsfri» (DB-verdien beholdes, samme
+      mønster som helligdag→«høytid»). Admin-badge + begge type-dropdowns og
+      AI-forhåndsvisningen får ny etikett automatisk.
+- [ ] Dedup i fridag-merkene (`lagFridagMerke` app.js:2094 +
+      `lagKompaktFridagRad` app.js:2160): hvis tittelen (lowercase, trimmet)
+      er lik DB-typen eller visningsnavnet, vis KUN visningsnavnet med stor
+      forbokstav — læreren ser da bare «Undervisningsfri», og dobbelvisningen
+      er borte også for rader med tittel «Planleggingsdag». (Generelt: en rad
+      med tittel «Høytid» ville tilsvarende vist kun «Høytid».)
+- [ ] CLAUDE.md-notatet om `kalenderTypeNavn` oppdateres (helligdag→«høytid»,
+      planleggingsdag→«undervisningsfri»).
+
+**C. Cache-bust + verifisering:**
+- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (kun JS-endring — CSS uendret).
+- [ ] Maskinverifisering (headless, stubbet data): info med og uten lagrede
+      ytre parenteser → alltid enkel parentes i kompakt OG Detaljer; indre
+      parenteser bevares; planleggingsdag-rad viser «Undervisningsfri» (uten
+      dobling) i begge moduser; admin-dropdowns viser «undervisningsfri» men
+      lagrer `planleggingsdag`.
+- [ ] Morfars sjekk i prod etter merge (NNA-økta uke 36 med «Klær til
+      naturbruk, kap. 2» + en planleggingsdag i skoleruten).
+- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
