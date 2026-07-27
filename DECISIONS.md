@@ -222,3 +222,25 @@ storage-policies — kjør `020_storage_policy_logos.sql` i SQL Editor.
   Lærermapping skjer på fornavn mot `users.full_name`; migrasjonene er
   re-kjørbare — opprettes lærerbrukere senere, mapper en ny kjøring
   eierskapet riktig. Forklarer hvorfor prod-data ser ut som de gjør.
+
+## P42 — Kompakt «Alle mine økter»: bevisste valg (27.07.2026)
+
+- **Detaljer-modus ER dagens layout, uendret.** Kompakt er ny standardvisning
+  på desktop; toggelen bytter til den gamle rad-layouten som egen modus i
+  stedet for å endre den (lav regresjonsrisiko). Ikke «rydd opp» ved å slå
+  dem sammen.
+- **«Vis kun ved første forekomst»** (Morfars regel): ukenummer kun på ukas
+  første rad, dato kun på dagens første økt, klasse kun ved klassebytte innen
+  dagen. Tomme celler beholder fast bredde — **tomrom er informasjon**, derfor
+  faste flex-bredder og aldri auto-fit grid. Sorteringen i kompaktmodus er
+  dag → fridag først → klasse → fag (klasse-gruppering innen dagen gjør
+  regelen meningsfull); Detaljer beholder dag → fridag → fag som før.
+- **📍 oppmøte utelates i kompaktmodus** (bevisst, Morfars svar 2) — hintet
+  etter tittelen er P/G-parti + `info`-feltet. Detaljer viser alt.
+- **Mobil-kortlisten er bevisst uendret** — kompakt-på-mobil er eget
+  backloggpunkt (`BACKLOGG-UX-MOBIL.md` punkt 5). Modusvelgeren er skjult
+  ≤700px. Ikke foreslå kompakt-på-mobil som del av annen opprydding.
+- **h3-uke-overskriftene beholdes i DOM i kompaktmodus** (skjules kun via CSS
+  på desktop): de er scroll-/spy-ankre for mobil og Detaljer, mens ukas
+  første rad (`.mp-anker[data-uke]`) er anker i kompakt desktop. Fjernes
+  h3-ene «fordi de er skjult», knekker «Nå»-knappen og P22-retur på mobil.

@@ -2,9 +2,8 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P41
-- **Pågående:** P42 (kompakt «Alle mine økter»-lærervisning — implementert og
-  maskinverifisert headless; venter på PR-merge + Morfars sjekk i produksjon)
+- **Siste fullførte P-nummer:** P42
+- **Pågående:** ingen
 - **Neste ledige P-nummer:** P43
 - **Dato sist oppdatert:** 27. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
@@ -226,9 +225,10 @@ Supabase Dashboard etter kode-endring i repo):**
 oppgaveteksten sa `claude/P42-kompakt-laerervisning`, samme situasjon som P34–P41).
 **Scope:** KUN `v4/app.js`, `v4/style.css` og cache-bust i `v4/index.html`.
 Ingen DB-migrasjon, ingen edge functions.
-**Status:** IMPLEMENTERT 27. juli 2026 (delplan godkjent av Morfar samme dag).
-Maskinverifisert med headless Chromium-røyktest (desktop 24 sjekker + mobil
-7 sjekker, alle OK); gjenstår PR-merge og Morfars visuelle sjekk i produksjon.
+**Status:** FULLFØRT OG VERIFISERT 27. juli 2026 — delplan godkjent av Morfar,
+kode merget til main (squash, PR #150), maskinverifisert med headless
+Chromium-røyktest (desktop 24 sjekker + mobil 7 sjekker, alle OK), og
+verifisert i produksjon av Morfar etter merge samme dag.
 
 **Morfars svar på de åpne spørsmålene (27. juli 2026):**
 1. Prototypen godkjent som den er, med justeringene under.
@@ -344,8 +344,8 @@ IKKE auto-fit grid:
       bevart tomrom; fridager som tynne markører med riktig ukenummer;
       «mer…» kun ved faktisk overflyt + folder ut/inn; title-attributt;
       modusbytte begge veier; mobil-kortliste uendret; ingen JS-feil.
-- [ ] Morfars sjekk i produksjon etter merge: «Nå»-knapp + auto-scroll +
+- [x] Morfars sjekk i produksjon etter merge: «Nå»-knapp + auto-scroll +
       P22-retur («der du slapp») i begge moduser, «mer…» ved vindus-resize,
-      og generelt utseende mot prototypen. (Står begrunnet åpen ved push —
-      ingen preview-deploy; samme mønster som P41.)
+      og generelt utseende mot prototypen. (Verifisert i produksjon av
+      Morfar 27. juli 2026 — «godkjent!».)
 - [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt.
