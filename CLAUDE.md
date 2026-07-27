@@ -250,7 +250,7 @@ users            – id (auth.uid), school_id, full_name, role(laerer|kontaktlae
 user_classes     – user_id, class_id
 sessions         – id, school_id, class_id, subject_id, division_id, week_nr, day_of_week(1-5), teacher_id, activity, meeting_point, info, school_year, version, created_by, last_modified_at, last_modified_by, shared_group_id (fellesundervisning, migrasjon 010), deleted_at, ...
 multi_day_events – id, school_id, class_id(null=alle), title, description, start_date, end_date, school_year, deleted_at
-school_calendar  – id, school_id, title, start_date, end_date, type(ferie|helligdag|planleggingsdag|annet), deleted_at (migrasjon 011). NB: `helligdag` vises for bruker som «høytid» (kun visningstekst via kalenderTypeNavn — DB-verdien er alltid `helligdag`)
+school_calendar  – id, school_id, title, start_date, end_date, type(ferie|helligdag|planleggingsdag|annet), deleted_at (migrasjon 011). NB: `helligdag` vises for bruker som «høytid» og `planleggingsdag` som «undervisningsfri» (kun visningstekst via kalenderTypeNavn — DB-verdiene er alltid `helligdag`/`planleggingsdag`)
 school_facts     – id, school_id, fact_text, view_count (migrasjon 018_funfacts_view_count), created_at, deleted_at (created_at/deleted_at fra migrasjon 011). Pool maks 20 aktive (FUNFACTS_MAKS, P41); eneste genereringsvei er «Forny» i adminfanen (Erstatt alle / Fyll opp med nye via fornyFunfacts + edge function generate-facts med count 1–20)
 audit_log, pending_transfers
 ```
@@ -335,7 +335,7 @@ Merget branch kan slettes etterpå — historikken bevares i main.
 | `slettOkt(id, onSave)` | Slett økt |
 | `eksporterSkolear(school, skolear, format)` | Eksport JSON/CSV/PDF |
 | `finnFridag(weekNr, dayOfWeek, schoolYear)` | Skolerute-oppslag; blokkerer økter på fridager |
-| `kalenderTypeNavn(t)` | Visningstekst for school_calendar.type (`helligdag` → «høytid») |
+| `kalenderTypeNavn(t)` | Visningstekst for school_calendar.type (`helligdag` → «høytid», `planleggingsdag` → «undervisningsfri») |
 | `bekreftKollegahjelp(s)` | Advarsel før redigering av annens økt |
 | `merkFellesOkter(sessions)` | Setter `_fellesMed` (klassenavn) på fellesøkter |
 | `visSkoleruteForhandsvisning(events, warnings, onSave)` | Redigerbar forhåndsvisning av AI-tolket skolerute før lagring |

@@ -3,7 +3,8 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P42
-- **Pågående:** P43 (delplan skrevet, venter på Morfars godkjenning)
+- **Pågående:** P43 (implementert + maskinverifisert — venter på merge og
+  Morfars prod-sjekk)
 - **Neste ledige P-nummer:** P44
 - **Dato sist oppdatert:** 27. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
@@ -357,9 +358,16 @@ IKKE auto-fit grid:
 **Branch:** `claude/pn-doble-parentes-planleggingsdag-0bh4ly` (miljøets tildelte
 branch — oppgaveteksten sa `claude/PN-kort-beskrivelse`, samme situasjon som
 P34–P42).
-**Scope:** KUN `v4/app.js` + cache-bust i `v4/index.html`. Ingen DB-migrasjon,
-ingen edge functions, ingen manuelle Supabase-steg.
-**Status:** delplan skrevet, venter på Morfars godkjenning.
+**Scope:** KUN `v4/app.js` + cache-bust i `v4/index.html` (+ CLAUDE.md-notat).
+Ingen DB-migrasjon, ingen edge functions, ingen manuelle Supabase-steg.
+**Status:** implementert og maskinverifisert 27. juli 2026 — venter på
+merge + Morfars prod-sjekk.
+
+**Morfars justering ved godkjenning (27. juli 2026):** Endring 1 løses IKKE
+med parentes-stripping — parentes-innpakkingen i kompaktraden fjernes helt,
+og info vises nøyaktig som lagret, visuelt skilt med dempet valør (som i
+Detaljer) + «·»-skille. Detaljer-modus forblir uendret (rå visning). Ingen
+tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
 
 ### Kartlegging (FASE 1, verifisert 27. juli 2026)
 
@@ -403,41 +411,36 @@ ingen edge functions, ingen manuelle Supabase-steg.
 
 ### Delplan
 
-**A. Info konsekvent med enkel parentes i begge moduser (app.js):**
-- [ ] Ny hjelpefunksjon `utenYtreParentes(t)`: fjerner ETT omsluttende
-      parentespar hvis (trimmet) tekst både starter med `(` og slutter med
-      `)` og parene er balanserte — ellers uendret. (Rører ikke parenteser
-      inne i teksten, f.eks. «Overnatte ute (kap. 1,2,3,6)».)
-- [ ] `lagKompaktRad`: bruk `utenYtreParentes(s.info)` i hintet
-      (app.js:2107) — så innpakkingen `(${hint})` (2113/2116) alltid gir
-      nøyaktig ÉN parentes.
-- [ ] Detaljer-raden (app.js:2362): vis info som `(…)` med samme hjelper —
-      `(utenYtreParentes(s.info))` når info finnes — så begge moduser viser
-      samme enkel-parentes-form.
-- [ ] UTENFOR scope (uendret): mobil-kortlisten/`renderSessionCard` deles
+**A. Info uten parentes-innpakking i kompaktmodus (app.js):**
+- [x] `lagKompaktRad`: parentes-innpakkingen `(${hint})` (app.js:2113/2116,
+      også hover-tooltip) fjernet helt — info vises NØYAKTIG som lagret
+      (parentes kun hvis læreren selv har skrevet den). Visuelt skille:
+      eksisterende dempet valør `.mpk-hint` (grå, .82rem — samme valør som
+      Detaljer-modusens `.mp-info`) + « · »-skille mellom aktivitet og hint
+      (samme skille som alt brukes mellom P/G og info). Ingen CSS-endring
+      nødvendig.
+- [x] Detaljer-raden (app.js:2362) UENDRET — viser allerede info rått.
+- [x] UTENFOR scope (uendret): mobil-kortlisten/`renderSessionCard` deles
       med elevvisningen og beholder rå info-visning som i dag.
 
 **B. «planleggingsdag» vises som «undervisningsfri» (app.js):**
-- [ ] `kalenderTypeNavn` (app.js:172): legg til mapping
-      `planleggingsdag` → «undervisningsfri» (DB-verdien beholdes, samme
-      mønster som helligdag→«høytid»). Admin-badge + begge type-dropdowns og
-      AI-forhåndsvisningen får ny etikett automatisk.
-- [ ] Dedup i fridag-merkene (`lagFridagMerke` app.js:2094 +
-      `lagKompaktFridagRad` app.js:2160): hvis tittelen (lowercase, trimmet)
-      er lik DB-typen eller visningsnavnet, vis KUN visningsnavnet med stor
-      forbokstav — læreren ser da bare «Undervisningsfri», og dobbelvisningen
-      er borte også for rader med tittel «Planleggingsdag». (Generelt: en rad
-      med tittel «Høytid» ville tilsvarende vist kun «Høytid».)
-- [ ] CLAUDE.md-notatet om `kalenderTypeNavn` oppdateres (helligdag→«høytid»,
-      planleggingsdag→«undervisningsfri»).
+- [x] `kalenderTypeNavn` (app.js:172): mapping `planleggingsdag` →
+      «undervisningsfri» (DB-verdien beholdes, samme mønster som
+      helligdag→«høytid»). Fridag-merkene i begge moduser, admin-badge,
+      begge type-dropdowns og AI-forhåndsvisningen får ny etikett automatisk
+      — dropdowns lagrer fortsatt `planleggingsdag`.
+- [x] CLAUDE.md-notatene om `kalenderTypeNavn` oppdatert (funksjonstabellen
+      + school_calendar-beskrivelsen).
 
 **C. Cache-bust + verifisering:**
-- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (kun JS-endring — CSS uendret).
-- [ ] Maskinverifisering (headless, stubbet data): info med og uten lagrede
-      ytre parenteser → alltid enkel parentes i kompakt OG Detaljer; indre
-      parenteser bevares; planleggingsdag-rad viser «Undervisningsfri» (uten
-      dobling) i begge moduser; admin-dropdowns viser «undervisningsfri» men
-      lagrer `planleggingsdag`.
+- [x] Bump `?v=20260727b` i `v4/index.html` (kun JS — CSS uendret).
+- [x] Maskinverifisert (headless Chromium, stubbet Supabase, 18 sjekker OK):
+      info lagret MED parentes → enkel «(…)» i kompakt OG Detaljer (aldri
+      «((…))»); info lagret UTEN parentes → uten parentes i begge; «·»-skille
+      + dempet hint i kompakt; tom info → ingen hint; fridagsmerke viser
+      «Planleggingsdag · undervisningsfri» i begge moduser (ingen
+      «· planleggingsdag» igjen); «Høstferie · ferie» uendret;
+      kalenderTypeNavn-mappingene direkte-testet; ingen JS-feil.
 - [ ] Morfars sjekk i prod etter merge (NNA-økta uke 36 med «Klær til
       naturbruk, kap. 2» + en planleggingsdag i skoleruten).
 - [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
