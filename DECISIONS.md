@@ -244,3 +244,22 @@ storage-policies — kjør `020_storage_policy_logos.sql` i SQL Editor.
   på desktop): de er scroll-/spy-ankre for mobil og Detaljer, mens ukas
   første rad (`.mp-anker[data-uke]`) er anker i kompakt desktop. Fjernes
   h3-ene «fordi de er skjult», knekker «Nå»-knappen og P22-retur på mobil.
+
+## P43 — Kosmetiske fikser: to bevisste valg (27.07.2026)
+
+- **Info-teksten vises nøyaktig som lagret — ingen normalisering.**
+  Dobbeltparentesen «((…))» i kompaktmodus ble løst ved å FJERNE
+  parentes-innpakkingen i `lagKompaktRad`, ikke ved å strippe ytre parenteser
+  fra lærerens tekst (Morfars justering ved godkjenning; kartleggingens
+  opprinnelige forslag `utenYtreParentes()` utgikk). Prinsippet: appen viser
+  det læreren skrev, og skiller info visuelt med dempet valør + « · » i
+  stedet for skilletegn den selv legger på. Ikke gjeninnfør innpakking eller
+  stripping — og ikke «rydd opp» parenteser i `sessions.info` i databasen;
+  lagringen er bevisst inkonsekvent fordi den er lærerens egen tekst.
+- **`planleggingsdag` → «undervisningsfri» er ren visningstekst.**
+  Løst i `kalenderTypeNavn`, samme mønster som `helligdag` → «høytid».
+  DB-enumen (`ferie|helligdag|planleggingsdag|annet`, migrasjon 012),
+  skolerute-radene og `ai-parse-skolerute` er UENDRET — edge-funksjonen skal
+  fortsatt produsere DB-verdien `planleggingsdag`. Admin-badgen og begge
+  type-dropdownene arver etiketten automatisk fordi de allerede kaller
+  `kalenderTypeNavn`. Ingen migrasjon skal skrives for dette.

@@ -2,14 +2,17 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P42
-- **Pågående:** P43 (implementert + maskinverifisert — venter på merge og
-  Morfars prod-sjekk)
+- **Siste fullførte P-nummer:** P43
+- **Pågående:** ingen
 - **Neste ledige P-nummer:** P44
 - **Dato sist oppdatert:** 27. juli 2026
-- **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
-  «Nå»-knappen etter skoleslutt (juli 2027 med 26/27 aktivt); maskinverifisert,
-  ekte manuell bekreftelse skjer naturlig når datoen inntreffer
+- **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
+    aktivt); maskinverifisert, ekte manuell bekreftelse skjer naturlig når
+    datoen inntreffer
+  - P43s prod-sjekk — kosmetikken er maskinverifisert (18 sjekker) og merget;
+    Morfars visuelle bekreftelse i produksjon gjenstår (ingen preview-deploy,
+    samme mønster som P41/P42)
 
 ---
 
@@ -360,8 +363,9 @@ branch — oppgaveteksten sa `claude/PN-kort-beskrivelse`, samme situasjon som
 P34–P42).
 **Scope:** KUN `v4/app.js` + cache-bust i `v4/index.html` (+ CLAUDE.md-notat).
 Ingen DB-migrasjon, ingen edge functions, ingen manuelle Supabase-steg.
-**Status:** implementert og maskinverifisert 27. juli 2026 — venter på
-merge + Morfars prod-sjekk.
+**Status:** FULLFØRT 27. juli 2026 — kode merget til main (squash, PR #152),
+maskinverifisert med headless Chromium (18 sjekker, alle OK). Kun Morfars
+visuelle prod-sjekk gjenstår (begrunnet åpent punkt, se sjekklisten).
 
 **Morfars justering ved godkjenning (27. juli 2026):** Endring 1 løses IKKE
 med parentes-stripping — parentes-innpakkingen i kompaktraden fjernes helt,
@@ -443,4 +447,10 @@ tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
       kalenderTypeNavn-mappingene direkte-testet; ingen JS-feil.
 - [ ] Morfars sjekk i prod etter merge (NNA-økta uke 36 med «Klær til
       naturbruk, kap. 2» + en planleggingsdag i skoleruten).
-- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
+      BEGRUNNET ÅPENT ved merge: ingen preview-deploy i repoet, så visuell
+      bekreftelse kan først skje i produksjon etter merge (samme situasjon
+      som P41/P42). Kosmetikken er maskinverifisert i mellomtiden.
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
+- [x] PR #152 opprettet og squash-merget til main (ingen PR-CI i repoet —
+      eneste workflow er den planlagte Supabase-keepaliven; `mergeable_state`
+      var `clean`). Cache-bust `app.js?v=20260727b` bekreftet i merget main.
