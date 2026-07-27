@@ -1974,9 +1974,10 @@ async function renderMinKlasseTab(container, klasse) {
 // Kontinuerlig liste over alle uker, auto-scroll til dagens uke, «Nå»-knapp
 // via IntersectionObserver, og bulk-redigering (marker → rediger/kopier/slett).
 async function renderAlleOkterTab(container, autoScroll = true) {
-  // Rydd opp tidligere observere (unngå lekkasje ved re-render)
+  // Rydd opp tidligere observere/lyttere (unngå lekkasje ved re-render)
   if (renderAlleOkterTab._obs) { renderAlleOkterTab._obs.disconnect(); renderAlleOkterTab._obs = null }
   if (renderAlleOkterTab._spyObs) { renderAlleOkterTab._spyObs.disconnect(); renderAlleOkterTab._spyObs = null }
+  if (renderAlleOkterTab._onResize) { window.removeEventListener('resize', renderAlleOkterTab._onResize); renderAlleOkterTab._onResize = null }
 
   const aktivtSkolear = APP.school?.active_school_year
   const schoolStart = APP.school?.school_year_start_week || 33
@@ -2047,6 +2048,13 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd, aktivtSkolear)
   const reRender = () => renderAlleOkterTab(container, false)
 
+  // P42: Kompakt (standard) vs Detaljer. Valget huskes funksjons-statisk i
+  // sesjonen (samme prinsipp som _lastTopWeek, P22). Kompakt gjelder kun
+  // desktop-tabellen — mobil-kortlisten er uendret i begge moduser.
+  const kompakt = (renderAlleOkterTab._modus || 'kompakt') === 'kompakt'
+  const erMobil = window.matchMedia('(max-width: 700px)').matches
+  const hoverEkte = window.matchMedia('(hover: hover)').matches
+
   const DAGKORT = ['Man', 'Tir', 'Ons', 'Tor', 'Fre']
   // Passende ikon per fridag, matchet på navn (uavhengig av DB-type — Juleferie/
   // Påskeferie er f.eks. lagret som «helligdag»). Ordnet liste: spesifikke
@@ -2084,6 +2092,73 @@ async function renderAlleOkterTab(container, autoScroll = true) {
       el('span', { class: 'mp-fridag-dag' }, dagTekst),
       el('span', { class: 'mp-fridag-dato' }, ` ${datoTekst}`),
       ` ${ikon} ${ev.title} · ${kalenderTypeNavn(ev.type)}`)
+  }
+
+  // P42: kompakt økt-rad. Faste kolonner der tomme celler beholder bredden
+  // (tomrom er informasjon): uke/dato/klasse vises kun ved første forekomst i
+  // sin gruppe. Tittel = aktivitet med kapittelhint (P/G + info) dempet inline
+  // i parentes; 📍 oppmøte utelates bevisst i kompaktmodus.
+  function lagKompaktRad(s, week, visUke, visDato, visKlasse, actions) {
+    const kalAar = skoleaarKalenderaar(s.school_year, s.week_nr, schoolStart)
+    const datoKort = formatDatoNO(isoWeekToDate(kalAar, s.week_nr, s.day_of_week).toISOString().slice(0, 10))
+    const dagKort = DAGKORT[s.day_of_week - 1] || ''
+    const farge = s.subjects?.color_hex || '#4a90d9'
+    const divtekst = (s.session_divisions || []).map(sd => sd.subject_divisions?.name).filter(Boolean).join(', ')
+    const hint = [divtekst, s.info || ''].filter(Boolean).join(' · ')
+
+    const kebab = el('button', { class: 'okt-kebab mpk-kebab', title: 'Handlinger',
+      onclick: (e) => { e.stopPropagation(); visOktHandlinger(actions, kebab) } }, '⋮')
+
+    const tekst = el('span', { class: 'mpk-tekst' }, s.activity || '')
+    if (hint) tekst.appendChild(el('span', { class: 'mpk-hint' }, `${s.activity ? ' ' : ''}(${hint})`))
+    // Full tekst i tooltip — kun på enheter med ekte hover (ikke touch)
+    if (hoverEkte) {
+      const full = [s.activity || '', hint ? `(${hint})` : ''].filter(Boolean).join(' ')
+      if (full) tekst.title = full
+    }
+    // «mer…» vises kun ved faktisk overflyt — måles i maalOverflyt() etter layout
+    const merBtn = el('button', { class: 'mpk-mer', style: 'display:none', title: 'Vis hele teksten' }, 'mer…')
+    merBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const utvidet = tekst.classList.toggle('utvidet')
+      merBtn.textContent = utvidet ? 'mindre' : 'mer…'
+      merBtn.title = utvidet ? 'Skjul' : 'Vis hele teksten'
+    })
+    tekst._merBtn = merBtn
+
+    const rad = el('div', { class: 'min-plan-rad mpk-rad' },
+      el('div', { class: 'mp-cb' }, lagCheckbox(s)),
+      el('div', { class: 'mpk-uke' }, visUke ? String(week) : ''),
+      el('div', { class: 'mpk-dag' }, visDato ? `${dagKort} ${datoKort}` : ''),
+      el('div', { class: 'mpk-klasse' }, visKlasse ? (s.classes?.name || '') : ''),
+      el('div', { class: 'mpk-fag' },
+        el('span', { class: 'mp-fag-badge', style: `border-left:3px solid ${farge}` },
+          s.subjects?.short_code || s.subjects?.name || '')),
+      el('div', { class: 'mpk-tittel' }, tekst, merBtn),
+      el('div', { class: 'mpk-handling' }, kebab))
+    rad.addEventListener('contextmenu', (e) => { e.preventDefault(); visOktHandlinger(actions, kebab) })
+    return rad
+  }
+
+  // P42: tynn fridagsmarkør i kompaktmodus — samme kolonneoppsett (ukenummer i
+  // uke-kolonnen på ukas første rad), ingen egen overskriftsrad.
+  function lagKompaktFridagRad(fe, week, visUke) {
+    const { ev, dagFra, dagTil } = fe
+    const dagTekst = dagFra === dagTil
+      ? (DAGKORT[dagFra - 1] || '')
+      : `${DAGKORT[dagFra - 1] || ''}–${DAGKORT[dagTil - 1] || ''}`
+    const kalAar = skoleaarKalenderaar(aktivtSkolear, week, schoolStart)
+    const datoFra = formatDatoNO(isoWeekToDate(kalAar, week, dagFra).toISOString().slice(0, 10))
+    const datoTil = formatDatoNO(isoWeekToDate(kalAar, week, dagTil).toISOString().slice(0, 10))
+    const datoTekst = dagFra === dagTil ? datoFra : `${datoFra}–${datoTil}`
+    return el('div', { class: 'min-plan-rad mpk-rad mpk-fridag' },
+      el('div', { class: 'mp-cb' }),
+      el('div', { class: 'mpk-uke' }, visUke ? String(week) : ''),
+      el('div', { class: 'mpk-dag' }, dagTekst),
+      el('div', { class: 'mpk-klasse' }),
+      el('div', { class: 'mpk-tittel mpk-fridag-tekst' },
+        `${fridagIkon(ev)} ${ev.title} · ${kalenderTypeNavn(ev.type)} `,
+        el('span', { class: 'mpk-hint' }, datoTekst)))
   }
 
   // ── Bulk-valg ──────────────────────────────────────────────
@@ -2128,23 +2203,36 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     for (const arr of cbRefs.values()) arr.forEach(cb => { cb.checked = false })
     oppdaterBulkBar()
   }}, 'Avbryt'))
-  container.appendChild(bulkBar)
+
+  // P42: alt innhold i en wrapper med modus-klasse (containeren deles med de
+  // andre fanene — klassen kan ikke stå på selve containeren).
+  const wrap = el('div', { class: 'min-plan' + (kompakt ? ' min-plan--kompakt' : '') })
+  container.appendChild(wrap)
+
+  // P42: Kompakt/Detaljer-velger — sticky rett under fane-raden (px-toppen
+  // settes lenger nede, når header-/fanehøydene kan måles). Skjult på mobil.
+  const modusBar = el('div', { class: 'mp-modus-bar' })
+  const lagModusKnapp = (navn, verdi, tittel) => el('button', {
+    class: 'mp-modus-knapp' + (((verdi === 'kompakt') === kompakt) ? ' aktiv' : ''),
+    title: tittel,
+    onclick: () => { if ((verdi === 'kompakt') !== kompakt) { renderAlleOkterTab._modus = verdi; reRender() } }
+  }, navn)
+  modusBar.appendChild(lagModusKnapp('Kompakt', 'kompakt', 'Tett liste: én linje per økt'))
+  modusBar.appendChild(lagModusKnapp('Detaljer', 'detaljer', 'Full visning med alle felt, uten avkorting'))
+  wrap.appendChild(modusBar)
+  wrap.appendChild(bulkBar)
 
   // ── Innhold per uke (tabell for desktop + kort-liste for mobil) ──
-  let naaHeader = null
+  // P42: h3-uke-overskriftene beholdes ALLTID i DOM (ankre for mobil-kort-
+  // listen og Detaljer-modus); i kompaktmodus skjules de på desktop via CSS —
+  // der bor ukenummeret i første kolonne på ukas første rad, som bærer
+  // `data-uke` + `.mp-anker` for «Nå»-knapp og scroll-spy.
   for (const week of uker) {
     const weekHeader = el('h3', { class: 'min-plan-uke', 'data-uke': week }, `Uke ${week}`)
-    container.appendChild(weekHeader)
-    if (week === naaWeek) naaHeader = weekHeader
+    wrap.appendChild(weekHeader)
 
     const ukeOkter = byWeek[week] || []
     const ukeFridager = eventsByWeek[week] || []
-
-    // Ren ferieuke uten økter: behold P18-oppførsel (merke rett under overskrift).
-    if (!ukeOkter.length) {
-      for (const fe of ukeFridager) container.appendChild(lagFridagMerke(fe, week))
-      continue
-    }
 
     const lagActions = (s) => ({
       edit: () => visRedigerOktModal(s, reRender),
@@ -2152,6 +2240,87 @@ async function renderAlleOkterTab(container, autoScroll = true) {
       del: () => slettOkt(s.id, reRender),
       transfer: () => visOverforModal(s, reRender),
     })
+
+    // Mobil: vertikal kort-liste (gjenbruker renderSessionCard m/sveip/kebab).
+    // Felles for begge moduser — mobilvisningen er uendret i P42.
+    const lagKortListe = (items) => {
+      const kortListe = el('div', { class: 'min-plan-kort' })
+      for (const it of items) {
+        if (it.fridag) { kortListe.appendChild(lagFridagMerke(it.fe, week)); continue }
+        const s = it.s
+        const wrapper = el('div', { class: 'session-wrapper' })
+        wrapper.appendChild(lagCheckbox(s))
+        const card = renderSessionCard(s, true, lagActions(s))
+        card.prepend(el('span', { class: 'session-card__class' }, `${s.classes?.name || ''} · ${dagNavn(s.day_of_week)}`))
+        wrapper.appendChild(card)
+        kortListe.appendChild(wrapper)
+      }
+      return kortListe
+    }
+
+    if (kompakt) {
+      // P42 kompakt desktop-tabell. Sortert dag → fridag først → klasse → fag
+      // (klasse-gruppering innen dagen gjør «vis kun ved første forekomst»
+      // meningsfull). Fridager ligger I tabellen — ingen egen overskriftsrad —
+      // så også rene ferieuker får sin tynne markørrad her.
+      const kItems = [
+        ...ukeOkter.map(s => ({ fridag: false, dag: s.day_of_week, kl: s.classes?.name || '', sub: s.subjects?.name || '', s })),
+        ...ukeFridager.map(fe => ({ fridag: true, dag: fe.dagFra, fe })),
+      ].sort((a, b) =>
+        (a.dag - b.dag) ||
+        ((a.fridag ? 0 : 1) - (b.fridag ? 0 : 1)) ||
+        ((a.kl || '').localeCompare(b.kl || '', 'nb')) ||
+        ((a.sub || '').localeCompare(b.sub || '', 'nb')))
+
+      // «Vis kun ved første forekomst»: uke på ukas første rad, dato på dagens
+      // første økt, klasse ved klassebytte innen dagen. Fridag bryter kjeden
+      // (neste økt viser dato/klasse igjen).
+      const kTabell = el('div', { class: 'min-plan-tabell' })
+      let foersteRad = true, prevDag = null, prevKlasse = null
+      for (const it of kItems) {
+        let rad
+        if (it.fridag) {
+          rad = lagKompaktFridagRad(it.fe, week, foersteRad)
+          prevDag = null; prevKlasse = null
+        } else {
+          const visDato = it.s.day_of_week !== prevDag
+          const visKlasse = visDato || (it.s.classes?.name || '') !== prevKlasse
+          rad = lagKompaktRad(it.s, week, foersteRad, visDato, visKlasse, lagActions(it.s))
+          prevDag = it.s.day_of_week; prevKlasse = it.s.classes?.name || ''
+        }
+        if (foersteRad) { rad.setAttribute('data-uke', week); rad.classList.add('mp-anker') }
+        kTabell.appendChild(rad)
+        foersteRad = false
+      }
+      wrap.appendChild(kTabell)
+
+      // Ren ferieuke: mobilen trenger fortsatt P18-merket (desktop har alt
+      // markørraden i tabellen — merket skjules der via .mp-kun-mobil).
+      if (!ukeOkter.length) {
+        for (const fe of ukeFridager) {
+          const merke = lagFridagMerke(fe, week)
+          merke.classList.add('mp-kun-mobil')
+          wrap.appendChild(merke)
+        }
+        continue
+      }
+      const mItems = [
+        ...ukeOkter.map(s => ({ fridag: false, dag: s.day_of_week, sub: s.subjects?.name || '', s })),
+        ...ukeFridager.map(fe => ({ fridag: true, dag: fe.dagFra, fe })),
+      ].sort((a, b) =>
+        (a.dag - b.dag) ||
+        ((a.fridag ? 0 : 1) - (b.fridag ? 0 : 1)) ||
+        ((a.sub || '').localeCompare(b.sub || '', 'nb')))
+      wrap.appendChild(lagKortListe(mItems))
+      continue
+    }
+
+    // ── Detaljer-modus: dagens layout, uendret ──
+    // Ren ferieuke uten økter: behold P18-oppførsel (merke rett under overskrift).
+    if (!ukeOkter.length) {
+      for (const fe of ukeFridager) wrap.appendChild(lagFridagMerke(fe, week))
+      continue
+    }
 
     // Bland økter + fridager og sorter kronologisk på dag (man=1 … fre=5). Ved
     // lik dag: fridag før økt, deretter fag-navn. Samme rekkefølge i desktop og mobil.
@@ -2197,39 +2366,34 @@ async function renderAlleOkterTab(container, autoScroll = true) {
       rad.addEventListener('contextmenu', (e) => { e.preventDefault(); visOktHandlinger(actions, kebab) })
       tabell.appendChild(rad)
     }
-    container.appendChild(tabell)
+    wrap.appendChild(tabell)
 
-    // Mobil: vertikal kort-liste (gjenbruker renderSessionCard m/sveip/kebab)
-    const kortListe = el('div', { class: 'min-plan-kort' })
-    for (const it of items) {
-      if (it.fridag) { kortListe.appendChild(lagFridagMerke(it.fe, week)); continue }
-      const s = it.s
-      const wrapper = el('div', { class: 'session-wrapper' })
-      wrapper.appendChild(lagCheckbox(s))
-      const card = renderSessionCard(s, true, lagActions(s))
-      card.prepend(el('span', { class: 'session-card__class' }, `${s.classes?.name || ''} · ${dagNavn(s.day_of_week)}`))
-      wrapper.appendChild(card)
-      kortListe.appendChild(wrapper)
-    }
-    container.appendChild(kortListe)
+    wrap.appendChild(lagKortListe(items))
   }
 
   // ── «Nå»-knapp + auto-scroll (samme navn/oppførsel som Klasse-visningen) ──
-  // Anker: overskriften for «nå»-uka (gjeldendeSkoleuke) hvis læreren har økter
+  // Anker: elementet for «nå»-uka (gjeldendeSkoleuke) hvis læreren har økter
   // den uka, ellers nærmeste uke etter posisjon, ellers første uke i planen — så
   // knappen alltid har et fornuftig mål og aldri blir permanent skjult.
-  let anker = naaHeader
+  // P42: i kompakt desktop er ankeret ukas første RAD (.mp-anker) — h3-ene er
+  // skjult der og kan hverken observeres eller scrolles til. Mobil og Detaljer
+  // bruker h3 som før.
+  const ankerFor = (w) => (kompakt && !erMobil)
+    ? wrap.querySelector(`.mp-anker[data-uke="${w}"]`)
+    : wrap.querySelector(`.min-plan-uke[data-uke="${w}"]`)
+
+  let anker = ankerFor(naaWeek)
   if (!anker) {
     const naaPos = ukePosisjon(naaWeek, schoolStart)
     const naermesteUke = uker.find(w => ukePosisjon(w, schoolStart) >= naaPos) ?? uker[0]
-    anker = container.querySelector(`.min-plan-uke[data-uke="${naermesteUke}"]`)
+    anker = ankerFor(naermesteUke)
   }
 
   const denneUkaBtn = el('button', { class: 'btn btn-p denne-uka-btn', style: 'display:none',
     title: 'Gå til gjeldende uke',
     onclick: () => anker?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, 'Nå')
-  container.appendChild(denneUkaBtn)
+  wrap.appendChild(denneUkaBtn)
 
   // P22: initialt scroll-mål. FØRSTE åpning i sesjonen (intet husket) → dagens «anker»
   // (uendret «Nå»-logikk). RETUR fra en annen fane → uka brukeren sto på
@@ -2239,19 +2403,24 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   let scrollMaal = anker
   const huketUke = renderAlleOkterTab._lastTopWeek
   if (huketUke != null) {
-    const huketHeader = container.querySelector(`.min-plan-uke[data-uke="${huketUke}"]`)
-    if (huketHeader) scrollMaal = huketHeader
+    const huketAnker = ankerFor(huketUke)
+    if (huketAnker) scrollMaal = huketAnker
   }
 
+  // Klebrig header + fanerad (+ P42: modusvelger) dekker toppen av viewporten.
+  // Modusvelgeren får px-toppen sin her (rett under faneraden); på mobil er den
+  // skjult i CSS og bidrar med 0 i offsetHeight.
+  const headerH = document.getElementById('app-header')?.offsetHeight || 58
+  const faneH = document.querySelector('.fane-bar')?.offsetHeight || 0
+  modusBar.style.top = (headerH + faneH) + 'px'
+  const stickyTop = headerH + faneH + modusBar.offsetHeight
+
   if (anker) {
-    // Klebrig header + fanerad dekker toppen av viewporten. rootMargin trekker
-    // observerens topp-kant ned tilsvarende, så «nå»-uka regnes som skjult når den
-    // forsvinner bak fanerad-en. Vis «Nå» når nå-uka IKKE er synlig — uansett om den
-    // er over (man har bladd ned i framtiden) ELLER under (man har bladd opp i
-    // tidligere uker; gjelder bl.a. sommeren da nå-uka er siste/nederste uke).
-    const headerH = document.getElementById('app-header')?.offsetHeight || 58
-    const faneH = document.querySelector('.fane-bar')?.offsetHeight || 0
-    const stickyTop = headerH + faneH
+    // rootMargin trekker observerens topp-kant ned tilsvarende sticky-høyden, så
+    // «nå»-uka regnes som skjult når den forsvinner bak fanerad-en. Vis «Nå» når
+    // nå-uka IKKE er synlig — uansett om den er over (man har bladd ned i
+    // framtiden) ELLER under (man har bladd opp i tidligere uker; gjelder bl.a.
+    // sommeren da nå-uka er siste/nederste uke).
     if (autoScroll) requestAnimationFrame(() => scrollMaal.scrollIntoView({ behavior: 'auto', block: 'start' }))
     const obs = new IntersectionObserver((entries) => {
       const e = entries[0]
@@ -2260,12 +2429,12 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     obs.observe(anker)
     renderAlleOkterTab._obs = obs
 
-    // P22: scroll-spy — husk hvilken uke-overskrift som ligger øverst (rett under den
-    // klebrige toppen), så retur fra en annen fane lander der brukeren slapp i stedet
-    // for å hoppe til dagens uke. Tynt (~1px) deteksjonsbånd ved sticky-toppen; uka
-    // hvis overskrift krysser båndet blir `_lastTopWeek`. Egen observer (ikke en
-    // window-scroll-listener) → fyrer ikke på tvers av faner og ryddes som `_obs`
-    // øverst i funksjonen.
+    // P22: scroll-spy — husk hvilken uke som ligger øverst (rett under den
+    // klebrige toppen), så retur fra en annen fane lander der brukeren slapp i
+    // stedet for å hoppe til dagens uke. Tynt (~1px) deteksjonsbånd ved
+    // sticky-toppen. P42: observerer uke-ankerradene i kompakt desktop, h3
+    // ellers — samme mekanikk. Egen observer (ikke en window-scroll-listener)
+    // → fyrer ikke på tvers av faner og ryddes som `_obs` øverst i funksjonen.
     const bandBunn = Math.max(0, window.innerHeight - stickyTop - 1)
     const spy = new IntersectionObserver((entries) => {
       for (const e of entries) {
@@ -2274,9 +2443,40 @@ async function renderAlleOkterTab(container, autoScroll = true) {
         if (!Number.isNaN(w)) renderAlleOkterTab._lastTopWeek = w
       }
     }, { threshold: 0, rootMargin: `-${stickyTop}px 0px -${bandBunn}px 0px` })
-    for (const h of container.querySelectorAll('.min-plan-uke')) spy.observe(h)
+    const spySel = (kompakt && !erMobil) ? '.mp-anker' : '.min-plan-uke'
+    for (const h of wrap.querySelectorAll(spySel)) spy.observe(h)
     renderAlleOkterTab._spyObs = spy
   }
+
+  // P42: «mer…» vises kun når tittelteksten faktisk er avkortet — mål etter
+  // layout, og re-mål ved resize (utvidede rader røres ikke).
+  function maalOverflyt() {
+    for (const t of wrap.querySelectorAll('.mpk-tekst')) {
+      if (!t._merBtn || t.classList.contains('utvidet')) continue
+      t._merBtn.style.display = t.scrollWidth > t.clientWidth ? '' : 'none'
+    }
+  }
+  if (kompakt) requestAnimationFrame(maalOverflyt)
+
+  // P42: debounced resize — re-mål overflyt; krysses 700px-brekkpunktet
+  // re-rendres fanen (ankervalg og kortliste avhenger av det, og reRender
+  // bevarer posisjonen via _lastTopWeek). Sentinel: modusBar ute av DOM → en
+  // annen fane eier containeren → fjern lytteren stille.
+  let resizeTimer = null
+  const onResize = () => {
+    clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(() => {
+      if (!modusBar.isConnected) {
+        window.removeEventListener('resize', onResize)
+        if (renderAlleOkterTab._onResize === onResize) renderAlleOkterTab._onResize = null
+        return
+      }
+      if (window.matchMedia('(max-width: 700px)').matches !== erMobil) { reRender(); return }
+      if (kompakt) maalOverflyt()
+    }, 150)
+  }
+  window.addEventListener('resize', onResize)
+  renderAlleOkterTab._onResize = onResize
 }
 
 async function renderSokTab(container) {
