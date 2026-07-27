@@ -3,8 +3,9 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P42
-- **Pågående:** ingen
-- **Neste ledige P-nummer:** P43
+- **Pågående:** P43 (implementert + maskinverifisert — venter på merge og
+  Morfars prod-sjekk)
+- **Neste ledige P-nummer:** P44
 - **Dato sist oppdatert:** 27. juli 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:** P33s langtidssjekk —
   «Nå»-knappen etter skoleslutt (juli 2027 med 26/27 aktivt); maskinverifisert,
@@ -349,3 +350,97 @@ IKKE auto-fit grid:
       og generelt utseende mot prototypen. (Verifisert i produksjon av
       Morfar 27. juli 2026 — «godkjent!».)
 - [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt.
+
+---
+
+## Økt (P43): Dobbel parentes i kompaktmodus + «planleggingsdag» → «undervisningsfri»
+
+**Branch:** `claude/pn-doble-parentes-planleggingsdag-0bh4ly` (miljøets tildelte
+branch — oppgaveteksten sa `claude/PN-kort-beskrivelse`, samme situasjon som
+P34–P42).
+**Scope:** KUN `v4/app.js` + cache-bust i `v4/index.html` (+ CLAUDE.md-notat).
+Ingen DB-migrasjon, ingen edge functions, ingen manuelle Supabase-steg.
+**Status:** implementert og maskinverifisert 27. juli 2026 — venter på
+merge + Morfars prod-sjekk.
+
+**Morfars justering ved godkjenning (27. juli 2026):** Endring 1 løses IKKE
+med parentes-stripping — parentes-innpakkingen i kompaktraden fjernes helt,
+og info vises nøyaktig som lagret, visuelt skilt med dempet valør (som i
+Detaljer) + «·»-skille. Detaljer-modus forblir uendret (rå visning). Ingen
+tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
+
+### Kartlegging (FASE 1, verifisert 27. juli 2026)
+
+**Funn 1 — dobbel parentes i kompaktmodus:**
+- **Kompakt:** `lagKompaktRad` (app.js:2101–2141) bygger
+  `hint = [partitekst, s.info].join(' · ')` (app.js:2107) og pakker HELE
+  hintet i parentes: `(${hint})` (app.js:2113, samme i hover-tooltip
+  app.js:2116). Info lagret som «(Klær til naturbruk, kap. 2)» blir dermed
+  «((Klær til naturbruk, kap. 2))».
+- **Detaljer:** desktop-raden viser `s.info` RÅTT uten innpakking
+  (app.js:2362, `.mp-info`). Mobil-kortlisten bruker `renderSessionCard`
+  (delt med elevvisningen, app.js:1406/1447) — også rå visning.
+- **Datanivå:** koden legger ALDRI til parentes ved lagring (økt-modalene
+  sender tekstfeltet rått, AI-importen likeså). Importmigrasjonene 014–016
+  har ingen info-verdier med omsluttende parentes (015:86 har f.eks.
+  `'Klær til naturbruk, kap. 2'` uten). Konklusjon: parentesene er skrevet
+  inn manuelt av lærer i enkelte prod-rader → lagringen er INKONSEKVENT
+  (noen med, noen uten). Robust fiks må derfor normalisere ved VISNING —
+  ingen SQL-opprydding nødvendig.
+
+**Funn 2 — «Planleggingsdag · planleggingsdag»:**
+- Kategoriteksten i fridag-merket kommer fra `kalenderTypeNavn(t)`
+  (app.js:172–174) som i dag KUN mapper `helligdag` → «høytid»; alle andre
+  typer returneres rått. Merket rendrer «tittel · kategori» i
+  `lagFridagMerke` (Detaljer, app.js:2094) og `lagKompaktFridagRad`
+  (kompakt, app.js:2160). Rader med tittel «Planleggingsdag» + type
+  `planleggingsdag` gir dermed dobbelvisningen.
+- **Datanivå:** `school_calendar.type` er enum
+  `ferie|helligdag|planleggingsdag|annet` (migrasjon 012). Dette er et RENT
+  RENDRINGSPROBLEM — samme mønster som helligdag→«høytid» (kun visningstekst,
+  DB-verdien beholdes). Ingen migrasjon, ingen endring av eksisterende rader.
+- **Andre steder `planleggingsdag` brukes (alle på DB-verdien, uendret):**
+  spørringsfiltre app.js:980 (`finnFridag`), 1294/1909 (fridag-sjekk i
+  elev-/klassevisning), 1998 («Alle mine økter»); ikon-fallback app.js:2077;
+  admin-skolerutefanen: badge app.js:5036 + type-dropdowns app.js:5190/5251
+  (begge bruker alt `kalenderTypeNavn` som etikett → får ny tekst gratis);
+  `ai-parse-skolerute` (GYLDIGE_TYPER + prompt, index.ts:60/131/140 — DB-verdi,
+  trenger INGEN endring); migrasjonene 012/013 (historiske, røres ikke).
+- Elevvisningens fridag-etikett (app.js:1297) viser kun TITTEL, aldri
+  kategori — upåvirket.
+
+### Delplan
+
+**A. Info uten parentes-innpakking i kompaktmodus (app.js):**
+- [x] `lagKompaktRad`: parentes-innpakkingen `(${hint})` (app.js:2113/2116,
+      også hover-tooltip) fjernet helt — info vises NØYAKTIG som lagret
+      (parentes kun hvis læreren selv har skrevet den). Visuelt skille:
+      eksisterende dempet valør `.mpk-hint` (grå, .82rem — samme valør som
+      Detaljer-modusens `.mp-info`) + « · »-skille mellom aktivitet og hint
+      (samme skille som alt brukes mellom P/G og info). Ingen CSS-endring
+      nødvendig.
+- [x] Detaljer-raden (app.js:2362) UENDRET — viser allerede info rått.
+- [x] UTENFOR scope (uendret): mobil-kortlisten/`renderSessionCard` deles
+      med elevvisningen og beholder rå info-visning som i dag.
+
+**B. «planleggingsdag» vises som «undervisningsfri» (app.js):**
+- [x] `kalenderTypeNavn` (app.js:172): mapping `planleggingsdag` →
+      «undervisningsfri» (DB-verdien beholdes, samme mønster som
+      helligdag→«høytid»). Fridag-merkene i begge moduser, admin-badge,
+      begge type-dropdowns og AI-forhåndsvisningen får ny etikett automatisk
+      — dropdowns lagrer fortsatt `planleggingsdag`.
+- [x] CLAUDE.md-notatene om `kalenderTypeNavn` oppdatert (funksjonstabellen
+      + school_calendar-beskrivelsen).
+
+**C. Cache-bust + verifisering:**
+- [x] Bump `?v=20260727b` i `v4/index.html` (kun JS — CSS uendret).
+- [x] Maskinverifisert (headless Chromium, stubbet Supabase, 18 sjekker OK):
+      info lagret MED parentes → enkel «(…)» i kompakt OG Detaljer (aldri
+      «((…))»); info lagret UTEN parentes → uten parentes i begge; «·»-skille
+      + dempet hint i kompakt; tom info → ingen hint; fridagsmerke viser
+      «Planleggingsdag · undervisningsfri» i begge moduser (ingen
+      «· planleggingsdag» igjen); «Høstferie · ferie» uendret;
+      kalenderTypeNavn-mappingene direkte-testet; ingen JS-feil.
+- [ ] Morfars sjekk i prod etter merge (NNA-økta uke 36 med «Klær til
+      naturbruk, kap. 2» + en planleggingsdag i skoleruten).
+- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.

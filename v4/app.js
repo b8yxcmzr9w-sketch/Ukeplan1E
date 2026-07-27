@@ -167,10 +167,13 @@ function dagNavn(n) {
   return ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'][n - 1]
 }
 
-// Visningstekst for school_calendar.type — databaseverdien «helligdag»
-// beholdes, men vises for brukeren som «høytid».
+// Visningstekst for school_calendar.type — databaseverdiene beholdes, men
+// vises for brukeren som «høytid» (helligdag) og «undervisningsfri»
+// (planleggingsdag, P43 — fjerner «Planleggingsdag · planleggingsdag»).
 function kalenderTypeNavn(t) {
-  return t === 'helligdag' ? 'høytid' : t
+  if (t === 'helligdag') return 'høytid'
+  if (t === 'planleggingsdag') return 'undervisningsfri'
+  return t
 }
 
 // Returnerer neste skoleår som 'YY/YY', f.eks. '25/26' → '26/27'.
@@ -2097,7 +2100,9 @@ async function renderAlleOkterTab(container, autoScroll = true) {
   // P42: kompakt økt-rad. Faste kolonner der tomme celler beholder bredden
   // (tomrom er informasjon): uke/dato/klasse vises kun ved første forekomst i
   // sin gruppe. Tittel = aktivitet med kapittelhint (P/G + info) dempet inline
-  // i parentes; 📍 oppmøte utelates bevisst i kompaktmodus.
+  // etter «·»-skille — teksten vises nøyaktig som lagret, ingen parentes-
+  // innpakking (P43: lagret «(…)» ble ellers «((…))»). 📍 oppmøte utelates
+  // bevisst i kompaktmodus.
   function lagKompaktRad(s, week, visUke, visDato, visKlasse, actions) {
     const kalAar = skoleaarKalenderaar(s.school_year, s.week_nr, schoolStart)
     const datoKort = formatDatoNO(isoWeekToDate(kalAar, s.week_nr, s.day_of_week).toISOString().slice(0, 10))
@@ -2110,10 +2115,10 @@ async function renderAlleOkterTab(container, autoScroll = true) {
       onclick: (e) => { e.stopPropagation(); visOktHandlinger(actions, kebab) } }, '⋮')
 
     const tekst = el('span', { class: 'mpk-tekst' }, s.activity || '')
-    if (hint) tekst.appendChild(el('span', { class: 'mpk-hint' }, `${s.activity ? ' ' : ''}(${hint})`))
+    if (hint) tekst.appendChild(el('span', { class: 'mpk-hint' }, `${s.activity ? ' · ' : ''}${hint}`))
     // Full tekst i tooltip — kun på enheter med ekte hover (ikke touch)
     if (hoverEkte) {
-      const full = [s.activity || '', hint ? `(${hint})` : ''].filter(Boolean).join(' ')
+      const full = [s.activity || '', hint].filter(Boolean).join(' · ')
       if (full) tekst.title = full
     }
     // «mer…» vises kun ved faktisk overflyt — måles i maalOverflyt() etter layout
