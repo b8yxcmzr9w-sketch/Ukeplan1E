@@ -457,12 +457,9 @@ tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
 
 ---
 
-## Økt (P35): Utelat ukjent klasse i AI-import av økter
+## Økt (P44): Utelat ukjent klasse i AI-import av økter
 
-> NB om nummerering: oppgaven fra planleggingschatten kaller dette «plan-punkt
-> P35», og branchen heter `claude/p35-utelat-ukjent-klasse-ai-import-6nv2vi`.
-> Statuslinjen i denne filen sier at neste ledige P-nummer er **P44**. Nummeret
-> her følger oppgaveteksten; si fra hvis seksjonen heller skal hete P44.
+**Branch:** `claude/p44-utelat-ukjent-klasse-ai-import`
 
 **Mål:** Når limt tekst inneholder en klasse som ikke er klassen læreren står i,
 skal raden IKKE importeres. Merknadskolonnen skal si det i klarspråk, og den
@@ -507,8 +504,9 @@ omgangen.
 
 **B. Frontend `v4/app.js` — flagging (Steg 4):**
 - [ ] `byggRad` tar vare på `s.class_name` og setter `rad.ukjentKlasse` =
-      klassenavnet når teksten oppgir en ANNEN klasse enn den man står i
-      (normalisert sammenligning: trim + små bokstaver + fjernede mellomrom).
+      klassenavnet når teksten oppgir en ANNEN klasse enn den AKTIVE klassen i
+      modalen — også når det er en av lærerens egne andre klasser (avgjørelse 1;
+      normalisert sammenligning: trim + små bokstaver + fjernede mellomrom).
       Tomt/likt navn → uendret oppførsel (raden hører til denne klassen).
 - [ ] `validerRad` returnerer `roed = true` også ved `ukjentKlasse`, med
       merknad «Ukjent klasse (1B) – importeres ikke» (klassenavn i parentes når
@@ -521,10 +519,11 @@ omgangen.
 
 **C. Frontend `v4/app.js` — den gule boksen:**
 - [ ] Etter analysen: teller rader med `ukjentKlasse` og skriver en
-      DETERMINISTISK advarsel i den gule boksen, foran ev. AI-varsler:
-      «⚠️ N rad(er) gjelder en annen klasse (1B, 2A) og importeres ikke. Åpne
-      ukeplanen for den klassen for å importere dem.» Teksten er vår egen —
-      ikke avhengig av hva modellen finner på å skrive.
+      DETERMINISTISK advarsel i den gule boksen, foran ev. AI-varsler
+      (avgjørelse 2, endelig ordlyd — ingen oppfølgingssetning):
+      «⚠️ N rad(er) gjelder en annen klasse enn den valgte og importeres ikke.»
+      Teksten er vår egen — ikke avhengig av hva modellen finner på å skrive.
+      Klassenavnene vises kun i merknadskolonnen per rad, ikke i boksen.
 - [ ] `rensVarsel` utvides til også å fjerne setninger som nevner `class_id`
       (samme sikkerhetsnett som for `week_nr`).
 - [ ] Toasten «Ingen rader klare til import…» (app.js:3566) får dekkende
@@ -535,16 +534,19 @@ omgangen.
 - [ ] Maskinverifisering (headless Chromium med stubbet Supabase):
       (1) rader uten klassenavn importeres som før; (2) rad med annet
       klassenavn blir rød, får merknaden og blir IKKE inserted; (3) den gule
-      boksen viser den nye teksten med riktig antall og klassenavn;
+      boksen viser den godkjente teksten med riktig antall rader;
       (4) svar UTEN `class_name` gir uendret oppførsel; (5) ingen JS-feil.
 - [ ] Morfar redeployer `ai-parse-sessions` i Supabase Dashboard og tester med
       ekte innliming som blander to klasser.
 - [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
 
-### Åpne spørsmål (svar før implementasjon)
+### Avgjørelser (godkjent av Morfar 4. august 2026)
 
-1. **Regelen:** forslaget utelater rader for ENHVER annen klasse enn den man
-   står i — også lærerens egne andre klasser (importmodalen er per klasse).
-   Oppgaven sier «utenfor din klasseliste». Er «annen klasse enn denne» riktig?
-2. **Ordlyd i gul boks:** godtar du forslaget i punkt C, eller vil du ha en
-   annen formulering?
+1. **Avgrensning: «annen klasse enn denne».** Alle rader som ikke tilhører den
+   aktive klassen i modalen utelates — også lærerens egne andre klasser.
+   Modalen er per klasse; kun aktiv klasse importeres.
+2. **Ordlyd i gul boks (endelig):**
+   «⚠️ N rad(er) gjelder en annen klasse enn den valgte og importeres ikke.»
+   Ingen oppfølgingssetning.
+3. **Nummerering:** P44 (følger statuslinjen), branch
+   `claude/p44-utelat-ukjent-klasse-ai-import`.
