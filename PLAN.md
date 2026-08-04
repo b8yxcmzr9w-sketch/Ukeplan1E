@@ -454,3 +454,97 @@ tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
 - [x] PR #152 opprettet og squash-merget til main (ingen PR-CI i repoet —
       eneste workflow er den planlagte Supabase-keepaliven; `mergeable_state`
       var `clean`). Cache-bust `app.js?v=20260727b` bekreftet i merget main.
+
+---
+
+## Økt (P35): Utelat ukjent klasse i AI-import av økter
+
+> NB om nummerering: oppgaven fra planleggingschatten kaller dette «plan-punkt
+> P35», og branchen heter `claude/p35-utelat-ukjent-klasse-ai-import-6nv2vi`.
+> Statuslinjen i denne filen sier at neste ledige P-nummer er **P44**. Nummeret
+> her følger oppgaveteksten; si fra hvis seksjonen heller skal hete P44.
+
+**Mål:** Når limt tekst inneholder en klasse som ikke er klassen læreren står i,
+skal raden IKKE importeres. Merknadskolonnen skal si det i klarspråk, og den
+gule boksen øverst skal si tydelig at slike økter ikke importeres i denne
+omgangen.
+
+### Kartlegging (verifisert i koden 4. august 2026)
+
+- **Modal:** `visAIPasteModal` (app.js:3200–3628), åpnes fra app.js:1759 med
+  `aktivKlasse` — `klasseId` er aldri tom.
+- **Steg 4 (flagging):** `validerRad` (app.js:3286) gir RØD ved manglende
+  fag/uke/dag; `oppdaterRadStatus` (app.js:3392) gir GUL ved fridag eller
+  kollisjon. Merknadstekst settes i app.js:3411–3415.
+- **Steg 5 (insert):** app.js:3553–3623. Rader filtreres på `roed` og på
+  ubekreftet kollisjon; resten inserted i løkka app.js:3572–3600.
+- **FUNN — avvik fra antakelsen:** økter lagres i dag IKKE med
+  `class_id = null`. `byggRad` leser aldri `s.class_id` fra AI-svaret, og
+  inserten hardkoder `class_id: klasseId` (app.js:3580). Rader for en fremmed
+  klasse havner altså i KLASSEN LÆREREN STÅR I (feil klasse), ikke i en
+  klasseløs økt. Uønsket på samme måte — fiksen er den samme.
+- **Hvor null oppstår:** `ai-parse-sessions/index.ts:86,98` — modellen får kun
+  ÉN klasse i konteksten (app.js:3516) og instrueres til å sette null når den
+  er usikker. Verdien forkastes i frontend.
+- **Gul boks:** app.js:3525–3535 bygger `.advarsel-tekst` (gul, style.css:874)
+  av `data.warnings` — FRITEKST fra Gemini (prompt index.ts:99). Prompten har
+  ingen VARSLER-regler (i motsetning til `ai-parse-skolerute`), og `rensVarsel`
+  (app.js:5221) filtrerer i dag bare `week_nr`.
+- **Kjernefelle:** `class_id = null` betyr i dag BÅDE «teksten nevner en annen
+  klasse» OG «teksten nevner ingen klasse» (det normale tilfellet). Å utelate
+  alle null-rader ville stoppe vanlig import. Derfor trengs et nytt felt fra
+  edge-funksjonen som skiller de to.
+
+### Delplan
+
+**A. Edge function `ai-parse-sessions` (krever manuell redeploy):**
+- [ ] Nytt felt per økt i prompten: `"class_name"` = klassenavnet NØYAKTIG slik
+      det står i teksten, eller null når teksten ikke nevner klasse. `class_id`
+      beholdes uendret.
+- [ ] Ny VARSLER-seksjon i prompten etter mønsteret fra `ai-parse-skolerute`:
+      klarspråk, aldri feltnavn (`class_id`, `week_nr`), aldri JSON/null, og
+      aldri påstander om hva som blir importert (frontend eier den beskjeden).
+
+**B. Frontend `v4/app.js` — flagging (Steg 4):**
+- [ ] `byggRad` tar vare på `s.class_name` og setter `rad.ukjentKlasse` =
+      klassenavnet når teksten oppgir en ANNEN klasse enn den man står i
+      (normalisert sammenligning: trim + små bokstaver + fjernede mellomrom).
+      Tomt/likt navn → uendret oppførsel (raden hører til denne klassen).
+- [ ] `validerRad` returnerer `roed = true` også ved `ukjentKlasse`, med
+      merknad «Ukjent klasse (1B) – importeres ikke» (klassenavn i parentes når
+      det finnes, ellers «Ukjent klasse – importeres ikke»). Raden får dermed
+      rød stil og ekskluderes automatisk av eksisterende filter i Steg 5.
+- [ ] Raden blir stående synlig (ikke auto-strøket), så læreren ser hva som ble
+      hoppet over og kan stryke den selv.
+- [ ] BAKOVERKOMPATIBELT: mangler `class_name` i svaret (edge function ikke
+      redeployet ennå), oppfører importen seg nøyaktig som i dag.
+
+**C. Frontend `v4/app.js` — den gule boksen:**
+- [ ] Etter analysen: teller rader med `ukjentKlasse` og skriver en
+      DETERMINISTISK advarsel i den gule boksen, foran ev. AI-varsler:
+      «⚠️ N rad(er) gjelder en annen klasse (1B, 2A) og importeres ikke. Åpne
+      ukeplanen for den klassen for å importere dem.» Teksten er vår egen —
+      ikke avhengig av hva modellen finner på å skrive.
+- [ ] `rensVarsel` utvides til også å fjerne setninger som nevner `class_id`
+      (samme sikkerhetsnett som for `week_nr`).
+- [ ] Toasten «Ingen rader klare til import…» (app.js:3566) får dekkende
+      ordlyd når alt som står igjen er ukjent-klasse-rader.
+
+**D. Cache-bust + verifisering:**
+- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (kun JS — CSS uendret).
+- [ ] Maskinverifisering (headless Chromium med stubbet Supabase):
+      (1) rader uten klassenavn importeres som før; (2) rad med annet
+      klassenavn blir rød, får merknaden og blir IKKE inserted; (3) den gule
+      boksen viser den nye teksten med riktig antall og klassenavn;
+      (4) svar UTEN `class_name` gir uendret oppførsel; (5) ingen JS-feil.
+- [ ] Morfar redeployer `ai-parse-sessions` i Supabase Dashboard og tester med
+      ekte innliming som blander to klasser.
+- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
+
+### Åpne spørsmål (svar før implementasjon)
+
+1. **Regelen:** forslaget utelater rader for ENHVER annen klasse enn den man
+   står i — også lærerens egne andre klasser (importmodalen er per klasse).
+   Oppgaven sier «utenfor din klasseliste». Er «annen klasse enn denne» riktig?
+2. **Ordlyd i gul boks:** godtar du forslaget i punkt C, eller vil du ha en
+   annen formulering?
