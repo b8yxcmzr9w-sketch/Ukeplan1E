@@ -3,9 +3,11 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P43
-- **Pågående:** ingen
-- **Neste ledige P-nummer:** P44
-- **Dato sist oppdatert:** 27. juli 2026
+- **Pågående:** P44 — kode ferdig og maskinverifisert på branch
+  `claude/p44-utelat-ukjent-klasse-ai-import`; venter på Morfars migrasjon 022,
+  redeploy av `ai-parse-sessions` og merge
+- **Neste ledige P-nummer:** P45 (oppgavetekst mottatt, ikke startet)
+- **Dato sist oppdatert:** 5. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
     aktivt); maskinverifisert, ekte manuell bekreftelse skjer naturlig når
@@ -457,18 +459,21 @@ tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
 
 ---
 
-## Økt (P44): Multi-klasse-import i AI-import av økter
+## Økt (P44): Trygg import til egne klasser (AI-import av økter)
 
 **Branch:** `claude/p44-utelat-ukjent-klasse-ai-import`
 
-> **Omfangsendring 4. august 2026:** startet som en ren feilretting («utelat
-> rader med ukjent klasse»), utvidet av Morfar samme dag til en
-> FUNKSJONSUTVIDELSE: én innliming kan fordele økter på flere klasser.
-> Utelating av ukjente klasser er nå ett av seks understeg.
+> **Omfangshistorikk 4. august 2026:** startet som ren feilretting («utelat
+> rader med ukjent klasse»), ble utvidet til multi-klasse-import, og landet på
+> ENDELIG form: import til lærerens EGNE klasser (`user_classes`), med
+> RLS-innstramming som håndhever det samme i databasen. Skriving til andre
+> klasser er ikke lenger en del av P44 — det håndteres av P45 (forslag til
+> kollega).
 
-**Mål:** Én innliming kan inneholde økter for flere klasser. Hver rad havner i
-sin egen klasse, læreren kan overstyre klasse per rad, forhåndsvisningen er
-gruppert klassevis, og rader uten gyldig klasse utelates i klarspråk.
+**Mål:** Én innliming kan fordele økter på lærerens egne klasser. Rader for
+klasser læreren ikke er satt opp med importeres ikke, klassen kan overstyres
+per rad, listen er gruppert klassevis, og databasen slipper ikke gjennom
+skriving til andre klasser.
 
 ### Kartlegging (verifisert i koden 4. august 2026)
 
@@ -476,141 +481,169 @@ gruppert klassevis, og rader uten gyldig klasse utelates i klarspråk.
 - **Modal:** `visAIPasteModal` (app.js:3200–3628), åpnes fra app.js:1759 med
   `aktivKlasse`. Hele modalen er bygget rundt ÉN klasse (`klasseId`).
 - **Steg 4 (flagging):** `validerRad` (app.js:3286) gir RØD ved manglende
-  fag/uke/dag; `oppdaterRadStatus` (app.js:3392) gir GUL ved fridag eller
-  kollisjon; merknadstekst settes app.js:3411–3415.
-- **Steg 5 (insert):** app.js:3553–3623. Filtrerer på `roed` og ubekreftet
-  kollisjon; insert-løkka app.js:3572–3600 hardkoder `class_id: klasseId`
-  (app.js:3580) og forkaster AI-ens klasseverdi — `byggRad` leser aldri
-  `s.class_id`. Rader for en fremmed klasse havner derfor i DAGENS klasse.
+  fag/uke/dag; `oppdaterRadStatus` (app.js:3392) gir GUL ved fridag/kollisjon.
+- **Steg 5 (insert):** app.js:3553–3623. Insert-løkka hardkoder
+  `class_id: klasseId` (app.js:3580) og forkaster AI-ens klasseverdi —
+  `byggRad` leser aldri `s.class_id`. Rader for en fremmed klasse havner
+  derfor i DAGENS klasse.
 - **Gul boks:** app.js:3525–3535 bygger `.advarsel-tekst` (gul, style.css:874)
   av `data.warnings` — fritekst fra Gemini (prompt index.ts:99). Prompten har
   ingen VARSLER-regler; `rensVarsel` (app.js:5221) luker i dag bare `week_nr`.
 
-**Hva multi-klasse berører (nytt siden forrige plan)**
-- **Skrivetilgang er allerede skoleomfattende.** RLS-policyen
-  `sessions_insert_laerer` (migrasjon 008) sjekker KUN `school_id`,
-  `created_by = auth.uid()` og at læreren hører til skolen — ingen
-  klassebegrensning. Lærervisningens klassevelger (app.js:1535–1600) viser
-  allerede alle skolens klasser i optgroups «Dine klasser» / «Andre klasser».
-  INGEN migrasjon trengs for multi-klasse-import.
+**Skjema og tilgang**
+- `user_classes` = tildelt/underviser (bekreftet). `class_contact_teachers`
+  finnes i skjemaet, men appen skriver aldri til den (jf. migrasjon 009);
+  INSERT-vernet bygger derfor på `user_classes`.
+- **RLS i dag er skoleomfattende:** `sessions_insert_laerer` (migrasjon 008)
+  sjekker kun `school_id`, `created_by = auth.uid()` og at `teacher_id` hører
+  til skolen — ingen klassebegrensning. Det er dette steg E strammer.
 - **Parti/gruppe er per klasse** (migrasjon 017). Modalen laster i dag kun
-  divisjoner for aktiv klasse (app.js:3213–3215). Nedtrekket «Parti/gruppe» må
-  filtreres på RADENS klasse, og valget må nullstilles når klassen endres.
-- **Kollisjonssjekken** laster i dag bare aktiv klasses økter
-  (app.js:3217–3221) og må gjøres per klasse.
+  divisjoner for aktiv klasse (app.js:3213–3215) → må lastes for alle egne
+  klasser og filtreres på RADENS klasse.
+- **Kollisjonssjekken** laster bare aktiv klasses økter (app.js:3217–3221) →
+  må gjøres per klasse.
 - **Fridagssjekken er allerede skoleomfattende:** `finnFridag` (app.js:972–985)
-  slår opp i `school_calendar`, som ikke har `class_id`. Kravet «fridagssjekk
-  per klasse» er dermed oppfylt uten endring — sjekken er lik for alle klasser.
-- **Tabellen** er et CSS-grid med 10 kolonner (style.css:886) + egne
-  mobilregler (style.css:909–916). Ny klasse-kolonne må inn begge steder.
-- **Utenfor scope:** dette lager SEPARATE økter per klasse, ikke fellesøkter
-  (`shared_group_id`, migrasjon 010). Fellesundervisning røres ikke.
+  slår opp i `school_calendar`, som ikke har `class_id`. Ingen endring.
+- **Tabellen** er et 10-kolonners CSS-grid (style.css:886) + mobilregler
+  (style.css:909–916). Ny klasse-kolonne må inn begge steder → CSS endres, så
+  BÅDE css- og js-versjon må cache-bustes.
+- **Utenfor scope:** separate økter per klasse, ikke fellesøkter
+  (`shared_group_id`, migrasjon 010).
+
+**Funn som påvirker steg E (se «Avvik» nederst)**
+- Fire innsettingssteder setter `teacher_id` fra et nedtrekk, ikke til seg
+  selv: «Ny økt» (app.js:2657), «Kopier økt» (app.js:2820), redigermodalens
+  kopi (app.js:2941), bulk-kopi med «behold lærer» (app.js:3174) — og
+  AI-importen selv (app.js:3585), der `matchLaerer` forhåndsvelger en KOLLEGA
+  når fornavnet i teksten matcher. Migrasjon 008 la eksplisitt til rette for
+  dette («økt kan registreres på en kollega»).
 
 ### Delplan
 
 **A. Edge function `ai-parse-sessions` (krever manuell redeploy):**
-- [ ] Nytt felt per økt i prompten: `"class_name"` = klassenavnet NØYAKTIG slik
+- [x] Nytt felt per økt i prompten: `"class_name"` = klassenavnet NØYAKTIG slik
       det står i teksten, eller null når teksten ikke nevner klasse.
-      `class_id` beholdes uendret.
-- [ ] Konteksten `classes` (app.js:3516) sendes med HELE tilgangslista, ikke
-      bare aktiv klasse, så modellen kan kjenne igjen klassenavn. Frontend er
-      likevel fasit: matchingen skjer i kode (steg B).
-- [ ] Ny VARSLER-seksjon i prompten etter mønsteret fra `ai-parse-skolerute`:
-      klarspråk, aldri feltnavn (`class_id`, `week_nr`), aldri JSON/null, og
-      aldri påstander om hva som blir importert (frontend eier den beskjeden).
+- [x] `classes`-konteksten (app.js:3516) sendes med lærerens tildelte klasser,
+      ikke bare aktiv klasse. Frontend er likevel fasit for matchingen.
+- [x] Ny VARSLER-seksjon etter mønsteret fra `ai-parse-skolerute`: klarspråk,
+      aldri feltnavn (`class_id`, `week_nr`), aldri JSON/null, og aldri
+      påstander om hva som blir importert (frontend eier den beskjeden).
 
-**B. Klassematching per rad (frontend):**
-- [ ] Tilgangslista lastes én gang i modalen (samme spørring som
-      klassevelgeren: `user_classes` = «Dine klasser», resten av skolens
-      klasser = «Andre klasser»).
-- [ ] Matcheregel per rad (normalisert: trim + små bokstaver + fjernede
-      mellomrom):
-      - `class_name` matcher klasse i lista → radens `class_id` = den klassen.
-      - `class_name` finnes, men matcher INGEN klasse i lista → rad RØD,
-        utelatt, merknad «Ukjent klasse (X) – importeres ikke».
-      - `class_name` = null → fall tilbake til aktiv klasse (som i dag).
-- [ ] `validerRad` returnerer `roed = true` også når raden mangler gyldig
-      klasse, så eksisterende utelatingsfilter i Steg 5 fanger den automatisk.
-- [ ] BAKOVERKOMPATIBELT: mangler `class_name` i svaret (edge function ikke
-      redeployet ennå), havner alle rader i aktiv klasse — nøyaktig som i dag.
+**B. Klassematching per rad — mot `user_classes`:**
+- [x] Modalen laster lærerens tildelte klasser (`user_classes`, ikke-slettede,
+      sortert på navn).
+- [x] Matcheregel (normalisert: trim + små bokstaver + fjernede mellomrom):
+      - `class_name` matcher egen klasse → radens `class_id` settes.
+      - `class_name` finnes, men ikke i `user_classes` → rad RØD, utelatt,
+        merknad «Ukjent/annen klasse (X) – importeres ikke».
+      - `class_name` = null → aktiv klasse (som i dag).
+- [x] Kant-tilfelle: er AKTIV klasse ikke blant lærerens egne (klassevelgeren
+      viser også «Andre klasser»), blir fallback-radene røde med samme
+      merknad — de kan reddes ved å velge en egen klasse i nedtrekket.
+- [x] `validerRad` gir `roed = true` uten gyldig klasse → eksisterende
+      utelatingsfilter i Steg 5 fanger raden automatisk.
+- [x] BAKOVERKOMPATIBELT: uten `class_name` i svaret havner alt i aktiv klasse
+      — nøyaktig som i dag.
 
 **C. Redigerbar klasse per rad:**
-- [ ] Ny kolonne «Klasse» i forhåndsvisningen med nedtrekk som KUN viser
-      klasser fra tilgangslista (optgroups «Dine klasser» / «Andre klasser»,
-      samme mønster som klassevelgeren).
-- [ ] Rød ukjent-klasse-rad kan «reddes»: velger læreren en gyldig klasse,
-      forsvinner rødfargen og merknaden, og raden blir importerbar.
-- [ ] Klassebytte trigger full re-validering av raden: parti/gruppe-nedtrekket
-      bygges på nytt for den nye klassen (ugyldig valg nullstilles), og
-      kollisjonssjekken kjøres på nytt mot den nye klassen.
-- [ ] CSS: grid-template i style.css:886 utvides med klasse-kolonnen, og
-      mobilreglene (style.css:909–916) gir klasse-cella egen plass.
+- [x] Ny kolonne «Klasse» med nedtrekk som viser KUN lærerens egne klasser.
+      Ingen skriving til andre klasser i P44.
+- [x] Rød rad kan reddes ved å velge en egen klasse.
+- [x] Klassebytte re-validerer raden: parti/gruppe bygges på nytt for den nye
+      klassen (ugyldig valg nullstilles) og kollisjonssjekken kjøres på nytt.
+- [x] CSS: grid-template (style.css:886) + mobilregler (909–916) utvides.
 
-**D. Klassevis gruppering av resultatlisten:**
-- [ ] Radene grupperes under en klasseoverskrift per klasse (sortert på
-      klassenavn), med rader innen gruppen sortert på uke og dag.
-- [ ] Rader uten gyldig klasse samles i egen gruppe nederst: «Uten gyldig
-      klasse – importeres ikke».
-- [ ] Endrer læreren klasse på en rad, flyttes raden til riktig gruppe med én
-      gang. «+ Legg til rad» legger raden i aktiv klasses gruppe.
+**D. Klassevis gruppering:**
+- [x] Rader grupperes under klasseoverskrift, sortert på klassenavn; innen
+      gruppen sortert på uke og dag.
+- [x] Ugyldige rader nederst i egen gruppe «Uten gyldig klasse – importeres
+      ikke».
+- [x] Klassebytte flytter raden til riktig gruppe umiddelbart; «+ Legg til
+      rad» legger raden i aktiv klasses gruppe.
 
-**E. Import (Steg 5):**
-- [ ] Insert bruker RADENS `class_id`, ikke modalens `klasseId`.
-- [ ] Kollisjonssjekk per klasse: eksisterende økter lastes per klasse ved
-      behov (kun klasser som faktisk forekommer i radene) og caches i modalen.
-- [ ] Fridagssjekk uendret (skoleomfattende — se kartleggingen).
-- [ ] Røde rader utelates som før (mangler fag/uke/dag ELLER mangler gyldig
-      klasse); kollisjonsrader krever fortsatt «importer likevel»-hake.
-- [ ] Kvitteringstoasten viser fordelingen per klasse, f.eks.
-      «12 økt(er) importert (1D: 8, 1E: 4)». NB: ukevisningen som oppdateres
-      etterpå (`onSave`) viser bare aktiv klasse — teksten må derfor si hvor
-      de andre havnet.
+**E. DB-migrasjon 022 — stram `sessions_insert_laerer` (manuell kjøring):**
+- [x] Ny fil `022_import_egne_klasser.sql`, idempotent
+      (`drop policy if exists`), kjøres manuelt i SQL Editor.
+- [x] Ny arm basert på `user_classes` (IKKE `is_contact_teacher_for` — det
+      ville låst ute faglærere som er tildelt klassen uten å være
+      kontaktlærer), med `or is_active_admin()`.
+- [x] Se «Avvik fra oppgaveteksten» nederst om `teacher_id = auth.uid()`.
 
 **F. Gul boks + varselvask:**
-- [ ] Deterministisk advarsel skrevet av oss, foran ev. AI-varsler:
+- [x] Deterministisk advarsel foran ev. AI-varsler:
       «⚠️ N rad(er) gjelder en annen klasse (1B, 2A) og importeres ikke.»
-      Klassenavnene i parentes er de ukjente navnene fra teksten.
-- [ ] `rensVarsel` utvides til å luke ut setninger som nevner feltnavn
-      (`class_id` i tillegg til `week_nr`).
-- [ ] Toasten «Ingen rader klare til import…» (app.js:3566) får dekkende
-      ordlyd når det som står igjen er rader uten gyldig klasse.
+      Oppdateres når rader reddes eller strykes.
+- [x] `rensVarsel` luker ut setninger som nevner feltnavn (`class_id` m.fl.,
+      i tillegg til `week_nr`).
+- [x] Toasten «Ingen rader klare til import…» (app.js:3566) får dekkende
+      ordlyd når det som står igjen mangler gyldig klasse.
 
 **G. Cache-bust + verifisering:**
-- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (BÅDE JS og CSS denne gangen —
-      style.css endres i steg C).
-- [ ] Maskinverifisering (headless Chromium med stubbet Supabase):
-      (1) innliming med to kjente klasser → radene havner i hver sin klasse og
-      inserted med riktig `class_id`; (2) ukjent klassenavn → rød rad, riktig
-      merknad, ikke inserted; (3) rad uten klassenavn → aktiv klasse;
-      (4) overstyring i klasse-nedtrekket flytter raden til riktig gruppe,
-      bygger parti/gruppe på nytt og redder en rød rad; (5) kollisjon oppdages
-      mot RIKTIG klasse (ikke aktiv klasse); (6) gul boks med godkjent ordlyd
-      og riktig antall; (7) svar UTEN `class_name` gir uendret oppførsel;
-      (8) ingen JS-feil.
-- [ ] Morfar redeployer `ai-parse-sessions` i Supabase Dashboard og tester med
-      ekte innliming som blander to klasser.
+- [x] Bump `?v=20260805a` i `v4/index.html` for BÅDE css og js.
+- [x] Maskinverifisering (headless Chromium mot ekte app.js + stubbet
+      Supabase): 35 sjekker, alle OK, ingen JS-feil. Dekker matching mot egne
+      klasser, rødflagg + merknad for fremmed klasse, nedtrekk uten «Andre
+      klasser», gul boks med godkjent ordlyd, renset AI-varsel, gruppering og
+      uke-sortering, kollisjon mot RADENS klasse (ikke aktiv), parti/gruppe
+      filtrert og gjenoppbygd ved klassebytte, redning av rød rad, insert med
+      riktig `class_id` per rad, kvittering med fordeling per klasse, svar
+      UTEN `class_name` (bakoverkompatibelt) og aktiv klasse som ikke er
+      lærerens egen.
+- [ ] Morfar kjører migrasjon 022 og redeployer `ai-parse-sessions`, og tester
+      med ekte innliming som blander to av sine egne klasser + én fremmed.
 - [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
 
 ### Avgjørelser (godkjent av Morfar 4. august 2026)
 
-1. **Avgrensning (opprinnelig):** «annen klasse enn denne» — utelat rader som
-   ikke tilhører den aktive klassen. **Erstattet samme dag** av
-   multi-klasse-retningen: rader for andre klasser i tilgangslista importeres
-   nå til SIN klasse i stedet for å utelates. Utelating gjelder fortsatt rader
-   med et klassenavn som ikke finnes i tilgangslista.
-2. **Ordlyd i gul boks (endelig):**
-   «⚠️ N rad(er) gjelder en annen klasse (1B, 2A) og importeres ikke.»
-   Ingen oppfølgingssetning.
-3. **Nummerering:** P44 (følger statuslinjen), branch
-   `claude/p44-utelat-ukjent-klasse-ai-import`.
-4. **Tilgangslista = som ellers i appen:** klassene læreren er satt opp med
-   (`user_classes`) øverst, deretter et skille og resten av skolens klasser —
-   nøyaktig samme mønster som klassevelgeren i lærervisningen
-   (optgroups «Dine klasser» / «Andre klasser», app.js:1535–1600). «Ukjent
-   klasse» betyr dermed «finnes ikke ved skolen». Gjelder både nedtrekket i
-   steg C og matchingen i steg B.
+1. **Import til lærerens egne klasser** (`user_classes`). Rader for andre
+   klasser importeres ikke i P44 — de er P45s oppgave (forslag til kollega).
+2. **Ordlyd i gul boks:** «⚠️ N rad(er) gjelder en annen klasse (1B, 2A) og
+   importeres ikke.» Radmerknad: «Ukjent/annen klasse (X) – importeres ikke».
+3. **Nummerering:** P44, branch `claude/p44-utelat-ukjent-klasse-ai-import`.
+4. **Klasse-nedtrekket:** kun lærerens tildelte klasser (`user_classes`).
+   (Tidligere avgjørelse om «Dine klasser» + «Andre klasser» er dermed
+   erstattet — «Andre klasser» skal ikke kunne velges i importen.)
+5. **INSERT-vernet bygger på `user_classes`**, ikke `class_contact_teachers`
+   eller `is_contact_teacher_for`.
 
-### Status
+### Avvik fra oppgaveteksten (steg E — venter på Morfars beslutning)
 
-Planen er godkjent i sin helhet. **Ingen bygging startet** — implementasjonen
-avventer klarsignal fra Morfar.
+Oppgaveteksten foreslår `teacher_id = auth.uid()` i policyen. Kjøres den slik,
+stopper databasen tre ting som virker i dag:
+
+1. «Ny økt» der læreren planlegger på vegne av en kollega (migrasjon 008 la
+   eksplisitt til rette for dette).
+2. Bulk-kopi med «behold lærer» av en kollegas økt.
+3. AI-importen SELV: lærer-nedtrekket forhåndsvelger en kollega når `matchLaerer`
+   kjenner igjen fornavnet i teksten — den raden ville da bli avvist av RLS.
+
+Migrasjon 022 er derfor skrevet med klassevernet (P44s faktiske mål) og
+BEHOLDER migrasjon 008s lærer-sjekk («læreren må høre til skolen»). Den
+strengere varianten ligger som ferdig, utkommentert blokk i samme fil, med
+denne begrunnelsen — bytt til den hvis kollegaplanlegging skal fjernes som en
+bevisst innstramming.
+
+---
+
+## Økt (P45): «Foreslå økt til kollega» — IKKE STARTET
+
+**Status:** kun mottatt oppgavetekst. Kartografi og sub-plan skrives i egen
+økt, etter at P44 er i mål.
+
+**Mål:** økter som gjelder en annen klasse sendes som forslag til en lærer som
+er tildelt den klassen; mottakeren godtar eller avviser. In-system, ikke
+e-post.
+
+**Skisse fra oppgaveteksten (ikke kodeverifisert ennå):**
+- Utvid `pending_transfers` — eller nytt bord, f.eks.
+  `pending_session_proposals` — til å bære UINNSATTE forslag: `class_id`,
+  `subject_id`, `division_id`, `week_nr`, `day_of_week`, `activity`,
+  `meeting_point`, `info`, `from_user`, `to_user`, `status`, `seen_at`.
+- Innboks-UI: mottaker ser innkommende forslag, godtar → økta opprettes i
+  mottakerens klasse under mottakerens eierskap (RLS-rent), eller avviser.
+- Kobles til importen senere: røde «annen klasse»-rader kan sendes som forslag
+  i stedet for bare å utelates.
+- E-postvarsel er valgfritt tillegg, ikke del av P45s kjerne.
+
+**Avhengighet:** P44s RLS-innstramming (migrasjon 022) er forutsetningen —
+den er grunnen til at «annen klasse» må gå veien om et forslag.

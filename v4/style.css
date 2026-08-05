@@ -883,7 +883,7 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-hode { font-size: .78rem; font-weight: 700; color: var(--tekst-svak); border-bottom: 2px solid var(--kant); padding-bottom: 4px; margin-bottom: 2px; }
 .okt-import-rad {
   display: grid;
-  grid-template-columns: 1.6fr 1.2fr 1.1fr 60px 80px 1fr 1fr 1fr 1.4fr 36px;
+  grid-template-columns: .9fr 1.6fr 1.2fr 1.1fr 60px 80px 1fr 1fr 1fr 1.4fr 36px;
   gap: 4px;
   align-items: center;
   padding: 4px 0;
@@ -906,10 +906,19 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-rad--gul .okt-import-merknad { color: #856404; }
 .okt-import-kollisjon-wrap { display: flex; align-items: center; gap: 4px; font-size: .78rem; margin-top: 2px; }
 
+/* P44: klassevis gruppering av forhåndsvisningen */
+.okt-import-gruppe { margin-bottom: 10px; }
+.okt-import-gruppe-hode {
+  font-size: .82rem; font-weight: 700; color: var(--tekst-svak);
+  padding: 6px 0 2px; position: sticky; top: 0; background: var(--bg-kort);
+}
+.okt-import-gruppe--ugyldig .okt-import-gruppe-hode { color: var(--fare); }
+
 @media (max-width: 900px) {
   .okt-import-rad { grid-template-columns: 1fr 1fr; }
   .okt-import-hode { display: none; }
   .okt-import-celle { }
+  .okt-import-celle--klasse,
   .okt-import-celle--fag,
   .okt-import-celle--akt { grid-column: 1 / -1; }
   .okt-import-celle--merknad { grid-column: 1 / -1; }

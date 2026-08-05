@@ -3205,31 +3205,70 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   const skolear = skoleAar || APP.school?.active_school_year
   const klasseId = defaultKlasse?.id
 
-  // Last inn kontekstdata (subjects, teachers, alle divisjoner for klassen, eksisterende sessions)
-  const [{ data: allSubjects }, { data: allTeachers }, { data: allDivs }, { data: eksisterendeSessions }] = await Promise.all([
+  // P44: importen skriver KUN til klasser læreren er satt opp med (user_classes).
+  // Rader for andre klasser utelates i forhåndsvisningen, og migrasjon 022
+  // håndhever den samme grensen i databasen.
+  const [{ data: allSubjects }, { data: allTeachers }, { data: mineKlasseRader }] = await Promise.all([
     sb.from('subjects').select('id, name, short_code').eq('school_id', APP.school.id).is('deleted_at', null).order('name'),
     sb.from('users').select('id, full_name').eq('school_id', APP.school.id).is('deleted_at', null).order('full_name'),
-    klasseId
-      ? sb.from('subject_divisions').select('id, name, subject_id, division_type, class_id')
-          .or(`class_id.is.null,class_id.eq.${klasseId}`)
-          .is('deleted_at', null).order('sort_order')
-      : { data: [] },
-    klasseId
-      ? sb.from('sessions')
-          .select('id, subject_id, week_nr, day_of_week, session_divisions(division_id)')
-          .eq('class_id', klasseId).eq('school_year', skolear).is('deleted_at', null)
-      : { data: [] },
+    sb.from('user_classes').select('classes(*)').eq('user_id', APP.profile.id),
   ])
+
+  const mineKlasser = (mineKlasseRader || []).map(r => r.classes)
+    .filter(k => k && !k.deleted_at)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'no'))
+  const mineKlasseIds = new Set(mineKlasser.map(k => k.id))
+
+  // Divisjoner for alle egne klasser (parti/gruppe er per klasse, migrasjon 017).
+  // Aktiv klasse tas med selv om den ikke er lærerens egen, så nedtrekket på en
+  // rød fallback-rad ikke står tomt før klassen rettes.
+  const divKlasseIds = [...new Set([...mineKlasseIds, klasseId].filter(Boolean))]
+  const { data: allDivs } = divKlasseIds.length
+    ? await sb.from('subject_divisions').select('id, name, subject_id, division_type, class_id')
+        .or(`class_id.is.null,class_id.in.(${divKlasseIds.join(',')})`)
+        .is('deleted_at', null).order('sort_order')
+    : { data: [] }
 
   const subjects = allSubjects || []
   const teachers = allTeachers || []
   const divs = allDivs || []
-  const eksisterende = eksisterendeSessions || []
 
   // Oppslag-kart
   const subjectById = Object.fromEntries(subjects.map(s => [s.id, s]))
   const teacherById = Object.fromEntries(teachers.map(t => [t.id, t]))
   const divById     = Object.fromEntries(divs.map(d => [d.id, d]))
+
+  // Eksisterende økter per klasse – lastes ved behov og caches, så
+  // kollisjonssjekken gjelder RADENS klasse og ikke bare den aktive.
+  const eksisterendeCache = new Map()
+  async function hentEksisterende(cid) {
+    if (!cid) return []
+    if (!eksisterendeCache.has(cid)) {
+      const { data } = await sb.from('sessions')
+        .select('id, subject_id, week_nr, day_of_week, session_divisions(division_id)')
+        .eq('class_id', cid).eq('school_year', skolear).is('deleted_at', null)
+      eksisterendeCache.set(cid, data || [])
+    }
+    return eksisterendeCache.get(cid)
+  }
+  if (klasseId) await hentEksisterende(klasseId)
+
+  // Klassematching: normalisert navnesammenligning mot lærerens egne klasser
+  const normKlasse = (v) => (v || '').toString().trim().toLowerCase().replace(/\s+/g, '')
+  const klasseVedNavn = new Map(mineKlasser.map(k => [normKlasse(k.name), k]))
+  // Aktiv klasse duger som fallback bare når læreren faktisk er satt opp med den
+  const fallbackKlasseId = mineKlasseIds.has(klasseId) ? klasseId : ''
+
+  function matchKlasse(s) {
+    const navn = (s?.class_name || '').toString().trim()
+    if (navn) {
+      const treff = klasseVedNavn.get(normKlasse(navn))
+      return treff ? { klasseId: treff.id, ukjentNavn: '' } : { klasseId: '', ukjentNavn: navn }
+    }
+    if (s?.class_id && mineKlasseIds.has(s.class_id)) return { klasseId: s.class_id, ukjentNavn: '' }
+    if (fallbackKlasseId) return { klasseId: fallbackKlasseId, ukjentNavn: '' }
+    return { klasseId: '', ukjentNavn: defaultKlasse?.name || '' }
+  }
 
   // Forhåndsmatching-hjelper: fag
   function matchFag(aiId, aiTekst) {
@@ -3265,15 +3304,16 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     return treff.length === 1 ? treff[0].id : ''
   }
 
-  // Divisjoner for et fag (for dropdown-bygging)
-  function divsForFag(subjId) {
+  // Divisjoner for et fag i en gitt klasse (parti/gruppe er per klasse)
+  function divsForFag(subjId, radKlasseId) {
     if (!subjId) return []
-    return divs.filter(d => d.subject_id === subjId)
+    return divs.filter(d => d.subject_id === subjId && (!d.class_id || d.class_id === radKlasseId))
   }
 
-  // Kollisjonssjekk: eksakt match på uke+dag+fag+divisjon-sett
-  function sjekkKollisjon(weekNr, dagOfWeek, subjId, divId) {
-    if (!weekNr || !dagOfWeek || !subjId) return false
+  // Kollisjonssjekk: eksakt match på uke+dag+fag+divisjon-sett, i radens klasse
+  async function sjekkKollisjon(radKlasseId, weekNr, dagOfWeek, subjId, divId) {
+    if (!radKlasseId || !weekNr || !dagOfWeek || !subjId) return false
+    const eksisterende = await hentEksisterende(radKlasseId)
     return eksisterende.some(s => {
       if (s.week_nr !== weekNr || s.day_of_week !== dagOfWeek || s.subject_id !== subjId) return false
       const eksDiv = (s.session_divisions || []).map(sd => sd.division_id).filter(Boolean).sort().join(',')
@@ -3286,6 +3326,12 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   function validerRad(rad) {
     const merknader = []
     let roed = false
+    if (!rad.klasseSel.value) {
+      merknader.push(rad.ukjentNavn
+        ? `Ukjent/annen klasse (${rad.ukjentNavn}) – importeres ikke`
+        : 'Mangler klasse – importeres ikke')
+      roed = true
+    }
     if (!rad.fagSel.value) { merknader.push('Mangler fag'); roed = true }
     const uke = parseInt(rad.ukeFelt.value)
     if (!uke || uke < 1 || uke > 53) { merknader.push('Mangler uke'); roed = true }
@@ -3296,7 +3342,16 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
 
   // Bygg en rad i tabellen
   function byggRad(s, rader, liste) {
-    const rad = { fjernet: false, fridagAdvarsel: null, kollisjon: false }
+    const rad = { fjernet: false, fridagAdvarsel: null, kollisjon: false, ukjentNavn: '' }
+
+    // Klasse-dropdown (kun lærerens egne klasser – P44)
+    const kMatch = matchKlasse(s)
+    rad.ukjentNavn = kMatch.ukjentNavn
+    rad.klasseSel = el('select', { class: 'felt select okt-import-felt' })
+    rad.klasseSel.appendChild(el('option', { value: '' }, '— velg klasse —'))
+    for (const k of mineKlasser)
+      rad.klasseSel.appendChild(el('option', { value: k.id }, k.name))
+    if (kMatch.klasseId) rad.klasseSel.value = kMatch.klasseId
 
     // Fag-dropdown
     rad.fagSel = el('select', { class: 'felt select okt-import-felt' })
@@ -3314,7 +3369,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     function fyllDivDropdown(subjId, velgId, foreslatt) {
       clearEl(rad.divSel)
       rad.divSel.appendChild(el('option', { value: '' }, '—'))
-      const tilgjengelig = divsForFag(subjId)
+      const tilgjengelig = divsForFag(subjId, rad.klasseSel.value)
       for (const d of tilgjengelig) {
         const opt = el('option', { value: d.id }, `${d.division_type === 'parti' ? 'Parti' : 'Gruppe'}: ${d.name}`)
         rad.divSel.appendChild(opt)
@@ -3377,15 +3432,31 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     rad.oppmoteFelt.value   = s?.meeting_point || ''
     rad.infoFelt.value      = s?.info || ''
 
-    // Fagbytte → oppdater divisjon-dropdown
-    rad.fagSel.addEventListener('change', () => {
+    // Beholder parti/gruppe med samme navn når fag eller klasse endres —
+    // ellers nullstilles valget, siden divisjonene hører til ny klasse/fag.
+    function byggDivPaaNytt() {
       const nySubjId = rad.fagSel.value
       const forrigeDiv = rad.divSel.value
       const forrigeNavn = forrigeDiv ? (divById[forrigeDiv]?.name || '') : ''
-      const nyeDivs = divsForFag(nySubjId)
+      const nyeDivs = divsForFag(nySubjId, rad.klasseSel.value)
       const sammeNavn = forrigeNavn ? nyeDivs.find(d => d.name === forrigeNavn) : null
       fyllDivDropdown(nySubjId, sammeNavn?.id || '', !!sammeNavn)
+    }
+
+    // Fagbytte → oppdater divisjon-dropdown
+    rad.fagSel.addEventListener('change', () => {
+      byggDivPaaNytt()
       oppdaterRadStatus()
+    })
+
+    // Klassebytte → raden er overstyrt av læreren: rødflagget faller bort,
+    // parti/gruppe bygges for den nye klassen, og raden flyttes til sin gruppe.
+    rad.klasseSel.addEventListener('change', () => {
+      rad.ukjentNavn = ''
+      byggDivPaaNytt()
+      plasserRad(rad)
+      oppdaterRadStatus()
+      oppdaterUkjentKlasseVarsel()
     })
 
     // Live-validering
@@ -3405,8 +3476,8 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
         }
       }
 
-      // Kollisjon-sjekk
-      rad.kollisjon = !roed && sjekkKollisjon(uke, dag, subjId, divId)
+      // Kollisjon-sjekk – mot radens egen klasse
+      rad.kollisjon = !roed && await sjekkKollisjon(rad.klasseSel.value, uke, dag, subjId, divId)
 
       const allemerknader = [...merknader]
       if (rad.fridagAdvarsel) allemerknader.push(rad.fridagAdvarsel)
@@ -3433,9 +3504,15 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
 
     // Stryk-knapp
     const strykKnapp = el('button', { type: 'button', class: 'btn btn-ikon btn-f', title: 'Stryk denne raden',
-      onclick: () => { rad.fjernet = true; rad.el.remove() } }, '🗑️')
+      onclick: () => {
+        rad.fjernet = true
+        rad.el.remove()
+        ryddTommeGrupper()
+        oppdaterUkjentKlasseVarsel()
+      } }, '🗑️')
 
     rad.el = el('div', { class: 'okt-import-rad' },
+      el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, rad.klasseSel),
       el('div', { class: 'okt-import-celle okt-import-celle--fag' }, rad.fagSel),
       el('div', { class: 'okt-import-celle okt-import-celle--div' }, divWrap),
       el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, rad.laererSel),
@@ -3448,8 +3525,9 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       el('div', { class: 'okt-import-celle okt-import-celle--stryk' }, strykKnapp),
     )
     rad._kollisjonHake = kollisjonHake
+    rad.el._rad = rad
     rader.push(rad)
-    liste.appendChild(rad.el)
+    plasserRad(rad)
 
     // Kjør innledende validering
     oppdaterRadStatus()
@@ -3457,6 +3535,12 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   }
 
   // ─── Tekstfelt-seksjon ───
+  // Uten egne klasser finnes det ingenting å importere TIL (P44 + migrasjon 022)
+  if (!mineKlasser.length) {
+    box.appendChild(el('p', { class: 'advarsel-tekst' },
+      '⚠️ Du er ikke satt opp med noen klasser, så økter kan ikke importeres. Be en administrator legge deg til på klassen din.'))
+  }
+
   const textarea = el('textarea', { class: 'felt textarea textarea-large', placeholder: 'Lim inn tekst her…' })
   box.appendChild(textarea)
 
@@ -3466,8 +3550,18 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   // ─── Forhåndsvisning ───
   const prevSeksjon = el('div', { class: 'okt-import-prev', style: 'display:none' })
 
+  // Deterministisk advarsel om rader uten gyldig klasse. Skrives av oss, ikke
+  // av AI-en, og ligger foran ev. AI-varsler.
+  const ukjentBoks = el('p', { class: 'advarsel-tekst', style: 'display:none' })
+  prevSeksjon.appendChild(ukjentBoks)
+
+  // AI-ens egne varsler (renset for feltnavn) – egen boks under vår.
+  const aiVarselBoks = el('p', { class: 'advarsel-tekst', style: 'display:none' })
+  prevSeksjon.appendChild(aiVarselBoks)
+
   // Kolonneoverskrifter
   prevSeksjon.appendChild(el('div', { class: 'okt-import-rad okt-import-hode' },
+    el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, 'Klasse'),
     el('div', { class: 'okt-import-celle okt-import-celle--fag' }, 'Fag'),
     el('div', { class: 'okt-import-celle okt-import-celle--div' }, 'Parti/gruppe'),
     el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, 'Lærer'),
@@ -3485,6 +3579,78 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   box.appendChild(prevSeksjon)
 
   const rader = []
+
+  // ─── Klassevis gruppering av forhåndsvisningen ───
+  // Én gruppe per klasse (sortert på klassenavn), og rader uten gyldig klasse
+  // samlet nederst. Radene flyttes mellom gruppene når klassen endres.
+  const grupper = new Map()
+
+  function gruppeNavn(key) {
+    if (!key) return 'Uten gyldig klasse – importeres ikke'
+    return mineKlasser.find(k => k.id === key)?.name || 'Klasse'
+  }
+
+  function hentGruppe(key) {
+    let g = grupper.get(key)
+    if (!g) {
+      const body = el('div', { class: 'okt-import-gruppe-rader' })
+      const wrap = el('div', { class: `okt-import-gruppe${key ? '' : ' okt-import-gruppe--ugyldig'}` },
+        el('div', { class: 'okt-import-gruppe-hode' }, gruppeNavn(key)),
+        body)
+      g = { key, wrap, body }
+      grupper.set(key, g)
+      liste.appendChild(wrap)
+      sorterGrupper()
+    }
+    return g
+  }
+
+  function sorterGrupper() {
+    const sortert = [...grupper.values()].sort((a, b) => {
+      if (!a.key) return 1
+      if (!b.key) return -1
+      return gruppeNavn(a.key).localeCompare(gruppeNavn(b.key), 'no')
+    })
+    for (const g of sortert) liste.appendChild(g.wrap)
+  }
+
+  function plasserRad(rad) {
+    hentGruppe(rad.klasseSel.value || '').body.appendChild(rad.el)
+    ryddTommeGrupper()
+  }
+
+  function ryddTommeGrupper() {
+    for (const [key, g] of [...grupper]) {
+      if (!g.body.children.length) { g.wrap.remove(); grupper.delete(key) }
+    }
+  }
+
+  // Sorterer radene innen hver gruppe på uke og dag (kjøres etter analysen,
+  // ikke ved hver endring — da ville rader hoppe mens læreren retter).
+  function sorterRaderIGrupper() {
+    for (const g of grupper.values()) {
+      const barn = [...g.body.children].sort((a, b) => {
+        const ua = parseInt(a._rad?.ukeFelt.value) || 99
+        const ub = parseInt(b._rad?.ukeFelt.value) || 99
+        if (ua !== ub) return ua - ub
+        return (parseInt(a._rad?.dagSel.value) || 9) - (parseInt(b._rad?.dagSel.value) || 9)
+      })
+      for (const b of barn) g.body.appendChild(b)
+    }
+  }
+
+  function oppdaterUkjentKlasseVarsel() {
+    const uten = rader.filter(r => !r.fjernet && !r.klasseSel.value)
+    if (!uten.length) {
+      ukjentBoks.style.display = 'none'
+      ukjentBoks.textContent = ''
+      return
+    }
+    const navn = [...new Set(uten.map(r => r.ukjentNavn).filter(Boolean))]
+    ukjentBoks.textContent =
+      `⚠️ ${uten.length} rad(er) gjelder en annen klasse${navn.length ? ` (${navn.join(', ')})` : ''} og importeres ikke.`
+    ukjentBoks.style.display = ''
+  }
 
   // «+ Legg til rad»-knapp og fast bunnfelt
   const leggTilBtn = el('button', { type: 'button', class: 'btn btn-s okt-import-legg-til', style: 'display:none',
@@ -3505,6 +3671,8 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     if (!textarea.value.trim()) return
     clearEl(liste)
     rader.length = 0
+    grupper.clear()
+    oppdaterUkjentKlasseVarsel()
 
     try {
       const { data, error } = await medAIOverlay('AI tolker teksten til økter …', () =>
@@ -3513,7 +3681,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
             text: textarea.value,
             context: {
               subjects: subjects.map(s => ({ id: s.id, name: s.name, short_code: s.short_code })),
-              classes: klasseId ? [{ id: klasseId, name: defaultKlasse.name }] : [],
+              classes: mineKlasser.map(k => ({ id: k.id, name: k.name })),
               teachers: teachers.map(t => ({ id: t.id, full_name: t.full_name })),
               divisions: divs.map(d => ({ id: d.id, name: d.name, subject_id: d.subject_id, division_type: d.division_type })),
             },
@@ -3522,23 +3690,17 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       if (error) throw error
 
       const parsed = data.sessions || data || []
-      if (data.warnings?.length) {
-        const varsler = data.warnings.map(rensVarsel).filter(Boolean)
-        if (varsler.length) {
-          const eksisterende = prevSeksjon.querySelector('.advarsel-tekst')
-          if (eksisterende) eksisterende.remove()
-          prevSeksjon.insertBefore(
-            el('p', { class: 'advarsel-tekst' }, `⚠️ ${varsler.join(' | ')}`),
-            liste
-          )
-        }
-      }
+      const varsler = (data.warnings || []).map(rensVarsel).filter(Boolean)
+      aiVarselBoks.textContent = varsler.length ? `⚠️ ${varsler.join(' | ')}` : ''
+      aiVarselBoks.style.display = varsler.length ? '' : 'none'
 
       if (!parsed.length) {
         liste.appendChild(el('p', {}, 'Ingen økter funnet i teksten.'))
       } else {
         for (const s of parsed) byggRad(s, rader, liste)
+        sorterRaderIGrupper()
       }
+      oppdaterUkjentKlasseVarsel()
 
       prevSeksjon.style.display = ''
       leggTilBtn.style.display = ''
@@ -3563,7 +3725,10 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     }
 
     if (!skalImporteres.length) {
-      showToast('Ingen rader klare til import. Rett røde felt eller hak av kollisjoner.', 'error')
+      const kunUtenKlasse = blirStaaende.length && blirStaaende.every(r => !r.klasseSel.value)
+      showToast(kunUtenKlasse
+        ? 'Ingen rader klare til import. Radene gjelder klasser du ikke er satt opp med — velg en av dine klasser, eller stryk dem.'
+        : 'Ingen rader klare til import. Rett røde felt eller hak av kollisjoner.', 'error')
       return
     }
 
@@ -3577,7 +3742,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
 
           const { data: inserted, error: insErr } = await sb.from('sessions').insert({
             school_id: APP.school.id,
-            class_id: klasseId,
+            class_id: rad.klasseSel.value,
             subject_id: subjId,
             division_id: null,
             week_nr: weekNr,
@@ -3600,6 +3765,20 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
         }
       })
 
+      // Fordeling per klasse – ukevisningen som oppdateres etterpå viser bare
+      // aktiv klasse, så kvitteringen må si hvor de andre økt(ene) havnet.
+      const perKlasse = new Map()
+      for (const rad of skalImporteres) {
+        const navn = mineKlasser.find(k => k.id === rad.klasseSel.value)?.name || 'Klasse'
+        perKlasse.set(navn, (perKlasse.get(navn) || 0) + 1)
+      }
+      const fordeling = perKlasse.size > 1
+        ? ` (${[...perKlasse].map(([navn, n]) => `${navn}: ${n}`).join(', ')})`
+        : ''
+
+      // Kollisjonscachen er utdatert for klassene vi nettopp skrev til
+      for (const rad of skalImporteres) eksisterendeCache.delete(rad.klasseSel.value)
+
       // Fjern importerte rader fra visningen
       for (const rad of skalImporteres) {
         rad.fjernet = true
@@ -3607,13 +3786,15 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
         const idx = rader.indexOf(rad)
         if (idx !== -1) rader.splice(idx, 1)
       }
+      ryddTommeGrupper()
+      oppdaterUkjentKlasseVarsel()
 
       const gjenstar = blirStaaende.filter(r => !r.fjernet).length
       if (gjenstar) {
-        showToast(`${skalImporteres.length} økt(er) importert. ${gjenstar} rad(er) står igjen — rett eller stryk dem.`, 'info')
+        showToast(`${skalImporteres.length} økt(er) importert${fordeling}. ${gjenstar} rad(er) står igjen — rett eller stryk dem.`, 'info')
         if (onSave) onSave()
       } else {
-        showToast(`${skalImporteres.length} økt(er) importert!`, 'ok')
+        showToast(`${skalImporteres.length} økt(er) importert${fordeling}!`, 'ok')
         if (onSave) onSave()
         modal.remove()
       }
@@ -5219,7 +5400,11 @@ function ukeTekst(fra, til) {
 // Sikkerhetsnett: AI-varsler skal være i klarspråk (styrt av prompten),
 // men fjern setninger med interne feltnavn hvis modellen likevel tar dem med
 function rensVarsel(tekst) {
-  return tekst.replace(/(^|[.!?])[^.!?]*\bweek_nr\b[^.!?]*[.!?]?/g, '$1').replace(/\s+/g, ' ').trim()
+  // Fjerner hele setninger som nevner feltnavn fra datamodellen — slike varsler
+  // er skrevet til utviklere, ikke til lærere (P44: class_id m.fl. i tillegg
+  // til week_nr).
+  const feltnavn = /(^|[.!?])[^.!?]*\b(week_nr|class_id|class_name|subject_id|division_id|day_of_week|teacher_id)\b[^.!?]*[.!?]?/g
+  return tekst.replace(feltnavn, '$1').replace(/\s+/g, ' ').trim()
 }
 
 // Forhåndsvisning av AI-tolket skolerute: redigerbare rader som kan
