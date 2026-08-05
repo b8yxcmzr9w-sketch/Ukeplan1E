@@ -603,20 +603,14 @@ gruppert klassevis, og rader uten gyldig klasse utelates i klarspråk.
    Ingen oppfølgingssetning.
 3. **Nummerering:** P44 (følger statuslinjen), branch
    `claude/p44-utelat-ukjent-klasse-ai-import`.
+4. **Tilgangslista = som ellers i appen:** klassene læreren er satt opp med
+   (`user_classes`) øverst, deretter et skille og resten av skolens klasser —
+   nøyaktig samme mønster som klassevelgeren i lærervisningen
+   (optgroups «Dine klasser» / «Andre klasser», app.js:1535–1600). «Ukjent
+   klasse» betyr dermed «finnes ikke ved skolen». Gjelder både nedtrekket i
+   steg C og matchingen i steg B.
 
-### Ett spørsmål før implementasjon
+### Status
 
-**Hva er «lærerens tilgangsliste»?** RLS gir i praksis skrivetilgang til ALLE
-klasser ved skolen (migrasjon 008 — ingen klassebegrensning), og
-klassevelgeren i lærervisningen viser allerede hele skolen delt i «Dine
-klasser» / «Andre klasser».
-
-- **Alternativ 1 (anbefalt):** hele skolens klasser, gruppert «Dine» / «Andre»
-  — samme liste som klassevelgeren. Konsistent med det læreren allerede kan
-  gjøre manuelt; «ukjent klasse» betyr da «finnes ikke ved skolen».
-- **Alternativ 2 (strengere):** kun lærerens egne klasser (`user_classes`).
-  Da blir en av skolens andre klasser flagget som «ukjent» selv om læreren har
-  lov til å skrive der — og må bytte klasse manuelt for å importere.
-
-Valget er én linje i koden, men avgjør både nedtrekket i steg C og hva som
-regnes som «ukjent» i steg B.
+Planen er godkjent i sin helhet. **Ingen bygging startet** — implementasjonen
+avventer klarsignal fra Morfar.
