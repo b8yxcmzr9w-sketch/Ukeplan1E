@@ -3,9 +3,8 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P43
-- **Pågående:** P44 — kode ferdig og maskinverifisert på branch
-  `claude/p44-utelat-ukjent-klasse-ai-import`; venter på Morfars migrasjon 022,
-  redeploy av `ai-parse-sessions` og merge
+- **Pågående:** P44 — kode ferdig og maskinverifisert, PR #154 åpen; venter på
+  Morfars migrasjon 022, redeploy av `ai-parse-sessions` og merge
 - **Neste ledige P-nummer:** P45 (oppgavetekst mottatt, ikke startet)
 - **Dato sist oppdatert:** 5. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
@@ -461,7 +460,7 @@ tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
 
 ## Økt (P44): Trygg import til egne klasser (AI-import av økter)
 
-**Branch:** `claude/p44-utelat-ukjent-klasse-ai-import`
+**Branch:** `claude/p44-utelat-ukjent-klasse-ai-import` · **PR #154**
 
 > **Omfangshistorikk 4. august 2026:** startet som ren feilretting («utelat
 > rader med ukjent klasse»), ble utvidet til multi-klasse-import, og landet på
