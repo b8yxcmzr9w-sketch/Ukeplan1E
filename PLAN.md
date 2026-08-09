@@ -3,9 +3,11 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P43
-- **Pågående:** ingen
-- **Neste ledige P-nummer:** P44
-- **Dato sist oppdatert:** 27. juli 2026
+- **Pågående:** P44 (umerget arbeid på `claude/p44-utelat-ukjent-klasse-ai-import`)
+  og P45 (branch-opprydding — kartlegging ferdig, selve slettingen gjenstår
+  hos Morfar, se nederst)
+- **Neste ledige P-nummer:** P46
+- **Dato sist oppdatert:** 9. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
     aktivt); maskinverifisert, ekte manuell bekreftelse skjer naturlig når
@@ -13,6 +15,8 @@
   - P43s prod-sjekk — kosmetikken er maskinverifisert (18 sjekker) og merget;
     Morfars visuelle bekreftelse i produksjon gjenstår (ingen preview-deploy,
     samme mønster som P41/P42)
+  - P45s sletting — de 8 godkjente grenene kan ikke slettes fra en Code-økt
+    (remoten svarer HTTP 403 på sletting av referanser); må gjøres av Morfar
 
 ---
 
@@ -454,3 +458,111 @@ tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
 - [x] PR #152 opprettet og squash-merget til main (ingen PR-CI i repoet —
       eneste workflow er den planlagte Supabase-keepaliven; `mergeable_state`
       var `clean`). Cache-bust `app.js?v=20260727b` bekreftet i merget main.
+
+---
+
+## Økt (P45): Housekeeping — opprydding av gamle branches på GitHub
+
+**Branch:** `claude/cleanup-old-branches-9z7a59` (miljøets tildelte branch).
+**Status:** KARTLEGGING FULLFØRT 9. august 2026 og godkjent av Morfar.
+SELVE SLETTINGEN GJENSTÅR — kan ikke utføres fra en Code-økt (se «Blokkering»).
+Ingen kodeendring, ingen DB, ingen edge functions, ingen cache-bust.
+
+### Bakgrunn
+
+22 arbeidsgrener lå igjen på remoten etter tidligere økter. Formålet var å
+slette dem som trygt var merget inn i main, og la resten stå.
+
+### Metodenotat (viktig ved neste opprydding)
+
+To fallgruver som ga falske svar første gang:
+
+1. **Arbeidsmiljøet klonet repoet «shallow»** (avkortet historikk). Alle
+   merge-sammenligninger ble da meningsløse («no merge base»). Kjør
+   `git fetch --unshallow --prune` FØR noe konkluderes.
+2. **Alle PR-er i dette repoet squash-merges.** Da blir grentuppen aldri en
+   forfar av main, og `git branch -r --merged origin/main` gir NULL treff —
+   også for grener som helt sikkert er merget. Den kommandoen kan altså ikke
+   brukes alene som slettekriterium her.
+
+Hver gren ble derfor vurdert på tre uavhengige måter: PR-historikken (alle 153
+PR-er gjennomgått), sammenligning av grentupp-SHA mot merget PR-hode, og
+innholdssjekk av hver «ekstra» commit mot filene i dagens main. Åpne PR-er ved
+kartleggingen: 0.
+
+### A. Godkjent for sletting (8 grener)
+
+Alt innhold er verifisert til stede i main:
+
+- [ ] `claude/v2-development-tnwSU` — 0 egne commits, forfar av main
+- [ ] `claude/pn-doble-parentes-planleggingsdag-0bh4ly` — tupp = PR #153
+- [ ] `claude/pn-kompakt-laerervisning-05evwh` — tupp = PR #151
+- [ ] `claude/p41-funfacts-forenkling-9hx7zx` — tupp = PR #149
+- [ ] `claude/P2-ukenummer-ui` — PR #93; ekstra commit gjenfunnet i main
+      (`ukeTekst` i fridag-toast, uke-hint i MDE-modaler; kom via PR #95)
+- [ ] `claude/P7-okt-handlinger-sveip-kebab` — PR #99; ekstra commit var en
+      to-linjers `---`-formatteringsfiks som landet via PR #101, og seksjonen
+      finnes uansett ikke lenger etter PLAN.md-omskrivingen i P40
+- [ ] `claude/focused-mendel-7uyjza` — PR #125; ekstra commit sitt eneste
+      kodeinnhold er `019_admin_panel_rls.sql`, byte-identisk med main (kom
+      via PR #127); resten var PLAN.md-notater erstattet i P40
+- [ ] `claude/ai-import-school-year-bug-enyxos` — PR #135; ekstra commit var
+      fire planpunkter, alle fire gjenfunnet i backloggen over
+
+### B. Skal stå (14 grener)
+
+**Bevisst bevart etter Morfars beskjed:**
+- `arkiv-foer-v2-sletting` — teknisk trygg (0 egne commits, forfar av main),
+  men beholdes som arkivmerke
+
+**Aldri merget, innholdet finnes ikke i main:**
+- `claude/adoring-bardeen-tcg0wi` — `017_parti_per_klasse_fix.sql` (124 linjer)
+- `claude/gracious-lamport-zejngl` — `GEMINI_MODEL` som miljøvariabel; main har
+  fortsatt hardkodet modellnavn
+- `claude/stoic-hopper-k0ypid` — README-omskriving + `docs/DECISIONS.md`
+- `claude/P17-tabell-kolonner-innhold` — egne CSS-regler for tabellkolonner
+- `claude/zen-feynman-izs5zl` — PR #89 er merget, MEN en ekstra CLAUDE.md-commit
+  (init-parallell-mønsteret) er ikke i main
+
+**PR lukket uten merge:**
+- `claude/practical-dijkstra-pwua44` — PR #97
+
+**Pågående/nyere arbeid:**
+- `claude/p44-utelat-ukjent-klasse-ai-import` — umerget P44 (migrasjon 022, app.js)
+- `claude/p35-utelat-ukjent-klasse-ai-import-6nv2vi` — sub-plan, også forfar til p44
+
+**Kun PLAN.md-notater, aldri merget:**
+- `claude/P28-diagnose-post-merge`, `claude/P6-mobil-plassbruk`,
+  `claude/awesome-allen-hp3zca`, `claude/busy-franklin-1r7adu`,
+  `claude/charming-bardeen-p9xciw`
+
+### Blokkering — sletting må gjøres av Morfar
+
+Code-øktens skriverettighet dekker å opprette og oppdatere grener (push av
+denne branchen gikk fint), men IKKE å slette dem: remoten svarer
+`HTTP 403` på `git push origin --delete`. Dette er en rettighetsgrense, ikke en
+nettverksfeil, og skal ikke omgås. Slettingen gjøres enten i GitHubs
+nettgrensesnitt (Branches-siden) eller lokalt:
+
+```
+git push origin --delete claude/v2-development-tnwSU
+git push origin --delete claude/pn-doble-parentes-planleggingsdag-0bh4ly
+git push origin --delete claude/pn-kompakt-laerervisning-05evwh
+git push origin --delete claude/p41-funfacts-forenkling-9hx7zx
+git push origin --delete claude/P2-ukenummer-ui
+git push origin --delete claude/P7-okt-handlinger-sveip-kebab
+git push origin --delete claude/focused-mendel-7uyjza
+git push origin --delete claude/ai-import-school-year-bug-enyxos
+```
+
+Kryss av i liste A over etter hvert som de slettes.
+
+### Sjekkliste
+
+- [x] `git fetch --unshallow --prune` kjørt; alle 22 grener kartlagt
+- [x] Åpne PR-er sjekket (0 stk) — ingen gren blokkert av åpen PR
+- [x] Liste A og B lagt fram og godkjent av Morfar («kjør», med
+      `arkiv-foer-v2-sletting` holdt utenfor)
+- [x] Ingen gren slettet som ikke er fullt representert i main
+- [ ] De 8 grenene i liste A faktisk slettet (blokkert — se over)
+- [x] Ingen lokale stale grener å rydde (kun `main` + øktens egen branch)
