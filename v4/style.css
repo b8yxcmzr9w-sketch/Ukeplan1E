@@ -883,7 +883,7 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-hode { font-size: .78rem; font-weight: 700; color: var(--tekst-svak); border-bottom: 2px solid var(--kant); padding-bottom: 4px; margin-bottom: 2px; }
 .okt-import-rad {
   display: grid;
-  grid-template-columns: .9fr 1.6fr 1.2fr 1.1fr 60px 80px 1fr 1fr 1fr 1.4fr 36px;
+  grid-template-columns: .9fr 1.6fr 1.2fr 60px 80px 1fr 1fr 1fr 1.4fr 36px;
   gap: 4px;
   align-items: center;
   padding: 4px 0;

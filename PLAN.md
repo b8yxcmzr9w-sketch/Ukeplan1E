@@ -561,18 +561,20 @@ skriving til andre klasser.
       rad» legger raden i aktiv klasses gruppe.
 
 **E. Ingen gjetting av lærer (NYTT 5. august 2026):**
-- [ ] Importerte økter får `teacher_id = APP.profile.id` — alltid deg selv.
+- [x] Importerte økter får `teacher_id = APP.profile.id` — alltid deg selv.
       AI-ens `teacher_id` ignoreres, og hjelperen `matchLaerer` (app.js:3284)
       fjernes som ubrukt.
-- [ ] Lærer-kolonnen tas ut av forhåndsvisningen (se «Valg som må tas» —
-      alternativ 1 er anbefalt), med tilhørende opprydding i grid-oppsettet
-      (style.css: 11 → 10 kolonner) og i kolonneoverskriftene.
-- [ ] Kartografinotat: fornavn-matchingen INNE i `matchLaerer` er allerede død
+- [x] Lærer-kolonnen fjernet fra forhåndsvisningen (alternativ 1, godkjent
+      5. august 2026), med opprydding i grid-oppsettet (style.css: 11 → 10
+      kolonner) og i kolonneoverskriftene. `users`-spørringen i modalen er
+      også fjernet — lærerlista lastes ikke lenger.
+- [x] Kartografinotat: fornavn-matchingen INNE i `matchLaerer` er allerede død
       kode — funksjonen kalles med `null` som tekstargument (app.js:3428).
       Gjettingen skjer via `s.teacher_id`, siden edge-funksjonen får hele
       lærerlista i konteksten og matcher fornavn der. Derfor må også
-      `teachers`-konteksten i kallet (app.js:3671) vurderes fjernet, så
-      modellen slutter å lete etter lærernavn i teksten.
+      `teachers` fjernet fra konteksten i kallet OG fra prompten i
+      `ai-parse-sessions` (samme redeploy som steg A), så modellen slutter å
+      lete etter lærernavn i teksten.
 
 **F. DB-migrasjon 022 — stram `sessions_insert_laerer` (manuell kjøring):**
 - [x] Ny fil `022_import_egne_klasser.sql`, idempotent
@@ -593,7 +595,7 @@ skriving til andre klasser.
       ordlyd når det som står igjen mangler gyldig klasse.
 
 **H. Cache-bust + verifisering:**
-- [x] Bump `?v=20260805a` i `v4/index.html` for BÅDE css og js.
+- [x] Bump `?v=20260805b` i `v4/index.html` for BÅDE css og js.
 - [x] Maskinverifisering (headless Chromium mot ekte app.js + stubbet
       Supabase): 35 sjekker, alle OK, ingen JS-feil. Dekker matching mot egne
       klasser, rødflagg + merknad for fremmed klasse, nedtrekk uten «Andre
@@ -602,20 +604,22 @@ skriving til andre klasser.
       filtrert og gjenoppbygd ved klassebytte, redning av rød rad, insert med
       riktig `class_id` per rad, kvittering med fordeling per klasse, svar
       UTEN `class_name` (bakoverkompatibelt) og aktiv klasse som ikke er
-      lærerens egen.
+      lærerens egen. Utvidet 5. august med steg E: 38 sjekker totalt, alle OK —
+      `teacher_id` alltid deg selv, ingen lærer-kolonne i tabellen, og ingen
+      lærerliste i AI-kallet.
 - [ ] Morfar kjører migrasjon 022 og redeployer `ai-parse-sessions`, og tester
       med ekte innliming som blander to av sine egne klasser + én fremmed.
 - [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
 
-### Valg som må tas før steg E kodes (5. august 2026)
+### Valg tatt for steg E (godkjent 5. august 2026: alternativ 1)
 
 **Hva skjer med lærer-kolonnen i importen?** Begge alternativene gir samme
 resultat i databasen (`teacher_id` = deg selv) når læreren ikke rører feltet.
 
-- **Alternativ 1 (anbefalt): fjern kolonnen helt.** Importen fører alltid økta
+- **VALGT — Alternativ 1: fjern kolonnen helt.** Importen fører alltid økta
   på deg selv. Enklest å forstå, én kolonne mindre i en allerede bred tabell,
   og ingen UI som tilbyr noe migrasjon 022 kan komme til å avvise etter P46.
-- **Alternativ 2: behold nedtrekket, men uten forhåndsvalg.** Står alltid på
+- ~~Alternativ 2: behold nedtrekket, men uten forhåndsvalg.~~ (ikke valgt) Står alltid på
   deg selv; læreren kan bevisst velge en kollega. Beholder dagens fleksibilitet
   fram til P46 avgjør spørsmålet — men da må kolonnen sannsynligvis fjernes
   likevel.

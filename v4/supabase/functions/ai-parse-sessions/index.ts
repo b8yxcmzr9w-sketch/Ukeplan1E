@@ -78,7 +78,6 @@ en JSON-array med økter. Returner KUN gyldig JSON, ingen forklaringer.
 
 Tilgjengelige fag (bruk id): ${JSON.stringify(context?.subjects ?? [])}
 Tilgjengelige klasser (bruk id): ${JSON.stringify(context?.classes ?? [])}
-Tilgjengelige lærere (bruk id): ${JSON.stringify(context?.teachers ?? [])}
 Tilgjengelige inndelinger (bruk id): ${JSON.stringify(context?.divisions ?? [])}
 
 Hvert økt-objekt skal ha disse feltene:

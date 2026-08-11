@@ -3205,12 +3205,12 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   const skolear = skoleAar || APP.school?.active_school_year
   const klasseId = defaultKlasse?.id
 
-  // P44: importen skriver KUN til klasser læreren er satt opp med (user_classes).
-  // Rader for andre klasser utelates i forhåndsvisningen, og migrasjon 022
-  // håndhever den samme grensen i databasen.
-  const [{ data: allSubjects }, { data: allTeachers }, { data: mineKlasseRader }] = await Promise.all([
+  // P44: importen skriver KUN til klasser læreren er satt opp med (user_classes),
+  // og alltid på læreren selv. Rader for andre klasser utelates i
+  // forhåndsvisningen, og migrasjon 022 håndhever den samme grensen i databasen.
+  // Lærerlista lastes ikke lenger — økta føres på deg, aldri på en kollega.
+  const [{ data: allSubjects }, { data: mineKlasseRader }] = await Promise.all([
     sb.from('subjects').select('id, name, short_code').eq('school_id', APP.school.id).is('deleted_at', null).order('name'),
-    sb.from('users').select('id, full_name').eq('school_id', APP.school.id).is('deleted_at', null).order('full_name'),
     sb.from('user_classes').select('classes(*)').eq('user_id', APP.profile.id),
   ])
 
@@ -3230,12 +3230,10 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     : { data: [] }
 
   const subjects = allSubjects || []
-  const teachers = allTeachers || []
   const divs = allDivs || []
 
   // Oppslag-kart
   const subjectById = Object.fromEntries(subjects.map(s => [s.id, s]))
-  const teacherById = Object.fromEntries(teachers.map(t => [t.id, t]))
   const divById     = Object.fromEntries(divs.map(d => [d.id, d]))
 
   // Eksisterende økter per klasse – lastes ved behov og caches, så
@@ -3278,17 +3276,6 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     const treff = subjects.filter(s =>
       s.name.toLowerCase() === norm || (s.short_code || '').toLowerCase() === norm)
     return treff.length === 1 ? treff[0].id : ''
-  }
-
-  // Forhåndsmatching-hjelper: lærer (fornavn-match)
-  function matchLaerer(aiId, aiTekst) {
-    if (aiId && teacherById[aiId]) return aiId
-    if (aiTekst) {
-      const norm = aiTekst.trim().toLowerCase()
-      const treff = teachers.filter(t => (t.full_name || '').split(' ')[0].toLowerCase() === norm)
-      if (treff.length === 1) return treff[0].id
-    }
-    return APP.profile?.id || ''
   }
 
   // Forhåndsmatching-hjelper: divisjon
@@ -3402,12 +3389,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     rad.dagSel.appendChild(el('option', { value: '' }, '—'))
     for (let i = 1; i <= 5; i++) rad.dagSel.appendChild(el('option', { value: i }, dagNavn(i)))
 
-    // Lærer-dropdown
-    rad.laererSel = el('select', { class: 'felt select okt-import-felt' })
-    for (const t of teachers) {
-      const opt = el('option', { value: t.id }, t.full_name)
-      rad.laererSel.appendChild(opt)
-    }
+    // Ingen lærer-kolonne (P44): importerte økter føres alltid på deg selv.
 
     // Fritekstfelt
     rad.aktivitetFelt  = el('input', { type: 'text', class: 'felt input okt-import-felt', placeholder: 'aktivitet' })
@@ -3425,7 +3407,6 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     const initFagId = matchFag(s?.subject_id, s?.activity)
     if (initFagId) rad.fagSel.value = initFagId
     fyllDivDropdown(initFagId, matchDiv(s?.division_id, null, initFagId), false)
-    rad.laererSel.value = matchLaerer(s?.teacher_id, null)
     if (s?.week_nr) rad.ukeFelt.value = s.week_nr
     if (s?.day_of_week) rad.dagSel.value = s.day_of_week
     rad.aktivitetFelt.value = s?.activity || ''
@@ -3515,7 +3496,6 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, rad.klasseSel),
       el('div', { class: 'okt-import-celle okt-import-celle--fag' }, rad.fagSel),
       el('div', { class: 'okt-import-celle okt-import-celle--div' }, divWrap),
-      el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, rad.laererSel),
       el('div', { class: 'okt-import-celle okt-import-celle--uke' }, rad.ukeFelt),
       el('div', { class: 'okt-import-celle okt-import-celle--dag' }, rad.dagSel),
       el('div', { class: 'okt-import-celle okt-import-celle--akt' }, rad.aktivitetFelt),
@@ -3564,7 +3544,6 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, 'Klasse'),
     el('div', { class: 'okt-import-celle okt-import-celle--fag' }, 'Fag'),
     el('div', { class: 'okt-import-celle okt-import-celle--div' }, 'Parti/gruppe'),
-    el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, 'Lærer'),
     el('div', { class: 'okt-import-celle okt-import-celle--uke' }, 'Uke'),
     el('div', { class: 'okt-import-celle okt-import-celle--dag' }, 'Dag'),
     el('div', { class: 'okt-import-celle okt-import-celle--akt' }, 'Aktivitet'),
@@ -3682,7 +3661,6 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
             context: {
               subjects: subjects.map(s => ({ id: s.id, name: s.name, short_code: s.short_code })),
               classes: mineKlasser.map(k => ({ id: k.id, name: k.name })),
-              teachers: teachers.map(t => ({ id: t.id, full_name: t.full_name })),
               divisions: divs.map(d => ({ id: d.id, name: d.name, subject_id: d.subject_id, division_type: d.division_type })),
             },
           }
@@ -3747,7 +3725,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
             division_id: null,
             week_nr: weekNr,
             day_of_week: dagOfWeek,
-            teacher_id: rad.laererSel.value || APP.profile.id,
+            teacher_id: APP.profile.id,
             activity: rad.aktivitetFelt.value.trim(),
             meeting_point: rad.oppmoteFelt.value.trim(),
             info: rad.infoFelt.value.trim(),
