@@ -5,7 +5,7 @@
 - **Siste fullførte P-nummer:** P43
 - **Pågående:** P44 — kode ferdig og maskinverifisert, PR #154 åpen; venter på
   Morfars migrasjon 022, redeploy av `ai-parse-sessions` og merge
-- **Neste ledige P-nummer:** P45 (oppgavetekst mottatt, ikke startet)
+- **Neste ledige P-nummer:** P48 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 5. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
@@ -560,15 +560,30 @@ skriving til andre klasser.
 - [x] Klassebytte flytter raden til riktig gruppe umiddelbart; «+ Legg til
       rad» legger raden i aktiv klasses gruppe.
 
-**E. DB-migrasjon 022 — stram `sessions_insert_laerer` (manuell kjøring):**
+**E. Ingen gjetting av lærer (NYTT 5. august 2026):**
+- [ ] Importerte økter får `teacher_id = APP.profile.id` — alltid deg selv.
+      AI-ens `teacher_id` ignoreres, og hjelperen `matchLaerer` (app.js:3284)
+      fjernes som ubrukt.
+- [ ] Lærer-kolonnen tas ut av forhåndsvisningen (se «Valg som må tas» —
+      alternativ 1 er anbefalt), med tilhørende opprydding i grid-oppsettet
+      (style.css: 11 → 10 kolonner) og i kolonneoverskriftene.
+- [ ] Kartografinotat: fornavn-matchingen INNE i `matchLaerer` er allerede død
+      kode — funksjonen kalles med `null` som tekstargument (app.js:3428).
+      Gjettingen skjer via `s.teacher_id`, siden edge-funksjonen får hele
+      lærerlista i konteksten og matcher fornavn der. Derfor må også
+      `teachers`-konteksten i kallet (app.js:3671) vurderes fjernet, så
+      modellen slutter å lete etter lærernavn i teksten.
+
+**F. DB-migrasjon 022 — stram `sessions_insert_laerer` (manuell kjøring):**
 - [x] Ny fil `022_import_egne_klasser.sql`, idempotent
       (`drop policy if exists`), kjøres manuelt i SQL Editor.
 - [x] Ny arm basert på `user_classes` (IKKE `is_contact_teacher_for` — det
       ville låst ute faglærere som er tildelt klassen uten å være
       kontaktlærer), med `or is_active_admin()`.
-- [x] Se «Avvik fra oppgaveteksten» nederst om `teacher_id = auth.uid()`.
+- [x] Se «Avvik fra oppgaveteksten» nederst om `teacher_id = auth.uid()`
+      (avklares endelig i P46).
 
-**F. Gul boks + varselvask:**
+**G. Gul boks + varselvask:**
 - [x] Deterministisk advarsel foran ev. AI-varsler:
       «⚠️ N rad(er) gjelder en annen klasse (1B, 2A) og importeres ikke.»
       Oppdateres når rader reddes eller strykes.
@@ -577,7 +592,7 @@ skriving til andre klasser.
 - [x] Toasten «Ingen rader klare til import…» (app.js:3566) får dekkende
       ordlyd når det som står igjen mangler gyldig klasse.
 
-**G. Cache-bust + verifisering:**
+**H. Cache-bust + verifisering:**
 - [x] Bump `?v=20260805a` i `v4/index.html` for BÅDE css og js.
 - [x] Maskinverifisering (headless Chromium mot ekte app.js + stubbet
       Supabase): 35 sjekker, alle OK, ingen JS-feil. Dekker matching mot egne
@@ -591,6 +606,23 @@ skriving til andre klasser.
 - [ ] Morfar kjører migrasjon 022 og redeployer `ai-parse-sessions`, og tester
       med ekte innliming som blander to av sine egne klasser + én fremmed.
 - [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
+
+### Valg som må tas før steg E kodes (5. august 2026)
+
+**Hva skjer med lærer-kolonnen i importen?** Begge alternativene gir samme
+resultat i databasen (`teacher_id` = deg selv) når læreren ikke rører feltet.
+
+- **Alternativ 1 (anbefalt): fjern kolonnen helt.** Importen fører alltid økta
+  på deg selv. Enklest å forstå, én kolonne mindre i en allerede bred tabell,
+  og ingen UI som tilbyr noe migrasjon 022 kan komme til å avvise etter P46.
+- **Alternativ 2: behold nedtrekket, men uten forhåndsvalg.** Står alltid på
+  deg selv; læreren kan bevisst velge en kollega. Beholder dagens fleksibilitet
+  fram til P46 avgjør spørsmålet — men da må kolonnen sannsynligvis fjernes
+  likevel.
+
+Med alternativ 1 bør også `teachers`-lista sluttes å sendes i AI-konteksten
+(app.js:3671), så modellen ikke leter etter lærernavn i teksten i det hele
+tatt. Med alternativ 2 må den bli værende.
 
 ### Avgjørelser (godkjent av Morfar 4. august 2026)
 
@@ -624,10 +656,16 @@ bevisst innstramming.
 
 ---
 
-## Økt (P45): «Foreslå økt til kollega» — IKKE STARTET
+## Økt (P45): «Foreslå økt til kollega» — LAGT BORT 5. august 2026
 
-**Status:** kun mottatt oppgavetekst. Kartografi og sub-plan skrives i egen
-økt, etter at P44 er i mål.
+**Status:** LAGT BORT uten å ha blitt startet. Seksjonen beholdes for
+historikken; ingen kode ble skrevet.
+
+**Begrunnelse:** kollega-innlegging brukes sjelden i praksis, og risikoen for
+at noe havner i feil lærers plan veier tyngre enn nytten. P46 strammer inn slik
+at en lærer kun skriver i egne klasser — da forsvinner behovet forslags-
+mekanismen skulle dekke. Med AI-importen er det uansett lite arbeid for hver
+lærer å legge inn sine egne økter.
 
 **Mål:** økter som gjelder en annen klasse sendes som forslag til en lærer som
 er tildelt den klassen; mottakeren godtar eller avviser. In-system, ikke
@@ -646,3 +684,18 @@ e-post.
 
 **Avhengighet:** P44s RLS-innstramming (migrasjon 022) er forutsetningen —
 den er grunnen til at «annen klasse» må gå veien om et forslag.
+
+---
+
+## Økt (P46): Innstramming — lærer skriver kun egne klasser — IKKE STARTET
+
+Streng variant av migrasjon 022 (`teacher_id = auth.uid()`) + tilpasning av UI-et
+som i dag tilbyr kollega-innlegging (lærer-nedtrekk i «Ny økt»/kopi, «↗️ Overfør»,
+og spørsmålet om redigering av andres økter). Detaljeres i egen økt.
+
+---
+
+## Økt (P47): Lett varsel — «økt lagt i din arbeidstid» — IKKE STARTET
+
+Enkelt varsel til en lærer når noen legger en økt som berører hens arbeidstid.
+Detaljeres i egen økt.
