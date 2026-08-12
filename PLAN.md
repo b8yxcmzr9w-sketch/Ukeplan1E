@@ -2,13 +2,10 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P43
-- **Pågående:** P44 — kode ferdig og maskinverifisert (41 sjekker), PR #154
-  åpen; steg E byttet til alternativ 2 (manuelt lærervalg, standard = deg
-  selv) 5. august etter Morfars justering — venter på migrasjon 022, redeploy
-  av `ai-parse-sessions` og merge
+- **Siste fullførte P-nummer:** P44
+- **Pågående:** ingen
 - **Neste ledige P-nummer:** P48 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
-- **Dato sist oppdatert:** 5. august 2026
+- **Dato sist oppdatert:** 12. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
     aktivt); maskinverifisert, ekte manuell bekreftelse skjer naturlig når
@@ -16,6 +13,11 @@
   - P43s prod-sjekk — kosmetikken er maskinverifisert (18 sjekker) og merget;
     Morfars visuelle bekreftelse i produksjon gjenstår (ingen preview-deploy,
     samme mønster som P41/P42)
+  - P44s prod-test — migrasjon 022 kjørt og `ai-parse-sessions` redeployet
+    (begge bekreftet 12. august 2026); ekte funksjonstest i produksjon med
+    tekst som blander flere klasser (én egen + én fremmed) gjenstår
+    (maskinverifisert med 41 sjekker i mellomtiden, samme mønster som
+    P41–P43)
 
 ---
 
@@ -462,7 +464,12 @@ tittel-dedup i fridag-merkene — kun visningstekst «undervisningsfri».
 
 ## Økt (P44): Trygg import til egne klasser (AI-import av økter)
 
-**Branch:** `claude/p44-utelat-ukjent-klasse-ai-import` · **PR #154**
+**Branch:** `claude/p44-utelat-ukjent-klasse-ai-import` · **PR #154 (merget
+squash til main 12. august 2026, commit `52ba6bc`)**
+**Status:** FULLFØRT OG DEPLOYET 12. august 2026 — migrasjon 022 kjørt,
+`ai-parse-sessions` redeployet, begge bekreftet av Morfar. Gjenstår kun ekte
+funksjonstest i produksjon med tekst som blander flere klasser (se
+statuslinjens «Åpne sjekkpunkter»).
 
 > **Omfangshistorikk 4. august 2026:** startet som ren feilretting («utelat
 > rader med ukjent klasse»), ble utvidet til multi-klasse-import, og landet på
@@ -623,9 +630,10 @@ uendret. Se «Valg tatt for steg E» nedenfor for full begrunnelse.
       overstyring til en kollega fungerer og insert bruker riktig
       `teacher_id` for både overstyrt og ikke-overstyrt rad, og lærerlista
       sendes fortsatt ikke til AI-en.
-- [ ] Morfar kjører migrasjon 022 og redeployer `ai-parse-sessions`, og tester
-      med ekte innliming som blander to av sine egne klasser + én fremmed.
-- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
+- [x] Morfar kjørte migrasjon 022 i SQL Editor (bekreftet 12. august 2026).
+- [x] Morfar redeployet `ai-parse-sessions` i Supabase Dashboard (bekreftet
+      12. august 2026).
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
 
 ### Valg tatt for steg E (endelig, godkjent 5. august 2026: alternativ 2)
 
