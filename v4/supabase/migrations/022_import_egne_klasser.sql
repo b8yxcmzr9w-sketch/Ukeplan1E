@@ -40,35 +40,13 @@ create policy "sessions_insert_laerer"
   );
 
 -- ───────────────────────────────────────────────────────────────
--- MERK – strengere variant (IKKE aktiv, se PLAN.md «Avvik fra
--- oppgaveteksten» under Økt (P44)):
---
--- Oppgaveteksten foreslo i tillegg `teacher_id = auth.uid()`, altså
--- at man bare kan opprette økter på seg selv. Kjøres den varianten,
--- slutter tre ting som virker i dag å fungere:
---   1. «Ny økt» der læreren planlegger på vegne av en kollega
---      (migrasjon 008 la eksplisitt til rette for dette).
---   2. Bulk-kopi med «behold lærer» av en kollegas økt.
---   3. AI-importen selv: lærer-nedtrekket forhåndsvelger en kollega
---      når fornavnet i teksten kjennes igjen — den raden ville da bli
---      avvist av RLS.
--- Skal kollegaplanlegging fjernes som en bevisst innstramming, kjør
--- denne i stedet for policyen over:
---
--- drop policy if exists "sessions_insert_laerer" on sessions;
--- create policy "sessions_insert_laerer"
---   on sessions for insert
---   with check (
---     school_id = auth_school_id()
---     and teacher_id = auth.uid()
---     and created_by = auth.uid()
---     and (
---       exists (
---         select 1 from user_classes uc
---         where uc.user_id = auth.uid()
---           and uc.class_id = sessions.class_id
---       )
---       or is_active_admin()
---     )
---   );
+-- HISTORIKK (5. august 2026): denne policyen ble først vurdert med et
+-- ekstra vilkår `teacher_id = auth.uid()` (kun opprette økter på seg
+-- selv). Den varianten er LAGT BORT — bekreftet av Morfar: læreren
+-- skal fortsatt kunne føre en økt på en kollega med bevisst,
+-- manuelt valg (importens lærer-nedtrekk står som standard på
+-- innlogget lærer, men er overstyrbart — se PLAN.md Økt (P44) steg E).
+-- Policyen over (med migrasjon 008s kollega-sjekk beholdt) er derfor
+-- ENDELIG for P44. Eventuell videre innstramming (P46) gjelder kun
+-- REDIGERING av andres økter, ikke opprettelse.
 -- ───────────────────────────────────────────────────────────────

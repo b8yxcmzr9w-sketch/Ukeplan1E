@@ -68,7 +68,9 @@ serve(async (req) => {
   if (!user) return new Response(JSON.stringify({ error: 'Ikke autentisert' }), { status: 401, headers: corsHeaders })
 
   const { text, context } = await req.json()
-  // context: { subjects: [{id, name, short_code}], classes: [{id, name}], teachers: [{id, full_name}], divisions: [{id, name, subject_id, division_type}] }
+  // context: { subjects: [{id, name, short_code}], classes: [{id, name}], divisions: [{id, name, subject_id, division_type}] }
+  // NB: bevisst INGEN lærere i konteksten (P44) — frontend velger alltid lærer
+  // selv (standard: innlogget lærer), AI-en skal aldri gjette lærer fra tekst.
 
   if (!text) return new Response(JSON.stringify({ error: 'Missing text' }), { status: 400, headers: corsHeaders })
 

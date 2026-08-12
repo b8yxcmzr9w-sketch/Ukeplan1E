@@ -3205,12 +3205,17 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   const skolear = skoleAar || APP.school?.active_school_year
   const klasseId = defaultKlasse?.id
 
-  // P44: importen skriver KUN til klasser læreren er satt opp med (user_classes),
-  // og alltid på læreren selv. Rader for andre klasser utelates i
-  // forhåndsvisningen, og migrasjon 022 håndhever den samme grensen i databasen.
-  // Lærerlista lastes ikke lenger — økta føres på deg, aldri på en kollega.
-  const [{ data: allSubjects }, { data: mineKlasseRader }] = await Promise.all([
+  // P44: importen skriver KUN til klasser læreren er satt opp med (user_classes).
+  // Rader for andre klasser utelates i forhåndsvisningen, og migrasjon 022
+  // håndhever den samme grensen i databasen.
+  // Lærer-nedtrekket (alternativ 2, 5. august 2026) står som standard på
+  // innlogget lærer på HVER rad, men kan overstyres bevisst — se steg E i
+  // PLAN.md. AI-en gjetter ALDRI lærer: verken via teachers-kontekst/prompt
+  // (fjernet, urørt fra forrige runde) eller via fornavn-matching (aldri
+  // gjeninnført).
+  const [{ data: allSubjects }, { data: allTeachers }, { data: mineKlasseRader }] = await Promise.all([
     sb.from('subjects').select('id, name, short_code').eq('school_id', APP.school.id).is('deleted_at', null).order('name'),
+    sb.from('users').select('id, full_name').eq('school_id', APP.school.id).is('deleted_at', null).order('full_name'),
     sb.from('user_classes').select('classes(*)').eq('user_id', APP.profile.id),
   ])
 
@@ -3230,6 +3235,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     : { data: [] }
 
   const subjects = allSubjects || []
+  const teachers = allTeachers || []
   const divs = allDivs || []
 
   // Oppslag-kart
@@ -3389,7 +3395,15 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     rad.dagSel.appendChild(el('option', { value: '' }, '—'))
     for (let i = 1; i <= 5; i++) rad.dagSel.appendChild(el('option', { value: i }, dagNavn(i)))
 
-    // Ingen lærer-kolonne (P44): importerte økter føres alltid på deg selv.
+    // Lærer-dropdown (alternativ 2, 5. august 2026): står alltid på innlogget
+    // lærer som standard — ALDRI forhåndsvalgt fra tekst/fornavn — men kan
+    // overstyres bevisst av læreren selv.
+    rad.laererSel = el('select', { class: 'felt select okt-import-felt' })
+    for (const t of teachers) {
+      const opt = el('option', { value: t.id }, t.full_name)
+      rad.laererSel.appendChild(opt)
+    }
+    rad.laererSel.value = APP.profile?.id || ''
 
     // Fritekstfelt
     rad.aktivitetFelt  = el('input', { type: 'text', class: 'felt input okt-import-felt', placeholder: 'aktivitet' })
@@ -3494,6 +3508,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
 
     rad.el = el('div', { class: 'okt-import-rad' },
       el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, rad.klasseSel),
+      el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, rad.laererSel),
       el('div', { class: 'okt-import-celle okt-import-celle--fag' }, rad.fagSel),
       el('div', { class: 'okt-import-celle okt-import-celle--div' }, divWrap),
       el('div', { class: 'okt-import-celle okt-import-celle--uke' }, rad.ukeFelt),
@@ -3542,6 +3557,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   // Kolonneoverskrifter
   prevSeksjon.appendChild(el('div', { class: 'okt-import-rad okt-import-hode' },
     el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, 'Klasse'),
+    el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, 'Lærer'),
     el('div', { class: 'okt-import-celle okt-import-celle--fag' }, 'Fag'),
     el('div', { class: 'okt-import-celle okt-import-celle--div' }, 'Parti/gruppe'),
     el('div', { class: 'okt-import-celle okt-import-celle--uke' }, 'Uke'),
@@ -3725,7 +3741,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
             division_id: null,
             week_nr: weekNr,
             day_of_week: dagOfWeek,
-            teacher_id: APP.profile.id,
+            teacher_id: rad.laererSel.value || APP.profile.id,
             activity: rad.aktivitetFelt.value.trim(),
             meeting_point: rad.oppmoteFelt.value.trim(),
             info: rad.infoFelt.value.trim(),
