@@ -68,7 +68,9 @@ serve(async (req) => {
   if (!user) return new Response(JSON.stringify({ error: 'Ikke autentisert' }), { status: 401, headers: corsHeaders })
 
   const { text, context } = await req.json()
-  // context: { subjects: [{id, name, short_code}], classes: [{id, name}], teachers: [{id, full_name}], divisions: [{id, name, subject_id, division_type}] }
+  // context: { subjects: [{id, name, short_code}], classes: [{id, name}], divisions: [{id, name, subject_id, division_type}] }
+  // NB: bevisst INGEN lærere i konteksten (P44) — frontend velger alltid lærer
+  // selv (standard: innlogget lærer), AI-en skal aldri gjette lærer fra tekst.
 
   if (!text) return new Response(JSON.stringify({ error: 'Missing text' }), { status: 400, headers: corsHeaders })
 
@@ -78,12 +80,12 @@ en JSON-array med økter. Returner KUN gyldig JSON, ingen forklaringer.
 
 Tilgjengelige fag (bruk id): ${JSON.stringify(context?.subjects ?? [])}
 Tilgjengelige klasser (bruk id): ${JSON.stringify(context?.classes ?? [])}
-Tilgjengelige lærere (bruk id): ${JSON.stringify(context?.teachers ?? [])}
 Tilgjengelige inndelinger (bruk id): ${JSON.stringify(context?.divisions ?? [])}
 
 Hvert økt-objekt skal ha disse feltene:
 {
   "class_id": "uuid eller null",
+  "class_name": "klassenavn nøyaktig slik det står i teksten, eller null",
   "subject_id": "uuid eller null",
   "division_id": "uuid eller null",
   "week_nr": tall (ISO-uke),
@@ -95,8 +97,25 @@ Hvert økt-objekt skal ha disse feltene:
   "_note": "eventuell merknad om usikkerhet"
 }
 
+KLASSE (viktig):
+- "class_name" skal være klassenavnet SLIK DET STÅR I TEKSTEN — også når navnet
+  ikke finnes i listen over tilgjengelige klasser. Ikke oversett, forkort eller
+  finn på et navn.
+- Nevner teksten ingen klasse for økten, skal "class_name" være null. Ikke gjett
+  en klasse, og ikke kopier en klasse fra listen bare fordi den finnes der.
+- "class_id" fylles kun når klassen i teksten helt klart er en av de
+  tilgjengelige klassene; ellers null.
+
 Dersom du ikke kan fastslå et felt med rimelig sikkerhet, sett det til null.
-Returner et objekt: { "sessions": [...], "warnings": ["eventuell advarsel"] }`
+Returner et objekt: { "sessions": [...], "warnings": ["eventuell advarsel"] }
+
+VARSLER:
+Skriv varsler i klarspråk til en vanlig lærer, om hva du observerte i teksten.
+- ALDRI feltnavn (class_id, class_name, week_nr, day_of_week …), JSON, «null»
+  eller referanser til reglene over.
+- ALDRI påstander om hva som blir importert eller ikke — det avgjøres i appen.
+- Riktig: «Teksten nevner både 1D og 1B.»
+- Galt: «class_name satt til null for tre økter, disse importeres ikke.»`
 
   let rawText: string
   try {
