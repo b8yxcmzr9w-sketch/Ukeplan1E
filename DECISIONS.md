@@ -263,3 +263,33 @@ storage-policies — kjør `020_storage_policy_logos.sql` i SQL Editor.
   fortsatt produsere DB-verdien `planleggingsdag`. Admin-badgen og begge
   type-dropdownene arver etiketten automatisk fordi de allerede kaller
   `kalenderTypeNavn`. Ingen migrasjon skal skrives for dette.
+
+## P44 — Trygg AI-import: klassevern, ikke lærervern (12.08.2026)
+
+- **Import begrenses til `user_classes`, ikke til aktiv klasse.** AI-import
+  (`visAIPasteModal`) matcher hver rads klassenavn mot lærerens TILDELTE
+  klasser (`user_classes`), ikke bare klassen man står i. Rader for klasser
+  utenfor denne lista blir røde og utelates («Ukjent/annen klasse (X) –
+  importeres ikke»), redigerbart per rad. Håndhevet i databasen av migrasjon
+  022 (`sessions_insert_laerer`) — samme grense i UI og RLS.
+- **`is_contact_teacher_for()` ble bevisst IKKE brukt** i migrasjon 022 — den
+  krever rollen kontaktlærer og ville låst ute faglærere som er tildelt
+  klassen uten å være kontaktlærer. `user_classes` er den riktige grensen for
+  «kan skrive i denne klassen».
+- **Lærervalg i importen: manuelt nedtrekk, standard = deg selv, ALDRI
+  gjetning fra tekst** (alternativ 2, valgt etter en kort A/B-runde samme
+  dag — alternativ 1, fjerne kolonnen helt, ble forkastet). En hel limt
+  årsplan havner automatisk på deg; bevisst overstyring til en kollega er
+  fortsatt mulig, som i «Ny økt»/kopi. Det som IKKE kom tilbake:
+  fornavn-matching (`matchLaerer`) og `teachers`-lista i AI-konteksten/
+  prompten — AI-en skal aldri se eller gjette lærernavn.
+- **`teacher_id = auth.uid()`-varianten av migrasjon 022 er lagt bort for
+  godt**, ikke bare utsatt. Den ville stoppet «Ny økt» på vegne av en
+  kollega (bevisst mulighet siden migrasjon 008) og bulk-kopi med «behold
+  lærer». Historikknotat står i selve SQL-filen — ikke gjeninnfør den uten
+  en ny, eksplisitt beslutning.
+- **P45 («Foreslå økt til kollega», innboks + godkjenning) er lagt bort**,
+  ikke bygget. Begrunnelse: kollega-innlegging brukes sjelden, og risikoen
+  for at noe havner i feil lærers plan veide tyngre enn nytten. Siden P44
+  fortsatt tillater bevisst lærervalg i importen, gjenstår et lite
+  varselbehov — se P47 (stub, ikke bygget).
