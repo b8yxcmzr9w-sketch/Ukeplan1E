@@ -2,10 +2,10 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P44
+- **Siste fullførte P-nummer:** P48
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P48 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
-- **Dato sist oppdatert:** 12. august 2026
+- **Neste ledige P-nummer:** P49 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Dato sist oppdatert:** 15. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
     aktivt); maskinverifisert, ekte manuell bekreftelse skjer naturlig når
@@ -18,6 +18,10 @@
     tekst som blander flere klasser (én egen + én fremmed) gjenstår
     (maskinverifisert med 41 sjekker i mellomtiden, samme mønster som
     P41–P43)
+  - P48s prod-sjekk — utvid/lukk-raden er maskinverifisert visuelt (isolert
+    CSS-harness, kompakt/utvidet desktop/utvidet mobil), men krever ekte
+    AI-import (Supabase-innlogging + Gemini-kall) for full funksjonstest i
+    produksjon; samme mønster som P41–P44
 
 ---
 
@@ -740,3 +744,62 @@ bevisst legge en økt på en kollega via importens nedtrekk (eller «Ny
 økt»/kopi), er varselbehovet reelt — når du bevisst legger en økt på en
 kollega, er det den kollegaen som bør varsles. Enkelt varsel til læreren når
 noen legger en økt som berører hens arbeidstid. Detaljeres i egen økt.
+
+---
+
+## Økt (P48): Utvid importrad ved klikk (lett redigering i AI-forhåndsvisning)
+
+**Branch:** `claude/p48-utvid-importrad-q1uuto` (miljøets tildelte branch).
+**Scope:** KUN `v4/app.js` + `v4/style.css` + cache-bust i `v4/index.html`.
+Ingen edge-funksjon, ingen DB.
+**Status:** FULLFØRT 15. august 2026 — kode merget til main.
+
+### Kartlegging (verifisert i koden 15. august 2026)
+
+`visAIPasteModal` → `byggRad(s, rader, liste)` (app.js) bygger hver
+importrad. Alle felt lagres direkte på `rad`-objektet (`klasseSel`,
+`laererSel`, `fagSel`, `divSel`, `ukeFelt`, `dagSel`, `aktivitetFelt`,
+`oppmoteFelt`, `infoFelt`) og handlerne (live-validering `oppdaterRadStatus`,
+klassebytte → `byggDivPaaNytt` + `plasserRad`, kollisjonssjekk) er bundet
+direkte på disse DOM-elementene. En utvidet visning kan dermed gjenbruke de
+samme elementene ved å endre CSS-klasse på `rad.el` og la CSS legge om
+layout — ingen duplisert logikk nødvendig. CSS-grid for raden lå i
+`.okt-import-rad` (`v4/style.css`), 11 kolonner, med egen mobil-stabling
+`@media (max-width:900px)`.
+
+### Delplan
+
+- [x] Aktivitet/møtested/info gjort om fra `<input>` til `<textarea>`
+      (samme `.value`-lesing i validering/import, ingen logikkendring) —
+      kompakt: én linje via CSS (`min-height` overstyrt, `resize:none`),
+      utvidet: fullt tekstområde.
+- [x] `medLabel(tekst, felt)`-hjelper: liten etikett over hvert felt, skjult
+      i kompakt visning (`display:contents`/`display:none`), vist i utvidet.
+- [x] Synlig utvid-/lukk-knapp (⌄→⌃) i egen liten celle ved siden av
+      stryk-knappen — primær affordanse for å åpne/lukke raden (justering
+      fra Morfar ved godkjenning av sub-planen).
+- [x] «Lukk»-knapp inni det utvidede panelet gjør samme handling.
+- [x] Klikk hvor som helst på raden (utenom felt/nedtrekk/knapper, sjekket
+      via `e.target.closest('input, select, textarea, button, a')`) er en
+      bonusvei til samme utvid-/lukk-handling.
+- [x] Maks én rad utvidet om gangen (`utvidetRad`-tilstand i modal-scope;
+      `apneUtvidet`/`lukkUtvidet` lukker forrige før ny åpnes).
+- [x] Opprydding av `utvidetRad`-tilstanden ved stryk, import og re-analyse
+      (radene fjernes fra DOM/liste i disse tilfellene).
+- [x] Utvidet rad blir værende i sin klassegruppe (ingen `plasserRad`-kall
+      ved utvid/lukk, kun klassebytte flytter raden som før).
+- [x] CSS: `.okt-import-rad--utvidet` — 2-kolonners romslig layout for
+      korte felt (klasse/lærer/fag/parti/uke/dag) på desktop (≥901px),
+      full bredde for tekstområder/merknad/knapper; ≤900px (mobil, der
+      raden allerede stables) kollapser til én lesbar kolonne.
+- [x] Ingen endring i validering/kollisjon/klassebytte-gruppering/import.
+- [x] Maskinverifisert med headless Chromium mot en isolert HTML-harness
+      som gjenbruker `v4/style.css` (samme klassenavn/struktur som den
+      ekte raden): kompakt visning uendret, utvidet 2-kolonners layout på
+      desktop, utvidet 1-kolonners stabling på mobil (500px bredde) — alle
+      tre skjermbilder bekreftet visuelt riktige.
+- [x] Cache-bust bumpet til `?v=20260815a` for både CSS og JS.
+- [ ] Morfars visuelle prod-sjekk (ekte AI-import med flere rader, prøv
+      utvid/lukk på både desktop og mobil i nettleser) — kan ikke
+      maskinverifiseres da AI-import krever ekte Supabase-innlogging og
+      Gemini-kall; samme mønster som P41–P44s gjenstående prod-sjekk.
