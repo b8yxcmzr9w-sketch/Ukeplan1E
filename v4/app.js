@@ -3316,11 +3316,13 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
   }
 
   // ─── Utvidet rad (P48) ───
-  // Maks én rad utvidet om gangen. Utvid-/lukk-knappen i egen liten celle er
-  // den primære affordansen; klikk hvor som helst på raden (utenom felt) er
-  // en bonusvei til det samme. Utvidet visning = to etasjer i samme
-  // rad-blokk: kompaktfeltene (klasse/lærer/fag/parti/uke/dag) på én linje
-  // som før, aktivitet/møtested/info som auto-voksende tekstområder under.
+  // Maks én rad utvidet om gangen. Utvid-/lukk-knappen (⌄→⌃) er ENESTE
+  // åpne/lukke-kontroll, og ligger på linje 1 i nøyaktig samme posisjon som
+  // i kompakt visning – klikk hvor som helst på raden (utenom felt) er en
+  // bonusvei til det samme. Utvidet visning = to etasjer i samme rad-blokk:
+  // kompaktfeltene (klasse/lærer/fag/parti/uke/dag/utvid-knapp/stryk) på
+  // linje 1 som før, aktivitet/møtested/info som auto-voksende
+  // tekstområder under.
   let utvidetRad = null
 
   // Høyden settes ut fra innhold (scrollHeight) – aldri fast/fullskjerm.
@@ -3565,12 +3567,10 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
         oppdaterUkjentKlasseVarsel()
       } }, '🗑️')
 
-    // Utvid-/lukk-knapp (P48) – primær affordanse for å åpne/lukke det store panelet
+    // Utvid-/lukk-knapp (P48) – eneste åpne/lukke-kontroll. Ligger på linje 1
+    // i utvidet visning, i nøyaktig samme posisjon som i kompakt visning.
     rad.toggleKnapp = el('button', { type: 'button', class: 'btn btn-ikon okt-import-toggle-knapp', title: 'Utvid raden',
       onclick: () => apneUtvidet(rad) }, '⌄')
-
-    // Lukk-knapp inni det utvidede panelet – samme handling som toggle-knappen
-    rad.lukkKnapp = el('button', { type: 'button', class: 'btn btn-s okt-import-lukk-knapp', onclick: () => lukkUtvidet() }, 'Lukk')
 
     rad.el = el('div', { class: 'okt-import-rad' },
       el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, rad.klasseSel),
@@ -3585,7 +3585,6 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       el('div', { class: 'okt-import-celle okt-import-celle--merknad' }, merknadCelle, kollisjonWrap),
       el('div', { class: 'okt-import-celle okt-import-celle--utvid' }, rad.toggleKnapp),
       el('div', { class: 'okt-import-celle okt-import-celle--stryk' }, strykKnapp),
-      rad.lukkKnapp,
     )
     // Klikk hvor som helst på raden (utenom felt/nedtrekk/knapper) er en bonusvei
     // til samme utvid-/lukk-handling som toggle-knappen.

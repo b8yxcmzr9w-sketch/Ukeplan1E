@@ -897,7 +897,9 @@ tr:hover td { background: var(--primær-svak); }
 [data-theme="mork"] .okt-import-rad--gul  { background: #2d2400; }
 
 .okt-import-felt { margin-bottom: 0 !important; padding: 3px 6px !important; font-size: .82rem !important; }
-.okt-import-felt--tekst { min-height: unset !important; height: 28px; resize: none; overflow: hidden; }
+/* resize:none MÅ ha !important – textarea.felt (skjema-basisstil) setter
+   resize:vertical med høyere spesifisitet (tag+klasse) og ville ellers vunnet */
+.okt-import-felt--tekst { min-height: unset !important; height: 28px; resize: none !important; overflow: hidden; }
 .okt-import-uke { width: 52px !important; }
 .okt-import-div-wrap { display: flex; gap: 4px; align-items: center; }
 .okt-import-foreslatt { border-color: var(--advarsel) !important; background: #fff8e1 !important; }
@@ -912,9 +914,8 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-feltgruppe { display: contents; }
 .okt-import-cellabel { display: none; }
 
-/* Utvid-/lukk-knapp i egen liten celle (P48) */
+/* Utvid-/lukk-knapp i egen liten celle (P48) – eneste åpne/lukke-kontroll */
 .okt-import-toggle-knapp { width: 100%; padding: 2px 4px !important; font-size: .82rem !important; line-height: 1; }
-.okt-import-lukk-knapp { display: none; }
 
 /* P44: klassevis gruppering av forhåndsvisningen */
 .okt-import-gruppe { margin-bottom: 10px; }
@@ -925,12 +926,14 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-gruppe--ugyldig .okt-import-gruppe-hode { color: var(--fare); }
 
 /* ── Utvidet rad (P48): to etasjer i samme rad-blokk ──
-   Etasje 1: kompaktfeltene (klasse/lærer/fag/parti/uke/dag) på én linje,
-   nøyaktig som i kompakt visning. Etasje 2: aktivitet/møtested/info i full
-   bredde, auto-voksende (høyden settes i JS – autosizeTekstfelt – ut fra
-   innhold). Ikke fullskjerm; raden blir bare så høy som teksten krever. */
+   Linje 1: kompaktfeltene (klasse/lærer/fag/parti/uke/dag) PLUSS
+   utvid-/stryk-knappen, i nøyaktig samme posisjon/rekkefølge som i kompakt
+   visning – chevronen (⌄→⌃) er eneste åpne/lukke-kontroll, alltid på
+   samme sted. Under: aktivitet/møtested/info i full bredde, auto-voksende
+   (høyden settes i JS – autosizeTekstfelt – ut fra innhold), så merknad.
+   Ikke fullskjerm; raden blir bare så høy som teksten krever. */
 .okt-import-rad--utvidet {
-  grid-template-columns: .9fr 1.2fr 1.6fr 1.2fr 60px 80px;
+  grid-template-columns: .9fr 1.2fr 1.6fr 1.2fr 60px 80px 32px 36px;
   align-items: start;
   gap: 6px 8px;
   padding: 10px 8px;
@@ -945,15 +948,12 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-rad--utvidet .okt-import-celle--div     { grid-column: 4; grid-row: 1; }
 .okt-import-rad--utvidet .okt-import-celle--uke     { grid-column: 5; grid-row: 1; }
 .okt-import-rad--utvidet .okt-import-celle--dag     { grid-column: 6; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--utvid   { grid-column: 7; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--stryk   { grid-column: 8; grid-row: 1; }
 .okt-import-rad--utvidet .okt-import-celle--akt     { grid-column: 1 / -1; grid-row: 2; }
 .okt-import-rad--utvidet .okt-import-celle--opp     { grid-column: 1 / -1; grid-row: 3; }
 .okt-import-rad--utvidet .okt-import-celle--info    { grid-column: 1 / -1; grid-row: 4; }
-.okt-import-rad--utvidet .okt-import-celle--merknad { grid-column: 1 / 5; grid-row: 5; }
-.okt-import-rad--utvidet .okt-import-celle--utvid   { grid-column: 5; grid-row: 5; }
-.okt-import-rad--utvidet .okt-import-celle--stryk   { grid-column: 6; grid-row: 5; }
-.okt-import-rad--utvidet .okt-import-lukk-knapp {
-  display: inline-block; grid-column: 1 / -1; grid-row: 6; justify-self: start; margin-top: 2px;
-}
+.okt-import-rad--utvidet .okt-import-celle--merknad { grid-column: 1 / -1; grid-row: 5; }
 
 .okt-import-rad--utvidet .okt-import-feltgruppe { display: block; margin-bottom: 3px; }
 .okt-import-rad--utvidet .okt-import-cellabel {
@@ -972,8 +972,9 @@ tr:hover td { background: var(--primær-svak); }
   .okt-import-celle--akt { grid-column: 1 / -1; }
   .okt-import-celle--merknad { grid-column: 1 / -1; }
 
-  /* Utvidet på mobil: kompaktfeltene stables i to kolonner (samme prinsipp
-     som kompakt visning), tekstfeltene i full bredde under. */
+  /* Utvidet på mobil: kompaktfeltene (inkl. utvid-/stryk-knappen) stables i
+     to kolonner (samme prinsipp som kompakt visning), tekstfeltene i full
+     bredde under. */
   .okt-import-rad--utvidet { grid-template-columns: 1fr 1fr; }
   .okt-import-rad--utvidet .okt-import-celle--klasse,
   .okt-import-rad--utvidet .okt-import-celle--laerer,
@@ -981,13 +982,12 @@ tr:hover td { background: var(--primær-svak); }
   .okt-import-rad--utvidet .okt-import-celle--div,
   .okt-import-rad--utvidet .okt-import-celle--uke,
   .okt-import-rad--utvidet .okt-import-celle--dag,
-  .okt-import-rad--utvidet .okt-import-celle--merknad,
   .okt-import-rad--utvidet .okt-import-celle--utvid,
   .okt-import-rad--utvidet .okt-import-celle--stryk { grid-column: auto; grid-row: auto; }
   .okt-import-rad--utvidet .okt-import-celle--akt,
   .okt-import-rad--utvidet .okt-import-celle--opp,
-  .okt-import-rad--utvidet .okt-import-celle--info { grid-column: 1 / -1; grid-row: auto; }
-  .okt-import-rad--utvidet .okt-import-lukk-knapp { grid-column: 1 / -1; grid-row: auto; }
+  .okt-import-rad--utvidet .okt-import-celle--info,
+  .okt-import-rad--utvidet .okt-import-celle--merknad { grid-column: 1 / -1; grid-row: auto; }
 }
 
 /* ── ════════════════════════════════════════════
