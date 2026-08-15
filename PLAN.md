@@ -816,6 +816,31 @@ linje fylte skjermen unødvendig siden de fleste tekstfeltene er korte.
       stabler etasje 1 i to kolonner med tekstfelt under; vindusendring
       mens raden er åpen re-beregner høyden korrekt (ingen avkutting).
 - [x] Cache-bust bumpet til `?v=20260815b` for både CSS og JS.
+
+**Runde 3 (justeringer etter ekte test i produksjon, 15. august 2026):**
+- [x] Fjernet resize-håndtaket på tekstfeltene i KOMPAKT visning. Rotårsak:
+      `.okt-import-felt--tekst { resize: none }` (én klasse) tapte for
+      skjemaets basisregel `textarea.felt { resize: vertical }` (tag+klasse
+      — høyere spesifisitet) selv om den sto lenger nede i filen. Fikset med
+      `!important` på `resize: none`.
+- [x] Utvidet visning: ⌃-chevronen og stryk-knappen (🗑) flyttet til LINJE 1,
+      i nøyaktig samme rutenett-posisjon (kolonne 7/8) som ⌄/🗑 har i
+      kompakt visning. Grid utvidet fra 6 til 8 kolonner på linje 1
+      (`.9fr 1.2fr 1.6fr 1.2fr 60px 80px 32px 36px`); aktivitet/møtested/
+      info/merknad flyttet ned én linje hver (linje 2–5).
+- [x] «Lukk»-knappen inni panelet fjernet helt (JS: `rad.lukkKnapp` og all
+      bruk av den; CSS: `.okt-import-lukk-knapp`-regler) — chevronen er nå
+      eneste åpne/lukke-kontroll, alltid på samme sted man åpnet.
+- [x] Mobil-mediesporet oppdatert tilsvarende: utvid-/stryk-cellene tas nå
+      med i resetten til `grid-column:auto` (var kun de seks kompaktfeltene
+      før), merknad forenklet til alltid full bredde i utvidet mobil.
+- [x] Maskinverifisert på nytt: `getComputedStyle(...).resize` bekreftet
+      `'none'` i kompakt visning (var `'vertical'` før fiksen); skjermbilder
+      av utvidet desktop (chevron+stryk øverst til høyre på linje 1, ingen
+      Lukk-knapp) og utvidet mobil (samme, med to-kolonners stabling).
+- [x] Branch restartet fra oppdatert `origin/main` (PR #156 var allerede
+      squash-merget) og bygget videre derfra, jf. rutinen for merget PR.
+- [x] Cache-bust bumpet til `?v=20260815c` for både CSS og JS.
 - [ ] Morfars visuelle prod-sjekk (ekte AI-import med flere rader, prøv
       utvid/lukk på både desktop og mobil i nettleser) — kan ikke
       maskinverifiseres da AI-import krever ekte Supabase-innlogging og
