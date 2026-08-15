@@ -924,38 +924,43 @@ tr:hover td { background: var(--primær-svak); }
 }
 .okt-import-gruppe--ugyldig .okt-import-gruppe-hode { color: var(--fare); }
 
-/* ── Utvidet rad (P48): stort panel på stedet, ett felt om gangen ── */
+/* ── Utvidet rad (P48): to etasjer i samme rad-blokk ──
+   Etasje 1: kompaktfeltene (klasse/lærer/fag/parti/uke/dag) på én linje,
+   nøyaktig som i kompakt visning. Etasje 2: aktivitet/møtested/info i full
+   bredde, auto-voksende (høyden settes i JS – autosizeTekstfelt – ut fra
+   innhold). Ikke fullskjerm; raden blir bare så høy som teksten krever. */
 .okt-import-rad--utvidet {
-  grid-template-columns: 1fr;
-  gap: 2px 12px;
-  padding: 14px;
+  grid-template-columns: .9fr 1.2fr 1.6fr 1.2fr 60px 80px;
+  align-items: start;
+  gap: 6px 8px;
+  padding: 10px 8px;
   border: 1px solid var(--kant);
   border-radius: 8px;
   background: var(--bg-kort);
   cursor: default;
 }
-.okt-import-rad--utvidet .okt-import-feltgruppe { display: block; margin-bottom: 10px; }
-.okt-import-rad--utvidet .okt-import-cellabel {
-  display: block; font-size: .72rem; font-weight: 700; color: var(--tekst-svak); margin-bottom: 3px;
+.okt-import-rad--utvidet .okt-import-celle--klasse  { grid-column: 1; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--laerer  { grid-column: 2; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--fag     { grid-column: 3; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--div     { grid-column: 4; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--uke     { grid-column: 5; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--dag     { grid-column: 6; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--akt     { grid-column: 1 / -1; grid-row: 2; }
+.okt-import-rad--utvidet .okt-import-celle--opp     { grid-column: 1 / -1; grid-row: 3; }
+.okt-import-rad--utvidet .okt-import-celle--info    { grid-column: 1 / -1; grid-row: 4; }
+.okt-import-rad--utvidet .okt-import-celle--merknad { grid-column: 1 / 5; grid-row: 5; }
+.okt-import-rad--utvidet .okt-import-celle--utvid   { grid-column: 5; grid-row: 5; }
+.okt-import-rad--utvidet .okt-import-celle--stryk   { grid-column: 6; grid-row: 5; }
+.okt-import-rad--utvidet .okt-import-lukk-knapp {
+  display: inline-block; grid-column: 1 / -1; grid-row: 6; justify-self: start; margin-top: 2px;
 }
-.okt-import-rad--utvidet .okt-import-felt {
-  font-size: .95rem !important; padding: 9px 12px !important;
-}
-.okt-import-rad--utvidet .okt-import-felt--tekst {
-  height: auto !important; min-height: 70px !important; resize: vertical; overflow: auto;
-}
-.okt-import-rad--utvidet .okt-import-uke { width: 100% !important; }
-.okt-import-rad--utvidet .okt-import-lukk-knapp { display: inline-block; margin-top: 4px; }
 
-@media (min-width: 901px) {
-  .okt-import-rad--utvidet { grid-template-columns: repeat(2, 1fr); }
-  .okt-import-rad--utvidet .okt-import-celle--akt,
-  .okt-import-rad--utvidet .okt-import-celle--opp,
-  .okt-import-rad--utvidet .okt-import-celle--info,
-  .okt-import-rad--utvidet .okt-import-celle--merknad,
-  .okt-import-rad--utvidet .okt-import-celle--utvid,
-  .okt-import-rad--utvidet .okt-import-celle--stryk { grid-column: 1 / -1; }
+.okt-import-rad--utvidet .okt-import-feltgruppe { display: block; margin-bottom: 3px; }
+.okt-import-rad--utvidet .okt-import-cellabel {
+  display: block; font-size: .7rem; font-weight: 700; color: var(--tekst-svak); margin-bottom: 2px;
 }
+/* Høyden settes i JS ut fra innhold – ingen !important her, så inline style vinner */
+.okt-import-rad--utvidet .okt-import-felt--tekst { height: auto; min-height: 30px; resize: none; overflow: hidden; }
 
 @media (max-width: 900px) {
   .okt-import-rad { grid-template-columns: 1fr 1fr; }
@@ -966,7 +971,23 @@ tr:hover td { background: var(--primær-svak); }
   .okt-import-celle--fag,
   .okt-import-celle--akt { grid-column: 1 / -1; }
   .okt-import-celle--merknad { grid-column: 1 / -1; }
-  .okt-import-rad--utvidet { grid-template-columns: 1fr; }
+
+  /* Utvidet på mobil: kompaktfeltene stables i to kolonner (samme prinsipp
+     som kompakt visning), tekstfeltene i full bredde under. */
+  .okt-import-rad--utvidet { grid-template-columns: 1fr 1fr; }
+  .okt-import-rad--utvidet .okt-import-celle--klasse,
+  .okt-import-rad--utvidet .okt-import-celle--laerer,
+  .okt-import-rad--utvidet .okt-import-celle--fag,
+  .okt-import-rad--utvidet .okt-import-celle--div,
+  .okt-import-rad--utvidet .okt-import-celle--uke,
+  .okt-import-rad--utvidet .okt-import-celle--dag,
+  .okt-import-rad--utvidet .okt-import-celle--merknad,
+  .okt-import-rad--utvidet .okt-import-celle--utvid,
+  .okt-import-rad--utvidet .okt-import-celle--stryk { grid-column: auto; grid-row: auto; }
+  .okt-import-rad--utvidet .okt-import-celle--akt,
+  .okt-import-rad--utvidet .okt-import-celle--opp,
+  .okt-import-rad--utvidet .okt-import-celle--info { grid-column: 1 / -1; grid-row: auto; }
+  .okt-import-rad--utvidet .okt-import-lukk-knapp { grid-column: 1 / -1; grid-row: auto; }
 }
 
 /* ── ════════════════════════════════════════════

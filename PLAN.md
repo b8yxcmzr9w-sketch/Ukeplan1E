@@ -769,15 +769,25 @@ layout — ingen duplisert logikk nødvendig. CSS-grid for raden lå i
 
 ### Delplan
 
-- [x] Aktivitet/møtested/info gjort om fra `<input>` til `<textarea>`
-      (samme `.value`-lesing i validering/import, ingen logikkendring) —
-      kompakt: én linje via CSS (`min-height` overstyrt, `resize:none`),
-      utvidet: fullt tekstområde.
-- [x] `medLabel(tekst, felt)`-hjelper: liten etikett over hvert felt, skjult
-      i kompakt visning (`display:contents`/`display:none`), vist i utvidet.
+**Runde 1 (klikk-for-å-utvide, ett-felt-per-linje):** implementert, men
+Morfar vurderte utvidet visning som for tung — hvert felt stablet på egen
+linje fylte skjermen unødvendig siden de fleste tekstfeltene er korte.
+
+**Runde 2 (godkjent design — to etasjer i samme rad-blokk):**
+- [x] Aktivitet/møtested/info er `<textarea>` (samme `.value`-lesing i
+      validering/import, ingen logikkendring) — kompakt: én linje via CSS,
+      utvidet: auto-voksende tekstområde (høyden settes i JS,
+      `autosizeTekstfelt`, ut fra `scrollHeight` — ikke fast, ikke
+      fullskjerm).
+- [x] Utvidet rad = to etasjer i samme rad-blokk: etasje 1 er
+      klasse/lærer/fag/parti/uke/dag på én linje med NØYAKTIG samme
+      kontroller/størrelse som kompakt visning (ingen forstørring, ingen
+      etiketter — droppet fra runde 1); etasje 2 er aktivitet/møtested/info
+      i full bredde under, hver sin auto-voksende boks. `medLabel`-hjelperen
+      brukes kun for disse tre (liten etikett, siden radkonteksten kan være
+      langt fra kolonneoverskriften når lista er scrollet).
 - [x] Synlig utvid-/lukk-knapp (⌄→⌃) i egen liten celle ved siden av
-      stryk-knappen — primær affordanse for å åpne/lukke raden (justering
-      fra Morfar ved godkjenning av sub-planen).
+      stryk-knappen — primær affordanse for å åpne/lukke raden.
 - [x] «Lukk»-knapp inni det utvidede panelet gjør samme handling.
 - [x] Klikk hvor som helst på raden (utenom felt/nedtrekk/knapper, sjekket
       via `e.target.closest('input, select, textarea, button, a')`) er en
@@ -785,20 +795,27 @@ layout — ingen duplisert logikk nødvendig. CSS-grid for raden lå i
 - [x] Maks én rad utvidet om gangen (`utvidetRad`-tilstand i modal-scope;
       `apneUtvidet`/`lukkUtvidet` lukker forrige før ny åpnes).
 - [x] Opprydding av `utvidetRad`-tilstanden ved stryk, import og re-analyse
-      (radene fjernes fra DOM/liste i disse tilfellene).
+      (radene fjernes fra DOM/liste i disse tilfellene) — inkl. nullstilling
+      av tekstfeltenes inline høyde ved lukking.
 - [x] Utvidet rad blir værende i sin klassegruppe (ingen `plasserRad`-kall
       ved utvid/lukk, kun klassebytte flytter raden som før).
-- [x] CSS: `.okt-import-rad--utvidet` — 2-kolonners romslig layout for
-      korte felt (klasse/lærer/fag/parti/uke/dag) på desktop (≥901px),
-      full bredde for tekstområder/merknad/knapper; ≤900px (mobil, der
-      raden allerede stables) kollapser til én lesbar kolonne.
+- [x] CSS: `.okt-import-rad--utvidet` med eksplisitt grid-plassering (linje-
+      for-linje, ikke auto-flow — unngår tvetydig auto-placement når celler
+      har ulikt kolonnespenn) for begge etasjer; ≤900px (mobil, der raden
+      allerede stables) bruker samme to-etasjers prinsipp, men etasje 1
+      stables i to kolonner slik kompaktfeltene allerede gjør.
+- [x] Resize-sikring: vindusendring mens en rad er åpen kunne gjøre
+      tekstboksens høyde utdatert (avkuttet tekst ved smalere bredde) —
+      lagt til debounced `resize`-lytter med samme selv-opprydningsmønster
+      som `renderAlleOkterTab` (`onResize` + `isConnected`-sjekk).
 - [x] Ingen endring i validering/kollisjon/klassebytte-gruppering/import.
-- [x] Maskinverifisert med headless Chromium mot en isolert HTML-harness
-      som gjenbruker `v4/style.css` (samme klassenavn/struktur som den
-      ekte raden): kompakt visning uendret, utvidet 2-kolonners layout på
-      desktop, utvidet 1-kolonners stabling på mobil (500px bredde) — alle
-      tre skjermbilder bekreftet visuelt riktige.
-- [x] Cache-bust bumpet til `?v=20260815a` for både CSS og JS.
+- [x] Maskinverifisert med headless Chromium mot en isolert HTML-harness som
+      gjenbruker `v4/style.css` (samme klassenavn/struktur som den ekte
+      raden): kompakt visning uendret; utvidet — kort tekst gir lav boks,
+      lang tekst gir flerlinjers auto-vokst boks, begge på desktop; mobil
+      stabler etasje 1 i to kolonner med tekstfelt under; vindusendring
+      mens raden er åpen re-beregner høyden korrekt (ingen avkutting).
+- [x] Cache-bust bumpet til `?v=20260815b` for både CSS og JS.
 - [ ] Morfars visuelle prod-sjekk (ekte AI-import med flere rader, prøv
       utvid/lukk på både desktop og mobil i nettleser) — kan ikke
       maskinverifiseres da AI-import krever ekte Supabase-innlogging og
