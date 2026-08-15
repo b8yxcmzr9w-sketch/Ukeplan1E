@@ -883,12 +883,13 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-hode { font-size: .78rem; font-weight: 700; color: var(--tekst-svak); border-bottom: 2px solid var(--kant); padding-bottom: 4px; margin-bottom: 2px; }
 .okt-import-rad {
   display: grid;
-  grid-template-columns: .9fr 1.2fr 1.6fr 1.2fr 60px 80px 1fr 1fr 1fr 1.4fr 36px;
+  grid-template-columns: .9fr 1.2fr 1.6fr 1.2fr 60px 80px 1fr 1fr 1fr 1.4fr 32px 36px;
   gap: 4px;
   align-items: center;
   padding: 4px 0;
   border-bottom: 1px solid var(--kant);
   border-radius: 4px;
+  cursor: pointer;
 }
 .okt-import-rad--roed { background: #fdecea; }
 .okt-import-rad--gul  { background: #fff8e1; }
@@ -896,6 +897,7 @@ tr:hover td { background: var(--primær-svak); }
 [data-theme="mork"] .okt-import-rad--gul  { background: #2d2400; }
 
 .okt-import-felt { margin-bottom: 0 !important; padding: 3px 6px !important; font-size: .82rem !important; }
+.okt-import-felt--tekst { min-height: unset !important; height: 28px; resize: none; overflow: hidden; }
 .okt-import-uke { width: 52px !important; }
 .okt-import-div-wrap { display: flex; gap: 4px; align-items: center; }
 .okt-import-foreslatt { border-color: var(--advarsel) !important; background: #fff8e1 !important; }
@@ -906,6 +908,14 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-rad--gul .okt-import-merknad { color: #856404; }
 .okt-import-kollisjon-wrap { display: flex; align-items: center; gap: 4px; font-size: .78rem; margin-top: 2px; }
 
+/* Felt-etikett (P48) – skjult i kompakt visning, vises i utvidet */
+.okt-import-feltgruppe { display: contents; }
+.okt-import-cellabel { display: none; }
+
+/* Utvid-/lukk-knapp i egen liten celle (P48) */
+.okt-import-toggle-knapp { width: 100%; padding: 2px 4px !important; font-size: .82rem !important; line-height: 1; }
+.okt-import-lukk-knapp { display: none; }
+
 /* P44: klassevis gruppering av forhåndsvisningen */
 .okt-import-gruppe { margin-bottom: 10px; }
 .okt-import-gruppe-hode {
@@ -913,6 +923,44 @@ tr:hover td { background: var(--primær-svak); }
   padding: 6px 0 2px; position: sticky; top: 0; background: var(--bg-kort);
 }
 .okt-import-gruppe--ugyldig .okt-import-gruppe-hode { color: var(--fare); }
+
+/* ── Utvidet rad (P48): to etasjer i samme rad-blokk ──
+   Etasje 1: kompaktfeltene (klasse/lærer/fag/parti/uke/dag) på én linje,
+   nøyaktig som i kompakt visning. Etasje 2: aktivitet/møtested/info i full
+   bredde, auto-voksende (høyden settes i JS – autosizeTekstfelt – ut fra
+   innhold). Ikke fullskjerm; raden blir bare så høy som teksten krever. */
+.okt-import-rad--utvidet {
+  grid-template-columns: .9fr 1.2fr 1.6fr 1.2fr 60px 80px;
+  align-items: start;
+  gap: 6px 8px;
+  padding: 10px 8px;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  background: var(--bg-kort);
+  cursor: default;
+}
+.okt-import-rad--utvidet .okt-import-celle--klasse  { grid-column: 1; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--laerer  { grid-column: 2; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--fag     { grid-column: 3; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--div     { grid-column: 4; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--uke     { grid-column: 5; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--dag     { grid-column: 6; grid-row: 1; }
+.okt-import-rad--utvidet .okt-import-celle--akt     { grid-column: 1 / -1; grid-row: 2; }
+.okt-import-rad--utvidet .okt-import-celle--opp     { grid-column: 1 / -1; grid-row: 3; }
+.okt-import-rad--utvidet .okt-import-celle--info    { grid-column: 1 / -1; grid-row: 4; }
+.okt-import-rad--utvidet .okt-import-celle--merknad { grid-column: 1 / 5; grid-row: 5; }
+.okt-import-rad--utvidet .okt-import-celle--utvid   { grid-column: 5; grid-row: 5; }
+.okt-import-rad--utvidet .okt-import-celle--stryk   { grid-column: 6; grid-row: 5; }
+.okt-import-rad--utvidet .okt-import-lukk-knapp {
+  display: inline-block; grid-column: 1 / -1; grid-row: 6; justify-self: start; margin-top: 2px;
+}
+
+.okt-import-rad--utvidet .okt-import-feltgruppe { display: block; margin-bottom: 3px; }
+.okt-import-rad--utvidet .okt-import-cellabel {
+  display: block; font-size: .7rem; font-weight: 700; color: var(--tekst-svak); margin-bottom: 2px;
+}
+/* Høyden settes i JS ut fra innhold – ingen !important her, så inline style vinner */
+.okt-import-rad--utvidet .okt-import-felt--tekst { height: auto; min-height: 30px; resize: none; overflow: hidden; }
 
 @media (max-width: 900px) {
   .okt-import-rad { grid-template-columns: 1fr 1fr; }
@@ -923,6 +971,23 @@ tr:hover td { background: var(--primær-svak); }
   .okt-import-celle--fag,
   .okt-import-celle--akt { grid-column: 1 / -1; }
   .okt-import-celle--merknad { grid-column: 1 / -1; }
+
+  /* Utvidet på mobil: kompaktfeltene stables i to kolonner (samme prinsipp
+     som kompakt visning), tekstfeltene i full bredde under. */
+  .okt-import-rad--utvidet { grid-template-columns: 1fr 1fr; }
+  .okt-import-rad--utvidet .okt-import-celle--klasse,
+  .okt-import-rad--utvidet .okt-import-celle--laerer,
+  .okt-import-rad--utvidet .okt-import-celle--fag,
+  .okt-import-rad--utvidet .okt-import-celle--div,
+  .okt-import-rad--utvidet .okt-import-celle--uke,
+  .okt-import-rad--utvidet .okt-import-celle--dag,
+  .okt-import-rad--utvidet .okt-import-celle--merknad,
+  .okt-import-rad--utvidet .okt-import-celle--utvid,
+  .okt-import-rad--utvidet .okt-import-celle--stryk { grid-column: auto; grid-row: auto; }
+  .okt-import-rad--utvidet .okt-import-celle--akt,
+  .okt-import-rad--utvidet .okt-import-celle--opp,
+  .okt-import-rad--utvidet .okt-import-celle--info { grid-column: 1 / -1; grid-row: auto; }
+  .okt-import-rad--utvidet .okt-import-lukk-knapp { grid-column: 1 / -1; grid-row: auto; }
 }
 
 /* ── ════════════════════════════════════════════

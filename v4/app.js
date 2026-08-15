@@ -3315,6 +3315,58 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     })
   }
 
+  // ─── Utvidet rad (P48) ───
+  // Maks én rad utvidet om gangen. Utvid-/lukk-knappen i egen liten celle er
+  // den primære affordansen; klikk hvor som helst på raden (utenom felt) er
+  // en bonusvei til det samme. Utvidet visning = to etasjer i samme
+  // rad-blokk: kompaktfeltene (klasse/lærer/fag/parti/uke/dag) på én linje
+  // som før, aktivitet/møtested/info som auto-voksende tekstområder under.
+  let utvidetRad = null
+
+  // Høyden settes ut fra innhold (scrollHeight) – aldri fast/fullskjerm.
+  function autosizeTekstfelt(ta) {
+    ta.style.height = 'auto'
+    ta.style.height = ta.scrollHeight + 'px'
+  }
+
+  function lukkUtvidet() {
+    if (!utvidetRad) return
+    utvidetRad.el.classList.remove('okt-import-rad--utvidet')
+    utvidetRad.toggleKnapp.textContent = '⌄'
+    utvidetRad.toggleKnapp.title = 'Utvid raden'
+    for (const ta of [utvidetRad.aktivitetFelt, utvidetRad.oppmoteFelt, utvidetRad.infoFelt]) ta.style.height = ''
+    utvidetRad = null
+  }
+
+  function apneUtvidet(rad) {
+    if (utvidetRad === rad) { lukkUtvidet(); return }
+    lukkUtvidet()
+    rad.el.classList.add('okt-import-rad--utvidet')
+    rad.toggleKnapp.textContent = '⌃'
+    rad.toggleKnapp.title = 'Lukk raden'
+    utvidetRad = rad
+    for (const ta of [rad.aktivitetFelt, rad.oppmoteFelt, rad.infoFelt]) autosizeTekstfelt(ta)
+  }
+
+  // Vindusbredden endrer hvor mye plass tekstfeltene har – uten dette blir
+  // en åpen rads høyde utdatert (og teksten avkuttet) ved f.eks. skjermrotasjon.
+  let utvidResizeTimer = null
+  const onUtvidResize = () => {
+    clearTimeout(utvidResizeTimer)
+    utvidResizeTimer = setTimeout(() => {
+      if (!modal.isConnected) { window.removeEventListener('resize', onUtvidResize); return }
+      if (utvidetRad) for (const ta of [utvidetRad.aktivitetFelt, utvidetRad.oppmoteFelt, utvidetRad.infoFelt]) autosizeTekstfelt(ta)
+    }, 150)
+  }
+  window.addEventListener('resize', onUtvidResize)
+
+  // Felt med liten etikett over – etiketten er skjult i kompakt visning
+  // (CSS: display:contents) og vises i utvidet visning.
+  function medLabel(tekst, felt) {
+    return el('div', { class: 'okt-import-feltgruppe' },
+      el('span', { class: 'okt-import-cellabel' }, tekst), felt)
+  }
+
   // Valideringstilstand for en rad
   function validerRad(rad) {
     const merknader = []
@@ -3405,10 +3457,16 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     }
     rad.laererSel.value = APP.profile?.id || ''
 
-    // Fritekstfelt
-    rad.aktivitetFelt  = el('input', { type: 'text', class: 'felt input okt-import-felt', placeholder: 'aktivitet' })
-    rad.oppmoteFelt    = el('input', { type: 'text', class: 'felt input okt-import-felt', placeholder: 'møtested' })
-    rad.infoFelt       = el('input', { type: 'text', class: 'felt input okt-import-felt', placeholder: 'info' })
+    // Fritekstfelt – textarea alltid (kompakt: én linje via CSS, utvidet: auto-voksende
+    // tekstområde – høyden settes i JS ut fra innhold, kun mens raden er utvidet).
+    rad.aktivitetFelt  = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'aktivitet', rows: 1 })
+    rad.oppmoteFelt    = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'møtested', rows: 1 })
+    rad.infoFelt       = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'info', rows: 1 })
+    for (const ta of [rad.aktivitetFelt, rad.oppmoteFelt, rad.infoFelt]) {
+      ta.addEventListener('input', () => {
+        if (rad.el.classList.contains('okt-import-rad--utvidet')) autosizeTekstfelt(ta)
+      })
+    }
 
     // Merknadscelle
     const merknadCelle = el('span', { class: 'okt-import-merknad' })
@@ -3501,10 +3559,18 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     const strykKnapp = el('button', { type: 'button', class: 'btn btn-ikon btn-f', title: 'Stryk denne raden',
       onclick: () => {
         rad.fjernet = true
+        if (utvidetRad === rad) utvidetRad = null
         rad.el.remove()
         ryddTommeGrupper()
         oppdaterUkjentKlasseVarsel()
       } }, '🗑️')
+
+    // Utvid-/lukk-knapp (P48) – primær affordanse for å åpne/lukke det store panelet
+    rad.toggleKnapp = el('button', { type: 'button', class: 'btn btn-ikon okt-import-toggle-knapp', title: 'Utvid raden',
+      onclick: () => apneUtvidet(rad) }, '⌄')
+
+    // Lukk-knapp inni det utvidede panelet – samme handling som toggle-knappen
+    rad.lukkKnapp = el('button', { type: 'button', class: 'btn btn-s okt-import-lukk-knapp', onclick: () => lukkUtvidet() }, 'Lukk')
 
     rad.el = el('div', { class: 'okt-import-rad' },
       el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, rad.klasseSel),
@@ -3513,12 +3579,20 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       el('div', { class: 'okt-import-celle okt-import-celle--div' }, divWrap),
       el('div', { class: 'okt-import-celle okt-import-celle--uke' }, rad.ukeFelt),
       el('div', { class: 'okt-import-celle okt-import-celle--dag' }, rad.dagSel),
-      el('div', { class: 'okt-import-celle okt-import-celle--akt' }, rad.aktivitetFelt),
-      el('div', { class: 'okt-import-celle okt-import-celle--opp' }, rad.oppmoteFelt),
-      el('div', { class: 'okt-import-celle okt-import-celle--info' }, rad.infoFelt),
+      el('div', { class: 'okt-import-celle okt-import-celle--akt' }, medLabel('Aktivitet', rad.aktivitetFelt)),
+      el('div', { class: 'okt-import-celle okt-import-celle--opp' }, medLabel('Møtested', rad.oppmoteFelt)),
+      el('div', { class: 'okt-import-celle okt-import-celle--info' }, medLabel('Info', rad.infoFelt)),
       el('div', { class: 'okt-import-celle okt-import-celle--merknad' }, merknadCelle, kollisjonWrap),
+      el('div', { class: 'okt-import-celle okt-import-celle--utvid' }, rad.toggleKnapp),
       el('div', { class: 'okt-import-celle okt-import-celle--stryk' }, strykKnapp),
+      rad.lukkKnapp,
     )
+    // Klikk hvor som helst på raden (utenom felt/nedtrekk/knapper) er en bonusvei
+    // til samme utvid-/lukk-handling som toggle-knappen.
+    rad.el.addEventListener('click', (e) => {
+      if (e.target.closest('input, select, textarea, button, a')) return
+      apneUtvidet(rad)
+    })
     rad._kollisjonHake = kollisjonHake
     rad.el._rad = rad
     rader.push(rad)
@@ -3566,6 +3640,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     el('div', { class: 'okt-import-celle okt-import-celle--opp' }, 'Møtested'),
     el('div', { class: 'okt-import-celle okt-import-celle--info' }, 'Info'),
     el('div', { class: 'okt-import-celle okt-import-celle--merknad' }, 'Merknad'),
+    el('div', { class: 'okt-import-celle okt-import-celle--utvid' }, ''),
     el('div', { class: 'okt-import-celle okt-import-celle--stryk' }, ''),
   ))
 
@@ -3667,6 +3742,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     clearEl(liste)
     rader.length = 0
     grupper.clear()
+    utvidetRad = null
     oppdaterUkjentKlasseVarsel()
 
     try {
@@ -3776,6 +3852,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       // Fjern importerte rader fra visningen
       for (const rad of skalImporteres) {
         rad.fjernet = true
+        if (utvidetRad === rad) utvidetRad = null
         rad.el.remove()
         const idx = rader.indexOf(rad)
         if (idx !== -1) rader.splice(idx, 1)
