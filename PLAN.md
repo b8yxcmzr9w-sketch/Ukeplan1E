@@ -19,9 +19,11 @@
     (maskinverifisert med 41 sjekker i mellomtiden, samme mønster som
     P41–P43)
   - P48s prod-sjekk — utvid/lukk-raden er maskinverifisert visuelt (isolert
-    CSS-harness, kompakt/utvidet desktop/utvidet mobil), men krever ekte
-    AI-import (Supabase-innlogging + Gemini-kall) for full funksjonstest i
-    produksjon; samme mønster som P41–P44
+    CSS-harness), og to runder rettelser fra ekte prod-test (resize-håndtak
+    fjernet, chevron/stryk flyttet til linje 1) er også maskinverifisert på
+    samme måte; men krever ekte AI-import (Supabase-innlogging + Gemini-kall)
+    for en siste fullstendig funksjonstest i produksjon; samme mønster som
+    P41–P44
 
 ---
 
