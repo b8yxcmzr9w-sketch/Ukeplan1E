@@ -914,6 +914,11 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-feltgruppe { display: contents; }
 .okt-import-cellabel { display: none; }
 
+/* Aktivitet/møtested/info-wrapper (P49): usynlig i kompakt visning – cellene
+   beholder sine egne grid-kolonner i .okt-import-rad, som om wrapperen ikke
+   fantes. Blir en wrap-fleksrad kun i utvidet visning (se lenger ned). */
+.okt-import-tekstrad { display: contents; }
+
 /* Utvid-/lukk-knapp i egen liten celle (P48) – eneste åpne/lukke-kontroll */
 .okt-import-toggle-knapp { width: 100%; padding: 2px 4px !important; font-size: .82rem !important; line-height: 1; }
 
@@ -925,13 +930,15 @@ tr:hover td { background: var(--primær-svak); }
 }
 .okt-import-gruppe--ugyldig .okt-import-gruppe-hode { color: var(--fare); }
 
-/* ── Utvidet rad (P48): to etasjer i samme rad-blokk ──
+/* ── Utvidet rad (P48/P49): to etasjer i samme rad-blokk ──
    Linje 1: kompaktfeltene (klasse/lærer/fag/parti/uke/dag) PLUSS
    utvid-/stryk-knappen, i nøyaktig samme posisjon/rekkefølge som i kompakt
    visning – chevronen (⌄→⌃) er eneste åpne/lukke-kontroll, alltid på
-   samme sted. Under: aktivitet/møtested/info i full bredde, auto-voksende
-   (høyden settes i JS – autosizeTekstfelt – ut fra innhold), så merknad.
-   Ikke fullskjerm; raden blir bare så høy som teksten krever. */
+   samme sted. Under: aktivitet/møtested/info side om side i én wrap-fleksrad
+   (P49 – smal/medium/bred, bryter til flere linjer når plassen er for
+   knapp), auto-voksende i høyden (høyden settes i JS – autosizeTekstfelt –
+   ut fra innhold), så merknad. Ikke fullskjerm; raden blir bare så høy som
+   teksten krever. */
 .okt-import-rad--utvidet {
   grid-template-columns: .9fr 1.2fr 1.6fr 1.2fr 60px 80px 32px 36px;
   align-items: start;
@@ -950,17 +957,24 @@ tr:hover td { background: var(--primær-svak); }
 .okt-import-rad--utvidet .okt-import-celle--dag     { grid-column: 6; grid-row: 1; }
 .okt-import-rad--utvidet .okt-import-celle--utvid   { grid-column: 7; grid-row: 1; }
 .okt-import-rad--utvidet .okt-import-celle--stryk   { grid-column: 8; grid-row: 1; }
-.okt-import-rad--utvidet .okt-import-celle--akt     { grid-column: 1 / -1; grid-row: 2; }
-.okt-import-rad--utvidet .okt-import-celle--opp     { grid-column: 1 / -1; grid-row: 3; }
-.okt-import-rad--utvidet .okt-import-celle--info    { grid-column: 1 / -1; grid-row: 4; }
-.okt-import-rad--utvidet .okt-import-celle--merknad { grid-column: 1 / -1; grid-row: 5; }
+.okt-import-rad--utvidet .okt-import-tekstrad {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.okt-import-rad--utvidet .okt-import-tekstrad .okt-import-celle--akt  { flex: 1 1 140px; min-width: 0; }
+.okt-import-rad--utvidet .okt-import-tekstrad .okt-import-celle--opp  { flex: 1.4 1 170px; min-width: 0; }
+.okt-import-rad--utvidet .okt-import-tekstrad .okt-import-celle--info { flex: 2.2 1 220px; min-width: 0; }
+.okt-import-rad--utvidet .okt-import-celle--merknad { grid-column: 1 / -1; grid-row: 3; }
 
-.okt-import-rad--utvidet .okt-import-feltgruppe { display: block; margin-bottom: 3px; }
+.okt-import-rad--utvidet .okt-import-feltgruppe { display: block; margin-bottom: 3px; width: 100%; }
 .okt-import-rad--utvidet .okt-import-cellabel {
   display: block; font-size: .7rem; font-weight: 700; color: var(--tekst-svak); margin-bottom: 2px;
 }
 /* Høyden settes i JS ut fra innhold – ingen !important her, så inline style vinner */
-.okt-import-rad--utvidet .okt-import-felt--tekst { height: auto; min-height: 30px; resize: none; overflow: hidden; }
+.okt-import-rad--utvidet .okt-import-felt--tekst { height: auto; min-height: 30px; resize: none; overflow: hidden; width: 100%; }
 
 @media (max-width: 900px) {
   .okt-import-rad { grid-template-columns: 1fr 1fr; }
@@ -973,8 +987,8 @@ tr:hover td { background: var(--primær-svak); }
   .okt-import-celle--merknad { grid-column: 1 / -1; }
 
   /* Utvidet på mobil: kompaktfeltene (inkl. utvid-/stryk-knappen) stables i
-     to kolonner (samme prinsipp som kompakt visning), tekstfeltene i full
-     bredde under. */
+     to kolonner (samme prinsipp som kompakt visning). Tekstraden (P49)
+     brytes til én kolonne per felt i stedet for side om side. */
   .okt-import-rad--utvidet { grid-template-columns: 1fr 1fr; }
   .okt-import-rad--utvidet .okt-import-celle--klasse,
   .okt-import-rad--utvidet .okt-import-celle--laerer,
@@ -984,9 +998,10 @@ tr:hover td { background: var(--primær-svak); }
   .okt-import-rad--utvidet .okt-import-celle--dag,
   .okt-import-rad--utvidet .okt-import-celle--utvid,
   .okt-import-rad--utvidet .okt-import-celle--stryk { grid-column: auto; grid-row: auto; }
-  .okt-import-rad--utvidet .okt-import-celle--akt,
-  .okt-import-rad--utvidet .okt-import-celle--opp,
-  .okt-import-rad--utvidet .okt-import-celle--info,
+  .okt-import-rad--utvidet .okt-import-tekstrad { grid-column: 1 / -1; grid-row: auto; }
+  .okt-import-rad--utvidet .okt-import-tekstrad .okt-import-celle--akt,
+  .okt-import-rad--utvidet .okt-import-tekstrad .okt-import-celle--opp,
+  .okt-import-rad--utvidet .okt-import-tekstrad .okt-import-celle--info { flex-basis: 100%; }
   .okt-import-rad--utvidet .okt-import-celle--merknad { grid-column: 1 / -1; grid-row: auto; }
 }
 

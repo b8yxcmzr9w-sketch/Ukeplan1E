@@ -2,11 +2,15 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P48
+- **Siste fullførte P-nummer:** P49
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P49 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
-- **Dato sist oppdatert:** 15. august 2026
+- **Neste ledige P-nummer:** P50 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Dato sist oppdatert:** 18. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P49s prod-sjekk — maxlength og kompakt utvidet importrad er
+    maskinverifisert (isolert CSS-harness + native maxlength-test i
+    nettleser); Morfars visuelle bekreftelse i produksjon gjenstår, samme
+    mønster som P41–P48
   - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
     aktivt); maskinverifisert, ekte manuell bekreftelse skjer naturlig når
     datoen inntreffer
@@ -847,3 +851,75 @@ linje fylte skjermen unødvendig siden de fleste tekstfeltene er korte.
       utvid/lukk på både desktop og mobil i nettleser) — kan ikke
       maskinverifiseres da AI-import krever ekte Supabase-innlogging og
       Gemini-kall; samme mønster som P41–P44s gjenstående prod-sjekk.
+
+## Økt (P49): Korte tekstfelt (aktivitet/møtested) + kompakt importlayout
+
+**Branch:** `claude/ukeplan-short-text-fields-5ibs7u` (miljøets tildelte
+branch — bygget videre på oppdatert `origin/main` etter P48, ingen
+konflikt med `claude/p49-vennlig-ai-feilmelding`, som ikke fantes på
+remote — P49 var ledig).
+**Scope:** KUN `v4/app.js` + `v4/style.css` + cache-bust i `v4/index.html`.
+Ingen DB-endring, ingen edge-funksjon.
+**Status:** FULLFØRT 18. august 2026 — kode merget til main.
+
+### Kartlegging (verifisert i koden 18. august 2026)
+
+Aktivitet/møtested/info-feltene fylles ut disse fem stedene i `v4/app.js`:
+- `visNyOktModal` (linje ~2770–2772)
+- `visRedigerOktModal` (linje ~2884–2891)
+- `visKopierOktModal` (linje ~3018–3020)
+- `visAIPasteModal` → `byggRad` (linje ~3464–3466), utvidet importrad (P48)
+- `visBulkKopierModal` og `visBulkEditModal` har ingen egne
+  aktivitet/møtested-inputfelt (kopierer eksisterende verdier
+  programmatisk, hhv. redigerer kun info) — ingen maxlength nødvendig der.
+
+Ingen av feltene hadde `maxlength` fra før. DB-kolonnene
+(`sessions.activity`, `sessions.meeting_point`, `sessions.info`) er `text`
+uten lengdegrense — bekreftet i `v4/supabase/migrations/001_initial_schema.sql`,
+ingen senere migrasjon endrer dette.
+
+### Delplan
+
+- [x] Delt konstant (`AKTIVITET_MAKS_LENGDE = 30`, `MOTESTED_MAKS_LENGDE = 40`)
+      rett før `visNyOktModal`, gjenbrukt på alle fire entry points — unngår
+      duplisering av tallene.
+- [x] `maxlength` lagt på aktivitet/møtested i `visNyOktModal`,
+      `visRedigerOktModal`, `visKopierOktModal` og AI-importradens
+      `rad.aktivitetFelt`/`rad.oppmoteFelt`. Info uendret (ingen grense).
+      Ingen DB/CHECK-constraint — håndheves kun i grensesnittet, så
+      eksisterende lange rader avvises ikke.
+- [x] Kompakt utvidet importrad: aktivitet/møtested/info pakket i en felles
+      `.okt-import-tekstrad`-wrapper i DOM (kun i `byggRad`). Wrapperen er
+      `display:contents` som standard, så kompaktradens grid og kolonner er
+      HELT uendret (cellene oppfører seg som om wrapperen ikke fantes).
+      I utvidet visning (`.okt-import-rad--utvidet`) blir wrapperen en
+      `flex-wrap`-rad: Aktivitet smalest (`flex: 1 1 140px`), Møtested
+      medium (`flex: 1.4 1 170px`), Info bredest og vokser mest
+      (`flex: 2.2 1 220px`) — alle på samme linje på desktop. `min-width:0`
+      på cellene sikrer at flex kan krympe/bryte i stedet for å presse
+      raden bredere enn modalen.
+- [x] Mobil (≤900px, samme brytningspunkt som resten av importraden):
+      `flex-basis:100%` på de tre cellene innenfor `.okt-import-tekstrad`
+      gir én kolonne per felt (samme stables-prinsipp som før P49, bare
+      uten faste `grid-row`-numre siden wrapperen selv nå eier plasseringen).
+      Merknad-cellen flyttet fra linje 5 til linje 3 (kun to etasjer med
+      tekstinnhold nå: kontrollene og selve tekstraden).
+- [x] Ingen fast høyde — `autosizeTekstfelt`/`scrollHeight`-mønsteret fra
+      P48 er uendret; Info kan fortsatt auto-vokse innenfor sin flex-celle.
+- [x] Kompaktradens layout og chevron/🗑 på linje 1 i utvidet visning er
+      ikke rørt (samme grid-kolonner/-rekkefølge som P48 runde 3).
+- [x] Ingen datamodell-endring.
+- [x] Maskinverifisert med headless Chromium mot en isolert HTML-harness
+      som gjenbruker `v4/style.css` (samme klassenavn/struktur som den
+      ekte raden): kompakt visning uendret på desktop og mobil; utvidet
+      visning viser aktivitet/møtested/info side om side (smal/medium/bred)
+      på desktop, stablet én per linje på mobil (420px bredde); native
+      `maxlength`-håndheving bekreftet i nettleser (30/40 tegn kuttet av på
+      både `<input>` og `<textarea>`).
+- [x] Cache-bust bumpet til `?v=20260818a` for både CSS og JS.
+- [ ] Morfars visuelle prod-sjekk: åpne «Ny økt», «Rediger økt» og AI-import
+      i produksjon og bekreft at maxlength stopper inntasting ved 30/40
+      tegn, og at utvidet importrad er kompakt (side om side) på desktop og
+      stablet på mobil — kan ikke maskinverifiseres fullt ut da ekte bruk
+      krever Supabase-innlogging; samme mønster som P41–P48s gjenstående
+      prod-sjekk.
