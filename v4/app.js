@@ -2590,6 +2590,12 @@ function visElevLenkeModal(klasse) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 }
 
+// P49: aktivitet/møtested skal alltid være få ord – detaljer hører hjemme i
+// info (uten grense). Håndheves som maxlength på alle stedene feltene fylles
+// ut (ny økt, rediger, kopi, AI-import); ingen DB-endring.
+const AKTIVITET_MAKS_LENGDE = 30
+const MOTESTED_MAKS_LENGDE = 40
+
 async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal' })
@@ -2767,8 +2773,8 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   }
   form.appendChild(lagFormRad('Lærer', laererSel))
 
-  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input' })))
-  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input' })))
+  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input', maxlength: AKTIVITET_MAKS_LENGDE })))
+  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input', maxlength: MOTESTED_MAKS_LENGDE })))
   form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' })))
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
@@ -2881,10 +2887,10 @@ async function visRedigerOktModal(session, onSave) {
   }
   form.appendChild(lagFormRad('Lærer', laererSel))
 
-  const actInput = el('input', { name: 'activity', type: 'text', class: 'felt input', value: session.activity || '' })
+  const actInput = el('input', { name: 'activity', type: 'text', class: 'felt input', value: session.activity || '', maxlength: AKTIVITET_MAKS_LENGDE })
   form.appendChild(lagFormRad('Aktivitet', actInput))
 
-  const mpInput = el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '' })
+  const mpInput = el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '', maxlength: MOTESTED_MAKS_LENGDE })
   form.appendChild(lagFormRad('Møtested', mpInput))
 
   const infoTA = el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')
@@ -3015,8 +3021,8 @@ async function visKopierOktModal(session, onSave) {
   }
   form.appendChild(lagFormRad('Lærer', laererSel))
 
-  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input', value: session.activity || '' })))
-  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '' })))
+  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input', value: session.activity || '', maxlength: AKTIVITET_MAKS_LENGDE })))
+  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '', maxlength: MOTESTED_MAKS_LENGDE })))
   form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')))
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre kopi'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
@@ -3461,8 +3467,8 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
 
     // Fritekstfelt – textarea alltid (kompakt: én linje via CSS, utvidet: auto-voksende
     // tekstområde – høyden settes i JS ut fra innhold, kun mens raden er utvidet).
-    rad.aktivitetFelt  = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'aktivitet', rows: 1 })
-    rad.oppmoteFelt    = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'møtested', rows: 1 })
+    rad.aktivitetFelt  = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'aktivitet', rows: 1, maxlength: AKTIVITET_MAKS_LENGDE })
+    rad.oppmoteFelt    = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'møtested', rows: 1, maxlength: MOTESTED_MAKS_LENGDE })
     rad.infoFelt       = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'info', rows: 1 })
     for (const ta of [rad.aktivitetFelt, rad.oppmoteFelt, rad.infoFelt]) {
       ta.addEventListener('input', () => {
@@ -3572,6 +3578,17 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     rad.toggleKnapp = el('button', { type: 'button', class: 'btn btn-ikon okt-import-toggle-knapp', title: 'Utvid raden',
       onclick: () => apneUtvidet(rad) }, '⌄')
 
+    // Aktivitet/møtested/info pakkes i en felles wrapper (P49) som er usynlig
+    // i kompakt visning (CSS: display:contents – cellene beholder sine egne
+    // kolonner i kompaktradens grid, uendret) og en wrap-fleksrad i utvidet
+    // visning (smal/medium/bred side om side, brytes til flere linjer på
+    // smal skjerm i stedet for tre faste rader under hverandre).
+    const tekstradWrap = el('div', { class: 'okt-import-tekstrad' },
+      el('div', { class: 'okt-import-celle okt-import-celle--akt' }, medLabel('Aktivitet', rad.aktivitetFelt)),
+      el('div', { class: 'okt-import-celle okt-import-celle--opp' }, medLabel('Møtested', rad.oppmoteFelt)),
+      el('div', { class: 'okt-import-celle okt-import-celle--info' }, medLabel('Info', rad.infoFelt)),
+    )
+
     rad.el = el('div', { class: 'okt-import-rad' },
       el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, rad.klasseSel),
       el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, rad.laererSel),
@@ -3579,9 +3596,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       el('div', { class: 'okt-import-celle okt-import-celle--div' }, divWrap),
       el('div', { class: 'okt-import-celle okt-import-celle--uke' }, rad.ukeFelt),
       el('div', { class: 'okt-import-celle okt-import-celle--dag' }, rad.dagSel),
-      el('div', { class: 'okt-import-celle okt-import-celle--akt' }, medLabel('Aktivitet', rad.aktivitetFelt)),
-      el('div', { class: 'okt-import-celle okt-import-celle--opp' }, medLabel('Møtested', rad.oppmoteFelt)),
-      el('div', { class: 'okt-import-celle okt-import-celle--info' }, medLabel('Info', rad.infoFelt)),
+      tekstradWrap,
       el('div', { class: 'okt-import-celle okt-import-celle--merknad' }, merknadCelle, kollisjonWrap),
       el('div', { class: 'okt-import-celle okt-import-celle--utvid' }, rad.toggleKnapp),
       el('div', { class: 'okt-import-celle okt-import-celle--stryk' }, strykKnapp),
