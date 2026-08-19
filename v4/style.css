@@ -941,6 +941,10 @@ tr:hover td { background: var(--primær-svak); }
    fantes. Blir en wrap-fleksrad kun i utvidet visning (se lenger ned). */
 .okt-import-tekstrad { display: contents; }
 
+/* Mobil sammendragslinje (P53) – skjult som standard/desktop; vises kun i
+   mobil-mediesporet lenger ned, og kun for rader som ikke er utvidet. */
+.okt-import-mobil-sammendrag { display: none; }
+
 /* Utvid-/lukk-knapp i egen liten celle (P48) – eneste åpne/lukke-kontroll */
 .okt-import-toggle-knapp { width: 100%; padding: 2px 4px !important; font-size: .82rem !important; line-height: 1; }
 
@@ -1029,6 +1033,29 @@ tr:hover td { background: var(--primær-svak); }
   .okt-import-celle--fag,
   .okt-import-celle--akt { grid-column: 1 / -1; }
   .okt-import-celle--merknad { grid-column: 1 / -1; }
+
+  /* P53: kompakt (ikke-utvidet) rad viser en ren tekst-sammendragslinje i
+     stedet for redigeringsfeltene – trykk hvor som helst treffer den
+     eksisterende klikk-vakten og utvider til visningen under (uendret).
+     Utvid-/stryk-knappen (celle--utvid/--stryk) er IKKE i denne listen og
+     forblir synlig/brukbar direkte fra kompakt visning, som før. */
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-mobil-sammendrag {
+    display: block;
+    grid-column: 1 / -1;
+    padding: 4px 2px;
+  }
+  .okt-import-mobil-linje1 { font-size: .85rem; font-weight: 600; }
+  .okt-import-mobil-linje2 { font-size: .78rem; color: var(--tekst-svak); margin-top: 2px; }
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--klasse,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--laerer,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--fag,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--div,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--uke,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--dag,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-tekstrad,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--merknad {
+    display: none;
+  }
 
   /* Utvidet på mobil: kompaktfeltene (inkl. utvid-/stryk-knappen) stables i
      to kolonner (samme prinsipp som kompakt visning). Tekstraden (P49)

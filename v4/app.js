@@ -3360,6 +3360,11 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     rad.toggleKnapp.title = 'Utvid raden'
     for (const ta of [rad.aktivitetFelt, rad.oppmoteFelt, rad.infoFelt]) ta.style.height = ''
     utvidetRad = null
+    // P53: aktivitet/møtested kan ha endret seg mens raden var utvidet – de
+    // feltene trigger ikke oppdaterRadStatus() live, så sammendraget må
+    // friskes opp her ved lukking (uke/dag/fag/klasse dekkes allerede av
+    // oppdaterRadStatus()).
+    rad.oppdaterMobilSammendrag()
     // P50: uke/klasse/lærer kan være endret mens raden var utvidet – regruppér
     // først NÅ (ikke live under redigering) siden gruppering er tre nivåer.
     if (!rad.fjernet) plasserRad(rad)
@@ -3578,6 +3583,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       } else {
         rad.el.classList.remove('okt-import-rad--roed', 'okt-import-rad--gul')
       }
+      rad.oppdaterMobilSammendrag()
     }
 
     rad.ukeFelt.addEventListener('change', oppdaterRadStatus)
@@ -3611,6 +3617,24 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       el('div', { class: 'okt-import-celle okt-import-celle--info' }, medLabel('Info', rad.infoFelt)),
     )
 
+    // Mobil sammendragslinje (P53) – rene tekstlinjer som viser rad-
+    // innholdet uten redigerbare felt. Vist KUN i kompakt (ikke-utvidet)
+    // visning på smal skjerm (CSS, ≤900px); trykk treffer klikk-vakten under
+    // som utvider til den eksisterende P48/P49-visningen der redigeringen
+    // skjer. Holdes i synk fra oppdaterRadStatus() og lukkUtvidet().
+    rad.mobilLinje1 = el('div', { class: 'okt-import-mobil-linje1' })
+    rad.mobilLinje2 = el('div', { class: 'okt-import-mobil-linje2' })
+    rad.mobilSammendrag = el('div', { class: 'okt-import-mobil-sammendrag' }, rad.mobilLinje1, rad.mobilLinje2)
+    rad.oppdaterMobilSammendrag = function () {
+      const dagVal = parseInt(rad.dagSel.value)
+      const dagTekst = dagVal ? dagNavn(dagVal) : '–'
+      const fagTekst = rad.fagSel.value ? (rad.fagSel.selectedOptions[0]?.textContent || '–') : '–'
+      rad.mobilLinje1.textContent = `${dagTekst} · ${fagTekst}`
+      const aktTekst = rad.aktivitetFelt.value.trim()
+      const oppTekst = rad.oppmoteFelt.value.trim()
+      rad.mobilLinje2.textContent = [aktTekst, oppTekst].filter(Boolean).join(' · ') || '–'
+    }
+
     rad.el = el('div', { class: 'okt-import-rad' },
       el('div', { class: 'okt-import-celle okt-import-celle--klasse' }, rad.klasseSel),
       el('div', { class: 'okt-import-celle okt-import-celle--laerer' }, rad.laererSel),
@@ -3619,6 +3643,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       el('div', { class: 'okt-import-celle okt-import-celle--uke' }, rad.ukeFelt),
       el('div', { class: 'okt-import-celle okt-import-celle--dag' }, rad.dagSel),
       tekstradWrap,
+      rad.mobilSammendrag,
       el('div', { class: 'okt-import-celle okt-import-celle--merknad' }, merknadCelle, kollisjonWrap),
       el('div', { class: 'okt-import-celle okt-import-celle--utvid' }, rad.toggleKnapp),
       el('div', { class: 'okt-import-celle okt-import-celle--stryk' }, strykKnapp),

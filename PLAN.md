@@ -2,24 +2,17 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P52
+- **Siste fullførte P-nummer:** P53
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P53 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Neste ledige P-nummer:** P54 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P53s prod-sjekk — mobil sammendragslinje i AI-import (maskinverifisert,
+    12 CSS-sjekker + 4 logikksjekker mot isolert harness); Morfars visuelle
+    bekreftelse på ekte telefon i produksjon gjenstår, samme mønster som
+    P41–P52 (krever ekte AI-import: Supabase-innlogging + Gemini-kall)
   - P52s prod-sjekk — redusert linjeavstand i «Ny økt» (maskinverifisert,
     5 sjekker); Morfars visuelle bekreftelse i produksjon gjenstår
-  - P51s prod-sjekk — «Parti/gruppe»-raden skjules når faget ikke har
-    partier/grupper (maskinverifisert, 7 sjekker); Morfars visuelle
-    bekreftelse i produksjon gjenstår
-  - P50s prod-sjekk — info-grense (300), kompakt «Ny økt» (desktop+mobil) og
-    AI-importens trapp-gruppering/kompaktskjul på desktop er maskinverifisert
-    (38 sjekker, headless Chromium mot isolert harness); Morfars visuelle
-    bekreftelse i produksjon gjenstår, samme mønster som P41–P49
-  - P49s prod-sjekk — maxlength og kompakt utvidet importrad er
-    maskinverifisert (isolert CSS-harness + native maxlength-test i
-    nettleser); Morfars visuelle bekreftelse i produksjon gjenstår, samme
-    mønster som P41–P48
   - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
     aktivt); maskinverifisert, ekte manuell bekreftelse skjer naturlig når
     datoen inntreffer
@@ -31,12 +24,6 @@
     tekst som blander flere klasser (én egen + én fremmed) gjenstår
     (maskinverifisert med 41 sjekker i mellomtiden, samme mønster som
     P41–P43)
-  - P48s prod-sjekk — utvid/lukk-raden er maskinverifisert visuelt (isolert
-    CSS-harness), og to runder rettelser fra ekte prod-test (resize-håndtak
-    fjernet, chevron/stryk flyttet til linje 1) er også maskinverifisert på
-    samme måte; men krever ekte AI-import (Supabase-innlogging + Gemini-kall)
-    for en siste fullstendig funksjonstest i produksjon; samme mønster som
-    P41–P44
 
 ---
 
@@ -1158,3 +1145,67 @@ var for stor.
 - [x] Cache-bust bumpet til `?v=20260819c` for både CSS og JS.
 - [ ] Morfars visuelle prod-sjekk: åpne «Ny økt» og bekreft at radene sitter
       tettere, uten at det blir trangt/vanskelig å lese.
+
+## Økt (P53): Mobil AI-import — sammendragslinje («Omgang 2»)
+
+**Branch:** `claude/P53-mobil-ai-import-sammendrag`.
+**Scope:** KUN `v4/app.js` + `v4/style.css` + cache-bust i `v4/index.html`.
+Ingen DB-endring, ingen edge-funksjon.
+
+**Bakgrunn:** P48–P50 løste kompakt/utvidet redigering av AI-importraden,
+men på telefon (≤900px, komponentens egen mobilgrense — se P50s kommentar
+i style.css) er de kompakte redigeringsfeltene (klasse/lærer/fag/parti/
+uke/dag/aktivitet/møtested) fortsatt for mange til å få plass uten
+vannrett trange felt. Løsning («Alternativ B», avklart med Morfar): vis en
+ren tekst-sammendragslinje i kompakt visning på mobil i stedet for
+redigerbare felt; trykk utvider til eksisterende P48/P49-visning der all
+redigering skjer.
+
+### Delplan
+- [x] `byggRad` i `v4/app.js`: legg til `rad.mobilSammendrag` — et nytt DOM-
+      element med to tekstlinjer (`rad.mobilLinje1` = «Dag · Fag»,
+      `rad.mobilLinje2` = «Aktivitet · Møtested»), lagt til i `rad.el` som
+      egen celle. Manglende dag/fag → «–»; tomme aktivitet+møtested → «–».
+      Gjenbruker eksisterende `dagNavn()` og valgt fagnavn fra `rad.fagSel`.
+- [x] Ny hjelpefunksjon `oppdaterMobilSammendrag(rad)` (eller inline i
+      `oppdaterRadStatus`) som setter tekstinnholdet på de to linjene ut fra
+      gjeldende feltverdier.
+- [x] Kall `oppdaterMobilSammendrag` i to punkter:
+      1. Til slutt i `oppdaterRadStatus()` (dekker uke/dag/fag/klasse-endring
+         og initiell rendering — kjøres allerede ved feltendringer).
+      2. I `lukkUtvidet()` (dekker aktivitet/møtested-endringer som skjedde
+         mens raden var utvidet, siden disse feltene ikke trigger
+         `oppdaterRadStatus` live).
+- [x] Rad-status-fargen (rød/gul via `.okt-import-rad--roed`/`--gul` på
+      `rad.el`) er allerede på rad-nivå og påvirkes ikke — sammendragslinja
+      arver bakgrunnsfargen uendret.
+- [x] CSS i `v4/style.css`, scoped til samme `@media (max-width: 900px)`
+      som komponentens eksisterende mobilblokk (linje ~1023–1050 — dette ER
+      appens mobilbrekk for denne komponenten, jf. P50s kommentar):
+      - `.okt-import-mobil-sammendrag` er `display: none` som standard
+        (utenfor mediesporet), vises kun i mediesporet, KUN når raden IKKE
+        har `.okt-import-rad--utvidet`.
+      - I samme medie-scope: skjul de kompakte redigeringscellene (klasse/
+        lærer/fag/parti/uke/dag/aktivitet/møtested/merknad) når raden IKKE
+        er utvidet — status-fargen på selve raden (rød/gul) dekker
+        merknadsbehovet på sammendragsnivå, jf. oppgavebeskrivelsen.
+      - `.okt-import-rad--utvidet` og dens undersnitt i samme mediesport
+        (linje 1036–1049) røres IKKE — utvidet visning på mobil er allerede
+        riktig og skal se ut som i dag.
+      - Desktop (`@media (min-width: 901px)`, P50) og
+        `.okt-import-rad--utvidet` generelt røres IKKE.
+- [x] Klikk-vakten (`rad.el.addEventListener('click', ...)`) ignorerer i dag
+      `input, select, textarea, button, a` — sammendragslinja er ren tekst
+      (`div`/`span`), så den treffes automatisk av `apneUtvidet` uten
+      endring i selve klikk-vakten. Verifiseres i test.
+- [x] Maskinverifisering: isolert CSS/DOM-harness (samme mønster som
+      P48–P52) som sjekker at sammendraget vises/skjules korrekt ved
+      resize, at kompaktfeltene er skjult under 900px, at utvidet visning
+      er uendret, og at innholdet oppdateres etter feltendring +
+      lukk-utvid-runde.
+- [x] Cache-bust bumpes i `v4/index.html`.
+- [x] STATUSLINJE i PLAN.md oppdateres; P48–P51 fjernes fra «åpne
+      sjekkpunkter» (Morfar har visuelt bekreftet dem i produksjon).
+- [ ] Morfars visuelle prod-sjekk på ekte telefon gjenstår (kan ikke
+      maskinverifiseres fullt ut — ekte AI-import krever Supabase-innlogging
+      + Gemini-kall, samme mønster som P41–P52).
