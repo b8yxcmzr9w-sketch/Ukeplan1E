@@ -2,16 +2,17 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P54 (PR #163 squash-merget til main
-  19. august 2026, commit `f2c6898`)
+- **Siste fullførte P-nummer:** P54 (PR #163, #164 og #165 squash-merget til
+  main 19. august 2026 — grunnleggende veiledning, åpnes i ny fane, og nye
+  brukere sendes dit automatisk etter invitasjon)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P55 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P54s prod-sjekk — illustrert hurtigstart-veiledning (maskinverifisert,
-    22 sjekker + visuell kontroll med skjermbilder desktop/mobil i isolert
-    harness); Morfars visuelle bekreftelse i ekte produksjon gjenstår, samme
-    mønster som P41–P53
+  - P54s prod-sjekk — illustrert hurtigstart-veiledning, åpnes i ny fane,
+    og nye brukere sendes dit automatisk etter invitasjon (alle tre deler
+    maskinverifisert i isolerte harnesser); Morfars visuelle bekreftelse i
+    ekte produksjon gjenstår, samme mønster som P41–P53
   - P53s prod-sjekk — mobil sammendragslinje i AI-import (maskinverifisert,
     12 CSS-sjekker + 4 logikksjekker mot isolert harness); Morfars visuelle
     bekreftelse på ekte telefon i produksjon gjenstår, samme mønster som
@@ -1261,7 +1262,8 @@ cache-bust `?v=20260819h`. Maskinverifisert (isolert harness som simulerer
 Supabase sitt `SIGNED_IN`-event med `type=invite` i hash, fyller ut og
 sender «velg passord»-skjemaet): 3 sjekker, alle OK — modalen vises, ny
 bruker sendes til `#/laerer/hurtigstart` (ikke klasse-fanen), og
-hurtigstart-siden faktisk rendres.
+hurtigstart-siden faktisk rendres. **PR #165 squash-merget til main
+19. august 2026** (Morfars eksplisitte «merge» mottatt).
 
 ### Mål
 
