@@ -82,7 +82,9 @@ async function handterAuthEndring(event, session) {
         tvungen: true,
         tittel: 'Velkommen! Velg et passord',
         ingress: 'Kontoen din er opprettet. Velg et passord for å logge inn.',
-        onFerdig: () => navigate('#/laerer'),
+        // Nye brukere sendes til hurtigstart-veiledningen første gang de
+        // logger inn, i stedet for rett til klasse-fanen (P54-tillegg).
+        onFerdig: () => navigate('#/laerer/hurtigstart'),
       })
     }
   }

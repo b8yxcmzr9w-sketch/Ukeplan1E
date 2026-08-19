@@ -1243,7 +1243,25 @@ er uendret (går til klasse-fanen i DEN fanen, eller brukeren lukker fanen
 direkte). Branch `claude/p54-hurtigstart-ny-fane`, cache-bust
 `?v=20260819g`. Maskinverifisert: 6 sjekker (window.open kalt riktig med
 `_blank`/`noopener` og riktig URL, hovedfanen navigerer IKKE bort,
-dropdown lukkes), alle OK.
+dropdown lukkes), alle OK. **PR #164 squash-merget til main 19. august
+2026** (Morfars eksplisitte «merge» mottatt).
+
+**Tillegg 2 (samme dag): lenke fra invitasjon.** Morfar spurte om
+invitasjoner til nye brukere kan inneholde en lenke til hurtigstarten.
+Løsningen valgt (i stedet for å endre Supabase sin e-postmal i Dashboard,
+som krever at brukeren allerede er innlogget for at lenken skal virke): nye
+brukere sendes automatisk til `#/laerer/hurtigstart` første gang de
+fullfører invitasjonen (setter passord), i stedet for rett til klasse-fanen.
+Endret KUN i invitasjons-grenen av `SIGNED_IN`-håndteringen i app.js
+(`onFerdig: () => navigate('#/laerer/hurtigstart')`) — password recovery-
+grenen (`PASSWORD_RECOVERY`-eventet, eksisterende brukere som glemmer
+passord) er UENDRET og går fortsatt til `#/laerer` (klasse-fanen), siden de
+allerede kjenner appen. Branch `claude/p54-invitasjon-hurtigstart`,
+cache-bust `?v=20260819h`. Maskinverifisert (isolert harness som simulerer
+Supabase sitt `SIGNED_IN`-event med `type=invite` i hash, fyller ut og
+sender «velg passord»-skjemaet): 3 sjekker, alle OK — modalen vises, ny
+bruker sendes til `#/laerer/hurtigstart` (ikke klasse-fanen), og
+hurtigstart-siden faktisk rendres.
 
 ### Mål
 
