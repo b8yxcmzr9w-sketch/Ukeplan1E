@@ -1440,17 +1440,19 @@ gjort dynamisk av hensyn til appens skolenøytrale arkitektur.
     lister; ikke relevante for denne bugen.
 
 ### Delplan
-- [ ] Legg `.is('deleted_at', null)` på brukerspørringen i
+- [x] Legg `.is('deleted_at', null)` på brukerspørringen i
       `renderBrukereTab` (linje 5159).
-- [ ] Legg `.is('deleted_at', null)` på kollega-spørringen i
+- [x] Legg `.is('deleted_at', null)` på kollega-spørringen i
       `visSlettBrukerModal` (linje 5456).
-- [ ] Ingen SQL-endring. Ingen endring av `visSlettBrukerModal`s
+- [x] Ingen SQL-endring. Ingen endring av `visSlettBrukerModal`s
       slettelogikk (linje 5468–5489) — den skriver allerede `deleted_at`
       korrekt.
-- [ ] Bump `app.js?v=` i `v4/index.html` (neste bokstav i dagens dato-serie).
-- [ ] Commit med beskrivende melding, push til
+- [x] Bump `app.js?v=20260819i` i `v4/index.html`.
+- [x] Commit med beskrivende melding, push til
       `claude/P55-slettede-brukere-vises-i-adminliste`.
-- [ ] Manuell testrunde for Morfar (beskrives i PR/oppsummering):
+- [ ] Manuell testrunde for Morfar (BEGRUNNET ÅPENT — krever ekte
+      innlogget admin-sesjon i produksjon/staging, ikke tilgjengelig i
+      denne økten):
       1. Opprett en testbruker i adminpanelets brukerfane.
       2. Slett testbrukeren (🗑️) — bekreft ingen feilmelding.
       3. Last siden på nytt (refresh) — bekreft at testbrukeren IKKE
@@ -1459,6 +1461,8 @@ gjort dynamisk av hensyn til appens skolenøytrale arkitektur.
          at «Overfør fremtidige økter til …»-nedtrekket vises — bekreft
          at den først slettede testbrukeren fra steg 2–3 IKKE dukker opp
          som valgbar mottaker i det nedtrekket.
-- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.
 
-**Status:** Sub-plan skrevet, venter på «kjør» fra Morfar før implementasjon.
+**Status:** Kode rettet og pushet. Kun Morfars manuelle produksjonstest
+gjenstår (kan ikke utføres fra denne økten — krever innlogget
+admin-sesjon).
