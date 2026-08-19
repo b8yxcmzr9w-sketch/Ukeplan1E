@@ -415,9 +415,12 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
   margin-bottom: 10px; display: flex; align-items: flex-start; gap: 7px;
 }
 
-/* P50: par-rader i skjema (f.eks. «Ny økt») – flere .felt på samme linje
-   i stedet for én per linje. Barna fyller linjen jevnt som standard. */
-.skjema-rad { display: flex; gap: 10px; }
+/* P50/P51: par-rader i skjema (f.eks. «Ny økt») – flere .felt på samme
+   linje i stedet for én per linje. Barna fyller linjen jevnt som standard.
+   align-items:flex-start (i stedet for flex-stiling standard "stretch")
+   hindrer at et kortere felt (f.eks. en tom Parti/gruppe-boks) blir
+   kunstig strukket til å matche et høyere nabofelt med tomt rom under. */
+.skjema-rad { display: flex; gap: 10px; align-items: flex-start; }
 .skjema-rad > .felt { flex: 1 1 0; min-width: 0; }
 /* Smal-variant (Aktivitet/Møtested): feltene skal IKKE strekke seg til å
    fylle linjen – bredden dimensjoneres etter tegngrensen (maxlength). */

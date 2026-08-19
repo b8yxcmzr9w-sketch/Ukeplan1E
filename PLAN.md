@@ -2,11 +2,14 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P50
+- **Siste fullførte P-nummer:** P51
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P51 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Neste ledige P-nummer:** P52 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P51s prod-sjekk — «Parti/gruppe»-raden skjules når faget ikke har
+    partier/grupper (maskinverifisert, 7 sjekker); Morfars visuelle
+    bekreftelse i produksjon gjenstår
   - P50s prod-sjekk — info-grense (300), kompakt «Ny økt» (desktop+mobil) og
     AI-importens trapp-gruppering/kompaktskjul på desktop er maskinverifisert
     (38 sjekker, headless Chromium mot isolert harness); Morfars visuelle
@@ -1083,3 +1086,44 @@ linje noe sted i skjemaet.
       uendret på mobil) — kan ikke fullt verifiseres maskinelt siden ekte
       AI-import krever Supabase-innlogging + Gemini-kall; samme mønster som
       P41–P49s gjenstående prod-sjekk.
+
+---
+
+## Økt (P51): Skjul tom «Parti/gruppe»-rad i «Ny økt» (rettelse etter P50-prod-sjekk)
+
+**Branch:** `claude/p51-parti-gruppe-hoyde`.
+**Scope:** KUN `v4/app.js` + `v4/style.css` + cache-bust i `v4/index.html`.
+Ingen DB-endring, ingen edge-funksjon.
+
+**Bakgrunn:** Morfar testet P50s kompakte «Ny økt» i produksjon (skjermbilde)
+og fant at når faget ikke har noen parti/gruppe å velge mellom, sto etiketten
+«Parti/gruppe» igjen over en tom boks ved siden av «Fag» — raden så ujevn ut
+i høyden fordi flex-radens standard `align-items:stretch` strakk den tomme
+raden til å matche Fag-radens høyde, uten synlig innhold i det strukne rommet.
+
+### Delplan
+- [x] `visNyOktModal`: «Parti/gruppe»-raden (etikett + boks, bygget av
+      `lagFormRad('Parti/gruppe', divContainer)`) hentes nå ut i en egen
+      variabel `partiRad`, satt til `display:none` som utgangspunkt.
+      `oppdaterDivisionCheckboxes` viser (`display:''`) raden når faget har
+      ≥1 parti/gruppe for valgt klasse, og skjuler den (`display:'none'`) når
+      det ikke finnes noen — både label og boks forsvinner sammen, ingen
+      løs etikett igjen.
+- [x] `.skjema-rad` fikk `align-items:flex-start` (var standard `stretch`) —
+      generell robusthet mot at et kortere felt kunstig strekkes til å
+      matche et høyere nabofelt med tomt rom under, uansett hvilket par av
+      felt som havner i samme rad fremover.
+- [x] `visRedigerOktModal`/`visKopierOktModal` er IKKE endret (de har ikke
+      «Ny økt»s parvise `.skjema-rad`-layout, så samme visuelle problem
+      oppstår ikke der).
+- [x] Maskinverifisert med headless Chromium mot samme isolerte harness som
+      P50 (ekte `style.css`/`app.js`, stubbet Supabase): 7 nye sjekker, alle
+      OK, ingen JS-feil — dekker (a) ingen parti/gruppe: raden er
+      `display:none`, Fag fyller hele radbredden alene, (b) med parti/gruppe:
+      raden vises, riktig antall avkryssingsbokser, `align-items:flex-start`
+      bekreftet. Full P50-regresjonssuite (38 sjekker) kjørt på nytt uten
+      endringer i utfall.
+- [x] Cache-bust bumpet til `?v=20260819b` for både CSS og JS.
+- [ ] Morfars visuelle prod-sjekk: åpne «Ny økt» for et fag UTEN parti/gruppe
+      (raden skal være helt borte, ikke bare tom) og for et fag MED
+      parti/gruppe (raden skal vises normalt, uten unaturlig tomrom).
