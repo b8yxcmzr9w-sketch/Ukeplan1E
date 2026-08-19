@@ -923,3 +923,153 @@ ingen senere migrasjon endrer dette.
       stablet på mobil — kan ikke maskinverifiseres fullt ut da ekte bruk
       krever Supabase-innlogging; samme mønster som P41–P48s gjenstående
       prod-sjekk.
+
+---
+
+## Økt (P50): Kompakt utforming — info-grense + «Ny økt» + AI-kompaktvisning (desktop)
+
+**Branch:** `claude/kompakt-utforming-info-grense-vmd2dh` (miljøets tildelte branch).
+**Scope:** KUN `v4/app.js` + `v4/style.css` + cache-bust i `v4/index.html`.
+Ingen DB-endring, ingen edge-funksjon.
+
+### Kartografi (verifisert i koden 19. august 2026)
+
+**(a) Info-felt — alle steder som fylles ut/redigeres:**
+- `visNyOktModal` — app.js:2778: `form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' })))`
+- `visRedigerOktModal` — app.js:2896–2897: `infoTA = el('textarea', { name:'info', class:'felt textarea' }, session.info || '')`
+- `visKopierOktModal` — app.js:3026: `el('textarea', { name:'info', class:'felt textarea' }, session.info || '')`
+- `visBulkEditModal` «Ny info» — app.js:3098: `infoInput = el('textarea', { class:'felt textarea', placeholder:'Ny info (blank = uendret)' })`
+- `visAIPasteModal` → `byggRad` — app.js:3472: `rad.infoFelt = el('textarea', {...}, rows:1)` (ingen maxlength i dag)
+
+**Avvik fra oppgaveteksten:** det finnes IKKE noe `FELTGRENSER`-objekt eller
+`settTekstgrense`-hjelpefunksjon i koden. P49s faktiske mønster er to enkle
+konstanter rett før `visNyOktModal` (app.js:2596–2597: `AKTIVITET_MAKS_LENGDE = 30`,
+`MOTESTED_MAKS_LENGDE = 40`) satt direkte som `maxlength`-attributt på hvert felt —
+ingen delt hjelpefunksjon. Punkt 1 under følger derfor DETTE mønsteret: en tredje
+konstant `INFO_MAKS_LENGDE = 300` ved siden av de to andre, satt som `maxlength`
+samme sted som i dag. Ingen ny «FELTGRENSER»-abstraksjon innføres.
+
+**(b) Feltoppsett i `visNyOktModal` i dag (app.js:2599–2787), ett `lagFormRad`
+per linje, i denne rekkefølgen:** Klasse (select) → Felles med (avkryssing,
+kun når skolen har flere klasser) → Fag (select) → Parti/gruppe (avkryssingsbokser)
+→ Uke (number-input) → Dag (select) → Lærer (select) → Aktivitet (input) →
+Møtested (input) → Info (textarea). `lagFormRad` (app.js:5802) bygger en
+`div.felt` (block, `margin-bottom:14px`) med `<label>` over et felt som er
+`width:100%` — alt stables i én kolonne i dag, ingen sammenstilling på samme
+linje noe sted i skjemaet.
+
+**(c) AI-forhåndsvisningens rad- og grupperingskode i `visAIPasteModal`:**
+- Rad bygges av `byggRad(s, rader, liste)` (app.js:3397–3618). Kompakt rad =
+  12-kolonners CSS-grid (`.okt-import-rad`, style.css:884–893):
+  klasse(.9fr) · lærer(1.2fr) · fag(1.6fr) · parti/gruppe(1.2fr) · uke(60px) ·
+  dag(80px) · aktivitet/møtested/info (hver 1fr, via `.okt-import-tekstrad`
+  som er `display:contents` i kompakt — cellene er reelle grid-items) ·
+  merknad(1.4fr) · utvid(32px) · stryk(36px).
+- Gruppering finnes fra P44 (`.okt-import-gruppe`, style.css:925–931) MEN er
+  i dag KUN étt nivå: `grupper`-Map (app.js:3670) nøklet på `klasseSel.value`
+  alene, sortert alfabetisk på klassenavn (`sorterGrupper`, app.js:3692–3699),
+  ugyldig-klasse-gruppe alltid sist. `plasserRad` (app.js:3701) flytter raden
+  til riktig gruppe UMIDDELBART ved klassebytte (app.js:3515–3521, i dag
+  bundet på `klasseSel`s `change`-event).
+- Utvidet visning (P48/P49) har egen 8-kolonners grid
+  (`.okt-import-rad--utvidet`, style.css:942–977) med EKSPLISITT
+  `grid-column`/`grid-row` per celle (klasse/lærer/fag/parti/uke/dag på linje 1,
+  tekstrad på linje 2, merknad linje 3) — uavhengig av kompaktgridets
+  auto-plassering. `apneUtvidet`/`lukkUtvidet` (app.js:3340–3357) styrer
+  `.okt-import-rad--utvidet`-klassen; maks én rad utvidet om gangen.
+- **Bekreftet:** `FELTGRENSER`/`settTekstgrense` finnes ikke (se avviket over) —
+  men selve gruppe-/rad-koden fra P44/P48/P49 (`.okt-import-gruppe`,
+  `byggRad`, utvidet-mekanikken) stemmer med kartleggingen over og kan
+  bygges videre på.
+
+### Delplan
+
+**1. Info-grense 300 tegn:**
+- [ ] Ny konstant `INFO_MAKS_LENGDE = 300` ved siden av de to eksisterende
+      (app.js ~2596).
+- [ ] `maxlength: INFO_MAKS_LENGDE` lagt til info-feltet i `visNyOktModal`,
+      `visRedigerOktModal`, `visKopierOktModal`, `rad.infoFelt` i
+      `visAIPasteModal`, og `infoInput` («Ny info») i `visBulkEditModal`.
+- [ ] Ingen DB-endring. Eksisterende lange info-rader i databasen røres ikke
+      (grensen håndheves kun i UI ved ny inntasting/redigering).
+
+**2. Kompakt «Ny økt» (`visNyOktModal`):**
+- [ ] Ny feltrekkefølge: Klasse → Felles med (uendret, øverst) → **rad A**
+      (Uke · Dag · Lærer) → **rad B** (Fag · Parti/gruppe) → **rad C**
+      (Aktivitet · Møtested, smalere) → Info (full bredde, uendret plassering
+      sist).
+- [ ] Ny CSS-klasse `.skjema-rad` (flex, `gap:10px`) som wrapper flere
+      `lagFormRad(...)`-resultater på samme linje; hvert barn `flex:1 1 0`
+      (rad A og B fyller linjen jevnt — Uke/Dag/Lærer og Fag/Parti/gruppe har
+      ingen naturlig «kort tekst»-grunn til å være smalere). På mobil
+      (≤700px, appens vanlige brekk) stables parene i full bredde via
+      `flex-direction:column` i samme brekkpunkt som resten av modalene.
+- [ ] Modifikator `.skjema-rad--smal` for rad C: barna får `flex:0 0 auto` i
+      stedet for å fylle linjen, og selve input-feltene får en `max-width`
+      dimensjonert etter grensen — forslag **Aktivitet `max-width:140px`**
+      (grense 30), **Møtested `max-width:190px`** (grense 40); resten av
+      linjen forblir tom (bevisst, jf. oppgaveteksten «ikke full bredde»).
+      Disse to tallene er et forslag — juster gjerne ved godkjenning. Ingen
+      «maks tegn»-etiketter i UI.
+- [ ] `visRedigerOktModal`/`visKopierOktModal` røres ikke i denne runden
+      (uendret radlayout, kun maxlength fra punkt 1).
+
+**3. AI-import kompaktvisning på desktop (`visAIPasteModal`):**
+- [ ] Gruppering utvides fra étt nivå (klasse) til tre: **Uke → Klasse →
+      Lærer**. Hver rad grupperes i en «bladgruppe» nøklet på
+      `(uke, klasseId, lærerId)`; sortering av bladgruppene: uke stigende
+      (rad uten gyldig uke sist, som i dag for ugyldig klasse) → klassenavn
+      alfabetisk (ugyldig klasse sist, som i dag) → lærernavn alfabetisk.
+      Rader INNEN en bladgruppe sorteres kun på dag (uke/klasse/lærer er per
+      definisjon like innad i gruppen).
+- [ ] Gruppeoverskriften bygges av tre faste, alltid tilstedeværende
+      «kolonner» (Uke-tekst · Klassenavn · Lærernavn — fast bredde per
+      kolonne for justert «trappe»-innrykk), der en kolonne tømmes for tekst
+      (ikke fjernes fra DOM) når den er lik forrige bladgruppes verdi på
+      samme nivå: uke tømmes når lik forrige gruppes uke; klasse tømmes KUN
+      når BÅDE uke og klasse er like forrige gruppe (kan aldri tømme et nivå
+      uten at nivået over også var likt). Lærer vises alltid (innerste nivå,
+      aldri tømt).
+- [ ] Kompaktradens grid (`.okt-import-rad`, DESKTOP-scope — kun over 900px,
+      samme brekk som i dag) mister klasse-, lærer- og uke-cellene fra
+      layouten (`display:none` på `.okt-import-celle--klasse/--laerer/--uke`
+      NÅR raden ikke er utvidet), og `grid-template-columns` for kompakt
+      desktop-visning innsnevres til de 9 gjenværende cellene (fag · parti/
+      gruppe · dag · aktivitet · møtested · info · merknad · utvid · stryk).
+      Feltene (`rad.klasseSel`/`rad.laererSel`/`rad.ukeFelt`) BEHOLDES i DOM
+      og vises fortsatt normalt i utvidet visning (P48s egne
+      `grid-column`/`grid-row`-regler for `.okt-import-rad--utvidet` er
+      uendret — de er allerede uavhengige av kompaktgridets kolonneoppsett).
+      Mobil (≤900px) er UTENFOR scope denne runden — ingen endring i
+      mobilens medieqUery-regler (style.css:979–1006), klasse/lærer/uke
+      forblir synlige i kompakt visning på mobil inntil videre.
+- [ ] Regruppering skjer KUN når en utvidet rad LUKKES (ikke live mens
+      feltene redigeres) — `lukkUtvidet()` sjekker om raden har fått ny
+      `(uke, klasse, lærer)`-nøkkel siden forrige plassering, flytter den til
+      riktig (evt. ny) bladgruppe ved behov, rydder tomme grupper, og bygger
+      «trappe»-overskriftene på nytt for hele lista. `plasserRad`-kallet på
+      `klasseSel`s `change`-event (dagens umiddelbare flytting, app.js:3515–
+      3521) fjernes — klassebytte oppdaterer fortsatt parti/gruppe-dropdown
+      og revaliderer raden med det samme, men flytter den ikke før lukking.
+      Samme utsettelse gjelder nye `change`-lyttere på `laererSel`/`ukeFelt`
+      (uke/lærer påvirker i dag ikke plassering i det hele tatt siden
+      grupperingen var étt-nivås — de får nye, tilsvarende lette lyttere som
+      kun trigger revalidering, ikke flytting).
+- [ ] Ved AI-analyse (`for (const s of parsed) byggRad(...)`) og «+ Legg til
+      rad» plasseres raden i riktig bladgruppe med det samme (som i dag) —
+      kun REDIGERING i utvidet visning utsetter flyttingen til lukking.
+- [ ] Ingen endring i validering, kollisjonssjekk, `matchKlasse`/`matchFag`/
+      `matchDiv`, insert-logikken eller den deterministiske
+      «gjelder en annen klasse»-varselboksen (`oppdaterUkjentKlasseVarsel`).
+- [ ] `.okt-import-hode` (kolonneoverskriftsraden) får samme kompakt-desktop-
+      behandling — klasse/lærer/uke-etikettene fjernes fra header-gridet på
+      desktop siden kolonnene ikke lenger finnes der.
+
+### Avslutning
+Cache-bust (`?v=20260819a` foreslått, CSS + JS) i `v4/index.html`, maskin-
+verifisering med headless Chromium (info-grense 300, kompakt Ny økt-layout
+desktop+mobil, AI-kompaktvisning med trappe-overskrift + utvidet visning
+uendret), PLAN.md-sjekkliste + STATUSLINJE oppdatert i samme commit som merge,
+PR opprettet. Punkt 3s «kan ikke fullt ut maskinverifiseres»-forbehold gjelder
+trolig KUN selve AI-kallet (Gemini) — layout/gruppering/staircase kan
+maskinverifiseres med stubbet Supabase, samme mønster som P44/P48/P49.
