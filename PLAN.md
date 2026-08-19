@@ -2,11 +2,13 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P51
+- **Siste fullførte P-nummer:** P52
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P52 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Neste ledige P-nummer:** P53 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P52s prod-sjekk — redusert linjeavstand i «Ny økt» (maskinverifisert,
+    5 sjekker); Morfars visuelle bekreftelse i produksjon gjenstår
   - P51s prod-sjekk — «Parti/gruppe»-raden skjules når faget ikke har
     partier/grupper (maskinverifisert, 7 sjekker); Morfars visuelle
     bekreftelse i produksjon gjenstår
@@ -1127,3 +1129,32 @@ raden til å matche Fag-radens høyde, uten synlig innhold i det strukne rommet.
 - [ ] Morfars visuelle prod-sjekk: åpne «Ny økt» for et fag UTEN parti/gruppe
       (raden skal være helt borte, ikke bare tom) og for et fag MED
       parti/gruppe (raden skal vises normalt, uten unaturlig tomrom).
+
+---
+
+## Økt (P52): Redusert linjeavstand i «Ny økt»
+
+**Branch:** `claude/p52-linjeavstand-ny-okt`.
+**Scope:** KUN `v4/app.js` + `v4/style.css` + cache-bust i `v4/index.html`.
+Ingen DB-endring, ingen edge-funksjon.
+
+**Bakgrunn:** Morfar syntes avstanden mellom radene i «Ny økt» (Klasse /
+Felles med / Uke-Dag-Lærer / Fag-Parti-gruppe / Aktivitet-Møtested / Info)
+var for stor.
+
+### Delplan
+- [x] `visNyOktModal`s form fikk en ekstra klasse `skjema--kompakt` (i
+      tillegg til `skjema`) — KUN denne modalen, jf. P50/P51s bevisste valg
+      om å la Rediger/Kopier stå uendret.
+- [x] Ny CSS-regel `form.skjema--kompakt .felt { margin-bottom: 8px }`
+      (ned fra 14px). Element+klasse-kombinasjonen gir høyere spesifisitet
+      enn den eksisterende `.skjema .felt`-regelen lenger ned i filen, så
+      den vinner uavhengig av kildekode-rekkefølge.
+- [x] Maskinverifisert med headless Chromium mot samme isolerte harness som
+      P50/P51: 5 sjekker (Ny økt har `skjema--kompakt`-klassen og 8px
+      margin-bottom; Rediger økt har verken klassen eller endret margin —
+      fortsatt 14px), alle OK, ingen JS-feil. Full P50- (38) og
+      P51-regresjonssuite (7) kjørt på nytt uten endring i utfall.
+- [x] Cache-bust bumpet til `?v=20260819c` for både CSS og JS.
+- [ ] Morfars visuelle prod-sjekk: åpne «Ny økt» og bekreft at radene sitter
+      tettere, uten at det blir trangt/vanskelig å lese.
