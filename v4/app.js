@@ -2724,8 +2724,13 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
 
   // Division – checkboxes (partier for valgt klasse + grupper for skolen)
   const divContainer = el('div', { class: 'div-checkboxes' })
-  // P50: Fag/Parti-gruppe legges til lenger ned, sammen med resten av
-  // kompaktradene (rad B) – kun elementene opprettes her.
+  // P51: hele «Parti/gruppe»-raden (etikett + boks) skjules når faget ikke
+  // har noen partier/grupper å velge mellom – ellers står etiketten igjen
+  // over en tom boks, og raden ved siden av («Fag») blir strukket til å
+  // matche en høyde det ikke er noe innhold til (P50: Fag/Parti-gruppe
+  // legges til lenger ned, sammen med resten av kompaktradene – rad B).
+  const partiRad = lagFormRad('Parti/gruppe', divContainer)
+  partiRad.style.display = 'none'
 
   async function oppdaterFagSel(classId) {
     clearEl(fagSel)
@@ -2738,14 +2743,15 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
 
   async function oppdaterDivisionCheckboxes(subjectId, classId) {
     clearEl(divContainer)
-    if (!subjectId || !classId) return
+    if (!subjectId || !classId) { partiRad.style.display = 'none'; return }
     const { data: divs } = await sb.from('subject_divisions')
       .select('*')
       .eq('subject_id', subjectId)
       .or(`class_id.is.null,class_id.eq.${classId}`)
       .is('deleted_at', null)
       .order('sort_order')
-    if (!(divs || []).length) return
+    if (!(divs || []).length) { partiRad.style.display = 'none'; return }
+    partiRad.style.display = ''
     for (const d of divs) {
       const lbl = el('label', { class: 'div-check-lbl' })
       lbl.appendChild(el('input', { type: 'checkbox', name: 'selected_divisions', value: d.id }))
@@ -2778,7 +2784,7 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   form.appendChild(el('div', { class: 'skjema-rad' },
     lagFormRad('Uke', weekInput), lagFormRad('Dag', dagSel), lagFormRad('Lærer', laererSel)))
   form.appendChild(el('div', { class: 'skjema-rad' },
-    lagFormRad('Fag', fagSel), lagFormRad('Parti/gruppe', divContainer)))
+    lagFormRad('Fag', fagSel), partiRad))
   form.appendChild(el('div', { class: 'skjema-rad skjema-rad--smal' },
     lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input skjema-felt--akt', maxlength: AKTIVITET_MAKS_LENGDE })),
     lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input skjema-felt--opp', maxlength: MOTESTED_MAKS_LENGDE }))))
