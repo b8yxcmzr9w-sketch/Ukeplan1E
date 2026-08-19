@@ -3,8 +3,8 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P53
-- **Pågående:** ingen
-- **Neste ledige P-nummer:** P54 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Pågående:** P54 (Hurtigstart-veiledning) — plan skrevet, venter på Morfars «kjør»
+- **Neste ledige P-nummer:** P55 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P53s prod-sjekk — mobil sammendragslinje i AI-import (maskinverifisert,
@@ -1209,3 +1209,119 @@ redigering skjer.
 - [ ] Morfars visuelle prod-sjekk på ekte telefon gjenstår (kan ikke
       maskinverifiseres fullt ut — ekte AI-import krever Supabase-innlogging
       + Gemini-kall, samme mønster som P41–P52).
+
+---
+
+## Økt (P54): Hurtigstart-veiledning for lærere
+
+**Branch:** `claude/laerer-hurtigstart-guide-bb1rm1` (miljøets tildelte
+branch — oppgaveteksten foreslo ikke noe eget navn).
+**Scope:** KUN `v4/app.js`, `v4/style.css`, `v4/index.html` (nytt
+menypunkt-markup + cache-bust). Ingen DB-migrasjon, ingen edge functions.
+**Status:** PLAN SKREVET 19. august 2026 — venter på Morfars «kjør».
+
+### Mål
+
+Et nytt menyvalg i header-hamburgeren (☰), synlig KUN for innloggede
+brukere (lærer/kontaktlærer/admin), som åpner en illustrert
+hurtigstart-/kom i gang-veiledning. Kilde: `hurtigstart-uten-bilder.html`
+(brødtekst + inline SVG-illustrasjoner), som Morfar leverer separat.
+Ikke synlig i elevvisning (anonym tilgang via klasselenke har uansett
+ingen innlogget bruker).
+
+### Kartlegging (verifisert i koden 19. august 2026)
+
+- **Header-dropdownen** (`#hdr-dropdown`, `index.html:45–53`) er ÉN delt
+  markup-blokk for hele appen (elev-, lærer- og adminvisning) — knappene
+  vises/skjules i `oppdaterHeader()` (app.js:742–848) ut fra
+  `APP.user && APP.profile`. «Profil» (`ddProfil`, app.js:819–822) er
+  ALLEREDE synlig for alle innloggede roller (ikke bare admin) og
+  navigerer til `#/laerer/innstillinger`. «Innstillinger» (`ddInnstillinger`)
+  er admin-only. Hurtigstart skal følge samme synlighetsregel som Profil
+  (alle innloggede roller) — det gir «ikke i elevvisning» helt gratis,
+  siden elevvisningens klasselenke er anonym og dermed aldri har
+  `APP.user`. Blir en lærer/admin i header «kikke» på elevvisningen
+  (P21-elevpeek), er de fortsatt innlogget — hamburgermenyen (delt
+  komponent) viser da fortsatt Hurtigstart. Det tolkes som riktig og i
+  tråd med oppgaveteksten («kun for innloggede brukere»), ikke et avvik.
+- **«Profil»-siden er malen å følge:** `renderInnstillingerTab`
+  (app.js:1633–1688) bruker det etablerte settings-mønsteret fra
+  CLAUDE.md (`.settings-page` sentrert kolonne + `.settings-card` per
+  seksjon + `lagSettingsLukk()` for «X»-lukk). Fanen er en «skjult» fane i
+  `renderLaererView`: `tabSlugs` inneholder `'innstillinger'`, men
+  `tabs.forEach`-løkka (app.js:1619–1624) hopper eksplisitt over den
+  (`if (tabSlugs[i] === 'innstillinger') return`) — den er kun nåbar via
+  hash (`#/laerer/innstillinger`) eller hamburgeren, og `setTab`
+  (app.js:1568–1584) skjuler `.fane-bar` når slugen er `innstillinger`
+  (linje 1576). Hurtigstart bygges som en identisk «skjult fane» —
+  samme rørledning, ny slug.
+- **Illustrasjonene** trenger trolig mer bredde enn den smale
+  `.settings-page` (680px). `.settings-page--admin`-varianten (920px,
+  brukt av adminpanelets faner, jf. CLAUDE.md «Settings-mønster») passer
+  bedre til SVG-innhold — foreslås brukt her fremfor standardvarianten.
+
+### Åpent punkt — BLOKKERER innholdsarbeidet
+
+`hurtigstart-uten-bilder.html` er ikke funnet i repoet (`find` gir
+treff kun på git-interne referanser til denne PLAN-seksjonen). Filen må
+limes inn / legges ved av Morfar før steg C (innhold) kan fullføres —
+resten av rørledningen (meny, route, layout) kan bygges og verifiseres
+med plassholder-innhold i mellomtiden om ønskelig.
+
+### Delplan
+
+**A. Menypunkt i hamburgeren (`index.html` + `app.js`):**
+- [ ] Ny knapp i dropdown-markupet (`index.html`, mellom `hdr-dd-profil`
+      og `hdr-dd-innstillinger`): `<button ... id="hdr-dd-hurtigstart"
+      class="hdr-dropdown-btn skjult">❓ Hurtigstart</button>` (tekst/emoji
+      justeres ved behov — «❓ Hurtigstart» foreslått som forslag fra
+      oppgaveteksten).
+- [ ] `oppdaterHeader()` (app.js): hent elementet, vis/skjul og koble
+      onclick i SAMME blokk som `ddProfil` (linje 819–822) — synlig for
+      alle innloggede roller, skjult i utlogget-grenen (linje 828–840,
+      sammen med `ddProfil`/`ddInnstillinger`). Klikk lukker dropdownen
+      og navigerer til `#/laerer/hurtigstart`.
+
+**B. Ny «skjult fane»/route i lærervisningen (`app.js`):**
+- [ ] `renderLaererView`: legg til `tabs.push('Hurtigstart');
+      tabSlugs.push('hurtigstart')` etter `'innstillinger'`-linjen
+      (1560), med samme hopp-over i `tabs.forEach`-løkka (1619–1624) —
+      usynlig i den synlige fane-raden, nåbar via hash/hamburger.
+- [ ] `setTab` (1568–1584): ny gren `else if (slug === 'hurtigstart')
+      renderHurtigstartTab(tabContent)`; `.fane-bar`-skjuling (linje 1576)
+      utvides til å gjelde begge frittstående-sidene
+      (`slug === 'innstillinger' || slug === 'hurtigstart'`).
+- [ ] Ny funksjon `renderHurtigstartTab(container)`: `.settings-page--admin`
+      (bredere, pga. illustrasjoner) + `lagSettingsLukk()` øverst — «X»
+      navigerer alltid tilbake til `#/laerer/<APP.laererCtx.tab ||
+      'klasse'>` (samme hjelper, ingen endring i den).
+
+**C. Innhold — BLOKKERT, se «Åpent punkt» over (`app.js`):**
+- [ ] Brødtekst + inline SVG-er fra `hurtigstart-uten-bilder.html`
+      overføres til `renderHurtigstartTab`, delt inn i `.settings-card`-
+      seksjoner (én seksjon per kapittel i kilden — naturlig samsvar med
+      det etablerte kort-mønsteret). SVG-markup limes inn direkte
+      (inline, ingen eksterne filer/CDN-er) — via `el()`-hjelperen der
+      det er praktisk, ellers en trygg `innerHTML`-tildeling på en egen
+      wrapper for de mer komplekse illustrasjonene (kilden er Morfars
+      eget innhold, ikke brukerinnsendt — ingen XSS-vurdering nødvendig).
+- [ ] Ingen nye rammeverk/biblioteker. Ingen endring av eksisterende
+      `.settings-card`/`.settings-page`-stiler.
+
+**D. Ev. minimal styling (`style.css`):**
+- [ ] Kun nye, tilleggsklasser for SVG-illustrasjonene om nødvendig
+      (f.eks. maks-bredde/sentrering i kortet) — ingen endring av
+      eksisterende settings-/kort-stiler.
+
+**E. Cache-bust + verifisering:**
+- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS + JS).
+- [ ] Maskinverifisering (headless Chromium, samme mønster som
+      P41–P53): menypunktet skjult når utlogget, synlig for
+      lærer/kontaktlærer/admin; klikk åpner `#/laerer/hurtigstart` med
+      innhold; «X» lukker tilbake til riktig fane (`APP.laererCtx.tab`);
+      fane-raden er skjult på siden; ikke tilgjengelig fra anonym
+      elevvisning (`#/klasse/:navn` uten innlogging).
+- [ ] Morfars visuelle prod-sjekk (ingen preview-deploy i repoet, samme
+      begrunnelse som P41–P53): innhold/illustrasjoner ser riktige ut,
+      stemmer med kildefilen, og menyplasseringen føles naturlig.
+- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
