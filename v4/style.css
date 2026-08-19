@@ -1247,6 +1247,50 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
   box-shadow: 0 0 0 3px rgba(64,145,108,.30);
 }
 
+/* ── Hurtigstart-veiledning (P54) — bruker settings-mønsteret over, kun
+   tillegg for illustrert innhold. Farger via eksisterende temavariabler,
+   ingen nye hardkodede farger. ── */
+.hs-badge {
+  display: inline-block; background: var(--badge-bg); color: var(--badge-tekst);
+  padding: 3px 12px; border-radius: 999px; font-size: .78rem; font-weight: 700;
+  letter-spacing: .03em; margin-bottom: 10px;
+}
+.hs-intro { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.hs-intro .hs-intro-txt { flex: 1; min-width: 220px; }
+.hs-intro svg { flex: none; width: 130px; height: auto; display: block; }
+.hs-lead { color: var(--tekst-svak); margin: 4px 2px 14px; font-size: .96rem; }
+.hs-step { display: flex; gap: 18px; align-items: flex-start; }
+.hs-step-num {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--primær-svak); color: var(--primær);
+  font-weight: 700; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.hs-step-body { flex: 1; min-width: 0; }
+.hs-step-body h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+.hs-step-body p { color: var(--tekst-svak); margin-top: 6px; }
+.hs-step-art { flex: none; width: 110px; }
+.hs-step-art svg { width: 110px; height: auto; display: block; }
+.hs-pill {
+  display: inline-block; background: var(--primær-svak); color: var(--primær);
+  border-radius: 6px; padding: 1px 7px; font-size: .92em; font-weight: 600;
+}
+.hs-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.hs-role { padding: 14px 4px; }
+.hs-role h4 { margin-bottom: 5px; font-size: 1rem; }
+.hs-role p { color: var(--tekst-svak); font-size: .9rem; }
+.hs-callout {
+  background: var(--primær-svak); color: var(--tekst); border-radius: var(--radius);
+  padding: 14px 18px; margin-top: 6px; font-size: .92rem;
+}
+.hs-footer { text-align: center; color: var(--tekst-svak); font-size: .82rem; margin-top: 8px; }
+@media (max-width: 560px) {
+  .hs-step { flex-wrap: wrap; }
+  .hs-step-art { width: 100%; order: 3; margin-top: 4px; }
+  .hs-step-art svg { width: 100%; max-width: 200px; margin: 0 auto; }
+  .hs-roles { grid-template-columns: 1fr; }
+}
+
 /* ── Skjema-rader ────────────────────────────────────────────────── */
 .skjema .felt { margin-bottom: 14px; }
 

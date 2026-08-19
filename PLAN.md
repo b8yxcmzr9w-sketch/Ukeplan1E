@@ -2,11 +2,17 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P53
+- **Siste fullførte P-nummer:** P54 (kode ferdig og maskinverifisert; PR #163
+  opprettet mot main, venter på Morfars eksplisitte «merge» siden appen er
+  live etter 1. august 2026 — se P54s egen status for detaljer)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P54 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Neste ledige P-nummer:** P55 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P54s prod-sjekk — illustrert hurtigstart-veiledning (maskinverifisert,
+    22 sjekker + visuell kontroll med skjermbilder desktop/mobil i isolert
+    harness); Morfars visuelle bekreftelse i ekte produksjon gjenstår, samme
+    mønster som P41–P53
   - P53s prod-sjekk — mobil sammendragslinje i AI-import (maskinverifisert,
     12 CSS-sjekker + 4 logikksjekker mot isolert harness); Morfars visuelle
     bekreftelse på ekte telefon i produksjon gjenstår, samme mønster som
@@ -1209,3 +1215,158 @@ redigering skjer.
 - [ ] Morfars visuelle prod-sjekk på ekte telefon gjenstår (kan ikke
       maskinverifiseres fullt ut — ekte AI-import krever Supabase-innlogging
       + Gemini-kall, samme mønster som P41–P52).
+
+---
+
+## Økt (P54): Hurtigstart-veiledning for lærere
+
+**Branch:** `claude/laerer-hurtigstart-guide-bb1rm1` (miljøets tildelte
+branch — oppgaveteksten foreslo ikke noe eget navn). **PR #163** opprettet
+mot `main` — VENTER PÅ MORFARS EKSPLISITTE «merge» (etter 1. august 2026 er
+appen live, så avslutningsprosedyren stopper ved «PR klar», jf. PROSEDYRER.md).
+**Scope:** KUN `v4/app.js`, `v4/style.css`, `v4/index.html` (nytt
+menypunkt-markup + cache-bust). Ingen DB-migrasjon, ingen edge functions.
+**Status:** FULLFØRT OG MASKINVERIFISERT 19. august 2026 — alle steg A–E
+bygget (meny/rute/lukk-rørledning + ekte innhold med SVG-illustrasjoner fra
+`hurtigstart-uten-bilder.html`). PR #163 klar til review. Morfars visuelle
+prod-sjekk gjenstår (mulig først etter merge, begrunnet åpent, ingen
+preview-deploy i repoet, samme mønster som P41–P53).
+
+### Mål
+
+Et nytt menyvalg i header-hamburgeren (☰), synlig KUN for innloggede
+brukere (lærer/kontaktlærer/admin), som åpner en illustrert
+hurtigstart-/kom i gang-veiledning. Kilde: `hurtigstart-uten-bilder.html`
+(brødtekst + inline SVG-illustrasjoner), som Morfar leverer separat.
+Ikke synlig i elevvisning (anonym tilgang via klasselenke har uansett
+ingen innlogget bruker).
+
+### Kartlegging (verifisert i koden 19. august 2026)
+
+- **Header-dropdownen** (`#hdr-dropdown`, `index.html:45–53`) er ÉN delt
+  markup-blokk for hele appen (elev-, lærer- og adminvisning) — knappene
+  vises/skjules i `oppdaterHeader()` (app.js:742–848) ut fra
+  `APP.user && APP.profile`. «Profil» (`ddProfil`, app.js:819–822) er
+  ALLEREDE synlig for alle innloggede roller (ikke bare admin) og
+  navigerer til `#/laerer/innstillinger`. «Innstillinger» (`ddInnstillinger`)
+  er admin-only. Hurtigstart skal følge samme synlighetsregel som Profil
+  (alle innloggede roller) — det gir «ikke i elevvisning» helt gratis,
+  siden elevvisningens klasselenke er anonym og dermed aldri har
+  `APP.user`. Blir en lærer/admin i header «kikke» på elevvisningen
+  (P21-elevpeek), er de fortsatt innlogget — hamburgermenyen (delt
+  komponent) viser da fortsatt Hurtigstart. Det tolkes som riktig og i
+  tråd med oppgaveteksten («kun for innloggede brukere»), ikke et avvik.
+- **«Profil»-siden er malen å følge:** `renderInnstillingerTab`
+  (app.js:1633–1688) bruker det etablerte settings-mønsteret fra
+  CLAUDE.md (`.settings-page` sentrert kolonne + `.settings-card` per
+  seksjon + `lagSettingsLukk()` for «X»-lukk). Fanen er en «skjult» fane i
+  `renderLaererView`: `tabSlugs` inneholder `'innstillinger'`, men
+  `tabs.forEach`-løkka (app.js:1619–1624) hopper eksplisitt over den
+  (`if (tabSlugs[i] === 'innstillinger') return`) — den er kun nåbar via
+  hash (`#/laerer/innstillinger`) eller hamburgeren, og `setTab`
+  (app.js:1568–1584) skjuler `.fane-bar` når slugen er `innstillinger`
+  (linje 1576). Hurtigstart bygges som en identisk «skjult fane» —
+  samme rørledning, ny slug.
+- **Illustrasjonene** trenger trolig mer bredde enn den smale
+  `.settings-page` (680px). `.settings-page--admin`-varianten (920px,
+  brukt av adminpanelets faner, jf. CLAUDE.md «Settings-mønster») passer
+  bedre til SVG-innhold — foreslås brukt her fremfor standardvarianten.
+
+### Åpent punkt — LØST 19. august 2026
+
+`hurtigstart-uten-bilder.html` ble limt inn av Morfar i oppfølgingsøkten.
+Innholdet er overført til `renderHurtigstartTab` (steg C) — se delplanen
+under for detaljer om hva som ble tatt rett fra kilden og hva som ble
+gjort dynamisk av hensyn til appens skolenøytrale arkitektur.
+
+### Delplan
+
+**A. Menypunkt i hamburgeren (`index.html` + `app.js`):**
+- [ ] Ny knapp i dropdown-markupet (`index.html`, mellom `hdr-dd-profil`
+      og `hdr-dd-innstillinger`): `<button ... id="hdr-dd-hurtigstart"
+      class="hdr-dropdown-btn skjult">❓ Hurtigstart</button>` (tekst/emoji
+      justeres ved behov — «❓ Hurtigstart» foreslått som forslag fra
+      oppgaveteksten).
+- [x] `oppdaterHeader()` (app.js): hent elementet, vis/skjul og koble
+      onclick i SAMME blokk som `ddProfil` (linje 819–822) — synlig for
+      alle innloggede roller, skjult i utlogget-grenen (linje 828–840,
+      sammen med `ddProfil`/`ddInnstillinger`). Klikk lukker dropdownen
+      og navigerer til `#/laerer/hurtigstart`.
+
+**B. Ny «skjult fane»/route i lærervisningen (`app.js`):**
+- [x] `renderLaererView`: `tabs.push('Hurtigstart');
+      tabSlugs.push('hurtigstart')` etter `'innstillinger'`-linjen, med
+      samme hopp-over i `tabs.forEach`-løkka — usynlig i den synlige
+      fane-raden, nåbar via hash/hamburger.
+- [x] `setTab`: ny gren `else if (slug === 'hurtigstart')
+      renderHurtigstartTab(tabContent)`; `.fane-bar`-skjuling utvidet til
+      å gjelde begge frittstående-sidene
+      (`slug === 'innstillinger' || slug === 'hurtigstart'`).
+- [x] Ny funksjon `renderHurtigstartTab(container)`: `.settings-page--admin`
+      (bredere, pga. illustrasjoner) + `lagSettingsLukk()` øverst.
+      FUNN UNDER BYGGING: `lagSettingsLukk()`s «X»-lukk hadde en
+      fallback-feil som kun unntok slugen `'innstillinger'` — uten fiks
+      ville «X» på Hurtigstart-siden navigert til `#/laerer/hurtigstart`
+      (seg selv, uendelig løkke) i stedet for tilbake til klasse-fanen.
+      Rettet til å unnta BEGGE frittstående slugene (`'innstillinger'` OG
+      `'hurtigstart'`) — påvirker ikke Profil-sidens oppførsel, kun
+      utvider unntaket. Verifisert i maskinsjekken under.
+
+**C. Innhold (`app.js`) — LEVERT OG BYGGET 19. august 2026:**
+- [x] Brødtekst + inline SVG-er fra `hurtigstart-uten-bilder.html`
+      overført til `renderHurtigstartTab`: intro-kort (badge + tittel +
+      ingress + kalender-SVG), fem nummererte steg-kort (hver med egen
+      SVG), to `.advarsel-tekst`-varsler (gjenbruker eksisterende
+      gul-boks-stil i stedet for en ny klasse), og ett rollekort med alle
+      fire rollene («Lærer», «Elev», «Admin», «Skoleåret») + callout-boks
+      SAMLET I ÉTT `.settings-card` (unngår boks-i-boks — samme lærdom
+      som CLAUDE.mds kjente Skoleår-fane-punkt). SVG-markup limes inn via
+      en liten `frag(html)`-hjelper (innerHTML på en frittstående
+      wrapper) — trygt siden alt innhold er Morfars eget forfattede
+      innhold, ikke bruker- eller databasedata.
+- [x] To bevisste tilpasninger til appens skolenøytrale arkitektur
+      (CLAUDE.md: «skolenøytral og åpen for flere skoler»), ellers
+      innholdet uendret fra kilden: (1) footerens skolenavn hentes fra
+      `APP.school?.name` i stedet for hardkodet «Øksnevad videregående
+      skole»; (2) «Skoleåret»-rollens ukespenn hentes fra
+      `APP.school?.school_year_start_week`/`school_year_end_week` i
+      stedet for hardkodet «33»/«24» (begge med samme fallback-verdier
+      som kilden hvis feltene mangler). Admin-kontakten
+      (geir.edland@skole.rogfk.no) og «Geir Edland»-nevnelsen i
+      Admin-rollen er beholdt uendret — reelt innhold for eneste skole i
+      drift i dag, ingen billig dynamisk erstatning tilgjengelig.
+- [x] Ingen nye rammeverk/biblioteker. Ingen endring av eksisterende
+      `.settings-card`/`.settings-page`-stiler — kun nye tilleggsklasser
+      (steg D).
+
+**D. Minimal styling (`style.css`) — BYGGET:**
+- [x] Nye `.hs-*`-klasser (intro/badge/steg/pill/roller/callout/footer)
+      lagt til rett under settings-mønsteret (linje ~1249), ALLE bygget
+      på eksisterende temavariabler (`--primær`, `--bg-kort`, `--kant`,
+      `--tekst-svak` osv.) — ingen nye hardkodede farger, så innholdet
+      følger automatisk skolens fargetema (standard/lys/mørk). Egen
+      `@media (max-width: 560px)`-regel (samme brekkpunkt som kilden) for
+      å stable steg-illustrasjonen under teksten og rollegridet til én
+      kolonne på smal skjerm. Ingen endring av eksisterende stiler.
+
+**E. Cache-bust + verifisering — FULLFØRT:**
+- [x] Bump `app.js?v=20260819f` OG `style.css?v=20260819f` i
+      `v4/index.html` (begge endret i denne runden).
+- [x] Maskinverifisert (headless Chromium, stubbet Supabase — isolert
+      harness, samme mønster som P41–P53): 22 sjekker, alle OK, ingen
+      JS-feil (kun en godartet 404 for en ressurs som bevisst ikke er
+      del av det isolerte test-harnesset). Dekker rørledningen fra forrige
+      runde (meny/rute/lukk, inkl. at «X» IKKE lukker til seg selv) PLUSS
+      innholdet: intro-kort, badge, SVG, ingress, fem steg-kort med riktig
+      tittel/nummerering/SVG hver, pill-elementer, to varselbokser med
+      mailto-lenke, fire rollekort, callout-boks, og de to dynamiske
+      verdiene (skolenavn og skoleår-uker hentet fra `APP.school`, IKKE
+      hardkodet «Øksnevad» i output når stub-skolen heter noe annet).
+      Visuell kontroll med skjermbilder på desktop (1100px) og mobil
+      (400px) — layout, temafarger og tekstbryting stemmer med
+      kort-mønsteret ellers i appen.
+- [ ] Morfars visuelle prod-sjekk (ingen preview-deploy i repoet, samme
+      begrunnelse som P41–P53): innhold/illustrasjoner ser riktige ut i
+      ekte nettleser, stemmer med kildefilen, og menyplasseringen føles
+      naturlig. BEGRUNNET ÅPENT ved merge — kan først gjøres i produksjon.
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.
