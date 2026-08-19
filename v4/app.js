@@ -5156,7 +5156,7 @@ async function visMergeKlasseModal(klasse, alleKlasser, onSave) {
 async function renderBrukereTab(container) {
   async function refresh() {
     clearEl(container)
-    const { data: users } = await sb.from('users').select('*, user_classes(classes(*))').eq('school_id', APP.school.id).order('full_name')
+    const { data: users } = await sb.from('users').select('*, user_classes(classes(*))').eq('school_id', APP.school.id).is('deleted_at', null).order('full_name')
     const { data: klasser } = await sb.from('classes').select('*').order('name')
 
     container.appendChild(el('h3', {}, 'Brukere'))
@@ -5456,6 +5456,7 @@ async function visSlettBrukerModal(user, onSave) {
     const { data: others } = await sb.from('users')
       .select('*')
       .eq('school_id', APP.school.id)
+      .is('deleted_at', null)
       .neq('id', user.id)
 
     const reassignSel = el('select', { class: 'felt select' })

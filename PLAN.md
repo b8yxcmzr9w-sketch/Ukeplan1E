@@ -2,13 +2,20 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P54 (PR #163, #164 og #165 squash-merget til
-  main 19. august 2026 — grunnleggende veiledning, åpnes i ny fane, og nye
-  brukere sendes dit automatisk etter invitasjon)
+- **Siste fullførte P-nummer:** P55 (PR #166 åpen, ikke merget ennå — venter
+  på Morfars uttrykkelige «merge»; fikset at myk-slettede brukere dukket
+  opp igjen i adminpanelets brukerliste og i «Overfør fremtidige økter
+  til …»-nedtrekket)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P55 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Neste ledige P-nummer:** P56 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
+    overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
+    testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
+    tilgjengelig fra denne økten): opprett testbruker → slett → bekreft
+    hun forsvinner ved refresh → bekreft hun ikke dukker opp i
+    «Overfør til»-nedtrekket ved neste sletting
   - P54s prod-sjekk — illustrert hurtigstart-veiledning, åpnes i ny fane,
     og nye brukere sendes dit automatisk etter invitasjon (alle tre deler
     maskinverifisert i isolerte harnesser); Morfars visuelle bekreftelse i
@@ -1403,3 +1410,66 @@ gjort dynamisk av hensyn til appens skolenøytrale arkitektur.
       ekte nettleser, stemmer med kildefilen, og menyplasseringen føles
       naturlig. BEGRUNNET ÅPENT ved merge — kan først gjøres i produksjon.
 - [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.
+
+## Økt 55 (P55): Slettede brukere blir liggende i adminpanelets brukerliste
+
+### Kartlegging (verifisert i koden 19. august 2026)
+- Antatt årsak BEKREFTET: myk sletting virker som den skal —
+  `visSlettBrukerModal` (linje 5478 og 5486) skriver
+  `deleted_at: new Date().toISOString()` på brukeren i begge grener
+  (med/uten fremtidige økter). Ingen feil i selve slettelogikken.
+- Bug bekreftet nøyaktig som beskrevet i oppgaven:
+  - `renderBrukereTab` (linje 5159): `sb.from('users').select('*,
+    user_classes(classes(*))').eq('school_id', APP.school.id)` —
+    MANGLER `.is('deleted_at', null)`. Admin-RLS gir admin lov til å se
+    myk-slettede rader → de dukker opp igjen ved refresh.
+  - `visSlettBrukerModal` (linje 5456): kollega-nedtrekket «Overfør
+    fremtidige økter til …» — `sb.from('users').select('*').eq('school_id',
+    APP.school.id).neq('id', user.id)` — MANGLER
+    `.is('deleted_at', null)`. En allerede slettet bruker kan dermed
+    velges som mottaker for overførte økter.
+- Full gjennomgang av alle `from('users')`-spørringer i `v4/app.js`
+  (11 treff totalt): to linjer over er de eneste to som mangler filteret
+  OG er i uttrykkelig scope for denne oppgaven. I tillegg funnet (IKKE i
+  scope, rapporteres uten retting jf. avgrensningen):
+  - Linje 2773 (`visNyOktModal`), 2982 (`visRedigerOktModal`), 3105
+    (`visKopierOktModal`), 3232 (`visOverforModal`) — alle henter
+    lærer-nedtrekk med `.eq('school_id', ...)` uten
+    `.is('deleted_at', null)`. Samme underliggende mangel som P55, men i
+    fire andre modaler (økt-lærervalg, ikke brukeradministrasjon). Utenfor
+    dagens avgrensning («ikke endre andre faner i adminpanelet» / kun de
+    to spørringene oppgaven peker på) — flagges til egen fremtidig
+    plan-post, rettes ikke nå.
+  - Linje 3405, 5195, 5290 har allerede korrekt `.is('deleted_at', null)`
+    — ingen endring nødvendig der.
+  - Linje 483 (egen profil ved innlogging), 527/583 (`is_admin_active`
+    på egen bruker) — enkeltoppslag på innlogget brukers egen id, ikke
+    lister; ikke relevante for denne bugen.
+
+### Delplan
+- [x] Legg `.is('deleted_at', null)` på brukerspørringen i
+      `renderBrukereTab` (linje 5159).
+- [x] Legg `.is('deleted_at', null)` på kollega-spørringen i
+      `visSlettBrukerModal` (linje 5456).
+- [x] Ingen SQL-endring. Ingen endring av `visSlettBrukerModal`s
+      slettelogikk (linje 5468–5489) — den skriver allerede `deleted_at`
+      korrekt.
+- [x] Bump `app.js?v=20260819i` i `v4/index.html`.
+- [x] Commit med beskrivende melding, push til
+      `claude/P55-slettede-brukere-vises-i-adminliste`.
+- [ ] Manuell testrunde for Morfar (BEGRUNNET ÅPENT — krever ekte
+      innlogget admin-sesjon i produksjon/staging, ikke tilgjengelig i
+      denne økten):
+      1. Opprett en testbruker i adminpanelets brukerfane.
+      2. Slett testbrukeren (🗑️) — bekreft ingen feilmelding.
+      3. Last siden på nytt (refresh) — bekreft at testbrukeren IKKE
+         lenger vises i brukerlisten.
+      4. Opprett/slett en ny testbruker som HAR fremtidige økter, slik
+         at «Overfør fremtidige økter til …»-nedtrekket vises — bekreft
+         at den først slettede testbrukeren fra steg 2–3 IKKE dukker opp
+         som valgbar mottaker i det nedtrekket.
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.
+
+**Status:** Kode rettet og pushet. Kun Morfars manuelle produksjonstest
+gjenstår (kan ikke utføres fra denne økten — krever innlogget
+admin-sesjon).
