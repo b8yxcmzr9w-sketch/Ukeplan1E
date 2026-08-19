@@ -2,13 +2,16 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P53
-- **Pågående:** P54 (Hurtigstart-veiledning) — meny/rute-rørledning bygget og
-  maskinverifisert; venter på at Morfar leverer `hurtigstart-uten-bilder.html`
-  for selve innholdssteget
+- **Siste fullførte P-nummer:** P54 (kode ferdig og maskinverifisert; PR
+  opprettet — se P54s egen status for detaljer)
+- **Pågående:** ingen
 - **Neste ledige P-nummer:** P55 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P54s prod-sjekk — illustrert hurtigstart-veiledning (maskinverifisert,
+    22 sjekker + visuell kontroll med skjermbilder desktop/mobil i isolert
+    harness); Morfars visuelle bekreftelse i ekte produksjon gjenstår, samme
+    mønster som P41–P53
   - P53s prod-sjekk — mobil sammendragslinje i AI-import (maskinverifisert,
     12 CSS-sjekker + 4 logikksjekker mot isolert harness); Morfars visuelle
     bekreftelse på ekte telefon i produksjon gjenstår, samme mønster som
@@ -1220,9 +1223,10 @@ redigering skjer.
 branch — oppgaveteksten foreslo ikke noe eget navn).
 **Scope:** KUN `v4/app.js`, `v4/style.css`, `v4/index.html` (nytt
 menypunkt-markup + cache-bust). Ingen DB-migrasjon, ingen edge functions.
-**Status:** DELVIS BYGGET 19. august 2026 — meny/rute/lukk-rørledning (steg
-A/B/D/E-rørledning) implementert og maskinverifisert. Steg C (ekte innhold)
-er BLOKKERT: venter fortsatt på at Morfar leverer `hurtigstart-uten-bilder.html`.
+**Status:** FULLFØRT OG MASKINVERIFISERT 19. august 2026 — alle steg A–E
+bygget (meny/rute/lukk-rørledning + ekte innhold med SVG-illustrasjoner fra
+`hurtigstart-uten-bilder.html`). Kun Morfars visuelle prod-sjekk gjenstår
+(begrunnet åpent, ingen preview-deploy i repoet, samme mønster som P41–P53).
 
 ### Mål
 
@@ -1264,13 +1268,12 @@ ingen innlogget bruker).
   brukt av adminpanelets faner, jf. CLAUDE.md «Settings-mønster») passer
   bedre til SVG-innhold — foreslås brukt her fremfor standardvarianten.
 
-### Åpent punkt — BLOKKERER innholdsarbeidet
+### Åpent punkt — LØST 19. august 2026
 
-`hurtigstart-uten-bilder.html` er ikke funnet i repoet (`find` gir
-treff kun på git-interne referanser til denne PLAN-seksjonen). Filen må
-limes inn / legges ved av Morfar før steg C (innhold) kan fullføres —
-resten av rørledningen (meny, route, layout) kan bygges og verifiseres
-med plassholder-innhold i mellomtiden om ønskelig.
+`hurtigstart-uten-bilder.html` ble limt inn av Morfar i oppfølgingsøkten.
+Innholdet er overført til `renderHurtigstartTab` (steg C) — se delplanen
+under for detaljer om hva som ble tatt rett fra kilden og hva som ble
+gjort dynamisk av hensyn til appens skolenøytrale arkitektur.
 
 ### Delplan
 
@@ -1305,41 +1308,61 @@ med plassholder-innhold i mellomtiden om ønskelig.
       `'hurtigstart'`) — påvirker ikke Profil-sidens oppførsel, kun
       utvider unntaket. Verifisert i maskinsjekken under.
 
-**C. Innhold — BLOKKERT, se «Åpent punkt» over (`app.js`):**
-- [ ] Brødtekst + inline SVG-er fra `hurtigstart-uten-bilder.html`
-      overføres til `renderHurtigstartTab`, delt inn i `.settings-card`-
-      seksjoner (én seksjon per kapittel i kilden — naturlig samsvar med
-      det etablerte kort-mønsteret). SVG-markup limes inn direkte
-      (inline, ingen eksterne filer/CDN-er) — via `el()`-hjelperen der
-      det er praktisk, ellers en trygg `innerHTML`-tildeling på en egen
-      wrapper for de mer komplekse illustrasjonene (kilden er Morfars
-      eget innhold, ikke brukerinnsendt — ingen XSS-vurdering nødvendig).
-- [ ] Ingen nye rammeverk/biblioteker. Ingen endring av eksisterende
-      `.settings-card`/`.settings-page`-stiler.
+**C. Innhold (`app.js`) — LEVERT OG BYGGET 19. august 2026:**
+- [x] Brødtekst + inline SVG-er fra `hurtigstart-uten-bilder.html`
+      overført til `renderHurtigstartTab`: intro-kort (badge + tittel +
+      ingress + kalender-SVG), fem nummererte steg-kort (hver med egen
+      SVG), to `.advarsel-tekst`-varsler (gjenbruker eksisterende
+      gul-boks-stil i stedet for en ny klasse), og ett rollekort med alle
+      fire rollene («Lærer», «Elev», «Admin», «Skoleåret») + callout-boks
+      SAMLET I ÉTT `.settings-card` (unngår boks-i-boks — samme lærdom
+      som CLAUDE.mds kjente Skoleår-fane-punkt). SVG-markup limes inn via
+      en liten `frag(html)`-hjelper (innerHTML på en frittstående
+      wrapper) — trygt siden alt innhold er Morfars eget forfattede
+      innhold, ikke bruker- eller databasedata.
+- [x] To bevisste tilpasninger til appens skolenøytrale arkitektur
+      (CLAUDE.md: «skolenøytral og åpen for flere skoler»), ellers
+      innholdet uendret fra kilden: (1) footerens skolenavn hentes fra
+      `APP.school?.name` i stedet for hardkodet «Øksnevad videregående
+      skole»; (2) «Skoleåret»-rollens ukespenn hentes fra
+      `APP.school?.school_year_start_week`/`school_year_end_week` i
+      stedet for hardkodet «33»/«24» (begge med samme fallback-verdier
+      som kilden hvis feltene mangler). Admin-kontakten
+      (geir.edland@skole.rogfk.no) og «Geir Edland»-nevnelsen i
+      Admin-rollen er beholdt uendret — reelt innhold for eneste skole i
+      drift i dag, ingen billig dynamisk erstatning tilgjengelig.
+- [x] Ingen nye rammeverk/biblioteker. Ingen endring av eksisterende
+      `.settings-card`/`.settings-page`-stiler — kun nye tilleggsklasser
+      (steg D).
 
-**D. Ev. minimal styling (`style.css`):**
-- [x] Ikke nødvendig ennå — `.settings-page--admin`/`.settings-card`
-      dekker rørledningen (plassholder-tekst). Vurderes på nytt når ekte
-      SVG-innhold (steg C) er på plass; ingen endring gjort i denne runden.
+**D. Minimal styling (`style.css`) — BYGGET:**
+- [x] Nye `.hs-*`-klasser (intro/badge/steg/pill/roller/callout/footer)
+      lagt til rett under settings-mønsteret (linje ~1249), ALLE bygget
+      på eksisterende temavariabler (`--primær`, `--bg-kort`, `--kant`,
+      `--tekst-svak` osv.) — ingen nye hardkodede farger, så innholdet
+      følger automatisk skolens fargetema (standard/lys/mørk). Egen
+      `@media (max-width: 560px)`-regel (samme brekkpunkt som kilden) for
+      å stable steg-illustrasjonen under teksten og rollegridet til én
+      kolonne på smal skjerm. Ingen endring av eksisterende stiler.
 
-**E. Cache-bust + verifisering (rørledning A/B/D):**
-- [x] Bump `app.js?v=20260819e` i `v4/index.html` (kun JS — ingen
-      CSS-endring i denne runden).
+**E. Cache-bust + verifisering — FULLFØRT:**
+- [x] Bump `app.js?v=20260819f` OG `style.css?v=20260819f` i
+      `v4/index.html` (begge endret i denne runden).
 - [x] Maskinverifisert (headless Chromium, stubbet Supabase — isolert
-      harness, samme mønster som P41–P53): 12 sjekker, alle OK, ingen
-      JS-feil. Dekker: hamburger + Hurtigstart-knapp synlig og med riktig
-      tekst for innlogget lærer; klikk navigerer til
-      `#/laerer/hurtigstart` og lukker dropdownen; fane-raden skjules på
-      siden; `.settings-page--admin` + overskrift rendres; «X» navigerer
-      til `#/laerer/klasse` (IKKE til seg selv — dekker fiksen i steg B)
-      og fane-raden vises igjen; direkte dyplenke til
-      `#/laerer/hurtigstart` fungerer; knappen er IKKE synlig i anonym
-      elevvisning (`#/klasse/1A` uten innlogging).
-- [ ] Steg C (ekte innhold fra `hurtigstart-uten-bilder.html`) gjenstår —
-      kilde ikke levert ennå. Denne runden dekker kun rørledningen.
+      harness, samme mønster som P41–P53): 22 sjekker, alle OK, ingen
+      JS-feil (kun en godartet 404 for en ressurs som bevisst ikke er
+      del av det isolerte test-harnesset). Dekker rørledningen fra forrige
+      runde (meny/rute/lukk, inkl. at «X» IKKE lukker til seg selv) PLUSS
+      innholdet: intro-kort, badge, SVG, ingress, fem steg-kort med riktig
+      tittel/nummerering/SVG hver, pill-elementer, to varselbokser med
+      mailto-lenke, fire rollekort, callout-boks, og de to dynamiske
+      verdiene (skolenavn og skoleår-uker hentet fra `APP.school`, IKKE
+      hardkodet «Øksnevad» i output når stub-skolen heter noe annet).
+      Visuell kontroll med skjermbilder på desktop (1100px) og mobil
+      (400px) — layout, temafarger og tekstbryting stemmer med
+      kort-mønsteret ellers i appen.
 - [ ] Morfars visuelle prod-sjekk (ingen preview-deploy i repoet, samme
-      begrunnelse som P41–P53): innhold/illustrasjoner ser riktige ut,
-      stemmer med kildefilen, og menyplasseringen føles naturlig. Kan
-      først gjøres etter steg C.
-- [x] PLAN.md-sjekkliste oppdatert i samme økt som denne delleveransen
-      (statuslinjen oppdateres når P54 er helt ferdig — se under).
+      begrunnelse som P41–P53): innhold/illustrasjoner ser riktige ut i
+      ekte nettleser, stemmer med kildefilen, og menyplasseringen føles
+      naturlig. BEGRUNNET ÅPENT ved merge — kan først gjøres i produksjon.
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.

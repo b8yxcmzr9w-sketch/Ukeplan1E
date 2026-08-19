@@ -1701,18 +1701,146 @@ async function renderInnstillingerTab(container) {
 // P54: illustrert hurtigstart-/kom i gang-veiledning for innloggede brukere
 // (lærer/kontaktlærer/admin). Samme «skjult fane»-mønster som Profil
 // (renderInnstillingerTab), men bruker den bredere admin-varianten av
-// settings-page siden innholdet skal ha SVG-illustrasjoner.
-// TODO (P54): innholdet under er en plassholder inntil Morfar leverer
-// hurtigstart-uten-bilder.html — erstattes med ekte brødtekst + inline SVG.
+// settings-page siden innholdet har SVG-illustrasjoner. Innhold og SVG-er
+// er fra hurtigstart-uten-bilder.html (Morfar) — tilpasset appens egne
+// temavariabler (--primær/--bg-kort/--kant osv.) i stedet for kildens
+// hardkodede farger, og med et par verdier (skolenavn, skolestart/-slutt)
+// hentet fra APP.school i stedet for skrevet inn statisk, siden appen er
+// skolenøytral. Selve SVG-illustrasjonene er uendret fra kilden.
 function renderHurtigstartTab(container) {
   const page = el('div', { class: 'settings-page settings-page--admin' })
   page.appendChild(lagSettingsLukk())
 
-  const kort = el('div', { class: 'settings-card' })
-  kort.appendChild(el('h3', {}, '❓ Hurtigstart'))
-  kort.appendChild(el('p', { class: 'tekst-svak' },
-    'Den illustrerte hurtigstart-veiledningen kommer her.'))
-  page.appendChild(kort)
+  // Rik tekst/SVG limes inn via innerHTML på en frittstående wrapper — trygt
+  // her siden alt innholdet er Morfars eget forfattede innhold, ikke data
+  // fra brukere eller databasen.
+  const frag = (html) => {
+    const w = document.createElement('div')
+    w.innerHTML = html.trim()
+    return w.firstElementChild
+  }
+
+  const svgHero = `<svg width="150" height="120" viewBox="0 0 150 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="15" y="18" width="120" height="90" rx="10" fill="#fff"/>
+    <rect x="15" y="18" width="120" height="22" rx="10" fill="#dcebe2"/>
+    <rect x="15" y="30" width="120" height="10" fill="#dcebe2"/>
+    <line x1="47" y1="40" x2="47" y2="108" stroke="#e2e8f0" stroke-width="2"/>
+    <line x1="79" y1="40" x2="79" y2="108" stroke="#e2e8f0" stroke-width="2"/>
+    <line x1="111" y1="40" x2="111" y2="108" stroke="#e2e8f0" stroke-width="2"/>
+    <line x1="15" y1="62" x2="135" y2="62" stroke="#e2e8f0" stroke-width="2"/>
+    <line x1="15" y1="85" x2="135" y2="85" stroke="#e2e8f0" stroke-width="2"/>
+    <rect x="20" y="45" width="22" height="12" rx="3" fill="#2f6b4f"/>
+    <rect x="52" y="45" width="22" height="12" rx="3" fill="#0d9488"/>
+    <rect x="84" y="68" width="22" height="12" rx="3" fill="#f59e0b"/>
+    <rect x="52" y="90" width="22" height="12" rx="3" fill="#2f6b4f"/>
+    <rect x="116" y="90" width="14" height="12" rx="3" fill="#0d9488"/>
+  </svg>`
+  const svgKlasse = `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="10" y="14" width="100" height="72" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="2"/>
+    <circle cx="60" cy="42" r="16" fill="#e3efe8"/>
+    <circle cx="60" cy="37" r="6" fill="#2f6b4f"/>
+    <path d="M49 52c0-6 5-9 11-9s11 3 11 9" fill="#2f6b4f"/>
+    <rect x="34" y="66" width="52" height="9" rx="4.5" fill="#0d9488"/>
+  </svg>`
+  const svgNyOkt = `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="14" y="12" width="92" height="76" rx="9" fill="#fff" stroke="#e2e8f0" stroke-width="2"/>
+    <rect x="26" y="24" width="52" height="8" rx="4" fill="#dcebe2"/>
+    <rect x="26" y="40" width="68" height="7" rx="3.5" fill="#eef2f6"/>
+    <rect x="26" y="53" width="68" height="7" rx="3.5" fill="#eef2f6"/>
+    <rect x="26" y="66" width="40" height="7" rx="3.5" fill="#eef2f6"/>
+    <circle cx="90" cy="76" r="18" fill="#0d9488"/>
+    <path d="M90 68v16M82 76h16" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+  </svg>`
+  const svgDokumenter = `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="16" y="26" width="52" height="60" rx="8" fill="#e3efe8" stroke="#2f6b4f" stroke-width="2"/>
+    <rect x="24" y="36" width="36" height="7" rx="3.5" fill="#2f6b4f"/>
+    <rect x="24" y="48" width="36" height="7" rx="3.5" fill="#9cc4ae"/>
+    <rect x="24" y="60" width="24" height="7" rx="3.5" fill="#9cc4ae"/>
+    <rect x="52" y="14" width="52" height="60" rx="8" fill="#fff" stroke="#0d9488" stroke-width="2"/>
+    <rect x="60" y="24" width="36" height="7" rx="3.5" fill="#0d9488"/>
+    <rect x="60" y="36" width="36" height="7" rx="3.5" fill="#8fd8cf"/>
+    <rect x="60" y="48" width="24" height="7" rx="3.5" fill="#8fd8cf"/>
+  </svg>`
+  const svgDel = `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="30" y="16" width="60" height="60" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="2"/>
+    <rect x="38" y="24" width="16" height="16" rx="3" fill="#1f2933"/>
+    <rect x="66" y="24" width="16" height="16" rx="3" fill="#1f2933"/>
+    <rect x="38" y="52" width="16" height="16" rx="3" fill="#1f2933"/>
+    <rect x="62" y="50" width="6" height="6" fill="#2f6b4f"/>
+    <rect x="72" y="50" width="6" height="6" fill="#2f6b4f"/>
+    <rect x="66" y="60" width="6" height="6" fill="#2f6b4f"/>
+    <rect x="76" y="60" width="6" height="6" fill="#2f6b4f"/>
+    <rect x="62" y="68" width="20" height="6" fill="#0d9488"/>
+  </svg>`
+
+  // Intro-kort
+  const introKort = el('div', { class: 'settings-card hs-intro' })
+  const introTxt = el('div', { class: 'hs-intro-txt' })
+  introTxt.appendChild(el('span', { class: 'hs-badge' }, 'HURTIGSTART'))
+  introTxt.appendChild(el('h3', {}, 'Ukeplan1E for kontakt- og faglærere'))
+  introTxt.appendChild(el('p', { class: 'tekst-svak' },
+    'Kom i gang på fem minutter – planlegg økter, del med elevene, og hold planen oppdatert.'))
+  introKort.appendChild(introTxt)
+  introKort.appendChild(frag(svgHero))
+  page.appendChild(introKort)
+
+  page.appendChild(el('p', { class: 'hs-lead' },
+    'Denne veiledningen gjelder deg som er innlogget lærer – både kontaktlærer for en klasse og faglærer i ett eller flere fag.'))
+
+  // Fem nummererte steg
+  const steg = [
+    { tittel: 'Logg inn og finn klassen din', svg: svgKlasse,
+      html: 'Logg inn og klikk <span class="hs-pill">Lærervisning</span> oppe til høyre. Du kommer inn i fanen <span class="hs-pill">Klasse</span> med ukeoversikten. Har du flere klasser, bytter du med velgeren ved siden av klassenavnet.' },
+    { tittel: 'Opprett en økt manuelt', svg: svgNyOkt,
+      html: 'Trykk <span class="hs-pill">+ Ny økt</span>. Velg klasse, uke, dag, lærer og fag, og fyll inn aktivitet, møtested og info. Skal økten være felles med en annen klasse, huker du av under «Felles med». Trykk <strong>Lagre</strong>.' },
+    { tittel: 'Lim inn en ferdig årsplan (AI)', svg: svgDokumenter,
+      html: 'Har du allerede en <strong>årsplan i et Word-dokument</strong>? Kopier teksten, trykk <span class="hs-pill">Lim inn med AI</span>, lim den inn og trykk <strong>Analyser med AI</strong>. Teksten tolkes til ferdige økter automatisk – så slipper du å skrive alt på nytt.' },
+    { tittel: 'Del planen med elevene', svg: svgDel,
+      html: 'Elevene trenger ikke å logge inn. Trykk <span class="hs-pill">Del elevlenke</span> og velg <strong>Elevlenke</strong> for QR-kode og lenke, <strong>Skriv ut</strong> for papir, eller <strong>iCal-abonnement</strong> så elevene får planen i sin egen kalender.' },
+    { tittel: 'Kopier, rediger og skriv ut', svg: svgDokumenter,
+      html: 'Gjentar undervisningen seg? Merk én eller flere økter og kopier dem til en annen uke. Klikk en økt for å redigere eller slette – endringer lagres fortløpende, og det andre lærere gjør dukker opp automatisk. Planen kan også skrives ut med eget utskriftshode.' },
+  ]
+  steg.forEach((s, i) => {
+    const kort = el('div', { class: 'settings-card hs-step' })
+    kort.appendChild(el('div', { class: 'hs-step-num' }, String(i + 1)))
+    const body = el('div', { class: 'hs-step-body' })
+    body.appendChild(el('h3', {}, s.tittel))
+    body.appendChild(frag(`<p>${s.html}</p>`))
+    kort.appendChild(body)
+    kort.appendChild(el('div', { class: 'hs-step-art' }, frag(s.svg)))
+    page.appendChild(kort)
+  })
+
+  // To varsler (samme visuelle språk som AI-importens gule varselboks)
+  const varselKort = el('div', { class: 'settings-card' })
+  varselKort.appendChild(frag('<div class="advarsel-tekst"><strong>Hvis noen andre har endret samme økt:</strong> Systemet passer på at endringer ikke overskrives ved et uhell. Får du beskjed om at økten er endret, laster du siden på nytt og gjør endringen din igjen.</div>'))
+  varselKort.appendChild(frag('<div class="advarsel-tekst" style="margin-bottom:0"><strong>Tidlig versjon:</strong> Ukeplan1E (uttales «ukeplanene») er fremdeles under utvikling og vil inneholde feil og mangler. Finner du noe som ikke stemmer, meld det til admin: <a href="mailto:geir.edland@skole.rogfk.no">geir.edland@skole.rogfk.no</a>.</div>'))
+  page.appendChild(varselKort)
+
+  // De tre rollene + skoleår, i ett kort (unngår boks-i-boks)
+  const rollerKort = el('div', { class: 'settings-card' })
+  rollerKort.appendChild(el('h3', {}, 'De tre rollene – kort forklart'))
+  const rollerGrid = el('div', { class: 'hs-roles' })
+  const schoolStart = APP.school?.school_year_start_week ?? 33
+  const schoolEnd = APP.school?.school_year_end_week ?? 24
+  const roller = [
+    { tittel: '👩‍🏫 Lærer (deg)', tekst: 'Planlegger og redigerer økter for klassen(e) dine, deler elevlenke og kalender. Kontaktlærer og faglærer bruker samme lærervisning.' },
+    { tittel: '🎒 Elev', tekst: 'Åpner elevlenken uten innlogging og ser klassens plan uke for uke. Kan abonnere via iCal, men endrer ingenting.' },
+    { tittel: '⚙️ Admin', tekst: 'Setter opp skoleinfo, skoleår, fag, klasser, brukere og skoleruta.' },
+    { tittel: '📅 Skoleåret', tekst: `Går fra uke ${schoolStart} til uke ${schoolEnd}. Ferier og fridager fra skoleruta vises i planen.` },
+  ]
+  for (const r of roller) {
+    const rolleEl = el('div', { class: 'hs-role' })
+    rolleEl.appendChild(el('h4', {}, r.tittel))
+    rolleEl.appendChild(el('p', {}, r.tekst))
+    rollerGrid.appendChild(rolleEl)
+  }
+  rollerKort.appendChild(rollerGrid)
+  rollerKort.appendChild(frag('<div class="hs-callout"><strong>Trenger du hjelp eller vil melde feil?</strong> Kontakt admin: <a href="mailto:geir.edland@skole.rogfk.no">geir.edland@skole.rogfk.no</a>.</div>'))
+  page.appendChild(rollerKort)
+
+  page.appendChild(el('p', { class: 'hs-footer' },
+    `Ukeplan1E · Hurtigstart for lærere · ${APP.school?.name || 'Øksnevad videregående skole'}`))
 
   container.appendChild(page)
 }
