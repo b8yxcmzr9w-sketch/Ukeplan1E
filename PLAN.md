@@ -1158,3 +1158,66 @@ var for stor.
 - [x] Cache-bust bumpet til `?v=20260819c` for både CSS og JS.
 - [ ] Morfars visuelle prod-sjekk: åpne «Ny økt» og bekreft at radene sitter
       tettere, uten at det blir trangt/vanskelig å lese.
+
+## Økt (P53): Mobil AI-import — sammendragslinje («Omgang 2»)
+
+**Branch:** `claude/P53-mobil-ai-import-sammendrag`.
+**Scope:** KUN `v4/app.js` + `v4/style.css` + cache-bust i `v4/index.html`.
+Ingen DB-endring, ingen edge-funksjon.
+
+**Bakgrunn:** P48–P50 løste kompakt/utvidet redigering av AI-importraden,
+men på telefon (≤900px, komponentens egen mobilgrense — se P50s kommentar
+i style.css) er de kompakte redigeringsfeltene (klasse/lærer/fag/parti/
+uke/dag/aktivitet/møtested) fortsatt for mange til å få plass uten
+vannrett trange felt. Løsning («Alternativ B», avklart med Morfar): vis en
+ren tekst-sammendragslinje i kompakt visning på mobil i stedet for
+redigerbare felt; trykk utvider til eksisterende P48/P49-visning der all
+redigering skjer.
+
+### Delplan
+- [ ] `byggRad` i `v4/app.js`: legg til `rad.mobilSammendrag` — et nytt DOM-
+      element med to tekstlinjer (`rad.mobilLinje1` = «Dag · Fag»,
+      `rad.mobilLinje2` = «Aktivitet · Møtested»), lagt til i `rad.el` som
+      egen celle. Manglende dag/fag → «–»; tomme aktivitet+møtested → «–».
+      Gjenbruker eksisterende `dagNavn()` og valgt fagnavn fra `rad.fagSel`.
+- [ ] Ny hjelpefunksjon `oppdaterMobilSammendrag(rad)` (eller inline i
+      `oppdaterRadStatus`) som setter tekstinnholdet på de to linjene ut fra
+      gjeldende feltverdier.
+- [ ] Kall `oppdaterMobilSammendrag` i to punkter:
+      1. Til slutt i `oppdaterRadStatus()` (dekker uke/dag/fag/klasse-endring
+         og initiell rendering — kjøres allerede ved feltendringer).
+      2. I `lukkUtvidet()` (dekker aktivitet/møtested-endringer som skjedde
+         mens raden var utvidet, siden disse feltene ikke trigger
+         `oppdaterRadStatus` live).
+- [ ] Rad-status-fargen (rød/gul via `.okt-import-rad--roed`/`--gul` på
+      `rad.el`) er allerede på rad-nivå og påvirkes ikke — sammendragslinja
+      arver bakgrunnsfargen uendret.
+- [ ] CSS i `v4/style.css`, scoped til samme `@media (max-width: 900px)`
+      som komponentens eksisterende mobilblokk (linje ~1023–1050 — dette ER
+      appens mobilbrekk for denne komponenten, jf. P50s kommentar):
+      - `.okt-import-mobil-sammendrag` er `display: none` som standard
+        (utenfor mediesporet), vises kun i mediesporet, KUN når raden IKKE
+        har `.okt-import-rad--utvidet`.
+      - I samme medie-scope: skjul de kompakte redigeringscellene (klasse/
+        lærer/fag/parti/uke/dag/aktivitet/møtested/merknad — merknad
+        forblir synlig under sammendraget) når raden IKKE er utvidet.
+      - `.okt-import-rad--utvidet` og dens undersnitt i samme mediesport
+        (linje 1036–1049) røres IKKE — utvidet visning på mobil er allerede
+        riktig og skal se ut som i dag.
+      - Desktop (`@media (min-width: 901px)`, P50) og
+        `.okt-import-rad--utvidet` generelt røres IKKE.
+- [ ] Klikk-vakten (`rad.el.addEventListener('click', ...)`) ignorerer i dag
+      `input, select, textarea, button, a` — sammendragslinja er ren tekst
+      (`div`/`span`), så den treffes automatisk av `apneUtvidet` uten
+      endring i selve klikk-vakten. Verifiseres i test.
+- [ ] Maskinverifisering: isolert CSS/DOM-harness (samme mønster som
+      P48–P52) som sjekker at sammendraget vises/skjules korrekt ved
+      resize, at kompaktfeltene er skjult under 900px, at utvidet visning
+      er uendret, og at innholdet oppdateres etter feltendring +
+      lukk-utvid-runde.
+- [ ] Cache-bust bumpes i `v4/index.html`.
+- [ ] STATUSLINJE i PLAN.md oppdateres; P48–P51 fjernes fra «åpne
+      sjekkpunkter» (Morfar har visuelt bekreftet dem i produksjon).
+- [ ] Morfars visuelle prod-sjekk på ekte telefon gjenstår (kan ikke
+      maskinverifiseres fullt ut — ekte AI-import krever Supabase-innlogging
+      + Gemini-kall, samme mønster som P41–P52).
