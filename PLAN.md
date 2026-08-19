@@ -2,10 +2,9 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P55 (PR #166 åpen, ikke merget ennå — venter
-  på Morfars uttrykkelige «merge»; fikset at myk-slettede brukere dukket
-  opp igjen i adminpanelets brukerliste og i «Overfør fremtidige økter
-  til …»-nedtrekket)
+- **Siste fullførte P-nummer:** P55 (PR #166 squash-merget til main
+  19. august 2026 — fikset at myk-slettede brukere dukket opp igjen i
+  adminpanelets brukerliste og i «Overfør fremtidige økter til …»-nedtrekket)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P56 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
@@ -1470,6 +1469,6 @@ gjort dynamisk av hensyn til appens skolenøytrale arkitektur.
          som valgbar mottaker i det nedtrekket.
 - [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.
 
-**Status:** Kode rettet og pushet. Kun Morfars manuelle produksjonstest
-gjenstår (kan ikke utføres fra denne økten — krever innlogget
-admin-sesjon).
+**Status:** PR #166 squash-merget til main 19. august 2026. Kun Morfars
+manuelle produksjonstest gjenstår (kan ikke utføres fra denne økten —
+krever innlogget admin-sesjon).
