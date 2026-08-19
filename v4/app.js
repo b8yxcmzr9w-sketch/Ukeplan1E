@@ -748,6 +748,7 @@ function oppdaterHeader() {
   const dropdown         = document.getElementById('hdr-dropdown')
   const ddNavn           = document.getElementById('hdr-dropdown-navn')
   const ddProfil         = document.getElementById('hdr-dd-profil')
+  const ddHurtigstart    = document.getElementById('hdr-dd-hurtigstart')
   const ddInnstillinger  = document.getElementById('hdr-dd-innstillinger')
   const ddLogout         = document.getElementById('hdr-dd-logout')
   const ddLogin          = document.getElementById('hdr-dd-login')
@@ -820,6 +821,10 @@ function oppdaterHeader() {
       ddProfil.classList.remove('skjult')
       ddProfil.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/laerer/innstillinger') }
     }
+    if (ddHurtigstart) {
+      ddHurtigstart.classList.remove('skjult')
+      ddHurtigstart.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/laerer/hurtigstart') }
+    }
     if (ddInnstillinger) {
       ddInnstillinger.classList.toggle('skjult', !visAdmin)
       ddInnstillinger.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/admin') }
@@ -834,6 +839,7 @@ function oppdaterHeader() {
     if (hamburger) { hamburger.classList.remove('skjult'); hamburger.title = 'Åpne meny' }
     if (ddNavn)          ddNavn.classList.add('skjult')
     if (ddProfil)        ddProfil.classList.add('skjult')
+    if (ddHurtigstart)   ddHurtigstart.classList.add('skjult')
     if (ddInnstillinger) ddInnstillinger.classList.add('skjult')
     if (ddLogout)        ddLogout.classList.add('skjult')
     if (ddLogin)  { ddLogin.classList.remove('skjult'); ddLogin.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/login') } }
@@ -1555,9 +1561,11 @@ async function renderLaererView() {
   const tabs = ['Min klasse', 'Alle mine økter', 'Søk']
   const tabSlugs = ['klasse', 'alle', 'sok']
   if (isKontakt) { tabs.push('Klasse-admin'); tabSlugs.push('klasse-admin') }
-  // «Profil» (innstillinger) ligger i hamburgeren, ikke som synlig fane. Slug-en
-  // beholdes så #/laerer/innstillinger fortsatt rendrer innholdet via setTab.
+  // «Profil» (innstillinger) og «Hurtigstart» ligger i hamburgeren, ikke som
+  // synlige faner. Slug-ene beholdes så #/laerer/innstillinger og
+  // #/laerer/hurtigstart fortsatt rendrer innholdet via setTab.
   tabs.push('Profil'); tabSlugs.push('innstillinger')
+  tabs.push('Hurtigstart'); tabSlugs.push('hurtigstart')
 
   const hashTab = location.hash.split('/')[2]
   const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
@@ -1570,10 +1578,11 @@ async function renderLaererView() {
     APP.laererCtx.tab = slug   // P21: husk fane for retur fra elevvisning
     history.replaceState(null, '', `#/laerer/${slug}`)
     tabBar.querySelectorAll('.fane').forEach((b, i) => b.classList.toggle('aktiv', i === idx))
-    // P23: Profil (innstillinger) bruker det sentrerte settings-mønsteret med egen
-    // «X»-lukk — skjul lærer-fane-raden her (de ekte fanene er uendret for sine egne
-    // visninger). Påvirker ikke admin-panelets separate fane-rad (egen funksjon).
-    tabBar.classList.toggle('skjult', slug === 'innstillinger')
+    // P23/P54: Profil (innstillinger) og Hurtigstart bruker det sentrerte
+    // settings-mønsteret med egen «X»-lukk — skjul lærer-fane-raden for begge
+    // (de ekte fanene er uendret for sine egne visninger). Påvirker ikke
+    // admin-panelets separate fane-rad (egen funksjon).
+    tabBar.classList.toggle('skjult', slug === 'innstillinger' || slug === 'hurtigstart')
     clearEl(tabContent)
     if (slug !== 'klasse') { APP.klasseVelger = null; oppdaterHeader() }
     if (slug === 'klasse') renderMinKlasseTab(tabContent, aktivKlasse)
@@ -1581,6 +1590,7 @@ async function renderLaererView() {
     else if (slug === 'sok') renderSokTab(tabContent)
     else if (slug === 'klasse-admin') renderKlasseAdminTab(tabContent)
     else if (slug === 'innstillinger') renderInnstillingerTab(tabContent)
+    else if (slug === 'hurtigstart') renderHurtigstartTab(tabContent)
   }
 
   // Fane 0 = klassevelger: native <select> med optgroup «Dine»/«Andre klasser».
@@ -1618,7 +1628,8 @@ async function renderLaererView() {
 
   tabs.forEach((t, i) => {
     if (i === 0) { tabBar.appendChild(velgerFane); return }
-    if (tabSlugs[i] === 'innstillinger') return  // vises via hamburger («Profil»)
+    // vises via hamburger («Profil» / «Hurtigstart»), ikke som synlig fane
+    if (tabSlugs[i] === 'innstillinger' || tabSlugs[i] === 'hurtigstart') return
     const btn = el('button', { class: 'fane', title: `Gå til ${t}`, onclick: () => setTab(i) }, t)
     tabBar.appendChild(btn)
   })
@@ -1683,6 +1694,25 @@ async function renderInnstillingerTab(container) {
   })
   epostKort.appendChild(epostForm)
   page.appendChild(epostKort)
+
+  container.appendChild(page)
+}
+
+// P54: illustrert hurtigstart-/kom i gang-veiledning for innloggede brukere
+// (lærer/kontaktlærer/admin). Samme «skjult fane»-mønster som Profil
+// (renderInnstillingerTab), men bruker den bredere admin-varianten av
+// settings-page siden innholdet skal ha SVG-illustrasjoner.
+// TODO (P54): innholdet under er en plassholder inntil Morfar leverer
+// hurtigstart-uten-bilder.html — erstattes med ekte brødtekst + inline SVG.
+function renderHurtigstartTab(container) {
+  const page = el('div', { class: 'settings-page settings-page--admin' })
+  page.appendChild(lagSettingsLukk())
+
+  const kort = el('div', { class: 'settings-card' })
+  kort.appendChild(el('h3', {}, '❓ Hurtigstart'))
+  kort.appendChild(el('p', { class: 'tekst-svak' },
+    'Den illustrerte hurtigstart-veiledningen kommer her.'))
+  page.appendChild(kort)
 
   container.appendChild(page)
 }
@@ -5874,7 +5904,8 @@ function lagSettingsLukk(klass = 'settings-close') {
     type: 'button', class: klass, 'aria-label': 'Lukk', title: 'Lukk',
     onclick: () => {
       const tab = APP.laererCtx?.tab
-      const mal = (tab && tab !== 'innstillinger') ? tab : 'klasse'
+      const frittstaaende = tab === 'innstillinger' || tab === 'hurtigstart'
+      const mal = (tab && !frittstaaende) ? tab : 'klasse'
       navigate(`#/laerer/${mal}`)
     },
   }, '✕')

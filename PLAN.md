@@ -3,7 +3,9 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Siste fullførte P-nummer:** P53
-- **Pågående:** P54 (Hurtigstart-veiledning) — plan skrevet, venter på Morfars «kjør»
+- **Pågående:** P54 (Hurtigstart-veiledning) — meny/rute-rørledning bygget og
+  maskinverifisert; venter på at Morfar leverer `hurtigstart-uten-bilder.html`
+  for selve innholdssteget
 - **Neste ledige P-nummer:** P55 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
@@ -1218,7 +1220,9 @@ redigering skjer.
 branch — oppgaveteksten foreslo ikke noe eget navn).
 **Scope:** KUN `v4/app.js`, `v4/style.css`, `v4/index.html` (nytt
 menypunkt-markup + cache-bust). Ingen DB-migrasjon, ingen edge functions.
-**Status:** PLAN SKREVET 19. august 2026 — venter på Morfars «kjør».
+**Status:** DELVIS BYGGET 19. august 2026 — meny/rute/lukk-rørledning (steg
+A/B/D/E-rørledning) implementert og maskinverifisert. Steg C (ekte innhold)
+er BLOKKERT: venter fortsatt på at Morfar leverer `hurtigstart-uten-bilder.html`.
 
 ### Mål
 
@@ -1276,25 +1280,30 @@ med plassholder-innhold i mellomtiden om ønskelig.
       class="hdr-dropdown-btn skjult">❓ Hurtigstart</button>` (tekst/emoji
       justeres ved behov — «❓ Hurtigstart» foreslått som forslag fra
       oppgaveteksten).
-- [ ] `oppdaterHeader()` (app.js): hent elementet, vis/skjul og koble
+- [x] `oppdaterHeader()` (app.js): hent elementet, vis/skjul og koble
       onclick i SAMME blokk som `ddProfil` (linje 819–822) — synlig for
       alle innloggede roller, skjult i utlogget-grenen (linje 828–840,
       sammen med `ddProfil`/`ddInnstillinger`). Klikk lukker dropdownen
       og navigerer til `#/laerer/hurtigstart`.
 
 **B. Ny «skjult fane»/route i lærervisningen (`app.js`):**
-- [ ] `renderLaererView`: legg til `tabs.push('Hurtigstart');
-      tabSlugs.push('hurtigstart')` etter `'innstillinger'`-linjen
-      (1560), med samme hopp-over i `tabs.forEach`-løkka (1619–1624) —
-      usynlig i den synlige fane-raden, nåbar via hash/hamburger.
-- [ ] `setTab` (1568–1584): ny gren `else if (slug === 'hurtigstart')
-      renderHurtigstartTab(tabContent)`; `.fane-bar`-skjuling (linje 1576)
-      utvides til å gjelde begge frittstående-sidene
+- [x] `renderLaererView`: `tabs.push('Hurtigstart');
+      tabSlugs.push('hurtigstart')` etter `'innstillinger'`-linjen, med
+      samme hopp-over i `tabs.forEach`-løkka — usynlig i den synlige
+      fane-raden, nåbar via hash/hamburger.
+- [x] `setTab`: ny gren `else if (slug === 'hurtigstart')
+      renderHurtigstartTab(tabContent)`; `.fane-bar`-skjuling utvidet til
+      å gjelde begge frittstående-sidene
       (`slug === 'innstillinger' || slug === 'hurtigstart'`).
-- [ ] Ny funksjon `renderHurtigstartTab(container)`: `.settings-page--admin`
-      (bredere, pga. illustrasjoner) + `lagSettingsLukk()` øverst — «X»
-      navigerer alltid tilbake til `#/laerer/<APP.laererCtx.tab ||
-      'klasse'>` (samme hjelper, ingen endring i den).
+- [x] Ny funksjon `renderHurtigstartTab(container)`: `.settings-page--admin`
+      (bredere, pga. illustrasjoner) + `lagSettingsLukk()` øverst.
+      FUNN UNDER BYGGING: `lagSettingsLukk()`s «X»-lukk hadde en
+      fallback-feil som kun unntok slugen `'innstillinger'` — uten fiks
+      ville «X» på Hurtigstart-siden navigert til `#/laerer/hurtigstart`
+      (seg selv, uendelig løkke) i stedet for tilbake til klasse-fanen.
+      Rettet til å unnta BEGGE frittstående slugene (`'innstillinger'` OG
+      `'hurtigstart'`) — påvirker ikke Profil-sidens oppførsel, kun
+      utvider unntaket. Verifisert i maskinsjekken under.
 
 **C. Innhold — BLOKKERT, se «Åpent punkt» over (`app.js`):**
 - [ ] Brødtekst + inline SVG-er fra `hurtigstart-uten-bilder.html`
@@ -1309,19 +1318,28 @@ med plassholder-innhold i mellomtiden om ønskelig.
       `.settings-card`/`.settings-page`-stiler.
 
 **D. Ev. minimal styling (`style.css`):**
-- [ ] Kun nye, tilleggsklasser for SVG-illustrasjonene om nødvendig
-      (f.eks. maks-bredde/sentrering i kortet) — ingen endring av
-      eksisterende settings-/kort-stiler.
+- [x] Ikke nødvendig ennå — `.settings-page--admin`/`.settings-card`
+      dekker rørledningen (plassholder-tekst). Vurderes på nytt når ekte
+      SVG-innhold (steg C) er på plass; ingen endring gjort i denne runden.
 
-**E. Cache-bust + verifisering:**
-- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (CSS + JS).
-- [ ] Maskinverifisering (headless Chromium, samme mønster som
-      P41–P53): menypunktet skjult når utlogget, synlig for
-      lærer/kontaktlærer/admin; klikk åpner `#/laerer/hurtigstart` med
-      innhold; «X» lukker tilbake til riktig fane (`APP.laererCtx.tab`);
-      fane-raden er skjult på siden; ikke tilgjengelig fra anonym
-      elevvisning (`#/klasse/:navn` uten innlogging).
+**E. Cache-bust + verifisering (rørledning A/B/D):**
+- [x] Bump `app.js?v=20260819e` i `v4/index.html` (kun JS — ingen
+      CSS-endring i denne runden).
+- [x] Maskinverifisert (headless Chromium, stubbet Supabase — isolert
+      harness, samme mønster som P41–P53): 12 sjekker, alle OK, ingen
+      JS-feil. Dekker: hamburger + Hurtigstart-knapp synlig og med riktig
+      tekst for innlogget lærer; klikk navigerer til
+      `#/laerer/hurtigstart` og lukker dropdownen; fane-raden skjules på
+      siden; `.settings-page--admin` + overskrift rendres; «X» navigerer
+      til `#/laerer/klasse` (IKKE til seg selv — dekker fiksen i steg B)
+      og fane-raden vises igjen; direkte dyplenke til
+      `#/laerer/hurtigstart` fungerer; knappen er IKKE synlig i anonym
+      elevvisning (`#/klasse/1A` uten innlogging).
+- [ ] Steg C (ekte innhold fra `hurtigstart-uten-bilder.html`) gjenstår —
+      kilde ikke levert ennå. Denne runden dekker kun rørledningen.
 - [ ] Morfars visuelle prod-sjekk (ingen preview-deploy i repoet, samme
       begrunnelse som P41–P53): innhold/illustrasjoner ser riktige ut,
-      stemmer med kildefilen, og menyplasseringen føles naturlig.
-- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som merge.
+      stemmer med kildefilen, og menyplasseringen føles naturlig. Kan
+      først gjøres etter steg C.
+- [x] PLAN.md-sjekkliste oppdatert i samme økt som denne delleveransen
+      (statuslinjen oppdateres når P54 er helt ferdig — se under).
