@@ -427,6 +427,10 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
 .skjema-rad--smal > .felt { flex: 0 0 auto; }
 .skjema-felt--akt { max-width: 140px; }
 .skjema-felt--opp { max-width: 190px; }
+/* P52: mindre linjeavstand i «Ny økt» – kun denne modalen (Rediger/Kopier
+   er uendret). Høyere spesifisitet enn «.skjema .felt» (style.css lenger
+   ned) sikrer at denne vinner uavhengig av kildekode-rekkefølge. */
+form.skjema--kompakt .felt { margin-bottom: 8px; }
 @media (max-width: 700px) {
   .skjema-rad { flex-direction: column; gap: 0; }
   .skjema-rad--smal > .felt { flex: 1 1 0; }

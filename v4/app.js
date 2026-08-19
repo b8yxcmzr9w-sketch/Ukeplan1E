@@ -2607,7 +2607,9 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   const { data: teachers } = await sb.from('users').select('*').eq('school_id', APP.school.id)
   const { data: subjects } = await sb.from('subjects').select('*').order('name')
 
-  const form = el('form', { class: 'skjema', onsubmit: async (e) => {
+  // P52: skjema--kompakt reduserer linjeavstanden mellom radene (kun denne
+  // modalen – Rediger/Kopier er uendret, jf. P50/P51).
+  const form = el('form', { class: 'skjema skjema--kompakt', onsubmit: async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
     const klassId = fd.get('class_id')
