@@ -823,7 +823,13 @@ function oppdaterHeader() {
     }
     if (ddHurtigstart) {
       ddHurtigstart.classList.remove('skjult')
-      ddHurtigstart.onclick = () => { dropdown?.classList.add('skjult'); navigate('#/laerer/hurtigstart') }
+      // Åpnes i ny fane (ikke navigate()) slik at brukeren kan ha veiledningen
+      // oppe ved siden av mens hen jobber i appen, i stedet for å forlate
+      // siden hen sto på.
+      ddHurtigstart.onclick = () => {
+        dropdown?.classList.add('skjult')
+        window.open(`${location.pathname}#/laerer/hurtigstart`, '_blank', 'noopener')
+      }
     }
     if (ddInnstillinger) {
       ddInnstillinger.classList.toggle('skjult', !visAdmin)

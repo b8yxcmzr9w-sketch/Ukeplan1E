@@ -1231,6 +1231,20 @@ bygget (meny/rute/lukk-rørledning + ekte innhold med SVG-illustrasjoner fra
 2026. Morfars visuelle prod-sjekk gjenstår (begrunnet åpent, ingen
 preview-deploy i repoet, samme mønster som P41–P53).
 
+**Tillegg (samme dag):** Morfar ønsket at Hurtigstart åpnes i ny fane i
+stedet for å navigere bort fra siden læreren sto på, slik at veiledningen
+kan holdes oppe ved siden av mens hen jobber. `oppdaterHeader()`s
+`ddHurtigstart.onclick` (app.js) endret fra `navigate('#/laerer/hurtigstart')`
+til `window.open(`${location.pathname}#/laerer/hurtigstart`, '_blank',
+'noopener')` — ny fane laster appen på nytt, gjenbruker den persisterte
+Supabase-sesjonen og ruter rett til hurtigstart-siden (samme mekanisme som
+dyplenke-testen fra hovedleveransen alt dekket). «X»-lukk i den nye fanen
+er uendret (går til klasse-fanen i DEN fanen, eller brukeren lukker fanen
+direkte). Branch `claude/p54-hurtigstart-ny-fane`, cache-bust
+`?v=20260819g`. Maskinverifisert: 6 sjekker (window.open kalt riktig med
+`_blank`/`noopener` og riktig URL, hovedfanen navigerer IKKE bort,
+dropdown lukkes), alle OK.
+
 ### Mål
 
 Et nytt menyvalg i header-hamburgeren (☰), synlig KUN for innloggede
