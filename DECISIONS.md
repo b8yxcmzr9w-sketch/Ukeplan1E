@@ -293,3 +293,18 @@ storage-policies — kjør `020_storage_policy_logos.sql` i SQL Editor.
   for at noe havner i feil lærers plan veide tyngre enn nytten. Siden P44
   fortsatt tillater bevisst lærervalg i importen, gjenstår et lite
   varselbehov — se P47 (stub, ikke bygget).
+
+## P53 — Mobil AI-import: sammendragslinje bruker komponentens EGEN
+mobilgrense, ikke det globale 700px-brekket (19.08.2026)
+
+- **Mobilbrekket for AI-importradens sammendragslinje er `@media
+  (max-width: 900px)`** — samme mediespor som allerede styrer
+  `.okt-import-rad` sin kompakt-/utvidet-stabling siden P44/P50 (se
+  kommentaren «Mobil (≤900px) er UTENFOR scope» i `style.css`). Dette er
+  BEVISST forskjellig fra det globale mobilbrekket (`@media (max-width:
+  700px)`, brukt f.eks. i header-hamburgeren fra P25). Komponenten har sin
+  egen etablerte mobilgrense fordi kompaktraden har mange smale felt som
+  trenger stableplass tidligere enn resten av appen. **Ikke** «rett opp»
+  denne forskjellen til 700px eller flytt sammendragslinja til et nytt
+  breakpoint uten en egen, eksplisitt beslutning — de to grensene styrer
+  bevisst ulike komponenter.
