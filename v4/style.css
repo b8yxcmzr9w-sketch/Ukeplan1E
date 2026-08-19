@@ -415,6 +415,21 @@ input.felt:focus, select.felt:focus, textarea.felt:focus {
   margin-bottom: 10px; display: flex; align-items: flex-start; gap: 7px;
 }
 
+/* P50: par-rader i skjema (f.eks. «Ny økt») – flere .felt på samme linje
+   i stedet for én per linje. Barna fyller linjen jevnt som standard. */
+.skjema-rad { display: flex; gap: 10px; }
+.skjema-rad > .felt { flex: 1 1 0; min-width: 0; }
+/* Smal-variant (Aktivitet/Møtested): feltene skal IKKE strekke seg til å
+   fylle linjen – bredden dimensjoneres etter tegngrensen (maxlength). */
+.skjema-rad--smal > .felt { flex: 0 0 auto; }
+.skjema-felt--akt { max-width: 140px; }
+.skjema-felt--opp { max-width: 190px; }
+@media (max-width: 700px) {
+  .skjema-rad { flex-direction: column; gap: 0; }
+  .skjema-rad--smal > .felt { flex: 1 1 0; }
+  .skjema-felt--akt, .skjema-felt--opp { max-width: none; }
+}
+
 /* ── Fane-bar ───────────────────────────────────────────────────── */
 .fane-bar {
   display: flex; gap: 2px; border-bottom: 2px solid var(--kant);
@@ -922,13 +937,35 @@ tr:hover td { background: var(--primær-svak); }
 /* Utvid-/lukk-knapp i egen liten celle (P48) – eneste åpne/lukke-kontroll */
 .okt-import-toggle-knapp { width: 100%; padding: 2px 4px !important; font-size: .82rem !important; line-height: 1; }
 
-/* P44: klassevis gruppering av forhåndsvisningen */
+/* P44/P50: Uke → Klasse → Lærer-gruppering av forhåndsvisningen. Overskriften
+   er tre faste kolonner («trappe») – et nivå tømmes for tekst når det er
+   likt gruppen rett over (se byggTrappeOverskrifter i app.js). */
 .okt-import-gruppe { margin-bottom: 10px; }
 .okt-import-gruppe-hode {
   font-size: .82rem; font-weight: 700; color: var(--tekst-svak);
   padding: 6px 0 2px; position: sticky; top: 0; background: var(--bg-kort);
+  display: flex; gap: 14px;
 }
+.okt-import-gruppe-uke    { flex: 0 0 64px; }
+.okt-import-gruppe-klasse { flex: 0 0 140px; }
+.okt-import-gruppe-laerer { flex: 1 1 auto; }
 .okt-import-gruppe--ugyldig .okt-import-gruppe-hode { color: var(--fare); }
+
+/* P50: kompaktraden på DESKTOP viser ikke lenger klasse/lærer/uke – de
+   fremgår av «trappe»-overskriften i stedet. Feltene beholdes i DOM og
+   vises fortsatt normalt i utvidet visning (se lenger ned – egen grid for
+   .okt-import-rad--utvidet er uendret og upåvirket av dette). Mobil
+   (≤900px) er UTENFOR scope – egen mediesport lenger ned er uendret. */
+@media (min-width: 901px) {
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--klasse,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--laerer,
+  .okt-import-rad:not(.okt-import-rad--utvidet) .okt-import-celle--uke {
+    display: none;
+  }
+  .okt-import-rad:not(.okt-import-rad--utvidet) {
+    grid-template-columns: 1.6fr 1.2fr 80px 1fr 1fr 1fr 1.4fr 32px 36px;
+  }
+}
 
 /* ── Utvidet rad (P48/P49): to etasjer i samme rad-blokk ──
    Linje 1: kompaktfeltene (klasse/lærer/fag/parti/uke/dag) PLUSS

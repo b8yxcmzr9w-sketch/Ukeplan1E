@@ -2591,10 +2591,12 @@ function visElevLenkeModal(klasse) {
 }
 
 // P49: aktivitet/møtested skal alltid være få ord – detaljer hører hjemme i
-// info (uten grense). Håndheves som maxlength på alle stedene feltene fylles
-// ut (ny økt, rediger, kopi, AI-import); ingen DB-endring.
+// info. Håndheves som maxlength på alle stedene feltene fylles ut (ny økt,
+// rediger, kopi, AI-import); ingen DB-endring.
 const AKTIVITET_MAKS_LENGDE = 30
 const MOTESTED_MAKS_LENGDE = 40
+// P50: info får en romslig, men ikke ubegrenset, grense – samme mønster.
+const INFO_MAKS_LENGDE = 300
 
 async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   const modal = el('div', { class: 'modal-bg' })
@@ -2719,11 +2721,11 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   const fagSel = el('select', { name: 'subject_id', class: 'felt select', required: 'true', onchange: async (e) => {
     await oppdaterDivisionCheckboxes(e.target.value, klasseSel.value)
   }})
-  form.appendChild(lagFormRad('Fag', fagSel))
 
   // Division – checkboxes (partier for valgt klasse + grupper for skolen)
   const divContainer = el('div', { class: 'div-checkboxes' })
-  form.appendChild(lagFormRad('Parti/gruppe', divContainer))
+  // P50: Fag/Parti-gruppe legges til lenger ned, sammen med resten av
+  // kompaktradene (rad B) – kun elementene opprettes her.
 
   async function oppdaterFagSel(classId) {
     clearEl(fagSel)
@@ -2757,12 +2759,10 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
   // Week
   const weekInput = el('input', { name: 'week_nr', type: 'number', class: 'felt input',
     value: defaultWeek, min: 1, max: 53, required: 'true' })
-  form.appendChild(lagFormRad('Uke', weekInput))
 
   // Day
   const dagSel = el('select', { name: 'day_of_week', class: 'felt select' })
   for (let i = 1; i <= 5; i++) dagSel.appendChild(el('option', { value: i }, dagNavn(i)))
-  form.appendChild(lagFormRad('Dag', dagSel))
 
   // Teacher
   const laererSel = el('select', { name: 'teacher_id', class: 'felt select' })
@@ -2771,11 +2771,18 @@ async function visNyOktModal(defaultKlasse, defaultWeek, onSave, skoleAar) {
     if (t.id === APP.profile.id) opt.setAttribute('selected', 'true')
     laererSel.appendChild(opt)
   }
-  form.appendChild(lagFormRad('Lærer', laererSel))
 
-  form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input', maxlength: AKTIVITET_MAKS_LENGDE })))
-  form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input', maxlength: MOTESTED_MAKS_LENGDE })))
-  form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' })))
+  // P50: kompakt layout – Uke/Dag/Lærer og Fag/Parti-gruppe parvis på egne
+  // linjer, Aktivitet/Møtested smalere (dimensjonert etter tegngrensen) i
+  // stedet for full bredde, Info sist i full bredde.
+  form.appendChild(el('div', { class: 'skjema-rad' },
+    lagFormRad('Uke', weekInput), lagFormRad('Dag', dagSel), lagFormRad('Lærer', laererSel)))
+  form.appendChild(el('div', { class: 'skjema-rad' },
+    lagFormRad('Fag', fagSel), lagFormRad('Parti/gruppe', divContainer)))
+  form.appendChild(el('div', { class: 'skjema-rad skjema-rad--smal' },
+    lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input skjema-felt--akt', maxlength: AKTIVITET_MAKS_LENGDE })),
+    lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input skjema-felt--opp', maxlength: MOTESTED_MAKS_LENGDE }))))
+  form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea', maxlength: INFO_MAKS_LENGDE })))
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
@@ -2893,7 +2900,7 @@ async function visRedigerOktModal(session, onSave) {
   const mpInput = el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '', maxlength: MOTESTED_MAKS_LENGDE })
   form.appendChild(lagFormRad('Møtested', mpInput))
 
-  const infoTA = el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')
+  const infoTA = el('textarea', { name: 'info', class: 'felt textarea', maxlength: INFO_MAKS_LENGDE }, session.info || '')
   form.appendChild(lagFormRad('Info', infoTA))
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
@@ -3023,7 +3030,7 @@ async function visKopierOktModal(session, onSave) {
 
   form.appendChild(lagFormRad('Aktivitet', el('input', { name: 'activity', type: 'text', class: 'felt input', value: session.activity || '', maxlength: AKTIVITET_MAKS_LENGDE })))
   form.appendChild(lagFormRad('Møtested', el('input', { name: 'meeting_point', type: 'text', class: 'felt input', value: session.meeting_point || '', maxlength: MOTESTED_MAKS_LENGDE })))
-  form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea' }, session.info || '')))
+  form.appendChild(lagFormRad('Info', el('textarea', { name: 'info', class: 'felt textarea', maxlength: INFO_MAKS_LENGDE }, session.info || '')))
 
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Lagre kopi'); form.appendChild(lagreKnapp); overvakSkjema(form, lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
@@ -3095,7 +3102,7 @@ async function visBulkEditModal(ids, onSave) {
   const dagSel = el('select', { class: 'felt select' })
   dagSel.appendChild(el('option', { value: '' }, '(uendret)'))
   for (let i = 1; i <= 5; i++) dagSel.appendChild(el('option', { value: i }, dagNavn(i)))
-  const infoInput = el('textarea', { class: 'felt textarea', placeholder: 'Ny info (blank = uendret)' })
+  const infoInput = el('textarea', { class: 'felt textarea', placeholder: 'Ny info (blank = uendret)', maxlength: INFO_MAKS_LENGDE })
 
   box.appendChild(lagFormRad('Uke', weekInput))
   box.appendChild(lagFormRad('Dag', dagSel))
@@ -3339,11 +3346,15 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
 
   function lukkUtvidet() {
     if (!utvidetRad) return
-    utvidetRad.el.classList.remove('okt-import-rad--utvidet')
-    utvidetRad.toggleKnapp.textContent = '⌄'
-    utvidetRad.toggleKnapp.title = 'Utvid raden'
-    for (const ta of [utvidetRad.aktivitetFelt, utvidetRad.oppmoteFelt, utvidetRad.infoFelt]) ta.style.height = ''
+    const rad = utvidetRad
+    rad.el.classList.remove('okt-import-rad--utvidet')
+    rad.toggleKnapp.textContent = '⌄'
+    rad.toggleKnapp.title = 'Utvid raden'
+    for (const ta of [rad.aktivitetFelt, rad.oppmoteFelt, rad.infoFelt]) ta.style.height = ''
     utvidetRad = null
+    // P50: uke/klasse/lærer kan være endret mens raden var utvidet – regruppér
+    // først NÅ (ikke live under redigering) siden gruppering er tre nivåer.
+    if (!rad.fjernet) plasserRad(rad)
   }
 
   function apneUtvidet(rad) {
@@ -3469,7 +3480,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     // tekstområde – høyden settes i JS ut fra innhold, kun mens raden er utvidet).
     rad.aktivitetFelt  = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'aktivitet', rows: 1, maxlength: AKTIVITET_MAKS_LENGDE })
     rad.oppmoteFelt    = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'møtested', rows: 1, maxlength: MOTESTED_MAKS_LENGDE })
-    rad.infoFelt       = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'info', rows: 1 })
+    rad.infoFelt       = el('textarea', { class: 'felt textarea okt-import-felt okt-import-felt--tekst', placeholder: 'info', rows: 1, maxlength: INFO_MAKS_LENGDE })
     for (const ta of [rad.aktivitetFelt, rad.oppmoteFelt, rad.infoFelt]) {
       ta.addEventListener('input', () => {
         if (rad.el.classList.contains('okt-import-rad--utvidet')) autosizeTekstfelt(ta)
@@ -3510,12 +3521,14 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
       oppdaterRadStatus()
     })
 
-    // Klassebytte → raden er overstyrt av læreren: rødflagget faller bort,
-    // parti/gruppe bygges for den nye klassen, og raden flyttes til sin gruppe.
+    // Klassebytte → raden er overstyrt av læreren: rødflagget faller bort og
+    // parti/gruppe bygges for den nye klassen med det samme. Selve
+    // flyttingen til riktig (uke/klasse/lærer-)gruppe utsettes til raden
+    // lukkes (P50) – å hoppe rad mens man redigerer i utvidet visning er
+    // forvirrende, spesielt nå som gruppering er tre nivåer.
     rad.klasseSel.addEventListener('change', () => {
       rad.ukjentNavn = ''
       byggDivPaaNytt()
-      plasserRad(rad)
       oppdaterRadStatus()
       oppdaterUkjentKlasseVarsel()
     })
@@ -3570,6 +3583,7 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
         if (utvidetRad === rad) utvidetRad = null
         rad.el.remove()
         ryddTommeGrupper()
+        byggTrappeOverskrifter()
         oppdaterUkjentKlasseVarsel()
       } }, '🗑️')
 
@@ -3664,43 +3678,80 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
 
   const rader = []
 
-  // ─── Klassevis gruppering av forhåndsvisningen ───
-  // Én gruppe per klasse (sortert på klassenavn), og rader uten gyldig klasse
-  // samlet nederst. Radene flyttes mellom gruppene når klassen endres.
+  // ─── Uke → Klasse → Lærer-gruppering av forhåndsvisningen (P50) ───
+  // Én bladgruppe per (uke, klasse, lærer)-kombinasjon, sortert i den
+  // rekkefølgen. Overskriften er tre faste kolonner (uke/klasse/lærer) der
+  // et nivå tømmes for tekst når det er likt gruppen rett over («trappe») —
+  // klasse kan kun tømmes når uke OGSÅ var lik, lærer vises alltid. Radene
+  // flyttes mellom bladgrupper KUN når en utvidet rad lukkes (se
+  // `lukkUtvidet`), ikke live mens uke/klasse/lærer redigeres.
   const grupper = new Map()
 
-  function gruppeNavn(key) {
-    if (!key) return 'Uten gyldig klasse – importeres ikke'
-    return mineKlasser.find(k => k.id === key)?.name || 'Klasse'
+  function klasseVisning(klasseId) {
+    if (!klasseId) return 'Uten gyldig klasse – importeres ikke'
+    return mineKlasser.find(k => k.id === klasseId)?.name || 'Klasse'
+  }
+  function laererVisning(laererId) {
+    return teachers.find(t => t.id === laererId)?.full_name || '—'
   }
 
-  function hentGruppe(key) {
-    let g = grupper.get(key)
-    if (!g) {
+  function gruppeNokkel(rad) {
+    const uke = parseInt(rad.ukeFelt.value) || null
+    const klasseId = rad.klasseSel.value || ''
+    const laererId = rad.laererSel.value || ''
+    return { uke, klasseId, laererId, key: `${uke ?? ''} ${klasseId} ${laererId}` }
+  }
+
+  function hentGruppe(g) {
+    let grp = grupper.get(g.key)
+    if (!grp) {
       const body = el('div', { class: 'okt-import-gruppe-rader' })
-      const wrap = el('div', { class: `okt-import-gruppe${key ? '' : ' okt-import-gruppe--ugyldig'}` },
-        el('div', { class: 'okt-import-gruppe-hode' }, gruppeNavn(key)),
+      const ukeSpan = el('span', { class: 'okt-import-gruppe-uke' })
+      const klasseSpan = el('span', { class: 'okt-import-gruppe-klasse' })
+      const laererSpan = el('span', { class: 'okt-import-gruppe-laerer' })
+      const wrap = el('div', { class: `okt-import-gruppe${g.klasseId ? '' : ' okt-import-gruppe--ugyldig'}` },
+        el('div', { class: 'okt-import-gruppe-hode' }, ukeSpan, klasseSpan, laererSpan),
         body)
-      g = { key, wrap, body }
-      grupper.set(key, g)
+      grp = { ...g, wrap, body, ukeSpan, klasseSpan, laererSpan }
+      grupper.set(g.key, grp)
       liste.appendChild(wrap)
-      sorterGrupper()
     }
-    return g
+    return grp
   }
 
-  function sorterGrupper() {
-    const sortert = [...grupper.values()].sort((a, b) => {
-      if (!a.key) return 1
-      if (!b.key) return -1
-      return gruppeNavn(a.key).localeCompare(gruppeNavn(b.key), 'no')
+  function sortertGruppeListe() {
+    return [...grupper.values()].sort((a, b) => {
+      const ua = a.uke ?? Infinity, ub = b.uke ?? Infinity
+      if (ua !== ub) return ua - ub
+      const ka = a.klasseId, kb = b.klasseId
+      if (!ka && kb) return 1
+      if (ka && !kb) return -1
+      if (ka !== kb) return klasseVisning(ka).localeCompare(klasseVisning(kb), 'no')
+      return laererVisning(a.laererId).localeCompare(laererVisning(b.laererId), 'no')
     })
+  }
+
+  // Rekkefølge + «trappe»-overskrifter bygges på nytt etter enhver
+  // strukturendring (ny/flyttet/fjernet rad, tom gruppe ryddet).
+  function byggTrappeOverskrifter() {
+    const sortert = sortertGruppeListe()
     for (const g of sortert) liste.appendChild(g.wrap)
+    let forrigeUke, forrigeKlasse
+    for (const g of sortert) {
+      const sammeUke = forrigeUke !== undefined && g.uke === forrigeUke
+      const sammeKlasse = sammeUke && forrigeKlasse === g.klasseId
+      g.ukeSpan.textContent = sammeUke ? '' : (g.uke != null ? `Uke ${g.uke}` : '—')
+      g.klasseSpan.textContent = sammeKlasse ? '' : klasseVisning(g.klasseId)
+      g.laererSpan.textContent = laererVisning(g.laererId)
+      forrigeUke = g.uke
+      forrigeKlasse = g.klasseId
+    }
   }
 
   function plasserRad(rad) {
-    hentGruppe(rad.klasseSel.value || '').body.appendChild(rad.el)
+    hentGruppe(gruppeNokkel(rad)).body.appendChild(rad.el)
     ryddTommeGrupper()
+    byggTrappeOverskrifter()
   }
 
   function ryddTommeGrupper() {
@@ -3709,16 +3760,13 @@ async function visAIPasteModal(defaultKlasse, onSave, skoleAar) {
     }
   }
 
-  // Sorterer radene innen hver gruppe på uke og dag (kjøres etter analysen,
-  // ikke ved hver endring — da ville rader hoppe mens læreren retter).
+  // Sorterer radene innen hver bladgruppe på dag (uke/klasse/lærer er per
+  // definisjon like innad i en bladgruppe). Kjøres etter analysen, ikke ved
+  // hver endring — da ville rader hoppe mens læreren retter.
   function sorterRaderIGrupper() {
     for (const g of grupper.values()) {
-      const barn = [...g.body.children].sort((a, b) => {
-        const ua = parseInt(a._rad?.ukeFelt.value) || 99
-        const ub = parseInt(b._rad?.ukeFelt.value) || 99
-        if (ua !== ub) return ua - ub
-        return (parseInt(a._rad?.dagSel.value) || 9) - (parseInt(b._rad?.dagSel.value) || 9)
-      })
+      const barn = [...g.body.children].sort((a, b) =>
+        (parseInt(a._rad?.dagSel.value) || 9) - (parseInt(b._rad?.dagSel.value) || 9))
       for (const b of barn) g.body.appendChild(b)
     }
   }
