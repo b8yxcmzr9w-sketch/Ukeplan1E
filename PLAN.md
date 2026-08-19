@@ -2,13 +2,20 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P54 (PR #163, #164 og #165 squash-merget til
-  main 19. august 2026 — grunnleggende veiledning, åpnes i ny fane, og nye
-  brukere sendes dit automatisk etter invitasjon)
+- **Siste fullførte P-nummer:** P55 (PR ikke merget ennå — kode pushet til
+  `claude/P55-slettede-brukere-vises-i-adminliste`, venter på Morfars
+  «merge»; fikset at myk-slettede brukere dukket opp igjen i adminpanelets
+  brukerliste og i «Overfør fremtidige økter til …»-nedtrekket)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P55 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Neste ledige P-nummer:** P56 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
+    overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
+    testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
+    tilgjengelig fra denne økten): opprett testbruker → slett → bekreft
+    hun forsvinner ved refresh → bekreft hun ikke dukker opp i
+    «Overfør til»-nedtrekket ved neste sletting
   - P54s prod-sjekk — illustrert hurtigstart-veiledning, åpnes i ny fane,
     og nye brukere sendes dit automatisk etter invitasjon (alle tre deler
     maskinverifisert i isolerte harnesser); Morfars visuelle bekreftelse i
