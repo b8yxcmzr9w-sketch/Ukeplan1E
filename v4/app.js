@@ -1221,7 +1221,8 @@ async function renderElevView(klasseNavn) {
         const v = parseInt(e.target.value)
         const p = ukePosisjon(v, schoolStart)
         if (p >= 0 && p <= ukePosisjon(schoolEnd, schoolStart)) { currentWeek = v; renderUke(currentWeek) }
-      }
+      },
+      onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur() } }
     })
 
     const nextBtn = el('button', { class: 'btn btn-s', title: 'Gå til neste uke', onclick: () => {
@@ -1982,7 +1983,8 @@ async function renderMinKlasseTab(container, klasse) {
       onchange: (e) => {
         const v = parseInt(e.target.value)
         if (v >= schoolStart && v <= schoolEnd) { currentWeek = v; renderUke() }
-      }
+      },
+      onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur() } }
     })
 
     const naaWeek = gjeldendeSkoleuke(schoolStart, schoolEnd, valgtSkolear)
