@@ -2,9 +2,8 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P54 (kode ferdig og maskinverifisert; PR #163
-  opprettet mot main, venter på Morfars eksplisitte «merge» siden appen er
-  live etter 1. august 2026 — se P54s egen status for detaljer)
+- **Siste fullførte P-nummer:** P54 (PR #163 squash-merget til main
+  19. august 2026, commit `f2c6898`)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P55 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
@@ -1221,15 +1220,15 @@ redigering skjer.
 ## Økt (P54): Hurtigstart-veiledning for lærere
 
 **Branch:** `claude/laerer-hurtigstart-guide-bb1rm1` (miljøets tildelte
-branch — oppgaveteksten foreslo ikke noe eget navn). **PR #163** opprettet
-mot `main` — VENTER PÅ MORFARS EKSPLISITTE «merge» (etter 1. august 2026 er
-appen live, så avslutningsprosedyren stopper ved «PR klar», jf. PROSEDYRER.md).
+branch — oppgaveteksten foreslo ikke noe eget navn). **PR #163 squash-merget
+til main 19. august 2026, commit `f2c6898`** (Morfars eksplisitte «merge»
+mottatt).
 **Scope:** KUN `v4/app.js`, `v4/style.css`, `v4/index.html` (nytt
 menypunkt-markup + cache-bust). Ingen DB-migrasjon, ingen edge functions.
 **Status:** FULLFØRT OG MASKINVERIFISERT 19. august 2026 — alle steg A–E
 bygget (meny/rute/lukk-rørledning + ekte innhold med SVG-illustrasjoner fra
-`hurtigstart-uten-bilder.html`). PR #163 klar til review. Morfars visuelle
-prod-sjekk gjenstår (mulig først etter merge, begrunnet åpent, ingen
+`hurtigstart-uten-bilder.html`). PR #163 squash-merget til main 19. august
+2026. Morfars visuelle prod-sjekk gjenstår (begrunnet åpent, ingen
 preview-deploy i repoet, samme mønster som P41–P53).
 
 ### Mål
