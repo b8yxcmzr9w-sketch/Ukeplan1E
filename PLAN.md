@@ -2,10 +2,10 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P55 (PR ikke merget ennå — kode pushet til
-  `claude/P55-slettede-brukere-vises-i-adminliste`, venter på Morfars
-  «merge»; fikset at myk-slettede brukere dukket opp igjen i adminpanelets
-  brukerliste og i «Overfør fremtidige økter til …»-nedtrekket)
+- **Siste fullførte P-nummer:** P55 (PR #166 åpen, ikke merget ennå — venter
+  på Morfars uttrykkelige «merge»; fikset at myk-slettede brukere dukket
+  opp igjen i adminpanelets brukerliste og i «Overfør fremtidige økter
+  til …»-nedtrekket)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P56 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
