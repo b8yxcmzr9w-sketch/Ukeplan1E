@@ -40,6 +40,10 @@ som sist redigerte den.
 
 ## Lærerens arbeidsflyt
 
+- Lærer uten konto kan be om tilgang direkte fra innloggingssiden (uinnlogget
+  skjema: navn, skole-e-post, ønsket rolle, fag/parti/gruppe som informasjon,
+  fritekst til admin). Skolens admin(er) varsles på e-post; kontoen opprettes
+  fortsatt manuelt av admin etter godkjenning (P57).
 - Ukeoversikt for egen klasse («Min klasse»). Lærere med flere klasser bytter
   klasse med en velger i headeren.
 - Oppretter, redigerer, kopierer og sletter økter. Kan kopiere én eller flere
@@ -56,6 +60,9 @@ som sist redigerte den.
 - Skoleruten kan limes inn som tekst og tolkes av AI. Kun admin kan
   redigere skoleruten.
 - Oppretter brukere (lærere/kontaktlærere).
+- Ser ventende tilgangsforespørsler fra uinnloggede lærere og kan
+  godkjenne/avvise dem. Dette endrer kun status — admin oppretter selve
+  kontoen manuelt som før, etter å ha lest forespørselen (P57).
 - Kan eksportere et helt skoleår som JSON, CSV eller PDF.
 
 ## Hvordan dataene henger sammen

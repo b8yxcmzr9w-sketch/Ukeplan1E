@@ -872,6 +872,14 @@ tr:hover td { background: var(--primær-svak); }
 .input-sm { width: 180px !important; }
 .div-checkboxes { display: flex; flex-direction: column; gap: 6px; min-height: 1.2rem; }
 .div-check-lbl { display: flex; align-items: center; gap: 6px; font-size: .9rem; cursor: pointer; }
+
+/* P57: scrollbar fag/parti-liste i «Be om tilgang»-modalen */
+.tilgang-liste {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 180px; overflow-y: auto;
+  border: 1px solid var(--kant); border-radius: var(--radius);
+  padding: 8px 10px; background: var(--bg-kort);
+}
 .admin-fag-blokk { margin-bottom: 6px; }
 .admin-grupper-rad { padding: 8px 0 4px 18px; border-left: 3px solid var(--kant); margin-left: 6px; margin-top: 4px; }
 

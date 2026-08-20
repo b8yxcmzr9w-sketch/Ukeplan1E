@@ -5,9 +5,12 @@
 - **Siste fullførte P-nummer:** P56 (PR #167 squash-merget til main
   19. august 2026 — uke-navigatorens Enter-tast fikset i begge uke-feltene,
   elev- og lærervisning)
-- **Pågående:** ingen
-- **Neste ledige P-nummer:** P57 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
-- **Dato sist oppdatert:** 19. august 2026
+- **Pågående:** P57 — uinnlogget tilgangsforespørsel ved innlogging. Kode
+  ferdig og maskinverifisert (22 sjekker OK), PR klar. Tjenesten regnes som
+  LIVE (etter 1. august 2026, jf. PROSEDYRER.md) — merge til `main` venter
+  på Morfars uttrykkelige «merge», gjøres ikke automatisk.
+- **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P56s prod-sjekk — Enter-tast i ukenavigatoren (maskinlogikk verifisert:
     `blur()` trigger eksisterende `onchange`-navigasjon, grensesjekk
@@ -1580,7 +1583,7 @@ utover én ny hjelpefunksjon; ingen endring av `create-user`/`admin-user`.
 
 **A. DB-migrasjon `023_tilgangsforesporsler.sql` — ⚠️ MANUELT STEG (Morfar
 kjører i Supabase SQL Editor):**
-- [ ] Ny tabell `access_requests`: `id uuid pk default gen_random_uuid()`,
+- [x] Ny tabell `access_requests`: `id uuid pk default gen_random_uuid()`,
       `school_id uuid references schools(id)`, `full_name text not null`,
       `email text not null`, `requested_role text not null check
       (requested_role in ('laerer','kontaktlaerer'))`,
@@ -1590,18 +1593,18 @@ kjører i Supabase SQL Editor):**
       in ('venter','godkjent','avvist'))`, `created_at timestamptz not null
       default now()`, `decided_at timestamptz`, `decided_by uuid references
       users(id)`.
-- [ ] `CHECK`-constraint på e-post-domenet direkte i tabellen:
+- [x] `CHECK`-constraint på e-post-domenet direkte i tabellen:
       `email ~* '@skole\.rogfk\.no$'` — databasen håndhever domenet uansett
       hva som kaller INSERT (dobbel sikring sammen med edge function-sjekken
       i del B).
-- [ ] RLS aktivert. INGEN insert-policy for anon/authenticated — innsending
+- [x] RLS aktivert. INGEN insert-policy for anon/authenticated — innsending
       går KUN via edge function med service-role-nøkkel (del B), akkurat som
       `create-user`/`admin-user` i dag. Select/update kun for admin ved egen
       skole: `access_requests_admin_all` — `using (school_id =
       auth_school_id() and (is_active_admin() or role... )` — konkret:
       `is_active_admin()` (dekker begge admin-varianter siden `is_admin`
       styrer `is_admin_active`-toggelen).
-- [ ] Ny SECURITY DEFINER-funksjon `public_admin_fornavn()` (samme fil):
+- [x] Ny SECURITY DEFINER-funksjon `public_admin_fornavn()` (samme fil):
       returnerer `text[]` med fornavn (`split_part(full_name, ' ', 1)`) for
       alle `is_admin = true OR role = 'admin'`-brukere uten `deleted_at`,
       sortert. `grant execute … to anon, authenticated`. Eneste uinnloggede
@@ -1609,17 +1612,17 @@ kjører i Supabase SQL Editor):**
 
 **B. Ny edge function `request-access` (uinnlogget, manuell deploy i
 Supabase Dashboard):**
-- [ ] CORS + OPTIONS-handler som de andre funksjonene. Ingen
+- [x] CORS + OPTIONS-handler som de andre funksjonene. Ingen
       Authorization-sjekk (uinnlogget per design) — bruker service-role-
       klient direkte for både lesing (finne skolen) og innsetting.
-- [ ] Validerer server-side (autoritativ, kan ikke stoles på klienten):
+- [x] Validerer server-side (autoritativ, kan ikke stoles på klienten):
       `full_name` ikke-tomt, `email` ikke-tomt OG matcher
       `/@skole\.rogfk\.no$/i`, `requested_role` er `laerer` eller
       `kontaktlaerer`. Returnerer 400 med klar norsk feiltekst ved brudd.
-- [ ] Henter skolen (`schools.select('id').limit(1)` — samme
+- [x] Henter skolen (`schools.select('id').limit(1)` — samme
       «kun én skole»-mønster som `init()`), setter `school_id` på raden.
-- [ ] Setter inn i `access_requests` med `status: 'venter'`.
-- [ ] Henter alle admin-brukere ved skolen (`is_admin = true OR role =
+- [x] Setter inn i `access_requests` med `status: 'venter'`.
+- [x] Henter alle admin-brukere ved skolen (`is_admin = true OR role =
       'admin'`, `deleted_at is null`), slår opp e-post per admin via
       `adminClient.auth.admin.getUserById` (samme kall som `admin-user`
       bruker for `gammelEpost`), og sender ett `sendVarsel(...)`-kall per
@@ -1627,67 +1630,67 @@ Supabase Dashboard):**
       e-post, ønsket rolle (+ kontaktlærer-forklart om det er valgt), fag,
       parti/gruppe og meldingen. Best-effort som i `admin-user` — svikt i
       e-post feiler ikke innsendingen.
-- [ ] Returnerer `{ ok: true }` ved suksess uansett om e-postvarsling
+- [x] Returnerer `{ ok: true }` ved suksess uansett om e-postvarsling
       lyktes (samme `notified`-mønster som `admin-user`).
 
 **C. Frontend — skjema på innloggingssiden (`v4/app.js` + `style.css`):**
-- [ ] Ny lenke/knapp «Be om tilgang» under «Glemt passord?» i
+- [x] Ny lenke/knapp «Be om tilgang» under «Glemt passord?» i
       `renderLoginForm`, åpner `visBeOmTilgangModal()`.
-- [ ] Modalen henter LIVE ved åpning (anon-klient, ingen innlogging kreves):
+- [x] Modalen henter LIVE ved åpning (anon-klient, ingen innlogging kreves):
       skole-id (`schools.select('id').limit(1)`), fag
       (`subjects.select('id,name').is('deleted_at', null).order('name')`),
       parti/gruppe (`subject_divisions` join `subjects` for navn — vises
       gruppert under fagnavn, f.eks. «Norsk — Parti A»), og admins fornavn
       via `sb.rpc('public_admin_fornavn')` (vist i modalens ingress: «Din
       forespørsel går til {navn}» — komma-separert ved flere).
-- [ ] Felt: Navn (tekst, påkrevd), E-post (påkrevd, klientvalidering
+- [x] Felt: Navn (tekst, påkrevd), E-post (påkrevd, klientvalidering
       `endsWith('@skole.rogfk.no')` case-insensitive med tydelig feiltekst
       FØR innsending — samme domenekrav som server), Ønsket rolle (radio
       lærer/kontaktlærer — velges kontaktlærer, vises kort forklaringstekst
       fra kartleggingen), Fag (avkrysningsbokser, flervalg), Parti/gruppe
       (avkrysningsbokser, flervalg, gruppert under fag), Melding til admin
       (fritekst, valgfri).
-- [ ] Innsending kaller `sb.functions.invoke('request-access', { body:
+- [x] Innsending kaller `sb.functions.invoke('request-access', { body:
       {...} })` — INGEN skriving til `subjects`/`subject_divisions`/
       `user_classes` noe sted; kun tekst sendes videre.
-- [ ] Suksess: toast «Forespørselen er sendt til {admin}» + lukk modal.
+- [x] Suksess: toast «Forespørselen er sendt til {admin}» + lukk modal.
       Feil (f.eks. galt domene fanget av serveren likevel, eller
       nettverksfeil): feilmelding i modalen, ingen lukking.
-- [ ] Minimal CSS for avkrysningslisten (gjenbruker `.felt`/`.skjema`/
+- [x] Minimal CSS for avkrysningslisten (gjenbruker `.felt`/`.skjema`/
       `.modal`-klassene der det går; kun ny CSS for evt.
       fag/parti-gruppering).
 
 **D. Adminpanel — ny fane «Forespørsler» (`v4/app.js`):**
-- [ ] `tabs`/`tabSlugs` i `renderAdminPanel` utvides med «Forespørsler» /
+- [x] `tabs`/`tabSlugs` i `renderAdminPanel` utvides med «Forespørsler» /
       `foresporsler` (fane-indeks 5, etter Brukere); `switch` i `setTab`
       justeres tilsvarende (Skolerute/Funfacts sine case-tall skyves).
-- [ ] `renderForesporslerTab(container)`: henter `access_requests` for
+- [x] `renderForesporslerTab(container)`: henter `access_requests` for
       `APP.school.id` med `status = 'venter'`, sortert eldst først. Viser
       hver som et kort: navn, e-post, ønsket rolle, fag-liste, parti/
       gruppe-liste, melding, innsendt-dato — pluss «Godkjenn»/«Avvis»-knapper.
-- [ ] Godkjenn/Avvis: `medLagreOverlay` → `update({ status, decided_at:
+- [x] Godkjenn/Avvis: `medLagreOverlay` → `update({ status, decided_at:
       now, decided_by: APP.profile.id })` KUN på den ene raden — ingen
       kontooppretting, ingen forhåndsutfylling av «Opprett bruker»-skjemaet
       noe sted. Etter lagring: fjern kortet fra listen + toast.
-- [ ] Tom liste: «Ingen ventende forespørsler» (samme mønster som andre
+- [x] Tom liste: «Ingen ventende forespørsler» (samme mønster som andre
       tomme-tilstander i appen).
 
 **E. Cache-bust + verifisering:**
-- [ ] Bump `?v=20260820a` i `v4/index.html` (CSS + JS).
-- [ ] Maskinverifisering (headless Chromium, stubbet Supabase): modal åpnes
+- [x] Bump `?v=20260820a` i `v4/index.html` (CSS + JS).
+- [x] Maskinverifisering (headless Chromium, stubbet Supabase): modal åpnes
       fra innloggingssiden; fag/parti/admin-fornavn lastes live fra stub;
       klient-domenevalidering blokkerer galt domene med feiltekst; gyldig
       innsending kaller `request-access` med riktig body og INGEN skriving
       til `subjects`/`subject_divisions`/`user_classes`; adminfanen viser
       ventende forespørsler; Godkjenn/Avvis oppdaterer KUN status og fjerner
       kortet; tom-liste-tilstand.
-- [ ] `git diff --stat` mot `origin/main` bekrefter kun de planlagte filene
+- [x] `git diff --stat` mot `origin/main` bekrefter kun de planlagte filene
       er endret (migrasjon, ny edge function, `app.js`, `style.css`,
       `index.html`, `PLAN.md`).
-- [ ] `FUNKSJONELL-BESKRIVELSE.md`: legg til kort omtale av den nye
+- [x] `FUNKSJONELL-BESKRIVELSE.md`: legg til kort omtale av den nye
       tilgangsforespørsel-flyten (uinnlogget skjema → admin godkjenner
       manuelt).
-- [ ] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.
+- [x] PLAN.md-sjekkliste + statuslinje oppdatert i samme økt som PR-en.
 
 **F. Manuelle steg for Morfar (etter merge):**
 - [ ] Kjør `023_tilgangsforesporsler.sql` i Supabase SQL Editor.
@@ -1701,16 +1704,40 @@ Supabase Dashboard):**
       bekreft e-postvarsel til admin, bekreft raden dukker opp i
       adminpanelets nye fane, test både Godkjenn og Avvis.
 
-### Åpne antakelser (flagget for godkjenning før «kjør»)
+### Valg tatt (ingen innsigelser ved «kjør» — bygget som foreslått)
 
 - Tabell-/funksjonsnavn (`access_requests`, `request-access`,
-  `public_admin_fornavn`) og fane-plassering («Forespørsler» etter Brukere)
-  er mine forslag — juster gjerne før «kjør».
+  `public_admin_fornavn`) og fane-plassering («Forespørsler» etter Brukere,
+  fane-indeks 5) er som foreslått.
 - Fag/parti lagres som tekst-snapshot (`text[]`), ikke FK-er — i tråd med
-  «ren informasjon, ingen kobling». Betyr at forespørselen ikke automatisk
-  følger med hvis et fag omdøpes/slettes senere; kun et øyeblikksbilde.
-- Ingen spam-/rate-beskyttelse bygges (ikke bedt om) — kun domenesjekk.
-  Flagg til Morfar hvis dette bør vurderes som eget punkt.
+  «ren informasjon, ingen kobling». Forespørselen følger derfor IKKE
+  automatisk med hvis et fag omdøpes/slettes senere — kun et øyeblikksbilde
+  fra innsendingstidspunktet.
+- Ingen spam-/rate-beskyttelse bygget (ikke bedt om) — kun domenesjekk
+  (klient + DB CHECK-constraint + edge function, tre lag). Kan vurderes som
+  eget punkt senere hvis det blir et problem i praksis.
 - Godkjente/avviste forespørsler blir liggende i tabellen (ingen sletting/
   arkivering bygget) — kun `venter`-status vises i adminfanen. Rydding kan
   evt. legges til `cleanup`-funksjonen i en senere økt hvis ønskelig.
+
+### Status
+
+**Kode ferdig og maskinverifisert** 20. august 2026 — headless Chromium mot
+ekte `app.js`/`style.css` med stubbet Supabase (server + edge functions),
+22 sjekker, alle OK: «Be om tilgang»-modalen åpnes fra innloggingssiden med
+live-hentet admin-fornavn/fag/parti-liste, kontaktlærer-forklaringen
+toggles korrekt, klient-domenevalidering blokkerer feil domene FØR noe
+sendes til serveren, gyldig innsending kaller `request-access` med riktig
+payload og skriver INGEN steder til `subjects`/`subject_divisions`/
+`user_classes`, adminfanen «Forespørsler» viser ventende forespørsel og
+Godkjenn oppdaterer KUN `access_requests.status` uten å opprette noen bruker.
+`node --check` OK på `app.js`. `git diff --stat` mot `origin/main` bekrefter
+kun planlagte filer + ny migrasjon/edge function.
+
+**Live-status (etter 1. august 2026):** per PROSEDYRER.md stoppes
+avslutningsprosedyren ved «PR klar» — merge til `main` krever Morfars
+uttrykkelige «merge», gjøres IKKE automatisk i denne økten.
+
+Gjenstår: PR opprettes, deretter Morfars manuelle steg i del F (kjøre
+migrasjon 023, deploye `request-access`, bekrefte e-postvarsel, funksjonstest
+i produksjon) — kan først gjøres ETTER merge.
