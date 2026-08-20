@@ -88,6 +88,9 @@ v4/
       019_admin_panel_rls.sql     # RLS-fix: adminpanel-skriving tillatt med auth_is_admin() uten toggle (KJØRT)
       020_storage_policy_logos.sql # Storage-policies for logos-bucketen: INSERT/UPDATE/DELETE (admin) + SELECT (public) (KJØRT)
       021_funfacts_tema.sql       # facts_theme-kolonne på schools: fritekst temastyring for funfacts (P41)
+      022_import_egne_klasser.sql # Stram INSERT på sessions til egne klasser (user_classes); admin i adminmodus unntatt (P44)
+      023_tilgangsforesporsler.sql # access_requests-tabell for uinnlogget tilgangsforespørsel ved innlogging (P57)
+      024_maks_inndelinger.sql    # Utvider subjects_max_divisions_check fra 1–8 til 1–20 (matcher appens skjema); default fortsatt 8 (P58)
     functions/
       ical/                       # iCal-abonnement for klasser/lærere
       generate-facts/             # Generer funfacts med Gemini
@@ -244,7 +247,7 @@ etter 30 dager.
 ```
 schools          – id, name, logo_url, logo_file_path, school_year_start_week, school_year_end_week, color_theme(standard|lys|mork), active_school_year, facts_theme (fritekst temastyring for funfacts, migrasjon 021)
 classes          – id, school_id, name, sort_order, deleted_at
-subjects         – id, school_id, name, short_code, color_hex, has_parti, has_gruppe, max_divisions, deleted_at
+subjects         – id, school_id, name, short_code, color_hex, has_parti, has_gruppe, max_divisions (1–20, migrasjon 024), deleted_at
 subject_divisions– id, subject_id, division_type(parti|gruppe), name, sort_order, deleted_at
 users            – id (auth.uid), school_id, full_name, role(laerer|kontaktlaerer|admin), is_admin_active, deleted_at
 user_classes     – user_id, class_id

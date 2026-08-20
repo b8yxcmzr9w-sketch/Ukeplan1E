@@ -2,19 +2,20 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P57 (PR #168 squash-merget til main
-  20. august 2026 — uinnlogget tilgangsforespørsel ved innlogging: skjema,
-  ny tabell/RLS, ny edge function `request-access`, ny adminfane
-  «Forespørsler». HELE kjeden bekreftet ende-til-ende i produksjon samme
-  dag av Morfar: skjema → lagret → Formspree-e-post mottatt → forespørsler
-  synlige i adminfanen (etter at admin-modus-bryteren ble slått på — se
-  eget backloggpunkt om den forvirringen). E-postvarsel byttet fra Resend
-  til Formspree, se DECISIONS.md. `admin-user`s EGNE Resend-varsler er
-  fortsatt uverifiserte — egen backloggsak, se «Klar til bygging»)
+- **Siste fullførte P-nummer:** P58 (kode ferdig 20. august 2026 — hevet
+  DB-constrainten på `subjects.max_divisions` fra 1–8 til 1–20 (migrasjon
+  024) slik at den matcher `app.js`s skjema, som lenge har tillatt 1–20.
+  Fag med 9+ inndelinger kunne ikke lagres før dette. Ren backend-fiks,
+  ingen frontend-endring. Manuelt migrasjonssteg til Morfar gjenstår, se
+  «Åpne sjekkpunkter»)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Neste ledige P-nummer:** P59 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P58s manuelle steg — migrasjon `024_maks_inndelinger.sql` må kjøres i
+    Supabase SQL Editor av Morfar (heves DB-taket på
+    `subjects.max_divisions` fra 1–8 til 1–20); kontrollspørring i
+    PLAN.md-seksjonen for Økt 58
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -55,6 +56,14 @@
 > Innholdet dupliseres ikke hit.
 
 ### Klar til bygging
+
+- **Oversett rå Postgres-feiltekst i feiloverlayet til lesbar norsk** (P58).
+  I dag vises f.eks. `new row for relation "subjects" violates check
+  constraint "subjects_max_divisions_check"` direkte til brukeren ved en
+  mislykket lagring. Et lite oversettelseslag (kjente constraint-navn →
+  norsk forklaring, med generisk fallback for ukjente) ville gjort feil
+  som dette forståelige uten å måtte lese Postgres-tekst. Ikke bygget i
+  P58 — utenfor scope for den økten (kun DB-taket ble hevet).
 
 - **«Godkjenn» skal (senere) lede rett til kontooppretting, med bekreft/rediger-steg**
   (ønske fra Morfar, presisert 20. august 2026, etter første praktiske bruk
@@ -1855,31 +1864,40 @@ har `001_initial_schema.sql` linje 47 uendret tilbake til
 er rent (`git status` → «nothing to commit»). Ingen re-redigering av 001.
 
 **Sjekkliste:**
-- [ ] Ny fil `v4/supabase/migrations/024_maks_inndelinger.sql` —
+- [x] Ny fil `v4/supabase/migrations/024_maks_inndelinger.sql` —
       idempotent DROP CONSTRAINT IF EXISTS + ADD CONSTRAINT
       `subjects_max_divisions_check` med `max_divisions between 1 and 20`.
       Kommentarblokk i 021-stil: bakgrunn (skjemaet tillater 1–20, DB
       tillot kun 1–8), at DB-taket nå matcher appens 1–20, og at CHECK
       kun ser egen rad (kan derfor ikke gjøres dynamisk per skole — ville
       krevd trigger, bevisst ikke gjort her).
-- [ ] DEFAULT uendret (fortsatt 8) — ikke satt til 20, siden det ville gitt
+- [x] DEFAULT uendret (fortsatt 8) — ikke satt til 20, siden det ville gitt
       20 tomme «Gruppe N:»-navnefelt for hvert nytt fag.
-- [ ] Ingen endring i `v4/app.js` (allerede riktig 1–20) eller andre
-      frontend-filer. Ingen cache-bust nødvendig (ingen JS/CSS-endring).
-- [ ] `CLAUDE.md`: `subjects`-skjemalinja oppdatert med
+- [x] Ingen endring i `v4/app.js` (allerede riktig 1–20) eller andre
+      frontend-filer — bekreftet med `git diff --stat origin/main` (tom
+      diff på app.js/style.css/index.html) og `node --check v4/app.js`
+      (OK). Ingen cache-bust nødvendig (ingen JS/CSS-endring).
+- [x] `CLAUDE.md`: `subjects`-skjemalinja oppdatert med
       `max_divisions (1–20, migrasjon 024)`, og migrasjonslisten i
       filstruktur-seksjonen oppdatert til å inkludere 022, 023 og 024
       (listen stoppet på 021 fra før — henger etter faktisk innhold).
-- [ ] `DECISIONS.md`: notat om rollefordelingen database vs. app — databasen
+- [x] `DECISIONS.md`: notat om rollefordelingen database vs. app — databasen
       er en vernebøyle (fast, romslig 1–20-tak), appen holder den praktiske
       grensen. Ikke foreslå trigger-basert dynamisk tak igjen uten ny
       begrunnelse.
-- [ ] `PLAN.md` sjekkliste + statuslinje oppdatert i samme økt.
+- [x] `PLAN.md` sjekkliste + statuslinje oppdatert i samme økt.
+- [x] Backloggpunkt for oversettelse av rå Postgres-feiltekst lagt til i
+      «Klar til bygging».
 
-**Utenfor scope:** oversettelse av rå Postgres-feilmeldinger til lesbar
-norsk i feiloverlayet — lagt til i Backlogg som eget punkt, ikke bygget nå.
+**Utenfor scope:** selve oversettelsen av rå Postgres-feilmeldinger til
+lesbar norsk i feiloverlayet — kun foreslått som backloggpunkt, ikke bygget.
 
-**Manuelt steg til Morfar (etter merge):** kjør `024_maks_inndelinger.sql`
-i Supabase SQL Editor. Kontrollspørring:
+**Status:** Kode ferdig 20. august 2026. Ingen kjørbar app-endring i denne
+økten (kun ny migrasjonsfil + dokumentasjon), så ingen headless/UI-verifisering
+er relevant — sjekket med `node --check` og `git diff --stat` mot
+`origin/main` at ingen andre filer enn de planlagte er rørt.
+
+**Åpent — manuelt steg til Morfar (kan ikke lukkes fra denne økten):**
+kjør `024_maks_inndelinger.sql` i Supabase SQL Editor. Kontrollspørring:
 `select pg_get_constraintdef(oid) from pg_constraint where conname = 'subjects_max_divisions_check';`
 — forventet svar: `CHECK ((max_divisions >= 1) AND (max_divisions <= 20))`.
