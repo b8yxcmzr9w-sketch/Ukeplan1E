@@ -2,8 +2,9 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P56 (uke-navigatorens Enter-tast fikset i
-  begge uke-feltene — elev- og lærervisning — 19. august 2026)
+- **Siste fullførte P-nummer:** P56 (PR #167 squash-merget til main
+  19. august 2026 — uke-navigatorens Enter-tast fikset i begge uke-feltene,
+  elev- og lærervisning)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P57 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
@@ -1512,6 +1513,6 @@ sted eller Tab).
       skoleårets grenser ikke navigerer (samme oppførsel som å klikke bort
       fra feltet i dag).
 
-**Status:** Kodefiks ferdig og pushet. Kun Morfars visuelle/manuelle
-produksjonstest av Enter-tasten gjenstår (kan ikke utføres fra denne
-økten).
+**Status:** PR #167 squash-merget til main 19. august 2026. Kun Morfars
+visuelle/manuelle produksjonstest av Enter-tasten gjenstår (kan ikke
+utføres fra denne økten).
