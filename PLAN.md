@@ -5,11 +5,12 @@
 - **Siste fullførte P-nummer:** P57 (PR #168 squash-merget til main
   20. august 2026 — uinnlogget tilgangsforespørsel ved innlogging: skjema,
   ny tabell/RLS, ny edge function `request-access`, ny adminfane
-  «Forespørsler». Kjede bekreftet ende-til-ende i produksjon samme dag.
-  E-postvarsel byttet fra Resend til Formspree samme dag, se DECISIONS.md —
-  ⚠️ krever redeploy av `request-access` i Supabase Dashboard før det
-  virker i produksjon. `admin-user`s EGNE Resend-varsler er fortsatt
-  uverifiserte — egen backloggsak, se «Klar til bygging»)
+  «Forespørsler». HELE kjeden bekreftet ende-til-ende i produksjon samme
+  dag av Morfar: skjema → lagret → Formspree-e-post mottatt → forespørsler
+  synlige i adminfanen (etter at admin-modus-bryteren ble slått på — se
+  eget backloggpunkt om den forvirringen). E-postvarsel byttet fra Resend
+  til Formspree, se DECISIONS.md. `admin-user`s EGNE Resend-varsler er
+  fortsatt uverifiserte — egen backloggsak, se «Klar til bygging»)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
@@ -1786,21 +1787,26 @@ kun planlagte filer + ny migrasjon/edge function.
       tilgang»-modalen var kun synlig øverst og ble usett ved nedscrollet
       skjema — duplisert til også å vises over «Send forespørsel»-knappen
       (`?v=20260820b`, egen commit direkte til main).
-- [~] Godkjenn/Avvis i adminfanen: IKKE eksplisitt testet av Morfar i denne
-      runden (koden er maskinverifisert i PR #168 — oppdaterer kun
-      `access_requests.status`), men siden kjernefunksjonen nå er bekreftet
-      ende-til-ende i produksjon, regnes P57 som FERDIG. Godkjenn/Avvis kan
-      verifiseres uformelt neste gang en reell forespørsel behandles.
-- [ ] E-postvarsel til admin — IKKE bekreftet. `RESEND_API_KEY`/
-      `RESEND_FROM` i Supabase Secrets stammer fra en tidligere økt
-      (samme nøkkel som `admin-user` bruker for passord-/e-post-endring-
-      varsler); Morfar har aldri brukt Resend selv og trodde en annen
-      tjeneste var i bruk. Root cause er dermed IKKE i P57s kode (funksjonen
-      kaller `sendVarsel()` korrekt og feiler stille som designet) — det er
-      en udokumentert, ubekreftet avhengighet fra tidligere. LAGT TIL
-      BACKLOGGEN som eget punkt (se «Klar til bygging») — blokkerer ikke
-      P57s kjernefunksjon (forespørsel → lagret → synlig for admin), som
-      fungerer uten e-post.
+- [x] E-postvarsel til admin — BEKREFTET FUNGERENDE 20. august 2026, via
+      Formspree (byttet fra Resend, se DECISIONS.md): e-post mottatt med
+      alle riktige felter (navn, e-post, rolle, fag, parti/gruppe, melding).
+      `admin-user`s EGNE, separate Resend-varsler (passord-/e-post-endring)
+      er fortsatt uverifiserte — egen backloggsak, ikke en del av P57.
+- [x] Adminfanen «Forespørsler» — BEKREFTET FUNGERENDE i produksjon: alle
+      ventende testforespørsler ble synlige etter at Morfar slo på
+      admin-modus-bryteren («Admin»-knappen i header). Underveis avdekket
+      og dokumentert som eget backloggpunkt: adminpanelets rute krever kun
+      det permanente `is_admin`-flagget, mens RLS bak dataene også krever
+      den separate `is_admin_active`-sesjonsbryteren — et stille,
+      forvirrende tomt resultat når de er ute av synk (ikke en P57-feil i
+      seg selv, men avdekket her).
+- [~] Godkjenn/Avvis: koden er maskinverifisert (PR #168, oppdaterer kun
+      `access_requests.status`); ikke eksplisitt klikket av Morfar i denne
+      runden, men lav risiko — verifiseres uformelt neste gang en reell
+      forespørsel behandles.
+
+**P57 er FERDIG — hele funksjonskjeden bekreftet i produksjon 20. august
+2026.**
 
 **Konklusjon: P57s kjernefunksjon (uinnlogget forespørsel → lagret → synlig
 i adminpanelet) er bygget, merget og bekreftet fungerende i produksjon.**
