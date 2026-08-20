@@ -624,8 +624,138 @@ function renderLoginForm() {
   form.appendChild(infoMelding)
 
   kort.appendChild(form)
+
+  // P57: uinnlogget tilgangsforespørsel
+  const tilgangBtn = el('button', { type: 'button', class: 'btn-lenke', style: 'margin-top:6px;font-size:.85rem;color:var(--tekst-svak);background:none;border:none;cursor:pointer;display:block;width:100%;text-align:center' }, 'Har du ikke konto? Be om tilgang')
+  tilgangBtn.addEventListener('click', () => visBeOmTilgangModal())
+  kort.appendChild(tilgangBtn)
+
   wrap.appendChild(kort)
   main.appendChild(wrap)
+}
+
+// P57: uinnlogget lærer ber om tilgang – skjemaet er åpent for alle (ingen
+// innlogging), sender via edge function `request-access` (service-role,
+// validerer domenet server-side). Fag/parti-valget er REN INFORMASJON til
+// admin – ingen skriving til subjects/subject_divisions/user_classes her.
+async function visBeOmTilgangModal() {
+  const modal = el('div', { class: 'modal-bg' })
+  const box = el('div', { class: 'modal modal-xl' })
+  box.appendChild(el('h3', {}, 'Be om tilgang'))
+
+  const ingress = el('p', { class: 'tekst-svak', style: 'font-size:.88rem;margin:0 0 12px' }, 'Laster …')
+  box.appendChild(ingress)
+
+  const feil = el('p', { class: 'feil-tekst skjult' })
+  box.appendChild(feil)
+
+  const form = el('form', { class: 'skjema' })
+
+  form.appendChild(lagFormRad('Navn', el('input', { name: 'full_name', type: 'text', class: 'felt input', required: 'true' })))
+  form.appendChild(lagFormRad('E-post', el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true', placeholder: 'din@skole.rogfk.no' })))
+
+  const kontaktForklaring = el('p', { class: 'tekst-svak skjult', style: 'font-size:.82rem;margin:2px 0 0' },
+    'Kontaktlærer kan i tillegg til vanlig lærer-tilgang redigere/slette alle økter i klassen (ikke bare egne) og sette opp fag/parti for klassen.')
+  const rolleWrap = el('div', { class: 'rolle-gruppe' })
+  for (const [val, label] of [['laerer', 'Lærer'], ['kontaktlaerer', 'Kontaktlærer']]) {
+    const lbl = el('label', { style: 'display:flex;align-items:center;gap:6px;cursor:pointer' })
+    const rb = el('input', {
+      type: 'radio', name: 'requested_role', value: val, required: 'true',
+      onchange: () => kontaktForklaring.classList.toggle('skjult', val !== 'kontaktlaerer' || !rb.checked),
+    })
+    if (val === 'laerer') rb.checked = true
+    lbl.appendChild(rb); lbl.appendChild(document.createTextNode(label))
+    rolleWrap.appendChild(lbl)
+  }
+  const rolleRad = lagFormRad('Ønsket rolle', rolleWrap)
+  rolleRad.appendChild(kontaktForklaring)
+  form.appendChild(rolleRad)
+
+  const fagContainer = el('div', { class: 'tilgang-liste' }, 'Laster fag …')
+  form.appendChild(lagFormRad('Fag', fagContainer))
+
+  const divContainer = el('div', { class: 'tilgang-liste' }, 'Laster parti/gruppe …')
+  form.appendChild(lagFormRad('Parti/gruppe', divContainer))
+
+  form.appendChild(lagFormRad('Melding til admin', el('textarea', { name: 'message', class: 'felt input', rows: 3, placeholder: 'Valgfritt' })))
+
+  const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Send forespørsel')
+  form.appendChild(lagreKnapp)
+  form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    feil.classList.add('skjult')
+    const fd = new FormData(form)
+    const email = (fd.get('email') || '').trim()
+    if (!/@skole\.rogfk\.no$/i.test(email)) {
+      feil.textContent = 'E-post må være en @skole.rogfk.no-adresse'
+      feil.classList.remove('skjult')
+      return
+    }
+    const subjectsText = [...form.querySelectorAll('input[name=selected_subjects]:checked')].map(cb => cb.value)
+    const divisionsText = [...form.querySelectorAll('input[name=selected_divisions]:checked')].map(cb => cb.value)
+    lagreKnapp.disabled = true
+    try {
+      const { data, error } = await sb.functions.invoke('request-access', {
+        body: {
+          full_name: (fd.get('full_name') || '').trim(),
+          email,
+          requested_role: fd.get('requested_role'),
+          subjects_text: subjectsText,
+          divisions_text: divisionsText,
+          message: (fd.get('message') || '').trim(),
+        },
+      })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+      modal.remove()
+      showToast('Forespørselen er sendt', 'ok')
+    } catch (err) {
+      feil.textContent = err.message || 'Kunne ikke sende forespørselen'
+      feil.classList.remove('skjult')
+      lagreKnapp.disabled = false
+    }
+  })
+
+  box.appendChild(form)
+  modal.appendChild(box)
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+
+  // Live-henting: skole (anon, kun én skole per instans), fag, parti/gruppe, admins fornavn
+  const { data: school } = await sb.from('schools').select('id').limit(1).single()
+  const schoolId = school?.id
+  const [{ data: fag }, { data: divs }, { data: adminNavn }] = await Promise.all([
+    schoolId ? sb.from('subjects').select('id,name').eq('school_id', schoolId).is('deleted_at', null).order('name') : Promise.resolve({ data: [] }),
+    schoolId ? sb.from('subject_divisions').select('id,name,division_type,class_id,subjects!inner(name,school_id),classes(name)').eq('subjects.school_id', schoolId).is('deleted_at', null).order('name') : Promise.resolve({ data: [] }),
+    sb.rpc('public_admin_fornavn'),
+  ])
+
+  ingress.textContent = (adminNavn && adminNavn.length)
+    ? `Din forespørsel går til ${adminNavn.join(', ')}.`
+    : 'Fyll ut skjemaet – en administrator ved skolen godkjenner forespørselen.'
+
+  clearEl(fagContainer)
+  for (const s of fag || []) {
+    const lbl = el('label', { class: 'div-check-lbl' })
+    lbl.appendChild(el('input', { type: 'checkbox', name: 'selected_subjects', value: s.name }))
+    lbl.appendChild(document.createTextNode(` ${s.name}`))
+    fagContainer.appendChild(lbl)
+  }
+  if (!(fag || []).length) fagContainer.appendChild(el('p', { class: 'tekst-svak' }, 'Ingen fag registrert.'))
+
+  clearEl(divContainer)
+  for (const d of divs || []) {
+    const typeNavn = d.division_type === 'parti' ? 'Parti' : 'Gruppe'
+    const klasseSuffix = d.classes?.name ? ` (${d.classes.name})` : ''
+    const merkelapp = `${d.subjects?.name || ''} — ${typeNavn}: ${d.name}${klasseSuffix}`
+    const lbl = el('label', { class: 'div-check-lbl' })
+    lbl.appendChild(el('input', { type: 'checkbox', name: 'selected_divisions', value: merkelapp }))
+    lbl.appendChild(document.createTextNode(` ${merkelapp}`))
+    divContainer.appendChild(lbl)
+  }
+  if (!(divs || []).length) divContainer.appendChild(el('p', { class: 'tekst-svak' }, 'Ingen parti/gruppe registrert.'))
 }
 
 // Fleksibel «sett nytt passord»-modal.
@@ -4429,8 +4559,8 @@ async function renderAdminPanel() {
   APP.klasseVelger = null
   oppdaterHeader()
 
-  const tabs = ['Skoleinfo', 'Skoleår', 'Fag', 'Klasser', 'Brukere', 'Skolerute', 'Funfacts']
-  const tabSlugs = ['skoleinfo', 'skolear', 'fag', 'klasser', 'brukere', 'skolerute', 'funfacts']
+  const tabs = ['Skoleinfo', 'Skoleår', 'Fag', 'Klasser', 'Brukere', 'Forespørsler', 'Skolerute', 'Funfacts']
+  const tabSlugs = ['skoleinfo', 'skolear', 'fag', 'klasser', 'brukere', 'foresporsler', 'skolerute', 'funfacts']
 
   const hashTab = location.hash.split('/')[2]
   const initTab = Math.max(0, tabSlugs.indexOf(hashTab))
@@ -4458,8 +4588,9 @@ async function renderAdminPanel() {
         case 2: renderFagTab(card); break
         case 3: renderKlasserTab(card); break
         case 4: renderBrukereTab(card); break
-        case 5: renderSkolerute(card); break
-        case 6: renderFaktaTab(card); break
+        case 5: renderForesporslerTab(card); break
+        case 6: renderSkolerute(card); break
+        case 7: renderFaktaTab(card); break
       }
     }
   }
@@ -5496,6 +5627,65 @@ async function visSlettBrukerModal(user, onSave) {
   modal.appendChild(box)
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
+
+// P57: adminfane som viser ventende uinnloggede tilgangsforespørsler.
+// Godkjenn/Avvis endrer KUN status – ingen kontoopprettelse, ingen
+// forhåndsutfylling av «Ny bruker»-skjemaet. Admin oppretter kontoen
+// manuelt via eksisterende flyt etter å ha lest forespørselen.
+async function renderForesporslerTab(container) {
+  container.appendChild(el('h3', {}, 'Ventende tilgangsforespørsler'))
+  container.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.88rem;margin:0 0 14px' },
+    'Fag/parti/gruppe under er ren informasjon fra søkeren – ingen kobling opprettes automatisk. Opprett kontoen manuelt som vanlig etter å ha lest forespørselen.'))
+
+  const listeDiv = el('div', {})
+  container.appendChild(listeDiv)
+
+  async function lastListe() {
+    clearEl(listeDiv)
+    const { data: forespoersler, error } = await sb.from('access_requests')
+      .select('*')
+      .eq('school_id', APP.school.id)
+      .eq('status', 'venter')
+      .order('created_at', { ascending: true })
+    if (error) {
+      listeDiv.appendChild(el('p', { class: 'feil-tekst' }, 'Kunne ikke hente forespørsler.'))
+      return
+    }
+    if (!forespoersler || !forespoersler.length) {
+      listeDiv.appendChild(el('p', { class: 'tekst-svak' }, 'Ingen ventende forespørsler.'))
+      return
+    }
+    for (const f of forespoersler) {
+      const kort = el('div', { class: 'kort', style: 'margin-bottom:12px' })
+      kort.appendChild(el('h4', { style: 'margin:0 0 6px' }, f.full_name))
+      kort.appendChild(el('p', { style: 'margin:0 0 4px' }, `${f.email} · ${f.requested_role === 'kontaktlaerer' ? 'Kontaktlærer' : 'Lærer'}`))
+      if (f.subjects_text?.length) kort.appendChild(el('p', { style: 'margin:0 0 4px' }, `Fag: ${f.subjects_text.join(', ')}`))
+      if (f.divisions_text?.length) kort.appendChild(el('p', { style: 'margin:0 0 4px' }, `Parti/gruppe: ${f.divisions_text.join(', ')}`))
+      if (f.message) kort.appendChild(el('p', { style: 'margin:0 0 4px' }, `Melding: ${f.message}`))
+      kort.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.8rem;margin:0 0 8px' }, `Sendt ${formatDatoNO(f.created_at)}`))
+
+      const knappRad = el('div', { style: 'display:flex;gap:8px' })
+      knappRad.appendChild(el('button', { class: 'btn btn-p', onclick: async () => {
+        await medLagreOverlay(() => sb.from('access_requests').update({
+          status: 'godkjent', decided_at: new Date().toISOString(), decided_by: APP.profile.id,
+        }).eq('id', f.id))
+        showToast('Forespørselen er godkjent', 'ok')
+        lastListe()
+      }}, 'Godkjenn'))
+      knappRad.appendChild(el('button', { class: 'btn btn-s', onclick: async () => {
+        await medLagreOverlay(() => sb.from('access_requests').update({
+          status: 'avvist', decided_at: new Date().toISOString(), decided_by: APP.profile.id,
+        }).eq('id', f.id))
+        showToast('Forespørselen er avvist', 'info')
+        lastListe()
+      }}, 'Avvis'))
+      kort.appendChild(knappRad)
+      listeDiv.appendChild(kort)
+    }
+  }
+
+  await lastListe()
 }
 
 async function renderSkolerute(container) {
