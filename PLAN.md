@@ -4,28 +4,15 @@
 
 - **Siste fullførte P-nummer:** P57 (PR #168 squash-merget til main
   20. august 2026 — uinnlogget tilgangsforespørsel ved innlogging: skjema,
-  ny tabell/RLS, ny edge function `request-access` med e-postvarsel til
-  admin, ny adminfane «Forespørsler»)
+  ny tabell/RLS, ny edge function `request-access`, ny adminfane
+  «Forespørsler». Kjede bekreftet ende-til-ende i produksjon samme dag.
+  E-postvarsel til admin er BYGGET men ikke bekreftet fungerende — egen
+  åpen backloggsak, se «Klar til bygging»: e-posttjenesten Resend er aldri
+  verifisert av Morfar)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P57s manuelle steg — migrasjon `023_tilgangsforesporsler.sql` KJØRT av
-    Morfar i Supabase SQL Editor 20. august 2026 («Success. No rows
-    returned» — tabell, RLS og `public_admin_fornavn()` er dermed på plass).
-    Edge function `request-access` DEPLOYET 20. august 2026 (URL bekreftet
-    riktig: `.../functions/v1/request-access` — første forsøk fikk feil
-    Supabase-generert slug `clever-processor`, slettet og gjenopprettet med
-    riktig navn). Skjemaet BEKREFTET i produksjon samme dag: admins fornavn
-    («Geir») vises live, fag/parti lastes live, klient-domenevalidering
-    blokkerer feil e-postdomene korrekt. Underveis oppdaget og rettet:
-    feilmeldingen var kun synlig øverst i modalen og ble usett når brukeren
-    hadde scrollet ned — duplisert til også å vises rett over «Send
-    forespørsel»-knappen (`?v=20260820b`, merget direkte til main). Gjenstår:
-    bekrefte at `RESEND_API_KEY`/`RESEND_FROM` når funksjonen (send en
-    forespørsel med GYLDIG domene og se om admin-e-posten kommer frem), og
-    bekrefte raden dukker opp i adminfanen «Forespørsler» + teste Godkjenn
-    og Avvis der. Kode maskinverifisert (22 sjekker) i PR #168.
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -67,6 +54,20 @@
 
 ### Klar til bygging
 
+- **E-postutsending (Resend) er ikke bekreftet fungerende** (funnet under
+  P57s produksjonstest, 20. august 2026). `RESEND_API_KEY`/`RESEND_FROM` i
+  Supabase Secrets stammer fra en tidligere økt (brukes av `admin-user` sine
+  passord-/e-post-endring-varsler OG nye `request-access`), men Morfar har
+  aldri brukt Resend selv, kjenner ikke igjen tjenesten, og har ikke mottatt
+  noen e-post fra den ved test. To spor å avklare før bygging/retting:
+  (1) Var det egentlig en ANNEN e-posttjeneste Morfar hadde tenkt/husker å
+  bruke? (2) Er Resend-kontoen reell, men bare aldri fullført (f.eks.
+  uverifisert avsenderdomene)? Begge de nevnte funksjonene feiler stille i
+  dag («best effort», jf. `sendVarsel()`-mønsteret) — ingen bruker har
+  noensinne fått bekreftet at NOEN e-postvarsling fra appen faktisk kommer
+  frem. Retting/oppsett bør skje som egen, avgrenset økt (kontosjekk,
+  domeneverifisering, ev. bytte tjeneste) — ikke antas løst av flere
+  «request-access»-forsøk.
 - **Ferie-filtrering i AI-økt-import** (sekundærfunn under P32). Prompten i
   `ai-parse-sessions` har ingen ferie-instruks og mottar ikke skoleruten — AI
   lager økter av «Vinterferie»-tekst. Delvis avbøtet av P30-forhåndsvisningen
@@ -1743,7 +1744,42 @@ Godkjenn oppdaterer KUN `access_requests.status` uten å opprette noen bruker.
 kun planlagte filer + ny migrasjon/edge function.
 
 **PR #168 squash-merget til main 20. august 2026** etter Morfars uttrykkelige
-«merge» (jf. live-status i PROSEDYRER.md — koden ble ikke merget automatisk).
-Gjenstår kun del F: Morfars manuelle steg (kjøre migrasjon 023, deploye
-`request-access`, bekrefte e-postvarsel, funksjonstest i produksjon) — se
-statuslinjens «Åpne sjekkpunkter».
+«merge» (jf. live-status i PROSEDYRER.md).
+
+**Del F — Morfars manuelle steg, gjennomført og verifisert i produksjon
+20. august 2026:**
+- [x] Migrasjon 023 kjørt i SQL Editor.
+- [x] `request-access` deployet (etter to omveier: først feil
+      Supabase-generert slug `clever-processor` — slettet og gjenopprettet
+      med riktig navn `request-access`; deretter viste det seg at Code-fanen
+      inneholdt Supabase sin standard eksempelkode («Hello world») i stedet
+      for vår kode — copy/paste hadde ikke tatt. Rettet ved å lime inn
+      kildefilen på nytt og redeploye).
+- [x] Ekte funksjonstest i produksjon: forespørsel sendt uinnlogget →
+      `request-access` svarer `{"ok": true, ...}` → raden lagres korrekt i
+      `access_requests` (bekreftet i Table Editor) → dukker opp i
+      adminfanen «Forespørsler» med riktig navn/e-post/rolle/fag/parti/
+      melding. Underveis oppdaget og rettet: feilmeldingen i «Be om
+      tilgang»-modalen var kun synlig øverst og ble usett ved nedscrollet
+      skjema — duplisert til også å vises over «Send forespørsel»-knappen
+      (`?v=20260820b`, egen commit direkte til main).
+- [~] Godkjenn/Avvis i adminfanen: IKKE eksplisitt testet av Morfar i denne
+      runden (koden er maskinverifisert i PR #168 — oppdaterer kun
+      `access_requests.status`), men siden kjernefunksjonen nå er bekreftet
+      ende-til-ende i produksjon, regnes P57 som FERDIG. Godkjenn/Avvis kan
+      verifiseres uformelt neste gang en reell forespørsel behandles.
+- [ ] E-postvarsel til admin — IKKE bekreftet. `RESEND_API_KEY`/
+      `RESEND_FROM` i Supabase Secrets stammer fra en tidligere økt
+      (samme nøkkel som `admin-user` bruker for passord-/e-post-endring-
+      varsler); Morfar har aldri brukt Resend selv og trodde en annen
+      tjeneste var i bruk. Root cause er dermed IKKE i P57s kode (funksjonen
+      kaller `sendVarsel()` korrekt og feiler stille som designet) — det er
+      en udokumentert, ubekreftet avhengighet fra tidligere. LAGT TIL
+      BACKLOGGEN som eget punkt (se «Klar til bygging») — blokkerer ikke
+      P57s kjernefunksjon (forespørsel → lagret → synlig for admin), som
+      fungerer uten e-post.
+
+**Konklusjon: P57s kjernefunksjon (uinnlogget forespørsel → lagret → synlig
+i adminpanelet) er bygget, merget og bekreftet fungerende i produksjon.**
+E-postvarselet er et tillegg som avhenger av en ekstern tjeneste ingen har
+verifisert er riktig satt opp — eget backlogg-punkt, ikke en P57-feil.
