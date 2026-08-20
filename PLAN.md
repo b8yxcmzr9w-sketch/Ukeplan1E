@@ -55,6 +55,27 @@
 
 ### Klar til bygging
 
+- **Stille tomt resultat i adminpanelet når «admin-modus»-bryteren er av**
+  (funnet under P57s produksjonstest, 20. august 2026). Adminpanelets rute
+  slipper deg inn basert KUN på det permanente `is_admin`-flagget
+  (`harAdminTilgang()`, app.js:1035) — men RLS-policyene som beskytter
+  dataene (bl.a. `access_requests_admin_all`, mønsteret `is_active_admin()`
+  brukt i de fleste admin-skrive-/lese-policyer) krever i TILLEGG at
+  sesjons-bryteren `is_admin_active` faktisk er slått på. Bryteren
+  nullstilles bl.a. ved vanlig innlogging (`renderLoginForm`, app.js~583:
+  `is_admin_active: false`). Resultatet: en admin kan stå midt inne i et
+  adminpanel-fane og få et helt tomt/stille resultat (ingen feilmelding,
+  ingen rader) fordi bryteren tilfeldigvis er av — svært forvirrende,
+  siden UI-et ikke skiller mellom «tomt fordi det faktisk er tomt» og
+  «tomt fordi RLS blokkerer». Gjelder sannsynligvis ALLE admin-faner som
+  leser data bak `is_active_admin()`, ikke bare «Forespørsler». Mulige
+  retninger å vurdere i egen økt: (a) la router-gaten kreve `isAdminActive`
+  konsekvent (ikke bare `harAdminTilgang()`) så man aldri havner i denne
+  mellomtilstanden, (b) vis en tydelig varseltekst i adminpanelet når
+  `is_admin_active` er false men brukeren likevel er der, eller (c) fjern
+  distinksjonen og la `is_admin`/`role=admin` alene styre RLS også (større
+  endring, påvirker mange policyer — krever egen vurdering av
+  sikkerhetskonsekvenser).
 - **`admin-user`s Resend-baserte varsler (passord-/e-post-endring) er
   fortsatt ikke bekreftet fungerende** (funnet under P57s produksjonstest,
   20. august 2026 — se DECISIONS.md for full bakgrunn). `RESEND_API_KEY`/
