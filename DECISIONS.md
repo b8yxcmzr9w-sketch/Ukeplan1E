@@ -340,3 +340,23 @@ mobilgrense, ikke det globale 700px-brekket (19.08.2026)
   de er ikke rettet eller verifisert i denne økten. Se PLAN.md-backloggen
   for det gjenstående punktet. Ikke anta at «P57 byttet til Formspree»
   betyr at Resend-problemet er løst generelt i appen.
+
+## P58 — Databasen som vernebøyle, appen som praktisk grense (20.08.2026)
+
+`subjects.max_divisions` hadde en DB-CHECK-constraint (1–8) som var strengere
+enn appens skjema (1–20) — fag med 9+ inndelinger kunne ikke lagres, med rå
+Postgres-feiltekst i overlayet. Migrasjon 024 hever DB-taket til 1–20 slik at
+det matcher appen.
+
+**Rollefordeling, bevisst valgt:**
+- **Databasen** setter et fast, romslig ytre tak (1–20) — en vernebøyle mot
+  helt urimelige verdier (f.eks. negative tall eller tusenvis), ikke en
+  pedagogisk grense.
+- **Appen** (`renderFagSkjema` + `oppdaterDivNavn` i `app.js`) håndhever den
+  praktiske grensen brukeren faktisk møter, og kan endres uten migrasjon.
+
+CHECK-constraints ser kun egen rad og kan derfor ikke variere per
+skole/fag uten en egen trigger. Dette er bevisst IKKE bygget — et fast tak
+er tilstrekkelig for formålet (vernebøyle, ikke forretningsregel). Ikke
+foreslå trigger-basert dynamisk tak på nytt uten en ny, konkret
+begrunnelse (f.eks. at en skole faktisk trenger et tak per fag).
