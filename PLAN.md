@@ -2,20 +2,18 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P58 (kode ferdig 20. august 2026 — hevet
-  DB-constrainten på `subjects.max_divisions` fra 1–8 til 1–20 (migrasjon
-  024) slik at den matcher `app.js`s skjema, som lenge har tillatt 1–20.
-  Fag med 9+ inndelinger kunne ikke lagres før dette. Ren backend-fiks,
-  ingen frontend-endring. Manuelt migrasjonssteg til Morfar gjenstår, se
-  «Åpne sjekkpunkter»)
+- **Siste fullførte P-nummer:** P58 (PR #169 squash-merget til main
+  20. august 2026 — hevet DB-constrainten på `subjects.max_divisions` fra
+  1–8 til 1–20 (migrasjon 024) slik at den matcher `app.js`s skjema, som
+  lenge har tillatt 1–20. Fag med 9+ inndelinger kunne ikke lagres før
+  dette. Ren backend-fiks, ingen frontend-endring. Migrasjon 024 KJØRT og
+  BEKREFTET av Morfar 20. august 2026 — kontrollspørring ga forventet svar
+  `CHECK (((max_divisions >= 1) AND (max_divisions <= 20)))`. P58 er
+  FERDIG, ingen åpne punkter.)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P59 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P58s manuelle steg — migrasjon `024_maks_inndelinger.sql` må kjøres i
-    Supabase SQL Editor av Morfar (heves DB-taket på
-    `subjects.max_divisions` fra 1–8 til 1–20); kontrollspørring i
-    PLAN.md-seksjonen for Økt 58
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -1897,7 +1895,12 @@ lesbar norsk i feiloverlayet — kun foreslått som backloggpunkt, ikke bygget.
 er relevant — sjekket med `node --check` og `git diff --stat` mot
 `origin/main` at ingen andre filer enn de planlagte er rørt.
 
-**Åpent — manuelt steg til Morfar (kan ikke lukkes fra denne økten):**
-kjør `024_maks_inndelinger.sql` i Supabase SQL Editor. Kontrollspørring:
+**PR #169 squash-merget til main 20. august 2026.**
+
+**Manuelt steg til Morfar — GJENNOMFØRT OG VERIFISERT i produksjon
+20. august 2026:** migrasjon `024_maks_inndelinger.sql` kjørt i Supabase
+SQL Editor. Kontrollspørring:
 `select pg_get_constraintdef(oid) from pg_constraint where conname = 'subjects_max_divisions_check';`
-— forventet svar: `CHECK ((max_divisions >= 1) AND (max_divisions <= 20))`.
+ga bekreftet forventet svar: `CHECK (((max_divisions >= 1) AND (max_divisions <= 20)))`.
+
+**P58 er FERDIG — ingen gjenstående punkter.**
