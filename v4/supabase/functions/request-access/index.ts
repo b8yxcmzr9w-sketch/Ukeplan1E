@@ -8,17 +8,20 @@ const corsHeaders = {
 
 const EPOST_DOMENE = /@skole\.rogfk\.no$/i
 
-// Sender et enkelt varsel til en e-postadresse via Resend (hvis konfigurert).
-// Returnerer true ved suksess, false hvis Resend ikke er satt opp / feiler.
-async function sendVarsel(til: string, emne: string, html: string): Promise<boolean> {
-  const key = Deno.env.get('RESEND_API_KEY')
-  const fra = Deno.env.get('RESEND_FROM')
-  if (!key || !fra) return false
+// Formspree-skjema opprettet av Morfar (mottaker satt til geir.edland@skole.rogfk.no
+// i Formspree-kontoen selv — ikke i kode). Erstatter Resend/sendVarsel (P57,
+// 20. august 2026): ingen hemmelig nøkkel trengs, samme tjeneste som allerede
+// er i bruk og bekreftet fungerende på uno.ganddal.net/ukeplan1e.html.
+const FORMSPREE_URL = 'https://formspree.io/f/mqpznaen'
+
+// Sender et enkelt varsel via Formspree. Returnerer true ved suksess, false
+// ved feil — best effort, feiler aldri selve innsendingen av forespørselen.
+async function sendVarsel(felter: Record<string, string>): Promise<boolean> {
   try {
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetch(FORMSPREE_URL, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fra, to: til, subject: emne, html }),
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(felter),
     })
     return res.ok
   } catch {
@@ -66,32 +69,20 @@ serve(async (req) => {
     })
     if (insertError) throw insertError
 
-    // Varsle skolens admin(er) på e-post — best effort, feiler ikke innsendingen
-    const { data: admins } = await adminClient.from('users')
-      .select('id, full_name')
-      .eq('school_id', school.id)
-      .is('deleted_at', null)
-      .or('is_admin.eq.true,role.eq.admin')
-
-    let notified = false
+    // Varsle admin via Formspree — best effort, feiler ikke innsendingen.
+    // Mottaker-e-post er satt i Formspree-kontoen, ikke her — trenger derfor
+    // ikke slå opp admin-brukere eller deres e-post i det hele tatt.
     const rolleNavn = requestedRole === 'kontaktlaerer' ? 'Kontaktlærer' : 'Lærer'
-    const html = `
-      <p>Hei!</p>
-      <p><strong>${fullName}</strong> (${email}) har bedt om tilgang til ${school.name} i Ukeplan,
-      som <strong>${rolleNavn}</strong>.</p>
-      <p><strong>Fag:</strong> ${subjectsText.length ? subjectsText.join(', ') : '(ingen valgt)'}</p>
-      <p><strong>Parti/gruppe:</strong> ${divisionsText.length ? divisionsText.join(', ') : '(ingen valgt)'}</p>
-      <p><strong>Melding:</strong> ${message ? message : '(ingen melding)'}</p>
-      <p>Logg inn som admin og se forespørselen under fanen «Forespørsler» i adminpanelet
-      for å godkjenne eller avvise.</p>`
-
-    for (const admin of admins || []) {
-      const { data: authUser } = await adminClient.auth.admin.getUserById(admin.id)
-      const adminEpost = authUser?.user?.email
-      if (!adminEpost) continue
-      const ok = await sendVarsel(adminEpost, `Ny tilgangsforespørsel i Ukeplan (${school.name})`, html)
-      if (ok) notified = true
-    }
+    const notified = await sendVarsel({
+      _subject: `Ny tilgangsforespørsel i Ukeplan (${school.name})`,
+      navn: fullName,
+      epost: email,
+      rolle: rolleNavn,
+      fag: subjectsText.length ? subjectsText.join(', ') : '(ingen valgt)',
+      parti_gruppe: divisionsText.length ? divisionsText.join(', ') : '(ingen valgt)',
+      melding: message || '(ingen melding)',
+      info: `Logg inn som admin og se forespørselen under fanen «Forespørsler» i adminpanelet for å godkjenne eller avvise.`,
+    })
 
     return json({ ok: true, notified })
   } catch (e) {
