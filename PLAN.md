@@ -56,21 +56,28 @@
 
 ### Klar til bygging
 
-- **Forhåndsutfylling ved «Ny bruker» fra en godkjent tilgangsforespørsel**
-  (ønske fra Morfar, 20. august 2026, etter første praktiske bruk av P57).
-  I dag må admin lese navn/e-post/rolle fra forespørsels-kortet i
+- **«Godkjenn» skal (senere) lede rett til kontooppretting, med bekreft/rediger-steg**
+  (ønske fra Morfar, presisert 20. august 2026, etter første praktiske bruk
+  av P57). I dag må admin lese navn/e-post/rolle fra forespørsels-kortet i
   «Forespørsler»-fanen og skrive dem inn på nytt for hånd i «+ Ny
   bruker»-skjemaet i «Brukere»-fanen — upraktisk på mobil/i farten (Morfar
   klarer seg i mellomtiden fordi samme info også kommer på e-post via
-  Formspree). Mulig løsning: en knapp på forespørsels-kortet, «Opprett
-  bruker fra denne», som åpner «Ny bruker»-skjemaet FORHÅNDSUTFYLT med
-  navn/e-post/rolle (fag/parti/gruppe er fortsatt bare informasjon — ingen
-  automatisk kobling, det prinsippet endres ikke). **NB:** dette reverserer
-  delvis en eksplisitt beslutning fra selve P57-oppgaveteksten («INGEN
-  forhåndsutfylling av opprett-bruker-skjemaet») — avklar derfor eksplisitt
-  med Morfar før bygging at forhåndsutfylling (kun UI-bekvemmelighet, admin
-  må fortsatt trykke lagre selv) er greit, det var ikke det opprinnelige
-  sikkerhetshensynet som var bekymringen.
+  Formspree; midlertidig forsterket forklaringstekst i fanen lagt til
+  samme dag så «Godkjenn» ikke misforstås som «oppretter bruker»).
+  **Ønsket fremtidig flyt:** «Godkjenn» åpner «Ny bruker»-skjemaet
+  FORHÅNDSUTFYLT med navn/e-post/rolle fra forespørselen — admin kan endre
+  feltene fritt (f.eks. justere rolle eller velge klasser) FØR en eksplisitt
+  bekreftelse faktisk oppretter kontoen. Selve statusendringen på
+  forespørselen (`venter` → `godkjent`) skjer i samme steg som
+  kontoopprettelsen, ikke separat som i dag. Fag/parti/gruppe forblir kun
+  informasjon — ingen automatisk kobling opprettes, det prinsippet endres
+  ikke. **NB:** dette reverserer en eksplisitt beslutning fra selve
+  P57-oppgaveteksten («INGEN automatisk kontoopprettelse, INGEN
+  forhåndsutfylling») — bevisst, siden Morfar selv har bedt om det etter å
+  ha brukt funksjonen i praksis. Design-punkter å avklare før bygging:
+  hva skjer med statusen hvis admin åpner skjemaet men avbryter uten å
+  lagre (forblir `venter`, ikke `godkjent`)? Skal «Avvis» fortsatt være en
+  ren statusendring uten skjema (trolig ja)?
 - **Stille tomt resultat i adminpanelet når «admin-modus»-bryteren er av**
   (funnet under P57s produksjonstest, 20. august 2026). Adminpanelets rute
   slipper deg inn basert KUN på det permanente `is_admin`-flagget
