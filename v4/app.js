@@ -5648,7 +5648,7 @@ async function visSlettBrukerModal(user, onSave) {
 async function renderForesporslerTab(container) {
   container.appendChild(el('h3', {}, 'Ventende tilgangsforespørsler'))
   container.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.88rem;margin:0 0 14px' },
-    'Fag/parti/gruppe under er ren informasjon fra søkeren – ingen kobling opprettes automatisk. Opprett kontoen manuelt som vanlig etter å ha lest forespørselen.'))
+    '⚠️ «Godkjenn»/«Avvis» oppretter INGEN konto – de endrer kun status på selve forespørselen. Skal du gi tilgang: gå til «Brukere»-fanen → «+ Ny bruker» og opprett kontoen selv (fag/parti/gruppe under er ren informasjon fra søkeren, ikke en kobling som overføres automatisk), og trykk «Godkjenn» her etterpå.'))
 
   const listeDiv = el('div', {})
   container.appendChild(listeDiv)
