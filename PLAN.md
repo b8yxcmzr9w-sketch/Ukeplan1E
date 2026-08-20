@@ -1834,3 +1834,52 @@ kun planlagte filer + ny migrasjon/edge function.
 i adminpanelet) er bygget, merget og bekreftet fungerende i produksjon.**
 E-postvarselet er et tillegg som avhenger av en ekstern tjeneste ingen har
 verifisert er riktig satt opp — eget backlogg-punkt, ikke en P57-feil.
+
+## Økt 58 (P58): Fag med flere enn 8 inndelinger kan ikke lagres
+
+**Branch:** `claude/P58-maks-inndelinger`
+**Feil:** I adminpanelet → Fag → «Rediger fag» kan `max_divisions` settes
+til 9–20 i skjemaet (`app.js` tillater 1–20), men databasens CHECK-
+constraint på `subjects.max_divisions` (fra `001_initial_schema.sql`)
+tillater kun 1–8. Lagring feiler med rå Postgres-feiltekst
+(`subjects_max_divisions_check`), og ingen inndelingsnavn lagres.
+**Årsak (bekreftet, ikke re-kartlagt):** `app.js` er allerede korrekt
+(1–20 begge steder: skjema-input og `oppdaterDivNavn`-klampen). Kun
+databasens CHECK-constraint (satt av migrasjon 001, kjørt for lenge
+siden — kan ikke endres i den filen uten at filen lyver om hva
+produksjonsbasen faktisk inneholder) står fast på 1–8.
+**Kontroll før start:** Bekreftet at `origin/main` (etter `git fetch`,
+commit `1147532` «Change max_divisions default value and constraint»)
+har `001_initial_schema.sql` linje 47 uendret tilbake til
+`default 8 check (max_divisions between 1 and 8)`, og at arbeidstreet
+er rent (`git status` → «nothing to commit»). Ingen re-redigering av 001.
+
+**Sjekkliste:**
+- [ ] Ny fil `v4/supabase/migrations/024_maks_inndelinger.sql` —
+      idempotent DROP CONSTRAINT IF EXISTS + ADD CONSTRAINT
+      `subjects_max_divisions_check` med `max_divisions between 1 and 20`.
+      Kommentarblokk i 021-stil: bakgrunn (skjemaet tillater 1–20, DB
+      tillot kun 1–8), at DB-taket nå matcher appens 1–20, og at CHECK
+      kun ser egen rad (kan derfor ikke gjøres dynamisk per skole — ville
+      krevd trigger, bevisst ikke gjort her).
+- [ ] DEFAULT uendret (fortsatt 8) — ikke satt til 20, siden det ville gitt
+      20 tomme «Gruppe N:»-navnefelt for hvert nytt fag.
+- [ ] Ingen endring i `v4/app.js` (allerede riktig 1–20) eller andre
+      frontend-filer. Ingen cache-bust nødvendig (ingen JS/CSS-endring).
+- [ ] `CLAUDE.md`: `subjects`-skjemalinja oppdatert med
+      `max_divisions (1–20, migrasjon 024)`, og migrasjonslisten i
+      filstruktur-seksjonen oppdatert til å inkludere 022, 023 og 024
+      (listen stoppet på 021 fra før — henger etter faktisk innhold).
+- [ ] `DECISIONS.md`: notat om rollefordelingen database vs. app — databasen
+      er en vernebøyle (fast, romslig 1–20-tak), appen holder den praktiske
+      grensen. Ikke foreslå trigger-basert dynamisk tak igjen uten ny
+      begrunnelse.
+- [ ] `PLAN.md` sjekkliste + statuslinje oppdatert i samme økt.
+
+**Utenfor scope:** oversettelse av rå Postgres-feilmeldinger til lesbar
+norsk i feiloverlayet — lagt til i Backlogg som eget punkt, ikke bygget nå.
+
+**Manuelt steg til Morfar (etter merge):** kjør `024_maks_inndelinger.sql`
+i Supabase SQL Editor. Kontrollspørring:
+`select pg_get_constraintdef(oid) from pg_constraint where conname = 'subjects_max_divisions_check';`
+— forventet svar: `CHECK ((max_divisions >= 1) AND (max_divisions <= 20))`.
