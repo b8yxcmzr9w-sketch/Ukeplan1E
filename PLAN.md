@@ -64,10 +64,16 @@
   bruke? (2) Er Resend-kontoen reell, men bare aldri fullført (f.eks.
   uverifisert avsenderdomene)? Begge de nevnte funksjonene feiler stille i
   dag («best effort», jf. `sendVarsel()`-mønsteret) — ingen bruker har
-  noensinne fått bekreftet at NOEN e-postvarsling fra appen faktisk kommer
-  frem. Retting/oppsett bør skje som egen, avgrenset økt (kontosjekk,
+  noensinne fått bekreftet at NOEN Resend-basert varsling fra appen faktisk
+  kommer frem. Retting/oppsett bør skje som egen, avgrenset økt (kontosjekk,
   domeneverifisering, ev. bytte tjeneste) — ikke antas løst av flere
   «request-access»-forsøk.
+  **NB (presisert 20. august 2026):** «Glemt passord»-e-posten på
+  innloggingssiden er IKKE et signal her — den bruker Supabase sin egen
+  innebygde auth-e-post (`sb.auth.resetPasswordForEmail`), en HELT ANNEN
+  sendevei enn `sendVarsel()`/Resend. At «Glemt passord» fungerer, bekrefter
+  bare at Supabase klarer å sende sin egen e-post — sier ingenting om
+  Resend-kontoens status.
 - **Ferie-filtrering i AI-økt-import** (sekundærfunn under P32). Prompten i
   `ai-parse-sessions` har ingen ferie-instruks og mottar ikke skoleruten — AI
   lager økter av «Vinterferie»-tekst. Delvis avbøtet av P30-forhåndsvisningen
