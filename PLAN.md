@@ -6,9 +6,9 @@
   19. august 2026 — uke-navigatorens Enter-tast fikset i begge uke-feltene,
   elev- og lærervisning)
 - **Pågående:** P57 — uinnlogget tilgangsforespørsel ved innlogging. Kode
-  ferdig og maskinverifisert (22 sjekker OK), PR klar. Tjenesten regnes som
-  LIVE (etter 1. august 2026, jf. PROSEDYRER.md) — merge til `main` venter
-  på Morfars uttrykkelige «merge», gjøres ikke automatisk.
+  ferdig og maskinverifisert (22 sjekker OK), PR #168 klar. Tjenesten regnes
+  som LIVE (etter 1. august 2026, jf. PROSEDYRER.md) — merge til `main`
+  venter på Morfars uttrykkelige «merge», gjøres ikke automatisk.
 - **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
@@ -1738,6 +1738,6 @@ kun planlagte filer + ny migrasjon/edge function.
 avslutningsprosedyren ved «PR klar» — merge til `main` krever Morfars
 uttrykkelige «merge», gjøres IKKE automatisk i denne økten.
 
-Gjenstår: PR opprettes, deretter Morfars manuelle steg i del F (kjøre
-migrasjon 023, deploye `request-access`, bekrefte e-postvarsel, funksjonstest
-i produksjon) — kan først gjøres ETTER merge.
+PR #168 opprettet mot `main`. Gjenstår: Morfars «merge», deretter de manuelle
+stegene i del F (kjøre migrasjon 023, deploye `request-access`, bekrefte
+e-postvarsel, funksjonstest i produksjon) — kan først gjøres ETTER merge.
