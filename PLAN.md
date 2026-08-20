@@ -2,13 +2,16 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P55 (PR #166 squash-merget til main
-  19. august 2026 — fikset at myk-slettede brukere dukket opp igjen i
-  adminpanelets brukerliste og i «Overfør fremtidige økter til …»-nedtrekket)
+- **Siste fullførte P-nummer:** P56 (uke-navigatorens Enter-tast fikset i
+  begge uke-feltene — elev- og lærervisning — 19. august 2026)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P56 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
+- **Neste ledige P-nummer:** P57 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P56s prod-sjekk — Enter-tast i ukenavigatoren (maskinlogikk verifisert:
+    `blur()` trigger eksisterende `onchange`-navigasjon, grensesjekk
+    uendret); Morfars manuelle test i ekte produksjon gjenstår (skriv
+    ukenummer i feltet og trykk Enter, både elev- og lærervisning)
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -61,9 +64,6 @@
   naturlig sammen med ferie-filtreringspunktet over (samme prompt/funksjon).
   Mulig samtidig utvidelse fra P30: uke-spenn per rad i importen (én rad =
   én uke i dag).
-- **Uke-navigator: Enter-tast registreres ikke.** Begge uke-feltene har kun
-  `onchange` og står ikke i et skjema (app.js ~1209 elev, ~1819 lærer);
-  tooltip sier likevel «trykk Enter».
 - **Default-uke lander feil ved åpning av ikke-aktivt skoleår.** Årsvelgeren
   bytter år uten å beregne uke på nytt (app.js ~1759); uke-seedingen bruker
   lagret uke uansett år. Bytte fra 25/26 uke 30 til 26/27 → står på uke 30.
@@ -1472,3 +1472,46 @@ gjort dynamisk av hensyn til appens skolenøytrale arkitektur.
 **Status:** PR #166 squash-merget til main 19. august 2026. Kun Morfars
 manuelle produksjonstest gjenstår (kan ikke utføres fra denne økten —
 krever innlogget admin-sesjon).
+
+## Økt (P56): Uke-navigator — Enter-tast registreres ikke
+
+**Branch:** `claude/ukenavigator-enter-key-pjep16`.
+**Scope:** KUN `v4/app.js` + cache-bust i `v4/index.html`. Ingen DB-endring,
+ingen edge-funksjon.
+
+**Bakgrunn:** Begge `uke-nr-input`-feltene (elevvisning ~1217, lærervisning
+~1979) hadde kun `onchange` og lå i `<div class="nav-bar">`, ikke i et
+`<form>`. Tooltip lovet «Skriv inn ukenummer og trykk Enter», men ingenting
+fanget Enter-tasten — feltet navigerte kun ved å miste fokus (klikk et annet
+sted eller Tab).
+
+### Delplan
+- [x] Lagt til `onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur() } }`
+      på BEGGE `uke-nr-input`-feltene, rett ved siden av `onchange`.
+      `blur()` trigger den eksisterende `onchange`-navigasjonen — ingen
+      duplisert logikk. `min`/`max`/`value` og all annen logikk uendret.
+- [x] Verifisert `el()`-hjelperen (app.js ~226) håndterer enhver `on*`-nøkkel
+      generisk via `addEventListener(k.slice(2), v)` — `onkeydown` fungerer
+      dermed identisk med `onchange`/`onclick`, ingen spesialhåndtering
+      nødvendig.
+- [x] Logisk gjennomgang av grensene: elevvisningens felt bruker
+      `ukePosisjon(v, schoolStart)` mot `ukePosisjon(schoolEnd, schoolStart)`
+      (min 1/max 52 på input-elementet, reell grense i `onchange`);
+      lærervisningens felt bruker `v >= schoolStart && v <= schoolEnd`
+      (min/max på input-elementet = reell grense). Begge uendret av denne
+      fiksen — Enter kaller samme `onchange`, som allerede respekterer
+      grensene.
+- [x] Bump `app.js?v=20260819j` i `v4/index.html`.
+- [x] `git diff --stat` mot origin/main bekrefter kun `v4/app.js`,
+      `v4/index.html` og `PLAN.md` er endret.
+- [x] Backlogg-punktet flyttet ut av «Klar til bygging» og statuslinjen
+      oppdatert i samme commit.
+- [ ] Morfars manuelle prod-sjekk: skriv et ukenummer i feltet og trykk
+      Enter (ikke klikk bort) i både elev- og lærervisning — bekreft at
+      navigasjonen skjer umiddelbart, og at et ugyldig tall utenfor
+      skoleårets grenser ikke navigerer (samme oppførsel som å klikke bort
+      fra feltet i dag).
+
+**Status:** Kodefiks ferdig og pushet. Kun Morfars visuelle/manuelle
+produksjonstest av Enter-tasten gjenstår (kan ikke utføres fra denne
+økten).
