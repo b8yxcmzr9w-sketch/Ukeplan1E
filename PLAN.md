@@ -16,11 +16,16 @@
     Edge function `request-access` DEPLOYET 20. august 2026 (URL bekreftet
     riktig: `.../functions/v1/request-access` — første forsøk fikk feil
     Supabase-generert slug `clever-processor`, slettet og gjenopprettet med
-    riktig navn). Gjenstår: bekrefte at `RESEND_API_KEY`/`RESEND_FROM` når
-    den nye funksjonen, og kjøre en ekte funksjonstest (send forespørsel
-    uinnlogget → e-postvarsel til admin → raden vises i adminfanen
-    «Forespørsler» → test Godkjenn og Avvis). Kode maskinverifisert
-    (22 sjekker) i PR #168.
+    riktig navn). Skjemaet BEKREFTET i produksjon samme dag: admins fornavn
+    («Geir») vises live, fag/parti lastes live, klient-domenevalidering
+    blokkerer feil e-postdomene korrekt. Underveis oppdaget og rettet:
+    feilmeldingen var kun synlig øverst i modalen og ble usett når brukeren
+    hadde scrollet ned — duplisert til også å vises rett over «Send
+    forespørsel»-knappen (`?v=20260820b`, merget direkte til main). Gjenstår:
+    bekrefte at `RESEND_API_KEY`/`RESEND_FROM` når funksjonen (send en
+    forespørsel med GYLDIG domene og se om admin-e-posten kommer frem), og
+    bekrefte raden dukker opp i adminfanen «Forespørsler» + teste Godkjenn
+    og Avvis der. Kode maskinverifisert (22 sjekker) i PR #168.
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
