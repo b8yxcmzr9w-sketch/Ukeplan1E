@@ -44,7 +44,7 @@ create table subjects (
   color_hex      text not null default '#e9ecef',
   has_parti      boolean not null default false,
   has_gruppe     boolean not null default false,
-  max_divisions  int  not null default 20 check (max_divisions between 1 and 20),
+  max_divisions  int  not null default 8 check (max_divisions between 1 and 8),
   deleted_at     timestamptz,
   constraint only_one_division_type check (not (has_parti and has_gruppe))
 );
