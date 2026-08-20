@@ -14,14 +14,6 @@
 - **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P57s Formspree-bytte — kode pushet direkte til main 20. august 2026
-    (`request-access/index.ts` bruker nå Formspree i stedet for Resend).
-    ⚠️ MANUELT STEG: Morfar må lime inn den oppdaterte koden i
-    `request-access`s Code-fane i Supabase Dashboard og trykke Deploy (samme
-    fremgangsmåte som første deploy) — funksjonen som kjører i produksjon nå
-    er FORTSATT Resend-varianten inntil dette gjøres. Deretter: send en ekte
-    forespørsel og bekreft at en e-post kommer frem til
-    `geir.edland@skole.rogfk.no`.
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
