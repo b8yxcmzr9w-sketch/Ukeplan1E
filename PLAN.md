@@ -2,16 +2,22 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P56 (PR #167 squash-merget til main
-  19. august 2026 — uke-navigatorens Enter-tast fikset i begge uke-feltene,
-  elev- og lærervisning)
-- **Pågående:** P57 — uinnlogget tilgangsforespørsel ved innlogging. Kode
-  ferdig og maskinverifisert (22 sjekker OK), PR #168 klar. Tjenesten regnes
-  som LIVE (etter 1. august 2026, jf. PROSEDYRER.md) — merge til `main`
-  venter på Morfars uttrykkelige «merge», gjøres ikke automatisk.
+- **Siste fullførte P-nummer:** P57 (PR #168 squash-merget til main
+  20. august 2026 — uinnlogget tilgangsforespørsel ved innlogging: skjema,
+  ny tabell/RLS, ny edge function `request-access` med e-postvarsel til
+  admin, ny adminfane «Forespørsler»)
+- **Pågående:** ingen
 - **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P57s manuelle steg — migrasjon `023_tilgangsforesporsler.sql` må kjøres
+    i Supabase SQL Editor og edge function `request-access` må deployes i
+    Dashboard (ny funksjon, opprettes der først) FØR «Be om tilgang»-
+    knappen på innloggingssiden faktisk fungerer i produksjon. Deretter:
+    bekreft at `RESEND_API_KEY`/`RESEND_FROM` når den nye funksjonen, og
+    kjør en ekte funksjonstest (send forespørsel uinnlogget → e-postvarsel
+    til admin → raden vises i adminfanen «Forespørsler» → test Godkjenn og
+    Avvis). Kode maskinverifisert (22 sjekker) i PR #168.
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -1728,10 +1734,8 @@ Godkjenn oppdaterer KUN `access_requests.status` uten å opprette noen bruker.
 `node --check` OK på `app.js`. `git diff --stat` mot `origin/main` bekrefter
 kun planlagte filer + ny migrasjon/edge function.
 
-**Live-status (etter 1. august 2026):** per PROSEDYRER.md stoppes
-avslutningsprosedyren ved «PR klar» — merge til `main` krever Morfars
-uttrykkelige «merge», gjøres IKKE automatisk i denne økten.
-
-PR #168 opprettet mot `main`. Gjenstår: Morfars «merge», deretter de manuelle
-stegene i del F (kjøre migrasjon 023, deploye `request-access`, bekrefte
-e-postvarsel, funksjonstest i produksjon) — kan først gjøres ETTER merge.
+**PR #168 squash-merget til main 20. august 2026** etter Morfars uttrykkelige
+«merge» (jf. live-status i PROSEDYRER.md — koden ble ikke merget automatisk).
+Gjenstår kun del F: Morfars manuelle steg (kjøre migrasjon 023, deploye
+`request-access`, bekrefte e-postvarsel, funksjonstest i produksjon) — se
+statuslinjens «Åpne sjekkpunkter».
