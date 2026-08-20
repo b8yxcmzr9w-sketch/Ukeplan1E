@@ -6,13 +6,22 @@
   20. august 2026 — uinnlogget tilgangsforespørsel ved innlogging: skjema,
   ny tabell/RLS, ny edge function `request-access`, ny adminfane
   «Forespørsler». Kjede bekreftet ende-til-ende i produksjon samme dag.
-  E-postvarsel til admin er BYGGET men ikke bekreftet fungerende — egen
-  åpen backloggsak, se «Klar til bygging»: e-posttjenesten Resend er aldri
-  verifisert av Morfar)
+  E-postvarsel byttet fra Resend til Formspree samme dag, se DECISIONS.md —
+  ⚠️ krever redeploy av `request-access` i Supabase Dashboard før det
+  virker i produksjon. `admin-user`s EGNE Resend-varsler er fortsatt
+  uverifiserte — egen backloggsak, se «Klar til bygging»)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P57s Formspree-bytte — kode pushet direkte til main 20. august 2026
+    (`request-access/index.ts` bruker nå Formspree i stedet for Resend).
+    ⚠️ MANUELT STEG: Morfar må lime inn den oppdaterte koden i
+    `request-access`s Code-fane i Supabase Dashboard og trykke Deploy (samme
+    fremgangsmåte som første deploy) — funksjonen som kjører i produksjon nå
+    er FORTSATT Resend-varianten inntil dette gjøres. Deretter: send en ekte
+    forespørsel og bekreft at en e-post kommer frem til
+    `geir.edland@skole.rogfk.no`.
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -54,26 +63,21 @@
 
 ### Klar til bygging
 
-- **E-postutsending (Resend) er ikke bekreftet fungerende** (funnet under
-  P57s produksjonstest, 20. august 2026). `RESEND_API_KEY`/`RESEND_FROM` i
-  Supabase Secrets stammer fra en tidligere økt (brukes av `admin-user` sine
-  passord-/e-post-endring-varsler OG nye `request-access`), men Morfar har
-  aldri brukt Resend selv, kjenner ikke igjen tjenesten, og har ikke mottatt
-  noen e-post fra den ved test. To spor å avklare før bygging/retting:
-  (1) Var det egentlig en ANNEN e-posttjeneste Morfar hadde tenkt/husker å
-  bruke? (2) Er Resend-kontoen reell, men bare aldri fullført (f.eks.
-  uverifisert avsenderdomene)? Begge de nevnte funksjonene feiler stille i
-  dag («best effort», jf. `sendVarsel()`-mønsteret) — ingen bruker har
-  noensinne fått bekreftet at NOEN Resend-basert varsling fra appen faktisk
-  kommer frem. Retting/oppsett bør skje som egen, avgrenset økt (kontosjekk,
-  domeneverifisering, ev. bytte tjeneste) — ikke antas løst av flere
-  «request-access»-forsøk.
-  **NB (presisert 20. august 2026):** «Glemt passord»-e-posten på
-  innloggingssiden er IKKE et signal her — den bruker Supabase sin egen
-  innebygde auth-e-post (`sb.auth.resetPasswordForEmail`), en HELT ANNEN
-  sendevei enn `sendVarsel()`/Resend. At «Glemt passord» fungerer, bekrefter
-  bare at Supabase klarer å sende sin egen e-post — sier ingenting om
-  Resend-kontoens status.
+- **`admin-user`s Resend-baserte varsler (passord-/e-post-endring) er
+  fortsatt ikke bekreftet fungerende** (funnet under P57s produksjonstest,
+  20. august 2026 — se DECISIONS.md for full bakgrunn). `RESEND_API_KEY`/
+  `RESEND_FROM` i Supabase Secrets stammer fra en tidligere økt; Morfar har
+  aldri brukt Resend selv og har ikke mottatt noen e-post derfra ved test.
+  P57s EGET behov for e-postvarsel er løst (byttet til Formspree, se
+  DECISIONS.md) — dette gjenværende punktet gjelder KUN de to eldre
+  `admin-user`-varslene (passord endret / e-post endret av admin), som
+  fortsatt bruker Resend uendret. Avklares/rettes som egen, avgrenset økt
+  ved behov (kontosjekk hos Resend, eller bytt disse også til Formspree
+  etter samme mønster som P57).
+  **NB:** «Glemt passord»-e-posten på innloggingssiden er IKKE et signal her
+  — den bruker Supabase sin egen innebygde auth-e-post
+  (`sb.auth.resetPasswordForEmail`), en helt annen sendevei enn
+  `sendVarsel()`/Resend.
 - **Ferie-filtrering i AI-økt-import** (sekundærfunn under P32). Prompten i
   `ai-parse-sessions` har ingen ferie-instruks og mottar ikke skoleruten — AI
   lager økter av «Vinterferie»-tekst. Delvis avbøtet av P30-forhåndsvisningen

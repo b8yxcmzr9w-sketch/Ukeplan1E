@@ -308,3 +308,35 @@ mobilgrense, ikke det globale 700px-brekket (19.08.2026)
   denne forskjellen til 700px eller flytt sammendragslinja til et nytt
   breakpoint uten en egen, eksplisitt beslutning — de to grensene styrer
   bevisst ulike komponenter.
+
+## P57 — E-postvarsel byttet fra Resend til Formspree (20.08.2026)
+
+- **Bakgrunn:** `request-access`s admin-varsel brukte i første omgang
+  `sendVarsel()`/Resend-mønsteret fra `admin-user` (samme
+  `RESEND_API_KEY`/`RESEND_FROM` i Supabase Secrets). Under produksjonstest
+  20. august 2026 viste det seg at Morfar aldri har brukt Resend, ikke
+  kjenner igjen tjenesten, og ikke har mottatt noen e-post derfra —
+  nøkkelen stammer fra en tidligere økt og er aldri verifisert av en
+  faktisk bruker.
+- **Valgt løsning:** `request-access` bruker nå **Formspree**
+  (`https://formspree.io/f/mqpznaen`) i stedet for Resend. Formspree er en
+  tjeneste Morfar allerede eier og har bekreftet fungerer (brukt på
+  `uno.ganddal.net/ukeplan1e.html`s kontaktskjema, endepunkt
+  `f/xzdwvpga`). Et NYTT, eget Formspree-skjema ble opprettet
+  (`f/mqpznaen`) med mottaker satt til `geir.edland@skole.rogfk.no` i
+  Formspree-kontoen selv — for å holde skole-forespørsler adskilt fra
+  salgshenvendelser til Uno i samme innboks-tråd. Ingen hemmelig nøkkel
+  trengs i Supabase Secrets for dette — endepunktet er hardkodet i
+  `request-access/index.ts` (ikke sensitivt, samme mønster som det
+  offentlige HTML-skjemaet på salgssiden).
+- **Bevisst forenkling:** admin-bruker-oppslaget (`is_admin`/`role=admin`
+  + `auth.admin.getUserById` for å finne e-postadresse) ble fjernet helt fra
+  `request-access` — mottaker-e-post styres nå i Formspree-kontoen, ikke i
+  kode. Reduserer kompleksitet og fjerner en avhengighet til
+  `SUPABASE_SERVICE_ROLE_KEY`s admin-API for akkurat denne biten (selve
+  DB-innsettingen bruker fortsatt service-role, uendret).
+- **IKKE i scope:** `admin-user`s to Resend-baserte varsler (passord
+  endret / e-post endret av admin) er UENDRET og bruker fortsatt Resend —
+  de er ikke rettet eller verifisert i denne økten. Se PLAN.md-backloggen
+  for det gjenstående punktet. Ikke anta at «P57 byttet til Formspree»
+  betyr at Resend-problemet er løst generelt i appen.
