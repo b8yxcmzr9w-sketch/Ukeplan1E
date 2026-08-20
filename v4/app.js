@@ -679,18 +679,31 @@ async function visBeOmTilgangModal() {
 
   form.appendChild(lagFormRad('Melding til admin', el('textarea', { name: 'message', class: 'felt input', rows: 3, placeholder: 'Valgfritt' })))
 
+  // P57-justering: feilmelding vises både øverst og nederst i modalen —
+  // skjemaet er langt (fag/parti kan kreve scrolling), og en feil kun øverst
+  // blir usett når brukeren står nederst ved «Send forespørsel».
+  const feilBunn = el('p', { class: 'feil-tekst skjult' })
+  function visFeil(msg) {
+    feil.textContent = msg; feil.classList.remove('skjult')
+    feilBunn.textContent = msg; feilBunn.classList.remove('skjult')
+  }
+  function skjulFeil() {
+    feil.classList.add('skjult')
+    feilBunn.classList.add('skjult')
+  }
+
+  form.appendChild(feilBunn)
   const lagreKnapp = el('button', { type: 'submit', class: 'btn btn-p' }, 'Send forespørsel')
   form.appendChild(lagreKnapp)
   form.appendChild(el('button', { type: 'button', class: 'btn btn-s', onclick: () => modal.remove() }, 'Avbryt'))
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
-    feil.classList.add('skjult')
+    skjulFeil()
     const fd = new FormData(form)
     const email = (fd.get('email') || '').trim()
     if (!/@skole\.rogfk\.no$/i.test(email)) {
-      feil.textContent = 'E-post må være en @skole.rogfk.no-adresse'
-      feil.classList.remove('skjult')
+      visFeil('E-post må være en @skole.rogfk.no-adresse')
       return
     }
     const subjectsText = [...form.querySelectorAll('input[name=selected_subjects]:checked')].map(cb => cb.value)
@@ -712,8 +725,7 @@ async function visBeOmTilgangModal() {
       modal.remove()
       showToast('Forespørselen er sendt', 'ok')
     } catch (err) {
-      feil.textContent = err.message || 'Kunne ikke sende forespørselen'
-      feil.classList.remove('skjult')
+      visFeil(err.message || 'Kunne ikke sende forespørselen')
       lagreKnapp.disabled = false
     }
   })
