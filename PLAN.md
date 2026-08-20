@@ -9,10 +9,6 @@
 - **Neste ledige P-nummer:** P57 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 19. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P56s prod-sjekk — Enter-tast i ukenavigatoren (maskinlogikk verifisert:
-    `blur()` trigger eksisterende `onchange`-navigasjon, grensesjekk
-    uendret); Morfars manuelle test i ekte produksjon gjenstår (skriv
-    ukenummer i feltet og trykk Enter, både elev- og lærervisning)
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -1507,12 +1503,10 @@ sted eller Tab).
       `v4/index.html` og `PLAN.md` er endret.
 - [x] Backlogg-punktet flyttet ut av «Klar til bygging» og statuslinjen
       oppdatert i samme commit.
-- [ ] Morfars manuelle prod-sjekk: skriv et ukenummer i feltet og trykk
-      Enter (ikke klikk bort) i både elev- og lærervisning — bekreft at
-      navigasjonen skjer umiddelbart, og at et ugyldig tall utenfor
-      skoleårets grenser ikke navigerer (samme oppførsel som å klikke bort
-      fra feltet i dag).
+- [x] Morfars manuelle prod-sjekk: bekreftet i Chrome mot
+      `ukeplan1e.ganddal.net/v4/` 19. august 2026 — Enter i ukefeltet
+      navigerer korrekt (Safari droppet av testen selv, pga. treg
+      cache-oppdatering ved sidelasting — ikke relatert til denne fiksen).
 
-**Status:** PR #167 squash-merget til main 19. august 2026. Kun Morfars
-visuelle/manuelle produksjonstest av Enter-tasten gjenstår (kan ikke
-utføres fra denne økten).
+**Status:** PR #167 squash-merget til main 19. august 2026. Morfars
+produksjonstest bekreftet samme dag. P56 er ferdig.
