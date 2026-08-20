@@ -13,13 +13,14 @@
   - P57s manuelle steg — migrasjon `023_tilgangsforesporsler.sql` KJØRT av
     Morfar i Supabase SQL Editor 20. august 2026 («Success. No rows
     returned» — tabell, RLS og `public_admin_fornavn()` er dermed på plass).
-    Gjenstår: deploye edge function `request-access` i Dashboard (ny
-    funksjon, opprettes der først) FØR «Be om tilgang»-knappen på
-    innloggingssiden faktisk fungerer i produksjon. Deretter: bekreft at
-    `RESEND_API_KEY`/`RESEND_FROM` når den nye funksjonen, og kjør en ekte
-    funksjonstest (send forespørsel uinnlogget → e-postvarsel til admin →
-    raden vises i adminfanen «Forespørsler» → test Godkjenn og Avvis). Kode
-    maskinverifisert (22 sjekker) i PR #168.
+    Edge function `request-access` DEPLOYET 20. august 2026 (URL bekreftet
+    riktig: `.../functions/v1/request-access` — første forsøk fikk feil
+    Supabase-generert slug `clever-processor`, slettet og gjenopprettet med
+    riktig navn). Gjenstår: bekrefte at `RESEND_API_KEY`/`RESEND_FROM` når
+    den nye funksjonen, og kjøre en ekte funksjonstest (send forespørsel
+    uinnlogget → e-postvarsel til admin → raden vises i adminfanen
+    «Forespørsler» → test Godkjenn og Avvis). Kode maskinverifisert
+    (22 sjekker) i PR #168.
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
