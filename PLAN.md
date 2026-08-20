@@ -10,14 +10,16 @@
 - **Neste ledige P-nummer:** P58 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
 - **Dato sist oppdatert:** 20. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P57s manuelle steg — migrasjon `023_tilgangsforesporsler.sql` må kjøres
-    i Supabase SQL Editor og edge function `request-access` må deployes i
-    Dashboard (ny funksjon, opprettes der først) FØR «Be om tilgang»-
-    knappen på innloggingssiden faktisk fungerer i produksjon. Deretter:
-    bekreft at `RESEND_API_KEY`/`RESEND_FROM` når den nye funksjonen, og
-    kjør en ekte funksjonstest (send forespørsel uinnlogget → e-postvarsel
-    til admin → raden vises i adminfanen «Forespørsler» → test Godkjenn og
-    Avvis). Kode maskinverifisert (22 sjekker) i PR #168.
+  - P57s manuelle steg — migrasjon `023_tilgangsforesporsler.sql` KJØRT av
+    Morfar i Supabase SQL Editor 20. august 2026 («Success. No rows
+    returned» — tabell, RLS og `public_admin_fornavn()` er dermed på plass).
+    Gjenstår: deploye edge function `request-access` i Dashboard (ny
+    funksjon, opprettes der først) FØR «Be om tilgang»-knappen på
+    innloggingssiden faktisk fungerer i produksjon. Deretter: bekreft at
+    `RESEND_API_KEY`/`RESEND_FROM` når den nye funksjonen, og kjør en ekte
+    funksjonstest (send forespørsel uinnlogget → e-postvarsel til admin →
+    raden vises i adminfanen «Forespørsler» → test Godkjenn og Avvis). Kode
+    maskinverifisert (22 sjekker) i PR #168.
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
