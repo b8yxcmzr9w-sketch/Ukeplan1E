@@ -2,17 +2,20 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P58 (PR #169 squash-merget til main
-  20. august 2026 — hevet DB-constrainten på `subjects.max_divisions` fra
-  1–8 til 1–20 (migrasjon 024) slik at den matcher `app.js`s skjema, som
-  lenge har tillatt 1–20. Fag med 9+ inndelinger kunne ikke lagres før
-  dette. Ren backend-fiks, ingen frontend-endring. Migrasjon 024 KJØRT og
-  BEKREFTET av Morfar 20. august 2026 — kontrollspørring ga forventet svar
-  `CHECK (((max_divisions >= 1) AND (max_divisions <= 20)))`. P58 er
-  FERDIG, ingen åpne punkter.)
+- **Siste fullførte P-nummer:** P59 (prosedyrer oppdatert til «live»:
+  PROSEDYRER.md sin gamle «før/etter 1. august 2026»-todeling er fjernet —
+  avslutningsprosedyren stopper nå ALLTID ved «PR klar til merge» og venter
+  på Morfars uttrykkelige «merge», ingen direkte-merge-variant lenger. Ny
+  seksjon «Slik tester Morfar før merge» (Files changed / fillenke /
+  raw.githack-preview med advarsel om delt produksjonsdatabase). Norsk
+  sluttoppsummering skal alltid inkludere branch-navn + preview-lenke.
+  CLAUDE.md sin utdaterte «Eneste redigerbare områder»-linje er erstattet
+  med en full liste over alle 8 vedlikeholdte .md-filer og hva hver av dem
+  er til. Ingen kode i `v4/` rørt. P59 er den siste økten som selv merges
+  under den gamle regelen — fra og med P60 gjelder den nye.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P59 (P45 lagt bort, P46/P47 stubbet 5. august 2026)
-- **Dato sist oppdatert:** 20. august 2026
+- **Neste ledige P-nummer:** P60
+- **Dato sist oppdatert:** 23. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
@@ -1904,3 +1907,84 @@ SQL Editor. Kontrollspørring:
 ga bekreftet forventet svar: `CHECK (((max_divisions >= 1) AND (max_divisions <= 20)))`.
 
 **P58 er FERDIG — ingen gjenstående punkter.**
+
+---
+
+## Økt 59 (P59): Prosedyrer oppdatert til «live» — merge stopper alltid ved godkjenning
+
+**Branch:** `claude/P59-prosedyrer-etter-live`
+**Bakgrunn:** PROSEDYRER.md har fortsatt en «Før 1. august 2026 / etter
+1. august 2026»-todeling av merge-steget, med direkte squash-merge som
+gyldig variant «før live». Datoen er passert og løsningen er i ferd med
+å gå live med ekte brukere — todelingen skal fjernes, ikke bare
+oppdateres, slik at den ikke kan misforstås eller brukes feil senere.
+
+**Sub-plan:**
+
+**A. PROSEDYRER.md — «Status: Før live / Etter live»**
+- [x] Seksjonen skrevet om til «Status: Live» — slår fast at løsningen NÅ
+      er live (ekte brukere), uten dato-betinget språk.
+- [x] Avslutningsprosedyrens punkt 6 («Merge») mistet sin to-variants
+      struktur. Kun én variant igjen: Code stopper ALLTID ved «PR klar til
+      merge» og venter på Morfars uttrykkelige «merge». «Før live:
+      squash-merge til main»-varianten er fjernet helt (ikke kommentert ut).
+
+**B. PROSEDYRER.md — ny seksjon «Slik tester Morfar før merge»**
+- [x] Plassert rett etter avslutningsprosedyren (mellom punkt 7 og «Mal:
+      ferdig Code-prompt»).
+- [x] Tre nivåer, i rekkefølge:
+      1. PR-ens «Files changed»-fane.
+      2. Direkte fillenke i branchen:
+         `https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/<branch>/<fil>`
+      3. Kjørbar app fra branchen via
+         `https://raw.githack.com/b8yxcmzr9w-sketch/Ukeplan1E/<branch>/v4/index.html`
+         — markert som ENNÅ IKKE BEKREFTET, må prøves én gang mot main
+         først. Tydelig ADVARSEL: `SUPABASE_URL`/`SUPABASE_ANON_KEY` er
+         hardkodet i `app.js`, så previewen snakker med SAMME database
+         som produksjon — lagring/endring/sletting treffer ekte data.
+         Notert at passord-reset og invitasjonslenker ikke fullføres i
+         previewen (peker tilbake til produksjonsadressen).
+- [x] Fast sjekkliste til slutt: test på PC og telefon, gå gjennom
+      øktens PLAN.md-punkter, hard refresh (Cmd+Shift+R), kontroller at
+      elevvisning, «Min klasse», «Alle mine økter», «Ny økt» og
+      adminpanelet fortsatt virker.
+
+**C. PROSEDYRER.md — avslutningsprosedyrens punkt 7 («Norsk sluttoppsummering»)**
+- [x] Utvidet slik at oppsummeringen ALLTID inkluderer branch-navnet OG
+      den ferdige raw.githack-preview-lenken (satt sammen fra branchen,
+      ikke noe Morfar må bygge selv).
+
+**D. CLAUDE.md — «Arbeidsrutiner»**
+- [x] Alle 8 filer lest (CLAUDE.md, PLAN.md, DECISIONS.md, PROSEDYRER.md,
+      FUNKSJONELL-BESKRIVELSE.md, BACKLOGG-UX-MOBIL.md,
+      UTREDNING-skolear-oppsett.md, README.md), og linje per fil skrevet
+      om hva den faktisk inneholder og når den skal oppdateres — basert på
+      reelt innhold.
+- [x] **Avvik fra oppgaveteksten oppdaget og rettet:** README.md er IKKE
+      tom slik oppgaven antok — den inneholder en generisk to-linjers
+      GitHub-standardstub («# praksisplan» / «Praksisplan ukeplan») uten
+      reelt innhold om Ukeplan1E. Notert som fakta i CLAUDE.md (ikke
+      «tom», men «ubrukt stub»); filen er IKKE rørt/slettet.
+- [x] Erstattet linjen «Eneste redigerbare områder: `v4/`, `CLAUDE.md` og
+      `PLAN.md`» (CLAUDE.md linje 19) med full liste over alle 8
+      .md-filer + ett-linjes formål/oppdateringspunkt hver. Fredet-lista
+      (`index.html`, `CNAME`, `appsscript.gs`, `logo.png`, `info/`,
+      `dev/`) er uendret.
+
+**E. PLAN.md — statuslinje (presisert av Morfar, egen del)**
+- [x] STATUSLINJE øverst i PLAN.md oppdatert i samme commit: siste
+      fullførte P-nummer (P59), neste ledige (P60) og dato
+      (23. august 2026).
+
+**Scope:** kun `PROSEDYRER.md`, `CLAUDE.md` og `PLAN.md` (statuslinje).
+Ingen kode i `v4/`, ingen migrasjon, ingen cache-bust, ingen edge
+functions, ingen nye filer.
+
+**Merk:** P59 er den siste økten som merges under den gamle
+direkte-merge-regelen (siden regelen som fjernes ennå gjaldt da denne
+økten startet). Fra og med P60 gjelder den nye regelen som nå er skrevet
+inn i PROSEDYRER.md: Code stopper alltid ved «PR klar til merge».
+
+**Status:** Kode og dokumentasjon ferdig. `node --check` er ikke relevant
+(ingen JS rørt); bekreftet med `git diff --stat` at kun `PROSEDYRER.md`,
+`CLAUDE.md` og `PLAN.md` er endret. P59 er FERDIG.
