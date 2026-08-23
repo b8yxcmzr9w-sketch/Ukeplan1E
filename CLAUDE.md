@@ -16,8 +16,33 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 - PRODUKSJON I AKTIV BRUK — fryst: rotfilene `index.html`, `CNAME`,
   `appsscript.gs`, `logo.png` samt mappene `info/` (bruksanvisning, lenket
   fra produksjonsmenyen) og `dev/` (testmiljø for dagens løsning) er fredet
-  og skal ALDRI endres. Eneste redigerbare områder: `v4/`, `CLAUDE.md`
-  og `PLAN.md`.
+  og skal ALDRI endres. Redigerbare områder: `v4/` og disse .md-filene,
+  hver med sitt eget formål og oppdateringspunkt:
+  - `CLAUDE.md` — denne fila; teknisk prosjektbeskrivelse for Claude
+    (stack, filstruktur, invarianter, nøkkelfunksjoner). Oppdateres når
+    noe av dette faktisk endrer seg i koden.
+  - `PLAN.md` — sub-planer og sjekklister per økt (P-nummerert), pluss
+    STATUSLINJE (siste/neste P-nummer, dato) og Backlogg-seksjonen.
+    Oppdateres i SAMME commit som resten av arbeidet i hver økt.
+  - `DECISIONS.md` — beslutningslogg for designvalg som ikke er åpenbare
+    fra koden alene. Oppdateres når en bevisst avgjørelse tas som ellers
+    ville blitt foreslått på nytt senere.
+  - `PROSEDYRER.md` — faste rutiner for oppstart/avslutning av økter og
+    samarbeidet mellom Morfar og Claude. Oppdateres kun når selve
+    rutinen endres (sjelden).
+  - `FUNKSJONELL-BESKRIVELSE.md` — hva tjenesten skal gjøre funksjonelt
+    (roller, visninger, avklarte beslutninger). Oppdateres når et
+    funksjonelt avvik mellom dokument og kode lukkes.
+  - `BACKLOGG-UX-MOBIL.md` — uferdig spesifiserte UX-/mobilønsker, brytes
+    ned til egne P-nummererte økter senere. Oppdateres når nye ønsker
+    noteres eller et punkt brytes ut til en økt.
+  - `UTREDNING-skolear-oppsett.md` — utredning (ikke byggeplan) av
+    skoleår-anker for fag/klasser/grupper. Status «IKKE BYGG» — røres
+    kun hvis modellen tas opp igjen og godkjennes.
+  - `README.md` — IKKE tom, men inneholder kun en generisk to-linjers
+    GitHub-standardstub («# praksisplan» / «Praksisplan ukeplan») uten
+    reelt innhold om Ukeplan1E. Ubrukt i praksis; røres ikke med mindre
+    noen bevisst bestemmer at repoet skal ha en ekte README.
 - Ved større oppgaver: skriv plan til `PLAN.md` (med avkrysningsbokser)
   før koding starter, og vent på godkjenning.
 - Etter hvert fullført delsteg: kryss av i `PLAN.md` og oppdater «Neste steg».

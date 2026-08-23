@@ -46,14 +46,12 @@ Morfar starte ny chat.
 
 ---
 
-## Status: Før live / Etter live
+## Status: Live
 
-**Nå (før 1. august 2026):** Siden er ikke i aktiv bruk. Merge til `main`
-kan gjøres direkte som en del av avslutningsprosedyren.
-
-**Etter 1. august 2026 (live, ekte brukere):** Merge = publisering. Da skal
-avslutningsprosedyren STOPPE ved «PR klar» og vente på Morfars uttrykkelige
-«merge». Stram inn merge-steget når vi nærmer oss live.
+Løsningen er nå live med ekte brukere. Merge til `main` = publisering.
+Avslutningsprosedyren STOPPER ALLTID ved «PR klar til merge» og venter på
+Morfars uttrykkelige «merge» — det finnes ingen variant der Code merger
+selv.
 
 ---
 
@@ -111,17 +109,55 @@ Kjøres i Claude Code når arbeidet på en økt er ferdig. Fast rekkefølge:
 3. **Commit** – én commit per P-punkt, tydelig melding.
 4. **Push** branch `claude/PN-kort-beskrivelse`.
 5. **Opprett PR.**
-6. **Merge:**
-   - Før live: squash-merge til `main`.
-   - Etter live: STOPP her. Rapporter «PR klar til merge» og vent på Morfars ok.
+6. **Merge:** STOPP her. Rapporter «PR klar til merge» og vent på Morfars
+   uttrykkelige «merge». Code merger ALDRI selv.
 7. **Norsk sluttoppsummering** (uten teknisk sjargong) tilbake til
    planleggingschat:
    - **Gjort:** hva ble gjort
    - **P-nummer:** hvilket punkt
-   - **Branch:** navnet
+   - **Branch:** navnet (alltid med, se «Slik tester Morfar før merge»
+     under)
+   - **Preview-lenke:** den ferdige raw.githack-lenken bygget fra
+     branch-navnet (se «Slik tester Morfar før merge»), slik at Morfar kan
+     klikke rett inn og teste uten å sette den sammen selv
    - **Gjenstår:** eventuelle rester
    - **Manuelle steg til Morfar:** SQL-migrasjon i Supabase, redeploy av edge
      functions, visuell verifisering i nettleser – nevn kun de som gjelder.
+
+---
+
+## Slik tester Morfar før merge
+
+Tre nivåer, fra raskt overblikk til full funksjonstest:
+
+1. **PR-ens «Files changed»-fane** — raskeste veien til å lese selve
+   endringen (diff, linje for linje).
+2. **Direkte fillenke i branchen** — for å se en hel fil slik den blir,
+   ikke bare diffen:
+   `https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/<branch>/<fil>`
+3. **Kjørbar app fra branchen**, via raw.githack:
+   `https://raw.githack.com/b8yxcmzr9w-sketch/Ukeplan1E/<branch>/v4/index.html`
+
+   **Denne veien er ENNÅ IKKE BEKREFTET** — må prøves én gang mot `main`
+   først, før den brukes til å teste en faktisk branch.
+
+   **⚠️ ADVARSEL:** `SUPABASE_URL` og `SUPABASE_ANON_KEY` er hardkodet i
+   `app.js`. En raw.githack-preview snakker derfor med SAMME database som
+   produksjon — alt som lagres, endres eller slettes i previewen treffer
+   ekte data, ikke en testkopi. Vær forsiktig med hva du klikker på.
+
+   Passord-reset og invitasjonslenker fullføres IKKE i previewen — de
+   peker tilbake til produksjonsadressen (`ukeplan1e.ganddal.net`), ikke
+   til raw.githack-URL-en.
+
+**Fast sjekkliste ved test:**
+- [ ] Test på PC.
+- [ ] Test på telefon.
+- [ ] Gå gjennom øktens PLAN.md-punkter én for én.
+- [ ] Hard refresh (Cmd+Shift+R) før du konkluderer — cache kan vise gammel
+      versjon.
+- [ ] Kontroller at elevvisning, «Min klasse», «Alle mine økter», «Ny økt»
+      og adminpanelet fortsatt virker.
 
 ---
 
