@@ -1904,3 +1904,67 @@ SQL Editor. Kontrollspørring:
 ga bekreftet forventet svar: `CHECK (((max_divisions >= 1) AND (max_divisions <= 20)))`.
 
 **P58 er FERDIG — ingen gjenstående punkter.**
+
+---
+
+## Økt 59 (P59): Prosedyrer oppdatert til «live» — merge stopper alltid ved godkjenning
+
+**Branch:** `claude/P59-prosedyrer-etter-live`
+**Bakgrunn:** PROSEDYRER.md har fortsatt en «Før 1. august 2026 / etter
+1. august 2026»-todeling av merge-steget, med direkte squash-merge som
+gyldig variant «før live». Datoen er passert og løsningen er i ferd med
+å gå live med ekte brukere — todelingen skal fjernes, ikke bare
+oppdateres, slik at den ikke kan misforstås eller brukes feil senere.
+
+**Sub-plan:**
+
+**A. PROSEDYRER.md — «Status: Før live / Etter live»**
+- [ ] Seksjonen skrives om til å slå fast at løsningen NÅ er live (ekte
+      brukere), uten dato-betinget språk.
+- [ ] Avslutningsprosedyrens punkt 6 («Merge») mister sin to-variants
+      struktur. Kun én variant gjenstår: Code stopper ALLTID ved «PR klar
+      til merge» og venter på Morfars uttrykkelige «merge». «Før live:
+      squash-merge til main»-varianten fjernes helt (ikke kommenteres ut).
+
+**B. PROSEDYRER.md — ny seksjon «Slik tester Morfar før merge»**
+- [ ] Plasseres rett etter avslutningsprosedyren (mellom dagens punkt 7
+      og «Mal: ferdig Code-prompt»).
+- [ ] Tre nivåer, i rekkefølge:
+      1. PR-ens «Files changed»-fane.
+      2. Direkte fillenke i branchen:
+         `https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/<branch>/<fil>`
+      3. Kjørbar app fra branchen via
+         `https://raw.githack.com/b8yxcmzr9w-sketch/Ukeplan1E/<branch>/v4/index.html`
+         — markert som ENNÅ IKKE BEKREFTET, må prøves én gang mot main
+         først. Tydelig ADVARSEL: `SUPABASE_URL`/`SUPABASE_ANON_KEY` er
+         hardkodet i `app.js`, så previewen snakker med SAMME database
+         som produksjon — lagring/endring/sletting treffer ekte data.
+         Noter at passord-reset og invitasjonslenker ikke fullføres i
+         previewen (peker tilbake til produksjonsadressen).
+- [ ] Fast sjekkliste til slutt: test på PC og telefon, gå gjennom
+      øktens PLAN.md-punkter, hard refresh (Cmd+Shift+R), kontroller at
+      elevvisning, «Min klasse», «Alle mine økter», «Ny økt» og
+      adminpanelet fortsatt virker.
+
+**C. PROSEDYRER.md — avslutningsprosedyrens punkt 7 («Norsk sluttoppsummering»)**
+- [ ] Utvides slik at oppsummeringen ALLTID inkluderer branch-navnet OG
+      den ferdige raw.githack-preview-lenken (satt sammen fra branchen,
+      ikke noe Morfar må bygge selv).
+
+**D. CLAUDE.md — «Arbeidsrutiner»**
+- [ ] Les hver av de 8 filene (CLAUDE.md, PLAN.md, DECISIONS.md,
+      PROSEDYRER.md, FUNKSJONELL-BESKRIVELSE.md, BACKLOGG-UX-MOBIL.md,
+      UTREDNING-skolear-oppsett.md, README.md) og skriv én linje per fil
+      om hva den faktisk inneholder og når den skal oppdateres — basert
+      på reelt innhold, ikke antakelse.
+- [ ] README.md er tom/ubrukt — noteres som fakta, ikke fjernes.
+- [ ] Erstatter linjen «Eneste redigerbare områder: `v4/`, `CLAUDE.md` og
+      `PLAN.md`» (CLAUDE.md linje 19) med denne lista. Fredet-lista
+      (`index.html`, `CNAME`, `appsscript.gs`, `logo.png`, `info/`,
+      `dev/`) rører jeg ikke.
+
+**Scope:** kun `PROSEDYRER.md`, `CLAUDE.md` og `PLAN.md` (statuslinje).
+Ingen kode i `v4/`, ingen migrasjon, ingen cache-bust, ingen edge
+functions, ingen nye filer.
+
+**Status:** plan skrevet, venter på «kjør».
