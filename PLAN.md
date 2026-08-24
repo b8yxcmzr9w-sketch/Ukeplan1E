@@ -20,8 +20,18 @@
   Ingen kode i `v4/app.js`/`style.css`/`index.html` rørt, ingen
   cache-bust. Migrasjonen ER kjørt i produksjon og bekreftet av Morfar
   24. august 2026 — «alt er kjørt og det ser godt ut». P60 er FERDIG.)
-- **Pågående:** P61 (sub-plan skrevet, venter på Morfars «kjør»)
-- **Neste ledige P-nummer:** P61
+- **Siste fullførte P-nummer:** P61 (parti/gruppe-spørsmålet fjernet fra
+  «Be om tilgang»-skjemaet — kun fag-listen står igjen. Endring KUN i
+  `visBeOmTilgangModal` i `v4/app.js` + cache-bust `?v=20260824a` i
+  `v4/index.html`. `DECISIONS.md` har ny oppføring «P61 — Tilgangsskjemaet
+  spør ikke lenger om parti/gruppe». Ingen migrasjon (kolonnen
+  `access_requests.divisions_text` beholdt uendret for eldre rader), ingen
+  edge function-endring (`request-access` tåler feltet fraværende), ingen
+  endring av adminpanelets forespørsels-kort. Kode committet og pushet til
+  branch `claude/remove-divisions-access-form-won4xl`. INGEN PR opprettet i
+  denne økten — kun eksplisitt bedt om kjøring, ikke om PR/merge.)
+- **Pågående:** ingen
+- **Neste ledige P-nummer:** P62
 - **Dato sist oppdatert:** 24. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
@@ -2273,28 +2283,29 @@ Fag-listen skal beholdes uendret.
 
 ### Delplan
 
-- [ ] Fjern skjemaraden «Parti/gruppe»: `divContainer` +
+- [x] Fjern skjemaraden «Parti/gruppe»: `divContainer` +
       `lagFormRad('Parti/gruppe', divContainer)` (app.js ~677–678)
-- [ ] Fjern `divisionsText`-innsamlingen i submit-handleren (app.js ~710) og
+- [x] Fjern `divisionsText`-innsamlingen i submit-handleren (app.js ~710) og
       `divisions_text`-feltet fra kallet til
       `sb.functions.invoke('request-access', …)` (app.js ~719)
-- [ ] Fjern spørringen mot `subject_divisions` i `Promise.all`-blokken
+- [x] Fjern spørringen mot `subject_divisions` i `Promise.all`-blokken
       (app.js ~741–745) — skjemaet henter da kun skole, fag og admins
       fornavn
-- [ ] Fjern løkken som bygger avkryssingsboksene for parti/gruppe + teksten
+- [x] Fjern løkken som bygger avkryssingsboksene for parti/gruppe + teksten
       «Ingen parti/gruppe registrert.» (app.js ~760–770)
-- [ ] Rett opp kommentarene i og over funksjonen (app.js ~637–640 og ~738)
-      så de ikke lenger lover et parti/gruppe-valg i skjemaet
-- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (kun JS — CSS uendret)
-- [ ] DECISIONS.md: ny oppføring om at tilgangsskjemaet bevisst ikke spør om
-      parti/gruppe lenger, mens `access_requests.divisions_text`-kolonnen
+- [x] Rett opp kommentarene i og over funksjonen (app.js ~637–640 og ~738,
+      pluss P57-scrolling-kommentaren app.js ~680) så de ikke lenger lover
+      et parti/gruppe-valg i skjemaet
+- [x] Bump `?v=20260824a` i `v4/index.html` (kun JS — CSS uendret)
+- [x] DECISIONS.md: ny oppføring («P61 — Tilgangsskjemaet spør ikke lenger
+      om parti/gruppe») om at `access_requests.divisions_text`-kolonnen
       (migrasjon 023, `not null default '{}'`) beholdes uendret — nye rader
       får tom liste, eldre forespørsler beholder innholdet sitt
-- [ ] Lesekontroll (ingen kodeendring): bekreft at adminpanelets
-      forespørsels-kort (app.js ~5676) fortsatt viser «Parti/gruppe»-linjen
-      kun når feltet har innhold, slik at eldre rader ikke mister
+- [x] Lesekontroll (ingen kodeendring): bekreftet at adminpanelets
+      forespørsels-kort (app.js ~5659) fortsatt viser «Parti/gruppe»-linjen
+      kun `if (f.divisions_text?.length)`, slik at eldre rader ikke mister
       informasjon og nye rader ikke viser en tom linje
-- [ ] Commit + push
+- [x] Commit + push
 
 **Bevisst IKKE endret:** databasen (ingen migrasjon), edge-funksjonen
 `request-access` (ingen redeploy — den leser feltet defensivt med
