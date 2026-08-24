@@ -2321,28 +2321,42 @@ og skrives om i CLAUDE.md som del av økten.
 Oppgaveteksten antar at «bruksanvisning»-lenken (❓ Bruksanvisning) i den
 gamle løsningen peker **relativt** til `info/`, og derfor fortsetter å
 virke når begge havner under `gammel/`. Ved gjennomgang av koden viser det
-seg lenken faktisk er **absolutt**:
-`href="https://ukeplan1e.ganddal.net/info/"` — i BÅDE `index.html` (linje
-519) og `dev/index.html` (samme linje/mønster, egen kopi av samme skall).
-En absolutt lenke til `/info/` vil gi 404 etter flyttingen, fordi `/info/`
-ikke lenger finnes på rota (den nye appen ligger der) — den ligger nå på
-`/gammel/info/`.
+seg lenken faktisk er **absolutt**, og det finnes en tredje selvlenke til
+med samme problem. Rettet av Morfar til **rot-relative** stier (ikke
+mappe-relative — `dev/index.html` havner på `gammel/dev/index.html`, så en
+vanlig relativ `info/`-lenke derfra ville truffet `gammel/dev/info/`, som
+ikke finnes):
 
-For at kravet «lenka fortsetter å virke» faktisk skal stemme, foreslås:
-gjør lenken relativ (`href="info/"`) i begge filene som del av flyttingen
-— eneste innholdsendring i de ellers uendrede, arkiverte filene, og
-nødvendig for at frysregel-unntaket («ingen av filene slettes», «lenka
-fortsetter å virke») faktisk holder i praksis. Går videre med dette
-med mindre Morfar sier noe annet ved «kjør».
+1. `index.html` linje 519: `href="https://ukeplan1e.ganddal.net/info/"` →
+   `href="/gammel/info/"`
+2. `dev/index.html` linje 519: samme lenke, samme retting →
+   `href="/gammel/info/"`
+3. `info/index.html` linje 314: `href="https://ukeplan1e.ganddal.net"`
+   (uten sti, i en «gå til ukeplan1e.ganddal.net»-instruks som beskriver
+   DEN GAMLE løsningen) → `href="/gammel/"`, ellers sender bruksanvisningen
+   leseren til den NYE appen på rota, midt i en instruks om den gamle.
+
+Sjekket og IKKE endret: `info/index.html` linje 278 (`ukeplan1e.ganddal.net`
+i ren tekst, ingen `href`) — fortsatt korrekt domenenavn, ingen lenke å
+rette. `appsscript.gs` og `README.md` (nå arkivens) har ingen treff på
+domenet i det hele tatt.
+
+Disse tre er de ENESTE innholdsendringene i de ellers uendrede, arkiverte
+filene — dokumenteres som en uttrykkelig, avgrenset dispensasjon fra
+frysregelen i DECISIONS.md (begrunnelse: absolutte selvlenker overlever
+ikke en flytting). Går videre med dette med mindre Morfar sier noe annet
+ved «kjør».
 
 ### Delplan
 
 **A. Arkiver dagens fryste løsning → `gammel/`**
 - [ ] Opprett `gammel/` og `git mv index.html appsscript.gs logo.png info/
-      dev/ README.md gammel/` (innhold uendret, bortsett fra info-lenke-
-      fikset over)
-- [ ] Rett `href="https://ukeplan1e.ganddal.net/info/"` → `href="info/"` i
-      `gammel/index.html` og `gammel/dev/index.html`
+      dev/ README.md gammel/` (innhold uendret, bortsett fra de tre
+      selvlenkene over)
+- [ ] Rett de tre selvlenkene til rot-relative stier (se «Funn før koding»):
+      `gammel/index.html` linje 519, `gammel/dev/index.html` linje 519 →
+      `href="/gammel/info/"`; `gammel/info/index.html` linje 314 →
+      `href="/gammel/"`
 - [ ] `CNAME` og `.github/` blir liggende urørt på rota
 
 **B. Flytt appen til rota**
@@ -2370,7 +2384,9 @@ med mindre Morfar sier noe annet ved «kjør».
 - [ ] `FUNKSJONELL-BESKRIVELSE.md`: produksjonsadresse →
       `https://ukeplan1e.ganddal.net/`
 - [ ] `PLAN.md`: STATUSLINJE + evt. Backlogg-justering
-- [ ] `DECISIONS.md`: ny oppføring «P62 — Appen flyttet til rota»
+- [ ] `DECISIONS.md`: ny oppføring «P62 — Appen flyttet til rota», inkl.
+      egen, uttrykkelig dispensasjon fra frysregelen for de tre
+      selvlenke-rettingene i `gammel/` (se «Funn før koding»)
 - [ ] Historiske PLAN.md/DECISIONS.md-seksjoner (Økt 1–61) IKKE endret —
       beholder `v4/`-stier som historisk korrekt
 
@@ -2379,8 +2395,12 @@ med mindre Morfar sier noe annet ved «kjør».
       (deleted) uten tilhørende R
 - [ ] Ingen treff på `/v4` i kode (js/html/css/ts) utenfor md-historikk
 - [ ] Rot-`index.html` laster `app.js`, `style.css`, `unoicon.png` relativt
-- [ ] `gammel/index.html` sin bruksanvisning-lenke er relativ og treffer
-      `gammel/info/`
+- [ ] Alle tre rettede selvlenker (pkt. 1–3 over) verifisert i innhold, ikke
+      bare i planen
+- [ ] Full gjennomgang av `ukeplan1e\.ganddal\.net` i alle filer under
+      `gammel/` (`index.html`, `dev/index.html`, `info/index.html`,
+      `appsscript.gs`, `README.md`) — bekreft at ingen gjenværende absolutt
+      lenke peker utenfor `gammel/`
 
 ### Manuelle steg til Morfar (tas med i sluttoppsummeringen)
 - Supabase → Authentication → URL Configuration: Site URL + Redirect URLs
