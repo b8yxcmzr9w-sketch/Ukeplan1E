@@ -360,3 +360,33 @@ skole/fag uten en egen trigger. Dette er bevisst IKKE bygget — et fast tak
 er tilstrekkelig for formålet (vernebøyle, ikke forretningsregel). Ikke
 foreslå trigger-basert dynamisk tak på nytt uten en ny, konkret
 begrunnelse (f.eks. at en skole faktisk trenger et tak per fag).
+
+## P60 — Kalenderhendelse vs. oppsett (24.08.2026)
+
+Før live-lansering ble databasen tømt for testinnhold (migrasjon 025).
+Skillet som styrte HVA som ble slettet og HVA som besto, er en bevisst
+grense som ikke skal forhandles på nytt uten en ny, konkret begrunnelse:
+
+- **Kalenderhendelse (slettbart):** `sessions`, `multi_day_events`. Dette
+  er hendelser lærere/admin legger inn løpende — testdata, syntetiske
+  eller ekte, har ingen verdi etter at live-drift starter med ekte
+  brukerdata.
+- **Oppsett (består):** `school_calendar`, `classes`, `subjects`,
+  `subject_divisions`, `users`, `user_classes`, `schools`, `school_facts`,
+  `access_requests`, `audit_log`. Dette er strukturen hendelser peker på
+  — klassenavn, fagnavn, partier/grupper, skolerute, brukere. Slettes
+  IKKE selv om alle hendelser slettes, og skal ikke ryddes automatisk av
+  fremtidige oppryddingsmigrasjoner uten en egen, eksplisitt vurdering.
+
+De syntetiske testfagene (Norsk, Matematikk, Engelsk, Kroppsøving) faller
+under «oppsett» og ble derfor IKKE slettet av P60, selv om de stammer fra
+testdata — det er trygt for Morfar å rydde dem selv i Fag-fanen når alle
+økter er borte, i dialog med faglærerne.
+
+**Sikkerhetskopi:** migrasjonens Del 2 oppretter `sessions_backup_for_live`
+og `multi_day_events_backup_for_live` som rene kopier, med RLS PÅ og
+INGEN policyer — bevisst valg fordi tabellene havner i `public`-skjemaet
+som Supabase eksponerer via API-et, og ikke skal være lesbare utenfra.
+Uten policyer er de kun tilgjengelige for service-role og SQL Editor.
+Backup-tabellene er midlertidige og droppes når Morfar har bekreftet at
+oppryddingen er riktig (se PLAN.md, Økt 60).

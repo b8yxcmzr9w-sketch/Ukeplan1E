@@ -2,20 +2,27 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P59 (prosedyrer oppdatert til «live»:
-  PROSEDYRER.md sin gamle «før/etter 1. august 2026»-todeling er fjernet —
-  avslutningsprosedyren stopper nå ALLTID ved «PR klar til merge» og venter
-  på Morfars uttrykkelige «merge», ingen direkte-merge-variant lenger. Ny
-  seksjon «Slik tester Morfar før merge» (Files changed / fillenke /
-  raw.githack-preview med advarsel om delt produksjonsdatabase). Norsk
-  sluttoppsummering skal alltid inkludere branch-navn + preview-lenke.
-  CLAUDE.md sin utdaterte «Eneste redigerbare områder»-linje er erstattet
-  med en full liste over alle 8 vedlikeholdte .md-filer og hva hver av dem
-  er til. Ingen kode i `v4/` rørt. P59 er den siste økten som selv merges
-  under den gamle regelen — fra og med P60 gjelder den nye.)
+- **Siste fullførte P-nummer:** P60 (kode ferdig 24. august 2026 — ny
+  migrasjon `v4/supabase/migrations/025_opprydding_for_live.sql` for
+  opprydding av kalenderdata før live. Del 1: tellespørringer for
+  sessions/multi_day_events (fordelt på skoleår) + school_calendar/
+  classes/subjects/subject_divisions (fordelt på skole). Del 2 (HELT
+  utkommentert som ÉN `/* ... */`-blokk — aktiveres ved å slette kun de
+  to linjene `/*`/`*/`): oppretter `sessions_backup_for_live` og
+  `multi_day_events_backup_for_live` med RLS på og ingen policyer, deretter
+  sletter ALLE rader i `sessions` og `multi_day_events`, alle skoler/
+  skoleår, ingen WHERE. Del 3: kontrollspørringer mot Del 1-tallene.
+  `session_calendar`, `classes`, `subjects`, `subject_divisions` og de
+  syntetiske testfagene (oppsett, ikke hendelse) er UENDRET av denne
+  migrasjonen — Morfar rydder selv i Fag-fanen senere, se backlogg.
+  `DECISIONS.md` har ny oppføring «P60 — Kalenderhendelse vs. oppsett».
+  Ingen kode i `v4/app.js`/`style.css`/`index.html` rørt, ingen
+  cache-bust. Migrasjonen er IKKE kjørt i produksjon ennå — det er
+  Morfars manuelle steg etter merge, se «Manuelt steg til Morfar» i
+  Økt 60.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P60
-- **Dato sist oppdatert:** 23. august 2026
+- **Neste ledige P-nummer:** P61
+- **Dato sist oppdatert:** 24. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
@@ -168,9 +175,12 @@
 - **Preview-deployments Cloudflare/Netlify** (backlogg, ikke aktiv). Ingen
   deploy-konfig i repoet i dag.
 - **Syntetiske testfag i prod-databasen** (P40; fra importrunden 014–016).
-  Fag uten ekte motpart (norsk, matte, engelsk, kroppsøving + ev. YFF) med
-  syntetiske økter fra migrasjon 013 beholdes «inntil videre» — vurder
-  opprydding før live.
+  Fag uten ekte motpart (norsk, matte, engelsk, kroppsøving + ev. YFF).
+  P60 (migrasjon 025) tømte alle kalenderhendelser (sessions,
+  multi_day_events) før live, men RØRTE BEVISST IKKE fagene selv — det er
+  oppsett, ikke en hendelse (se Økt 60). Morfar rydder selv i Fag-fanen,
+  i dialog med faglærerne, når han finner det riktig — trygt å gjøre nå
+  som ingen økter lenger peker på dem.
 
 ---
 
@@ -1988,3 +1998,260 @@ inn i PROSEDYRER.md: Code stopper alltid ved «PR klar til merge».
 **Status:** Kode og dokumentasjon ferdig. `node --check` er ikke relevant
 (ingen JS rørt); bekreftet med `git diff --stat` at kun `PROSEDYRER.md`,
 `CLAUDE.md` og `PLAN.md` er endret. P59 er FERDIG.
+
+---
+
+## Økt 60 (P60): Opprydding av kalenderdata før live
+
+**Branch:** `claude/calendar-cleanup-live-tgh5jw` (miljøets tildelte
+branch — oppgaveteksten foreslo `claude/P60-opprydding-for-live`, men
+miljøet hadde allerede opprettet denne, og den følges i stedet).
+**Status:** KODE FERDIG 24. august 2026. Migrasjonsfila er skrevet og
+`node --check` er ikke relevant (SQL, ikke JS). Bekreftet med
+`git status`/`git diff --stat` at kun de planlagte filene er endret:
+ny `v4/supabase/migrations/025_opprydding_for_live.sql`, samt
+`PLAN.md` og `DECISIONS.md`. Venter på PR-merge — migrasjonen er IKKE
+kjørt i produksjon ennå, det er Morfars manuelle steg (se under).
+
+### Bakgrunn
+
+Databasen inneholder testinnhold som ikke skal følge med inn i live drift:
+syntetiske økter fra migrasjon 013, importerte 25/26-planer fra migrasjon
+014–016, og økter Morfar selv har lagt inn under testing av 26/27.
+**Prinsippet:** innholdet i kalenderen tømmes, rammen rundt står.
+
+- **Slettes** (hard delete, alle skoler, alle skoleår): `sessions`,
+  `multi_day_events`. `session_divisions` og `pending_transfers` rydder
+  seg selv via `on delete cascade` fra `sessions` — ingen egne
+  slette-setninger.
+- **Består urørt:** `school_calendar` (skoleruta), `classes`, `subjects`,
+  `subject_divisions` (oppsett/struktur, ikke hendelser — inkl. de nye
+  YFF-gruppene Morfar nettopp la inn), `users`, `user_classes`,
+  `schools`, `school_facts`, `access_requests`, `audit_log` (loggen
+  beholder rader som viser til slettede økter, med vilje).
+- **Utenfor scope:** de syntetiske testfagene (Norsk, Matematikk,
+  Engelsk, Kroppsøving) ryddes IKKE av P60 — det er oppsett, ikke en
+  hendelse. Morfar rydder selv i Fag-fanen når alle økter er borte
+  (se «Ikke lukket av P60» nederst).
+
+### Fire avklaringer med Morfar (24. august 2026) — alle besvart «ja», med tillegg
+
+1. **Sikkerhetskopi i databasen** — ja. `sessions_backup_for_live` og
+   `multi_day_events_backup_for_live` opprettes som rene kopier, med RLS
+   PÅ og ingen policyer (kun service-role/SQL Editor kan lese dem — de
+   skal ikke være eksponert via det offentlige API-et som resten av
+   `public`-skjemaet).
+2. **Del 2 utkommentert** — ja, HELE blokken (inkl. backup-opprettelsen).
+   Backup-opprettelsen ligger som FØRSTE steg INNE i den utkommenterte
+   transaksjonen — ikke som et eget steg utenfor — slik at det er umulig
+   å kjøre slettingen uten samtidig å ha tatt kopi.
+3. **Del 1 teller flere tabeller** — ja. I tillegg til `sessions`/
+   `multi_day_events` (fordelt på skoleår) telles også `school_calendar`,
+   `classes`, `subjects` og `subject_divisions` (fordelt på skole), slik
+   at del 3 har noe å sammenligne «uendret» mot.
+4. **DECISIONS.md-oppføring** — ja, om skillet «kalenderhendelse»
+   (slettbart) vs. «oppsett» (består). I tillegg: PLAN.md skal notere at
+   backup-tabellene droppes når Morfar har bekreftet at oppryddingen er
+   riktig, med de to DROP-setningene ferdig skrevet (se eget avsnitt
+   nederst i denne sub-planen).
+
+### Sjekkliste
+
+- [x] Ny fil `v4/supabase/migrations/025_opprydding_for_live.sql` skrevet
+      etter utkastet under («Utkast til migrasjonsfilen»).
+- [x] ⚠️-blokk øverst i fila: ENGANGSKJØRING før live, DELETE-setningene
+      er uten WHERE og treffer ALLE skoler og ALLE skoleår, fila skal
+      ALDRI kjøres på nytt etter at ekte brukere har lagt inn data. IKKE
+      beskrevet som idempotent eller «trygt å kjøre flere ganger» noe
+      sted i fila (bevisst — leses som en invitasjon til gjenkjøring).
+- [x] Del 1 (tellespørringer) kjørbar alene, ingen transaksjon, dekker
+      alle seks tabellene (sessions + multi_day_events fordelt på
+      skoleår; school_calendar + classes + subjects + subject_divisions
+      fordelt på skole).
+- [x] Del 2 (slettingen) HELT utkommentert som ÉN `/* ... */`-blokk (endret
+      fra `-- ` per linje etter Morfars presisering 24.08.2026 — aktiveres
+      ved å slette de to linjene `/*` og `*/`, ikke tretti enkeltlinjer).
+      Backup-opprettelse + RLS-på-uten-policyer som første steg inne i
+      `BEGIN…COMMIT`, deretter de to `DELETE`-setningene.
+- [x] Del 3 (kontroll) kjørbar alene: `sessions`/`multi_day_events`
+      forventes 0, de fire oppsett-tabellene forventes samme tall som i
+      del 1.
+- [x] `DECISIONS.md`: ny oppføring «P60 — kalenderhendelse vs. oppsett»
+      lagt til (se innhold under).
+- [x] `PLAN.md`: denne sjekklisten krysset av, STATUSLINJE oppdatert
+      (siste fullførte → P60), og backlogg-punktet «Syntetiske testfag i
+      prod-databasen» merket eksplisitt IKKE lukket av P60.
+- [x] Ingen endring i `v4/app.js`, `v4/style.css` eller `v4/index.html`.
+      Ingen cache-bust (ingen frontend-endring). Ingen edge functions.
+
+### Utkast til migrasjonsfilen (for gjennomlesning før «kjør»)
+
+```sql
+-- ═══════════════════════════════════════════════════════════════
+-- ⚠️  ENGANGSKJØRING FØR LIVE — LES FØR DU KJØRER NOE SOM HELST
+-- ═══════════════════════════════════════════════════════════════
+-- Denne fila tømmer sessions og multi_day_events FULLSTENDIG — alle
+-- skoler, alle skoleår, ingen WHERE-betingelse. Den er laget for å
+-- kjøres ÉN gang, rett før løsningen går live med ekte brukere.
+--
+-- Kjør ALDRI denne fila på nytt etter at ekte brukere har lagt inn
+-- data — del 2 sletter da ekte undervisningsplaner uten mulighet
+-- til å angre utover backup-tabellene fila selv oppretter.
+--
+-- Ta backup FØR del 2 kjøres (se del 2 — backup-opprettelsen ligger
+-- inne i den utkommenterte transaksjonen som første steg).
+-- ═══════════════════════════════════════════════════════════════
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- DEL 1 — TELLESPØRRINGER (kjøres FØRST og ALENE)
+-- Rene SELECT-er, ingen endring. Noter tallene før du går videre
+-- til del 2 — del 3 sammenligner mot disse.
+-- ═══════════════════════════════════════════════════════════════
+
+-- Skal SLETTES i del 2:
+select school_year, count(*) as antall
+  from sessions
+ group by school_year
+ order by school_year;
+
+select count(*) as sessions_totalt from sessions;
+
+select school_year, count(*) as antall
+  from multi_day_events
+ group by school_year
+ order by school_year;
+
+select count(*) as multi_day_events_totalt from multi_day_events;
+
+-- Skal BESTÅ uendret (sammenlignes i del 3):
+select school_id, count(*) as antall from school_calendar group by school_id;
+select count(*) as school_calendar_totalt from school_calendar;
+
+select school_id, count(*) as antall from classes group by school_id;
+select count(*) as classes_totalt from classes;
+
+select school_id, count(*) as antall from subjects group by school_id;
+select count(*) as subjects_totalt from subjects;
+
+select sub.school_id, count(*) as antall
+  from subject_divisions sd
+  join subjects sub on sub.id = sd.subject_id
+ group by sub.school_id;
+
+select count(*) as subject_divisions_totalt from subject_divisions;
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- DEL 2 — SLETTING (⚠️ se advarselen øverst i fila)
+--
+-- Hele blokken under er kommentert ut som ÉN /* ... */-blokk (endret
+-- fra `-- ` per linje etter Morfars ønske 24.08.2026 — aktiveres ved å
+-- slette KUN de to linjene "/*" og "*/", ikke tretti enkeltlinjer).
+-- Gjør dette BEVISST, kun når du faktisk skal kjøre slettingen.
+-- ═══════════════════════════════════════════════════════════════
+
+/*
+BEGIN;
+
+-- Sikkerhetskopi FØRST, inne i samme transaksjon som slettingen.
+-- Radene kan settes tilbake med "insert into sessions select * from
+-- sessions_backup_for_live" (og tilsvarende for multi_day_events)
+-- siden classes/subjects/users står urørt.
+create table if not exists sessions_backup_for_live as
+  select * from sessions;
+create table if not exists multi_day_events_backup_for_live as
+  select * from multi_day_events;
+
+-- RLS på, uten policyer: tabellene havner i public-skjemaet som
+-- Supabase eksponerer via API-et, og skal ikke være lesbare utenfra.
+-- Uten policyer er de kun tilgjengelige for service-role og SQL Editor.
+alter table sessions_backup_for_live enable row level security;
+alter table multi_day_events_backup_for_live enable row level security;
+
+-- session_divisions og pending_transfers rydder seg selv via
+-- "on delete cascade" fra sessions — ingen egne slette-setninger.
+delete from sessions;
+delete from multi_day_events;
+
+COMMIT;
+*/
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- DEL 3 — KONTROLL (kjøres ETTER del 2)
+-- ═══════════════════════════════════════════════════════════════
+
+-- Forventet: 0 rader begge steder
+select count(*) as sessions_gjenvaerende from sessions;
+select count(*) as multi_day_events_gjenvaerende from multi_day_events;
+
+-- Forventet: SAMME tall som i del 1
+select school_id, count(*) as antall from school_calendar group by school_id;
+select count(*) as school_calendar_totalt from school_calendar;
+
+select school_id, count(*) as antall from classes group by school_id;
+select count(*) as classes_totalt from classes;
+
+select school_id, count(*) as antall from subjects group by school_id;
+select count(*) as subjects_totalt from subjects;
+
+select sub.school_id, count(*) as antall
+  from subject_divisions sd
+  join subjects sub on sub.id = sd.subject_id
+ group by sub.school_id;
+
+select count(*) as subject_divisions_totalt from subject_divisions;
+```
+
+### Opprydding av backup-tabellene (senere, IKKE nå)
+
+Når Morfar har bekreftet at oppryddingen er riktig (etter noen dager/uker
+i live drift, ikke samme dag), kan backup-tabellene droppes. Klar til å
+kopiere rett inn i SQL Editor når den tid kommer:
+
+```sql
+drop table if exists sessions_backup_for_live;
+drop table if exists multi_day_events_backup_for_live;
+```
+
+### DECISIONS.md — planlagt oppføring
+
+```
+## P60 — Kalenderhendelse vs. oppsett (24.08.2026)
+
+Før live-lansering ble databasen tømt for testinnhold (migrasjon 025).
+Skillet som styrte HVA som ble slettet og HVA som besto, er en bevisst
+grense som ikke skal forhandles på nytt uten en ny, konkret begrunnelse:
+
+- **Kalenderhendelse (slettbart):** `sessions`, `multi_day_events`. Dette
+  er hendelser lærere/admin legger inn løpende — testdata, syntetiske
+  eller ekte, har ingen verdi etter at live-drift starter med ekte
+  brukerdata.
+- **Oppsett (består):** `school_calendar`, `classes`, `subjects`,
+  `subject_divisions`, `users`, `user_classes`, `schools`, `school_facts`,
+  `access_requests`, `audit_log`. Dette er strukturen hendelser peker på
+  — klassenavn, fagnavn, partier/grupper, skolerute, brukere. Slettes
+  IKKE selv om alle hendelser slettes, og skal ikke ryddes automatisk av
+  fremtidige oppryddingsmigrasjoner uten en egen, eksplisitt vurdering.
+
+De syntetiske testfagene (Norsk, Matematikk, Engelsk, Kroppsøving) faller
+under «oppsett» og ble derfor IKKE slettet av P60, selv om de stammer fra
+testdata — det er trygt for Morfar å rydde dem selv i Fag-fanen når alle
+økter er borte, i dialog med faglærerne.
+```
+
+### Ikke lukket av P60
+
+Backlogg-punktet «Syntetiske testfag i prod-databasen» lukkes IKKE av
+denne økten — se «Utenfor scope» over.
+
+### Manuelt steg til Morfar (etter merge)
+
+1. Kjør Del 1 i Supabase SQL Editor, noter tallene.
+2. Ta stilling til om han vil kjøre Del 2 nå — fjern kommentartegnene
+   bevisst, kjør blokken.
+3. Kjør Del 3, sammenlign mot tallene fra Del 1.
+4. (Senere, ikke samme dag) Drop backup-tabellene med de to
+   `DROP TABLE`-setningene over, når han er trygg på at oppryddingen er
+   riktig.
