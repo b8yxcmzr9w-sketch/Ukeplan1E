@@ -2302,3 +2302,87 @@ Fag-listen skal beholdes uendret.
 parti/gruppe andre steder i appen (økt-skjemaene, elevfilteret,
 klasse-admin — `selected_divisions` finnes flere andre steder i app.js og
 skal stå urørt).
+
+---
+
+## Økt 62 (P62): Flytt v4-appen til rota
+
+**Branch:** `claude/P62-flytt-app-til-rot`
+**Scope:** filflytting (arkivering av frossen løsning + løft av v4/ til rot),
+dokumentoppdatering av stier, cache-bust. Ingen funksjonell kodeendring i
+appen selv utover det som kreves for at ting fortsatt virker etter flytting.
+Frysregelen er eksplisitt opphevet for denne økten (Morfar har godkjent),
+og skrives om i CLAUDE.md som del av økten.
+
+### Funn før koding — avvik fra oppgaveteksten
+
+Oppgaveteksten antar at «bruksanvisning»-lenken (❓ Bruksanvisning) i den
+gamle løsningen peker **relativt** til `info/`, og derfor fortsetter å
+virke når begge havner under `gammel/`. Ved gjennomgang av koden viser det
+seg lenken faktisk er **absolutt**:
+`href="https://ukeplan1e.ganddal.net/info/"` — i BÅDE `index.html` (linje
+519) og `dev/index.html` (samme linje/mønster, egen kopi av samme skall).
+En absolutt lenke til `/info/` vil gi 404 etter flyttingen, fordi `/info/`
+ikke lenger finnes på rota (den nye appen ligger der) — den ligger nå på
+`/gammel/info/`.
+
+For at kravet «lenka fortsetter å virke» faktisk skal stemme, foreslås:
+gjør lenken relativ (`href="info/"`) i begge filene som del av flyttingen
+— eneste innholdsendring i de ellers uendrede, arkiverte filene, og
+nødvendig for at frysregel-unntaket («ingen av filene slettes», «lenka
+fortsetter å virke») faktisk holder i praksis. Går videre med dette
+med mindre Morfar sier noe annet ved «kjør».
+
+### Delplan
+
+**A. Arkiver dagens fryste løsning → `gammel/`**
+- [ ] Opprett `gammel/` og `git mv index.html appsscript.gs logo.png info/
+      dev/ README.md gammel/` (innhold uendret, bortsett fra info-lenke-
+      fikset over)
+- [ ] Rett `href="https://ukeplan1e.ganddal.net/info/"` → `href="info/"` i
+      `gammel/index.html` og `gammel/dev/index.html`
+- [ ] `CNAME` og `.github/` blir liggende urørt på rota
+
+**B. Flytt appen til rota**
+- [ ] `git mv v4/index.html v4/app.js v4/style.css v4/uno-footer.js
+      v4/unoicon.png v4/supabase v4/README.md .` (løfter alt opp til rot)
+- [ ] `v4/` skal være tom/borte etterpå — ingen stub, ingen videresending
+- [ ] Root-`README.md` (dagens generiske to-linjers stub) erstattes av
+      v4/README.md sitt innhold ved flyttingen (git mv gjør dette naturlig
+      siden begge heter README.md — v4-versjonen vinner)
+- [ ] Verifiser at appen kun bruker relative stier og
+      `location.origin + location.pathname` for elevlenke/QR/redirect
+      (allerede bekreftet ved gjennomgang: `app.js` linje 503, 616, 958,
+      2858, 5223, 5353, 5503, 5526 — ingen hardkodet `/v4` i app.js/ts/css)
+- [ ] Søk gjennom hele repoet etter strengen `/v4` og bekreft ingen treff
+      utenfor historiske/fullførte PLAN.md- og DECISIONS.md-seksjoner
+
+**C. Cache-bust**
+- [ ] Bump `?v=` for CSS og JS i ny rot-`index.html` til `20260824b`
+
+**D. Dokumentasjon**
+- [ ] `CLAUDE.md`: alle `v4/`-stier → rot-stier, mappetre, GitHub-lenker,
+      «Ny løsning under utvikling: /v4/»-linja, frys-avsnittet skrevet om
+      (fryst = `gammel/`, redigerbart = rot + .md-filer)
+- [ ] `PROSEDYRER.md`: raw.githack-lenken → `<branch>/index.html`
+- [ ] `FUNKSJONELL-BESKRIVELSE.md`: produksjonsadresse →
+      `https://ukeplan1e.ganddal.net/`
+- [ ] `PLAN.md`: STATUSLINJE + evt. Backlogg-justering
+- [ ] `DECISIONS.md`: ny oppføring «P62 — Appen flyttet til rota»
+- [ ] Historiske PLAN.md/DECISIONS.md-seksjoner (Økt 1–61) IKKE endret —
+      beholder `v4/`-stier som historisk korrekt
+
+**E. Verifisering før PR**
+- [ ] `git status` viser rene R (rename) for alle flyttede filer, ingen D
+      (deleted) uten tilhørende R
+- [ ] Ingen treff på `/v4` i kode (js/html/css/ts) utenfor md-historikk
+- [ ] Rot-`index.html` laster `app.js`, `style.css`, `unoicon.png` relativt
+- [ ] `gammel/index.html` sin bruksanvisning-lenke er relativ og treffer
+      `gammel/info/`
+
+### Manuelle steg til Morfar (tas med i sluttoppsummeringen)
+- Supabase → Authentication → URL Configuration: Site URL + Redirect URLs
+  fra `/v4/` til rot (`https://ukeplan1e.ganddal.net/`)
+- Hard refresh + kontroller at rota laster og at
+  `https://ukeplan1e.ganddal.net/gammel/` fortsatt viser 25/26-planene
+- Del nye elevlenker/QR-koder på nytt (gamle med `/v4/` i URL-en dør)
