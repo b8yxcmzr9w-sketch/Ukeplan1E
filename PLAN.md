@@ -2,24 +2,9 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P60 (PR #171 squash-merget til main
-  24. august 2026 — ny migrasjon
-  `v4/supabase/migrations/025_opprydding_for_live.sql` for opprydding av
-  kalenderdata før live. Del 1: tellespørringer for sessions/
-  multi_day_events (fordelt på skoleår) + school_calendar/classes/
-  subjects/subject_divisions (fordelt på skole). Del 2 (HELT utkommentert
-  som ÉN `/* ... */`-blokk — aktiveres ved å slette kun de to linjene
-  `/*`/`*/`): oppretter `sessions_backup_for_live` og
-  `multi_day_events_backup_for_live` med RLS på og ingen policyer, deretter
-  sletter ALLE rader i `sessions` og `multi_day_events`, alle skoler/
-  skoleår, ingen WHERE. Del 3: kontrollspørringer mot Del 1-tallene.
-  `school_calendar`, `classes`, `subjects`, `subject_divisions` og de
-  syntetiske testfagene (oppsett, ikke hendelse) er UENDRET av denne
-  migrasjonen — Morfar rydder selv i Fag-fanen senere, se backlogg.
-  `DECISIONS.md` har ny oppføring «P60 — Kalenderhendelse vs. oppsett».
-  Ingen kode i `v4/app.js`/`style.css`/`index.html` rørt, ingen
-  cache-bust. Migrasjonen ER kjørt i produksjon og bekreftet av Morfar
-  24. august 2026 — «alt er kjørt og det ser godt ut». P60 er FERDIG.)
+- **Nest siste fullførte P-nummer:** P60 (opprydding av kalenderdata før
+  live — migrasjon 025 kjørt og bekreftet i produksjon 24. august 2026;
+  se DECISIONS.md «P60 — Kalenderhendelse vs. oppsett»).
 - **Siste fullførte P-nummer:** P61 (parti/gruppe-spørsmålet fjernet fra
   «Be om tilgang»-skjemaet — kun fag-listen står igjen. Endring KUN i
   `visBeOmTilgangModal` i `v4/app.js` + cache-bust `?v=20260824a` i
@@ -34,6 +19,10 @@
 - **Neste ledige P-nummer:** P62
 - **Dato sist oppdatert:** 24. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P61s prod-sjekk — parti/gruppe-spørsmålet fjernet fra «Be om
+    tilgang»-skjemaet, kun fag-listen står igjen (kode klar, ingen
+    migrasjon/redeploy); Morfars visuelle bekreftelse i produksjon etter
+    merge gjenstår, samme mønster som P41–P55
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
