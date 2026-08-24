@@ -2,19 +2,25 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P59 (prosedyrer oppdatert til «live»:
-  PROSEDYRER.md sin gamle «før/etter 1. august 2026»-todeling er fjernet —
-  avslutningsprosedyren stopper nå ALLTID ved «PR klar til merge» og venter
-  på Morfars uttrykkelige «merge», ingen direkte-merge-variant lenger. Ny
-  seksjon «Slik tester Morfar før merge» (Files changed / fillenke /
-  raw.githack-preview med advarsel om delt produksjonsdatabase). Norsk
-  sluttoppsummering skal alltid inkludere branch-navn + preview-lenke.
-  CLAUDE.md sin utdaterte «Eneste redigerbare områder»-linje er erstattet
-  med en full liste over alle 8 vedlikeholdte .md-filer og hva hver av dem
-  er til. Ingen kode i `v4/` rørt. P59 er den siste økten som selv merges
-  under den gamle regelen — fra og med P60 gjelder den nye.)
-- **Pågående:** P60 (Opprydding av kalenderdata før live) — plan skrevet,
-  venter på Morfars «kjør»
+- **Siste fullførte P-nummer:** P60 (kode ferdig 24. august 2026 — ny
+  migrasjon `v4/supabase/migrations/025_opprydding_for_live.sql` for
+  opprydding av kalenderdata før live. Del 1: tellespørringer for
+  sessions/multi_day_events (fordelt på skoleår) + school_calendar/
+  classes/subjects/subject_divisions (fordelt på skole). Del 2 (HELT
+  utkommentert som ÉN `/* ... */`-blokk — aktiveres ved å slette kun de
+  to linjene `/*`/`*/`): oppretter `sessions_backup_for_live` og
+  `multi_day_events_backup_for_live` med RLS på og ingen policyer, deretter
+  sletter ALLE rader i `sessions` og `multi_day_events`, alle skoler/
+  skoleår, ingen WHERE. Del 3: kontrollspørringer mot Del 1-tallene.
+  `session_calendar`, `classes`, `subjects`, `subject_divisions` og de
+  syntetiske testfagene (oppsett, ikke hendelse) er UENDRET av denne
+  migrasjonen — Morfar rydder selv i Fag-fanen senere, se backlogg.
+  `DECISIONS.md` har ny oppføring «P60 — Kalenderhendelse vs. oppsett».
+  Ingen kode i `v4/app.js`/`style.css`/`index.html` rørt, ingen
+  cache-bust. Migrasjonen er IKKE kjørt i produksjon ennå — det er
+  Morfars manuelle steg etter merge, se «Manuelt steg til Morfar» i
+  Økt 60.)
+- **Pågående:** ingen
 - **Neste ledige P-nummer:** P61
 - **Dato sist oppdatert:** 24. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
@@ -169,9 +175,12 @@
 - **Preview-deployments Cloudflare/Netlify** (backlogg, ikke aktiv). Ingen
   deploy-konfig i repoet i dag.
 - **Syntetiske testfag i prod-databasen** (P40; fra importrunden 014–016).
-  Fag uten ekte motpart (norsk, matte, engelsk, kroppsøving + ev. YFF) med
-  syntetiske økter fra migrasjon 013 beholdes «inntil videre» — vurder
-  opprydding før live.
+  Fag uten ekte motpart (norsk, matte, engelsk, kroppsøving + ev. YFF).
+  P60 (migrasjon 025) tømte alle kalenderhendelser (sessions,
+  multi_day_events) før live, men RØRTE BEVISST IKKE fagene selv — det er
+  oppsett, ikke en hendelse (se Økt 60). Morfar rydder selv i Fag-fanen,
+  i dialog med faglærerne, når han finner det riktig — trygt å gjøre nå
+  som ingen økter lenger peker på dem.
 
 ---
 
@@ -1997,7 +2006,12 @@ inn i PROSEDYRER.md: Code stopper alltid ved «PR klar til merge».
 **Branch:** `claude/calendar-cleanup-live-tgh5jw` (miljøets tildelte
 branch — oppgaveteksten foreslo `claude/P60-opprydding-for-live`, men
 miljøet hadde allerede opprettet denne, og den følges i stedet).
-**Status:** PLAN SKREVET 24. august 2026 — venter på Morfars «kjør».
+**Status:** KODE FERDIG 24. august 2026. Migrasjonsfila er skrevet og
+`node --check` er ikke relevant (SQL, ikke JS). Bekreftet med
+`git status`/`git diff --stat` at kun de planlagte filene er endret:
+ny `v4/supabase/migrations/025_opprydding_for_live.sql`, samt
+`PLAN.md` og `DECISIONS.md`. Venter på PR-merge — migrasjonen er IKKE
+kjørt i produksjon ennå, det er Morfars manuelle steg (se under).
 
 ### Bakgrunn
 
@@ -2043,30 +2057,31 @@ syntetiske økter fra migrasjon 013, importerte 25/26-planer fra migrasjon
 
 ### Sjekkliste
 
-- [ ] Ny fil `v4/supabase/migrations/025_opprydding_for_live.sql` skrevet
+- [x] Ny fil `v4/supabase/migrations/025_opprydding_for_live.sql` skrevet
       etter utkastet under («Utkast til migrasjonsfilen»).
-- [ ] ⚠️-blokk øverst i fila: ENGANGSKJØRING før live, DELETE-setningene
+- [x] ⚠️-blokk øverst i fila: ENGANGSKJØRING før live, DELETE-setningene
       er uten WHERE og treffer ALLE skoler og ALLE skoleår, fila skal
       ALDRI kjøres på nytt etter at ekte brukere har lagt inn data. IKKE
       beskrevet som idempotent eller «trygt å kjøre flere ganger» noe
       sted i fila (bevisst — leses som en invitasjon til gjenkjøring).
-- [ ] Del 1 (tellespørringer) kjørbar alene, ingen transaksjon, dekker
+- [x] Del 1 (tellespørringer) kjørbar alene, ingen transaksjon, dekker
       alle seks tabellene (sessions + multi_day_events fordelt på
       skoleår; school_calendar + classes + subjects + subject_divisions
       fordelt på skole).
-- [ ] Del 2 (slettingen) HELT utkommentert, egen forklaringslinje om at
-      Morfar må fjerne kommentartegn bevisst. Backup-opprettelse +
-      RLS-på-uten-policyer som første steg inne i `BEGIN…COMMIT`, deretter
-      de to `DELETE`-setningene.
-- [ ] Del 3 (kontroll) kjørbar alene: `sessions`/`multi_day_events`
+- [x] Del 2 (slettingen) HELT utkommentert som ÉN `/* ... */`-blokk (endret
+      fra `-- ` per linje etter Morfars presisering 24.08.2026 — aktiveres
+      ved å slette de to linjene `/*` og `*/`, ikke tretti enkeltlinjer).
+      Backup-opprettelse + RLS-på-uten-policyer som første steg inne i
+      `BEGIN…COMMIT`, deretter de to `DELETE`-setningene.
+- [x] Del 3 (kontroll) kjørbar alene: `sessions`/`multi_day_events`
       forventes 0, de fire oppsett-tabellene forventes samme tall som i
       del 1.
-- [ ] `DECISIONS.md`: ny oppføring «P60 — kalenderhendelse vs. oppsett»
-      (se innhold under).
-- [ ] `PLAN.md`: denne sjekklisten krysses av, STATUSLINJE oppdateres
+- [x] `DECISIONS.md`: ny oppføring «P60 — kalenderhendelse vs. oppsett»
+      lagt til (se innhold under).
+- [x] `PLAN.md`: denne sjekklisten krysset av, STATUSLINJE oppdatert
       (siste fullførte → P60), og backlogg-punktet «Syntetiske testfag i
-      prod-databasen» merkes eksplisitt IKKE lukket av P60.
-- [ ] Ingen endring i `v4/app.js`, `v4/style.css` eller `v4/index.html`.
+      prod-databasen» merket eksplisitt IKKE lukket av P60.
+- [x] Ingen endring i `v4/app.js`, `v4/style.css` eller `v4/index.html`.
       Ingen cache-bust (ingen frontend-endring). Ingen edge functions.
 
 ### Utkast til migrasjonsfilen (for gjennomlesning før «kjør»)
@@ -2129,34 +2144,38 @@ select count(*) as subject_divisions_totalt from subject_divisions;
 
 -- ═══════════════════════════════════════════════════════════════
 -- DEL 2 — SLETTING (⚠️ se advarselen øverst i fila)
--- Utkommentert med vilje. Fjern "-- " foran hver linje i blokken
--- under BEVISST, og kun når du faktisk skal kjøre slettingen.
+--
+-- Hele blokken under er kommentert ut som ÉN /* ... */-blokk (endret
+-- fra `-- ` per linje etter Morfars ønske 24.08.2026 — aktiveres ved å
+-- slette KUN de to linjene "/*" og "*/", ikke tretti enkeltlinjer).
+-- Gjør dette BEVISST, kun når du faktisk skal kjøre slettingen.
 -- ═══════════════════════════════════════════════════════════════
 
--- BEGIN;
---
--- -- Sikkerhetskopi FØRST, inne i samme transaksjon som slettingen.
--- -- Radene kan settes tilbake med "insert into sessions select *
--- -- from sessions_backup_for_live" (og tilsvarende for
--- -- multi_day_events) siden classes/subjects/users står urørt.
--- create table if not exists sessions_backup_for_live as
---   select * from sessions;
--- create table if not exists multi_day_events_backup_for_live as
---   select * from multi_day_events;
---
--- -- RLS på, uten policyer: tabellene havner i public-skjemaet som
--- -- Supabase eksponerer via API-et, og skal ikke være lesbare
--- -- utenfra. Uten policyer er de kun tilgjengelige for service-role
--- -- og SQL Editor.
--- alter table sessions_backup_for_live enable row level security;
--- alter table multi_day_events_backup_for_live enable row level security;
---
--- -- session_divisions og pending_transfers rydder seg selv via
--- -- "on delete cascade" fra sessions — ingen egne slette-setninger.
--- delete from sessions;
--- delete from multi_day_events;
---
--- COMMIT;
+/*
+BEGIN;
+
+-- Sikkerhetskopi FØRST, inne i samme transaksjon som slettingen.
+-- Radene kan settes tilbake med "insert into sessions select * from
+-- sessions_backup_for_live" (og tilsvarende for multi_day_events)
+-- siden classes/subjects/users står urørt.
+create table if not exists sessions_backup_for_live as
+  select * from sessions;
+create table if not exists multi_day_events_backup_for_live as
+  select * from multi_day_events;
+
+-- RLS på, uten policyer: tabellene havner i public-skjemaet som
+-- Supabase eksponerer via API-et, og skal ikke være lesbare utenfra.
+-- Uten policyer er de kun tilgjengelige for service-role og SQL Editor.
+alter table sessions_backup_for_live enable row level security;
+alter table multi_day_events_backup_for_live enable row level security;
+
+-- session_divisions og pending_transfers rydder seg selv via
+-- "on delete cascade" fra sessions — ingen egne slette-setninger.
+delete from sessions;
+delete from multi_day_events;
+
+COMMIT;
+*/
 
 
 -- ═══════════════════════════════════════════════════════════════
