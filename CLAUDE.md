@@ -10,14 +10,24 @@ Ukeplan v4 er en norsk ukeplantjeneste, skolenøytral og åpen for flere skoler
 Lærere planlegger undervisningsøkter per klasse/uke. Elever ser sin klasses plan.
 Admins administrerer skolen, fag, klasser, brukere og skoleruten.
 
-Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikling: /v4/.
+Dagens produksjonsløsning (P62): appen kjører på rota av
+ukeplan1e.ganddal.net — ikke lenger under /v4/.
 
 ## Arbeidsrutiner (VIKTIG)
-- PRODUKSJON I AKTIV BRUK — fryst: rotfilene `index.html`, `CNAME`,
-  `appsscript.gs`, `logo.png` samt mappene `info/` (bruksanvisning, lenket
-  fra produksjonsmenyen) og `dev/` (testmiljø for dagens løsning) er fredet
-  og skal ALDRI endres. Redigerbare områder: `v4/` og disse .md-filene,
-  hver med sitt eget formål og oppdateringspunkt:
+- PRODUKSJON I AKTIV BRUK — fryst arkiv: `gammel/`-mappa (den forrige
+  produksjonsløsningen, flyttet dit i P62 — inneholder `index.html`,
+  `appsscript.gs`, `logo.png`, `info/` (bruksanvisning, lenket fra den
+  gamle produksjonsmenyen) og `dev/` (testmiljø for den gamle løsningen))
+  er fredet og skal ALDRI endres. `CNAME` og `.github/` ligger på rota og
+  er også fredet (GitHub Pages-oppsett). Redigerbare områder: rota (appen
+  — `app.js`, `style.css`, `index.html` osv.) og disse .md-filene, hver
+  med sitt eget formål og oppdateringspunkt:
+  - `v4/` — **MIDLERTIDIG beholdt, IKKE i bruk.** Identisk snapshot av
+    appen slik den var rett før P62-flyttingen til rota, beholdt kun som
+    rollback-sikkerhet på uttrykkelig ønske fra Morfar («ikke slett /v4
+    før jeg bekrefter at flyttingen er vellykket»). Skal IKKE redigeres
+    eller brukes som kilde — rota er kanonisk. Slettes i egen, senere økt
+    når Morfar har bekreftet at rot-versjonen fungerer i produksjon.
   - `CLAUDE.md` — denne fila; teknisk prosjektbeskrivelse for Claude
     (stack, filstruktur, invarianter, nøkkelfunksjoner). Oppdateres når
     noe av dette faktisk endrer seg i koden.
@@ -46,7 +56,7 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 - Ved større oppgaver: skriv plan til `PLAN.md` (med avkrysningsbokser)
   før koding starter, og vent på godkjenning.
 - Etter hvert fullført delsteg: kryss av i `PLAN.md` og oppdater «Neste steg».
-- Ved JS/CSS-endringer: bump alltid `?v=YYYYMMDDx` i `v4/index.html`.
+- Ved JS/CSS-endringer: bump alltid `?v=YYYYMMDDx` i rot-`index.html`.
 - Commit etter hver fullførte deloppgave, med beskrivende melding.
 - Hold deg til oppgavens omfang — ikke endre kode utenfor det som er avtalt.
 - **Sjekkliste-lukking er del av økten, ikke oppfølging** — PLAN.md sin
@@ -69,11 +79,11 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
   gjort, hvilket PN-nummer og branch som ble brukt, og hva som eventuelt gjenstår.
 
 ## Teknisk stack
-- **Frontend**: Vanilla JS (ingen rammeverk), én fil: `v4/app.js` (~4000 linjer)
-- **CSS**: `v4/style.css`
-- **HTML**: `v4/index.html` (cache-busting via `?v=YYYYMMDDx` — bump ved hver endring)
+- **Frontend**: Vanilla JS (ingen rammeverk), én fil: `app.js` (~4000 linjer)
+- **CSS**: `style.css`
+- **HTML**: `index.html` (cache-busting via `?v=YYYYMMDDx` — bump ved hver endring)
 - **Backend**: Supabase (PostgreSQL + Auth + Realtime + Edge Functions)
-- **Edge Functions**: Deno/TypeScript i `v4/supabase/functions/`
+- **Edge Functions**: Deno/TypeScript i `supabase/functions/`
 - **AI**: Gemini 2.5 Flash via REST API (nøkkel: `GEMINI_API_KEY` i Supabase Secrets).
   Kallmønsteret (retry ved 503/429, thought-filtrering, feilhåndtering) er portet fra
   `kallGemini_` i appsscript.gs og ligger som identisk `kallGemini`-hjelpefunksjon i
@@ -83,47 +93,48 @@ Dagens løsning i bruk: ukeplan1e.ganddal.net (fryst). Ny løsning under utvikli
 
 ```
 BACKLOGG-UX-MOBIL.md              # UX/mobil-backlogg (egen fil; Backlogg-seksjonen i PLAN.md peker hit)
-v4/
-  app.js                          # All frontend-logikk
-  style.css
-  index.html
-  uno-footer.js                   # Uno-logo + © årstall i footeren (selvstendig, lastes fra index.html; fra PR #88, før P-nummereringen)
-  unoicon.png                     # Favicon (index.html + fallback i app.js når skolen mangler logo)
-  supabase/
-    migrations/                   # SQL-migrasjoner (kjøres manuelt i Supabase SQL Editor)
-      001_initial_schema.sql
-      002_rls.sql
-      003_cleanup_cron.sql
-      004_school_year.sql         # Skoleår-støtte (KJØRT)
-      005_test_sessions.sql       # Testdata (KJØRT)
-      006_fix_school_facts_rls.sql # school_facts RLS-fix (KJØRT)
-      007_sporbarhet.sql          # created_by/last_modified_by (KJØRT)
-      008_kollegahjelp.sql        # Lærer kan endre andres økter (KJØRT)
-      009_rollegrenser.sql        # Maks 2 admin / 3 kontaktlærere + RLS-fix (KJØRT)
-      010_fellesokter.sql         # shared_group_id for fellesundervisning (KJØRT)
-      011_softdelete_facts_kalender.sql # created_at/deleted_at på school_facts, deleted_at på school_calendar, purge-utvidelse (KJØRT)
-      012_kalendertyper.sql       # calendar_type_enum → ferie|helligdag|planleggingsdag|annet ('fridag'-rader blir 'helligdag')
-      013_testdata_2526.sql       # Testdata: komplett skoleår 25/26 (skolerute, fag m/parti+gruppe, økter uke 33–24) — idempotent, krever 012
-      014_import_npt_2526.sql     # Ekte NPT-plan 25/26 fra prod (erstatter syntetiske NPT-økter; lærermapping på fornavn)
-      015_import_nna_2526.sql     # Ekte NNA-plan 25/26 fra prod (samme mønster som 014)
-      016_import_fag_2526.sql     # Ekte fellesfag-plan 25/26 fra prod (Plan_Fag; kun Naturfag, mapper fag-kolonne mot subjects)
-      017_parti_per_klasse.sql    # Parti per klasse: session_divisions-koblingstabell + subject_divisions per klasse (KJØRT)
-      018_admin_additiv.sql       # Admin som additivt flagg: is_admin-kolonne, auth_is_admin()-helper, RLS-oppdatering (KJØRT)
-      018_funfacts_view_count.sql # view_count for funfacts-rotasjon + increment_fact_view()-funksjon (KJØRT)
-      019_admin_panel_rls.sql     # RLS-fix: adminpanel-skriving tillatt med auth_is_admin() uten toggle (KJØRT)
-      020_storage_policy_logos.sql # Storage-policies for logos-bucketen: INSERT/UPDATE/DELETE (admin) + SELECT (public) (KJØRT)
-      021_funfacts_tema.sql       # facts_theme-kolonne på schools: fritekst temastyring for funfacts (P41)
-      022_import_egne_klasser.sql # Stram INSERT på sessions til egne klasser (user_classes); admin i adminmodus unntatt (P44)
-      023_tilgangsforesporsler.sql # access_requests-tabell for uinnlogget tilgangsforespørsel ved innlogging (P57)
-      024_maks_inndelinger.sql    # Utvider subjects_max_divisions_check fra 1–8 til 1–20 (matcher appens skjema); default fortsatt 8 (P58)
-    functions/
-      ical/                       # iCal-abonnement for klasser/lærere
-      generate-facts/             # Generer funfacts med Gemini
-      ai-parse-sessions/          # Importer økter fra tekst med AI
-      ai-parse-skolerute/         # Importer skolerute fra tekst med AI
-      create-user/                # Opprett bruker (admin)
-      admin-user/                 # Admin-brukeroperasjoner
-      cleanup/                    # Periodisk rydding
+gammel/                           # Arkivert tidligere produksjonsløsning (P62) — fredet, se Arbeidsrutiner
+v4/                                # MIDLERTIDIG rollback-kopi (P62) — se Arbeidsrutiner, IKKE i bruk
+app.js                             # All frontend-logikk
+style.css
+index.html
+uno-footer.js                     # Uno-logo + © årstall i footeren (selvstendig, lastes fra index.html; fra PR #88, før P-nummereringen)
+unoicon.png                       # Favicon (index.html + fallback i app.js når skolen mangler logo)
+supabase/
+  migrations/                     # SQL-migrasjoner (kjøres manuelt i Supabase SQL Editor)
+    001_initial_schema.sql
+    002_rls.sql
+    003_cleanup_cron.sql
+    004_school_year.sql           # Skoleår-støtte (KJØRT)
+    005_test_sessions.sql         # Testdata (KJØRT)
+    006_fix_school_facts_rls.sql  # school_facts RLS-fix (KJØRT)
+    007_sporbarhet.sql            # created_by/last_modified_by (KJØRT)
+    008_kollegahjelp.sql          # Lærer kan endre andres økter (KJØRT)
+    009_rollegrenser.sql          # Maks 2 admin / 3 kontaktlærere + RLS-fix (KJØRT)
+    010_fellesokter.sql           # shared_group_id for fellesundervisning (KJØRT)
+    011_softdelete_facts_kalender.sql # created_at/deleted_at på school_facts, deleted_at på school_calendar, purge-utvidelse (KJØRT)
+    012_kalendertyper.sql         # calendar_type_enum → ferie|helligdag|planleggingsdag|annet ('fridag'-rader blir 'helligdag')
+    013_testdata_2526.sql         # Testdata: komplett skoleår 25/26 (skolerute, fag m/parti+gruppe, økter uke 33–24) — idempotent, krever 012
+    014_import_npt_2526.sql       # Ekte NPT-plan 25/26 fra prod (erstatter syntetiske NPT-økter; lærermapping på fornavn)
+    015_import_nna_2526.sql       # Ekte NNA-plan 25/26 fra prod (samme mønster som 014)
+    016_import_fag_2526.sql       # Ekte fellesfag-plan 25/26 fra prod (Plan_Fag; kun Naturfag, mapper fag-kolonne mot subjects)
+    017_parti_per_klasse.sql      # Parti per klasse: session_divisions-koblingstabell + subject_divisions per klasse (KJØRT)
+    018_admin_additiv.sql         # Admin som additivt flagg: is_admin-kolonne, auth_is_admin()-helper, RLS-oppdatering (KJØRT)
+    018_funfacts_view_count.sql   # view_count for funfacts-rotasjon + increment_fact_view()-funksjon (KJØRT)
+    019_admin_panel_rls.sql       # RLS-fix: adminpanel-skriving tillatt med auth_is_admin() uten toggle (KJØRT)
+    020_storage_policy_logos.sql  # Storage-policies for logos-bucketen: INSERT/UPDATE/DELETE (admin) + SELECT (public) (KJØRT)
+    021_funfacts_tema.sql         # facts_theme-kolonne på schools: fritekst temastyring for funfacts (P41)
+    022_import_egne_klasser.sql   # Stram INSERT på sessions til egne klasser (user_classes); admin i adminmodus unntatt (P44)
+    023_tilgangsforesporsler.sql  # access_requests-tabell for uinnlogget tilgangsforespørsel ved innlogging (P57)
+    024_maks_inndelinger.sql      # Utvider subjects_max_divisions_check fra 1–8 til 1–20 (matcher appens skjema); default fortsatt 8 (P58)
+  functions/
+    ical/                         # iCal-abonnement for klasser/lærere
+    generate-facts/               # Generer funfacts med Gemini
+    ai-parse-sessions/            # Importer økter fra tekst med AI
+    ai-parse-skolerute/           # Importer skolerute fra tekst med AI
+    create-user/                  # Opprett bruker (admin)
+    admin-user/                   # Admin-brukeroperasjoner
+    cleanup/                      # Periodisk rydding
 ```
 
 ## Router (hash-basert)
@@ -306,13 +317,13 @@ Alle funksjoner deployes manuelt via Supabase Dashboard:
 Edge Functions → velg funksjon → Code-fanen → lim inn kode → Deploy.
 
 Direkte lenker til kildekode på GitHub (kopier herfra ved deploy):
-- [ical/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/ical/index.ts)
-- [generate-facts/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/generate-facts/index.ts)
-- [ai-parse-sessions/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/ai-parse-sessions/index.ts)
-- [ai-parse-skolerute/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/ai-parse-skolerute/index.ts)
-- [create-user/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/create-user/index.ts)
-- [admin-user/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/admin-user/index.ts)
-- [cleanup/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/v4/supabase/functions/cleanup/index.ts)
+- [ical/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/supabase/functions/ical/index.ts)
+- [generate-facts/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/supabase/functions/generate-facts/index.ts)
+- [ai-parse-sessions/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/supabase/functions/ai-parse-sessions/index.ts)
+- [ai-parse-skolerute/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/supabase/functions/ai-parse-skolerute/index.ts)
+- [create-user/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/supabase/functions/create-user/index.ts)
+- [admin-user/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/supabase/functions/admin-user/index.ts)
+- [cleanup/index.ts](https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/main/supabase/functions/cleanup/index.ts)
 
 Merk: bruk `/blob/main/`-lenker (direkte til fil), ikke `/tree/`-lenker (mappelisting).
 

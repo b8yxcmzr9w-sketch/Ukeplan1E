@@ -136,7 +136,7 @@ Tre nivåer, fra raskt overblikk til full funksjonstest:
    ikke bare diffen:
    `https://github.com/b8yxcmzr9w-sketch/Ukeplan1E/blob/<branch>/<fil>`
 3. **Kjørbar app fra branchen**, via raw.githack:
-   `https://raw.githack.com/b8yxcmzr9w-sketch/Ukeplan1E/<branch>/v4/index.html`
+   `https://raw.githack.com/b8yxcmzr9w-sketch/Ukeplan1E/<branch>/index.html`
 
    **Denne veien er ENNÅ IKKE BEKREFTET** — må prøves én gang mot `main`
    først, før den brukes til å teste en faktisk branch.
