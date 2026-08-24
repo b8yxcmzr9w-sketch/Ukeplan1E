@@ -18,18 +18,12 @@
   migrasjonen — Morfar rydder selv i Fag-fanen senere, se backlogg.
   `DECISIONS.md` har ny oppføring «P60 — Kalenderhendelse vs. oppsett».
   Ingen kode i `v4/app.js`/`style.css`/`index.html` rørt, ingen
-  cache-bust. Migrasjonen er IKKE kjørt i produksjon ennå — det er
-  Morfars manuelle steg, se «Manuelt steg til Morfar» i Økt 60. Åpent
-  prod-sjekkpunkt til den er kjørt og bekreftet, se under.)
+  cache-bust. Migrasjonen ER kjørt i produksjon og bekreftet av Morfar
+  24. august 2026 — «alt er kjørt og det ser godt ut». P60 er FERDIG.)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P61
 - **Dato sist oppdatert:** 24. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P60s produksjonskjøring — migrasjon 025 er merget til main, men IKKE
-    kjørt i Supabase SQL Editor ennå. Morfar må selv: kjøre Del 1, ta
-    stilling til Del 2 (fjerne kommentartegn bevisst, kjøre slettingen),
-    kjøre Del 3, og bekrefte tallene stemmer. Kan ikke gjøres fra denne
-    økten — krever tilgang til produksjonsdatabasen.
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -2012,12 +2006,9 @@ inn i PROSEDYRER.md: Code stopper alltid ved «PR klar til merge».
 **Branch:** `claude/calendar-cleanup-live-tgh5jw` (miljøets tildelte
 branch — oppgaveteksten foreslo `claude/P60-opprydding-for-live`, men
 miljøet hadde allerede opprettet denne, og den følges i stedet).
-**Status:** KODE FERDIG 24. august 2026. Migrasjonsfila er skrevet og
-`node --check` er ikke relevant (SQL, ikke JS). Bekreftet med
-`git status`/`git diff --stat` at kun de planlagte filene er endret:
-ny `v4/supabase/migrations/025_opprydding_for_live.sql`, samt
-`PLAN.md` og `DECISIONS.md`. Venter på PR-merge — migrasjonen er IKKE
-kjørt i produksjon ennå, det er Morfars manuelle steg (se under).
+**Status:** FERDIG OG VERIFISERT 24. august 2026. PR #171 squash-merget
+til main. Migrasjonen er kjørt av Morfar i Supabase SQL Editor (alle tre
+deler) og bekreftet: «alt er kjørt og det ser godt ut». P60 er FERDIG.
 
 ### Bakgrunn
 
