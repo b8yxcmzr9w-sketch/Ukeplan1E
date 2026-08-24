@@ -20,7 +20,7 @@
   Ingen kode i `v4/app.js`/`style.css`/`index.html` rørt, ingen
   cache-bust. Migrasjonen ER kjørt i produksjon og bekreftet av Morfar
   24. august 2026 — «alt er kjørt og det ser godt ut». P60 er FERDIG.)
-- **Pågående:** ingen
+- **Pågående:** P61 (sub-plan skrevet, venter på Morfars «kjør»)
 - **Neste ledige P-nummer:** P61
 - **Dato sist oppdatert:** 24. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
@@ -2252,3 +2252,53 @@ denne økten — se «Utenfor scope» over.
 4. (Senere, ikke samme dag) Drop backup-tabellene med de to
    `DROP TABLE`-setningene over, når han er trygg på at oppryddingen er
    riktig.
+
+---
+
+## Økt 61 (P61): Fjern «Parti/gruppe» fra «Be om tilgang»-skjemaet
+
+**Branch:** miljøets tildelte branch `claude/remove-divisions-access-form-won4xl`
+(oppgaveteksten sa `claude/P61-fjern-parti-i-tilgangsskjema`, samme situasjon
+som P34–P44).
+**Scope:** KUN `v4/app.js` (funksjonen `visBeOmTilgangModal`, fra ca. linje
+641) + cache-bust i `v4/index.html` + én oppføring i DECISIONS.md. Ingen
+migrasjon, ingen edge function-endring, ingen endring av adminpanelets
+forespørsels-kort eller parti/gruppe andre steder i appen.
+
+### Bakgrunn
+P57 bygget skjemaet med to avkryssingslister: fag OG parti/gruppe.
+Parti-listen viser hver inndeling ved skolen på formen «Fag — Type: Navn
+(Klasse)» — for detaljert og for lang for en søker som ennå ikke har konto.
+Fag-listen skal beholdes uendret.
+
+### Delplan
+
+- [ ] Fjern skjemaraden «Parti/gruppe»: `divContainer` +
+      `lagFormRad('Parti/gruppe', divContainer)` (app.js ~677–678)
+- [ ] Fjern `divisionsText`-innsamlingen i submit-handleren (app.js ~710) og
+      `divisions_text`-feltet fra kallet til
+      `sb.functions.invoke('request-access', …)` (app.js ~719)
+- [ ] Fjern spørringen mot `subject_divisions` i `Promise.all`-blokken
+      (app.js ~741–745) — skjemaet henter da kun skole, fag og admins
+      fornavn
+- [ ] Fjern løkken som bygger avkryssingsboksene for parti/gruppe + teksten
+      «Ingen parti/gruppe registrert.» (app.js ~760–770)
+- [ ] Rett opp kommentarene i og over funksjonen (app.js ~637–640 og ~738)
+      så de ikke lenger lover et parti/gruppe-valg i skjemaet
+- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (kun JS — CSS uendret)
+- [ ] DECISIONS.md: ny oppføring om at tilgangsskjemaet bevisst ikke spør om
+      parti/gruppe lenger, mens `access_requests.divisions_text`-kolonnen
+      (migrasjon 023, `not null default '{}'`) beholdes uendret — nye rader
+      får tom liste, eldre forespørsler beholder innholdet sitt
+- [ ] Lesekontroll (ingen kodeendring): bekreft at adminpanelets
+      forespørsels-kort (app.js ~5676) fortsatt viser «Parti/gruppe»-linjen
+      kun når feltet har innhold, slik at eldre rader ikke mister
+      informasjon og nye rader ikke viser en tom linje
+- [ ] Commit + push
+
+**Bevisst IKKE endret:** databasen (ingen migrasjon), edge-funksjonen
+`request-access` (ingen redeploy — den leser feltet defensivt med
+`Array.isArray(...) ? ... : []`), adminpanelets forespørsels-kort, og
+parti/gruppe andre steder i appen (økt-skjemaene, elevfilteret,
+klasse-admin — `selected_divisions` finnes flere andre steder i app.js og
+skal stå urørt).
