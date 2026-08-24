@@ -636,8 +636,9 @@ function renderLoginForm() {
 
 // P57: uinnlogget lærer ber om tilgang – skjemaet er åpent for alle (ingen
 // innlogging), sender via edge function `request-access` (service-role,
-// validerer domenet server-side). Fag/parti-valget er REN INFORMASJON til
-// admin – ingen skriving til subjects/subject_divisions/user_classes her.
+// validerer domenet server-side). Fag-valget er REN INFORMASJON til admin –
+// ingen skriving til subjects/user_classes her. (P61: parti/gruppe-valget er
+// fjernet fra skjemaet – for detaljert for en søker uten konto ennå.)
 async function visBeOmTilgangModal() {
   const modal = el('div', { class: 'modal-bg' })
   const box = el('div', { class: 'modal modal-xl' })
@@ -674,13 +675,10 @@ async function visBeOmTilgangModal() {
   const fagContainer = el('div', { class: 'tilgang-liste' }, 'Laster fag …')
   form.appendChild(lagFormRad('Fag', fagContainer))
 
-  const divContainer = el('div', { class: 'tilgang-liste' }, 'Laster parti/gruppe …')
-  form.appendChild(lagFormRad('Parti/gruppe', divContainer))
-
   form.appendChild(lagFormRad('Melding til admin', el('textarea', { name: 'message', class: 'felt input', rows: 3, placeholder: 'Valgfritt' })))
 
   // P57-justering: feilmelding vises både øverst og nederst i modalen —
-  // skjemaet er langt (fag/parti kan kreve scrolling), og en feil kun øverst
+  // skjemaet er langt (fag kan kreve scrolling), og en feil kun øverst
   // blir usett når brukeren står nederst ved «Send forespørsel».
   const feilBunn = el('p', { class: 'feil-tekst skjult' })
   function visFeil(msg) {
@@ -707,7 +705,6 @@ async function visBeOmTilgangModal() {
       return
     }
     const subjectsText = [...form.querySelectorAll('input[name=selected_subjects]:checked')].map(cb => cb.value)
-    const divisionsText = [...form.querySelectorAll('input[name=selected_divisions]:checked')].map(cb => cb.value)
     lagreKnapp.disabled = true
     try {
       const { data, error } = await sb.functions.invoke('request-access', {
@@ -716,7 +713,6 @@ async function visBeOmTilgangModal() {
           email,
           requested_role: fd.get('requested_role'),
           subjects_text: subjectsText,
-          divisions_text: divisionsText,
           message: (fd.get('message') || '').trim(),
         },
       })
@@ -735,12 +731,11 @@ async function visBeOmTilgangModal() {
   document.body.appendChild(modal)
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 
-  // Live-henting: skole (anon, kun én skole per instans), fag, parti/gruppe, admins fornavn
+  // Live-henting: skole (anon, kun én skole per instans), fag, admins fornavn
   const { data: school } = await sb.from('schools').select('id').limit(1).single()
   const schoolId = school?.id
-  const [{ data: fag }, { data: divs }, { data: adminNavn }] = await Promise.all([
+  const [{ data: fag }, { data: adminNavn }] = await Promise.all([
     schoolId ? sb.from('subjects').select('id,name').eq('school_id', schoolId).is('deleted_at', null).order('name') : Promise.resolve({ data: [] }),
-    schoolId ? sb.from('subject_divisions').select('id,name,division_type,class_id,subjects!inner(name,school_id),classes(name)').eq('subjects.school_id', schoolId).is('deleted_at', null).order('name') : Promise.resolve({ data: [] }),
     sb.rpc('public_admin_fornavn'),
   ])
 
@@ -756,18 +751,6 @@ async function visBeOmTilgangModal() {
     fagContainer.appendChild(lbl)
   }
   if (!(fag || []).length) fagContainer.appendChild(el('p', { class: 'tekst-svak' }, 'Ingen fag registrert.'))
-
-  clearEl(divContainer)
-  for (const d of divs || []) {
-    const typeNavn = d.division_type === 'parti' ? 'Parti' : 'Gruppe'
-    const klasseSuffix = d.classes?.name ? ` (${d.classes.name})` : ''
-    const merkelapp = `${d.subjects?.name || ''} — ${typeNavn}: ${d.name}${klasseSuffix}`
-    const lbl = el('label', { class: 'div-check-lbl' })
-    lbl.appendChild(el('input', { type: 'checkbox', name: 'selected_divisions', value: merkelapp }))
-    lbl.appendChild(document.createTextNode(` ${merkelapp}`))
-    divContainer.appendChild(lbl)
-  }
-  if (!(divs || []).length) divContainer.appendChild(el('p', { class: 'tekst-svak' }, 'Ingen parti/gruppe registrert.'))
 }
 
 // Fleksibel «sett nytt passord»-modal.

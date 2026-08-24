@@ -2,28 +2,27 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P60 (PR #171 squash-merget til main
-  24. august 2026 — ny migrasjon
-  `v4/supabase/migrations/025_opprydding_for_live.sql` for opprydding av
-  kalenderdata før live. Del 1: tellespørringer for sessions/
-  multi_day_events (fordelt på skoleår) + school_calendar/classes/
-  subjects/subject_divisions (fordelt på skole). Del 2 (HELT utkommentert
-  som ÉN `/* ... */`-blokk — aktiveres ved å slette kun de to linjene
-  `/*`/`*/`): oppretter `sessions_backup_for_live` og
-  `multi_day_events_backup_for_live` med RLS på og ingen policyer, deretter
-  sletter ALLE rader i `sessions` og `multi_day_events`, alle skoler/
-  skoleår, ingen WHERE. Del 3: kontrollspørringer mot Del 1-tallene.
-  `school_calendar`, `classes`, `subjects`, `subject_divisions` og de
-  syntetiske testfagene (oppsett, ikke hendelse) er UENDRET av denne
-  migrasjonen — Morfar rydder selv i Fag-fanen senere, se backlogg.
-  `DECISIONS.md` har ny oppføring «P60 — Kalenderhendelse vs. oppsett».
-  Ingen kode i `v4/app.js`/`style.css`/`index.html` rørt, ingen
-  cache-bust. Migrasjonen ER kjørt i produksjon og bekreftet av Morfar
-  24. august 2026 — «alt er kjørt og det ser godt ut». P60 er FERDIG.)
+- **Nest siste fullførte P-nummer:** P60 (opprydding av kalenderdata før
+  live — migrasjon 025 kjørt og bekreftet i produksjon 24. august 2026;
+  se DECISIONS.md «P60 — Kalenderhendelse vs. oppsett»).
+- **Siste fullførte P-nummer:** P61 (parti/gruppe-spørsmålet fjernet fra
+  «Be om tilgang»-skjemaet — kun fag-listen står igjen. Endring KUN i
+  `visBeOmTilgangModal` i `v4/app.js` + cache-bust `?v=20260824a` i
+  `v4/index.html`. `DECISIONS.md` har ny oppføring «P61 — Tilgangsskjemaet
+  spør ikke lenger om parti/gruppe». Ingen migrasjon (kolonnen
+  `access_requests.divisions_text` beholdt uendret for eldre rader), ingen
+  edge function-endring (`request-access` tåler feltet fraværende), ingen
+  endring av adminpanelets forespørsels-kort. Kode committet og pushet til
+  branch `claude/remove-divisions-access-form-won4xl`. INGEN PR opprettet i
+  denne økten — kun eksplisitt bedt om kjøring, ikke om PR/merge.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P61
+- **Neste ledige P-nummer:** P62
 - **Dato sist oppdatert:** 24. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P61s prod-sjekk — parti/gruppe-spørsmålet fjernet fra «Be om
+    tilgang»-skjemaet, kun fag-listen står igjen (kode klar, ingen
+    migrasjon/redeploy); Morfars visuelle bekreftelse i produksjon etter
+    merge gjenstår, samme mønster som P41–P55
   - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
     overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
     testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
@@ -2252,3 +2251,54 @@ denne økten — se «Utenfor scope» over.
 4. (Senere, ikke samme dag) Drop backup-tabellene med de to
    `DROP TABLE`-setningene over, når han er trygg på at oppryddingen er
    riktig.
+
+---
+
+## Økt 61 (P61): Fjern «Parti/gruppe» fra «Be om tilgang»-skjemaet
+
+**Branch:** miljøets tildelte branch `claude/remove-divisions-access-form-won4xl`
+(oppgaveteksten sa `claude/P61-fjern-parti-i-tilgangsskjema`, samme situasjon
+som P34–P44).
+**Scope:** KUN `v4/app.js` (funksjonen `visBeOmTilgangModal`, fra ca. linje
+641) + cache-bust i `v4/index.html` + én oppføring i DECISIONS.md. Ingen
+migrasjon, ingen edge function-endring, ingen endring av adminpanelets
+forespørsels-kort eller parti/gruppe andre steder i appen.
+
+### Bakgrunn
+P57 bygget skjemaet med to avkryssingslister: fag OG parti/gruppe.
+Parti-listen viser hver inndeling ved skolen på formen «Fag — Type: Navn
+(Klasse)» — for detaljert og for lang for en søker som ennå ikke har konto.
+Fag-listen skal beholdes uendret.
+
+### Delplan
+
+- [x] Fjern skjemaraden «Parti/gruppe»: `divContainer` +
+      `lagFormRad('Parti/gruppe', divContainer)` (app.js ~677–678)
+- [x] Fjern `divisionsText`-innsamlingen i submit-handleren (app.js ~710) og
+      `divisions_text`-feltet fra kallet til
+      `sb.functions.invoke('request-access', …)` (app.js ~719)
+- [x] Fjern spørringen mot `subject_divisions` i `Promise.all`-blokken
+      (app.js ~741–745) — skjemaet henter da kun skole, fag og admins
+      fornavn
+- [x] Fjern løkken som bygger avkryssingsboksene for parti/gruppe + teksten
+      «Ingen parti/gruppe registrert.» (app.js ~760–770)
+- [x] Rett opp kommentarene i og over funksjonen (app.js ~637–640 og ~738,
+      pluss P57-scrolling-kommentaren app.js ~680) så de ikke lenger lover
+      et parti/gruppe-valg i skjemaet
+- [x] Bump `?v=20260824a` i `v4/index.html` (kun JS — CSS uendret)
+- [x] DECISIONS.md: ny oppføring («P61 — Tilgangsskjemaet spør ikke lenger
+      om parti/gruppe») om at `access_requests.divisions_text`-kolonnen
+      (migrasjon 023, `not null default '{}'`) beholdes uendret — nye rader
+      får tom liste, eldre forespørsler beholder innholdet sitt
+- [x] Lesekontroll (ingen kodeendring): bekreftet at adminpanelets
+      forespørsels-kort (app.js ~5659) fortsatt viser «Parti/gruppe»-linjen
+      kun `if (f.divisions_text?.length)`, slik at eldre rader ikke mister
+      informasjon og nye rader ikke viser en tom linje
+- [x] Commit + push
+
+**Bevisst IKKE endret:** databasen (ingen migrasjon), edge-funksjonen
+`request-access` (ingen redeploy — den leser feltet defensivt med
+`Array.isArray(...) ? ... : []`), adminpanelets forespørsels-kort, og
+parti/gruppe andre steder i appen (økt-skjemaene, elevfilteret,
+klasse-admin — `selected_divisions` finnes flere andre steder i app.js og
+skal stå urørt).

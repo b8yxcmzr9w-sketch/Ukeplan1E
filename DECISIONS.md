@@ -390,3 +390,30 @@ som Supabase eksponerer via API-et, og ikke skal være lesbare utenfra.
 Uten policyer er de kun tilgjengelige for service-role og SQL Editor.
 Backup-tabellene er midlertidige og droppes når Morfar har bekreftet at
 oppryddingen er riktig (se PLAN.md, Økt 60).
+
+## P61 — Tilgangsskjemaet spør ikke lenger om parti/gruppe (24.08.2026)
+
+«Be om tilgang»-skjemaet (P57) spurte opprinnelig om både fag OG
+parti/gruppe. Parti-listen viser hver inndeling ved skolen på formen
+«Fag — Type: Navn (Klasse)» — for detaljert og for lang en liste for en
+søker som ennå ikke har konto. Parti/gruppe-raden er derfor fjernet fra
+selve skjemaet (`visBeOmTilgangModal`, `v4/app.js`): ingen avkrysningsliste,
+ingen spørring mot `subject_divisions`, og feltet `divisions_text` sendes
+ikke lenger med i kallet til edge-funksjonen `request-access`. Fag-listen
+er UENDRET.
+
+**Bevisst beholdt uendret:**
+- **Databasen:** `access_requests.divisions_text` (migrasjon 023) har
+  `not null default '{}'` og beholdes som kolonne — ingen migrasjon i
+  denne økten. Nye rader får en tom liste (default), eldre forespørsler
+  beholder innholdet sitt.
+- **Edge-funksjonen `request-access`:** leser feltet defensivt
+  (`Array.isArray(body.divisions_text) ? … : []`) og tåler at det mangler
+  fra frontend — ingen redeploy trengs.
+- **Adminpanelets forespørsels-kort** (app.js, «Forespørsler»-fanen):
+  viser «Parti/gruppe: …»-linjen kun `if (f.divisions_text?.length)` —
+  linjen forsvinner derfor av seg selv for nye forespørsler uten at
+  gamle forespørsler mister informasjon. Ingen kodeendring nødvendig der.
+
+Ikke foreslå å gjeninnføre parti/gruppe-valget i tilgangsskjemaet uten en
+ny, konkret begrunnelse — beslutningen er bevisst, ikke en forglemmelse.
