@@ -2307,7 +2307,9 @@ skal stå urørt).
 
 ## Økt 62 (P62): Flytt v4-appen til rota
 
-**Branch:** `claude/P62-flytt-app-til-rot`
+**Branch:** miljøets tildelte branch `claude/move-app-v4-to-root-untc86`
+(oppgaveteksten sa `claude/P62-flytt-app-til-rot`, samme situasjon som
+P34–P44 og P61).
 **Scope:** filflytting (arkivering av frossen løsning + løft av v4/ til rot),
 dokumentoppdatering av stier, cache-bust. Ingen funksjonell kodeendring i
 appen selv utover det som kreves for at ting fortsatt virker etter flytting.
