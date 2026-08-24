@@ -12,7 +12,7 @@ passe for — ikke knyttet til én bestemt skole. Hver skole administrerer sine
 egne data, adskilt fra andre skoler. Lærere planlegger undervisningsøkter per
 klasse og uke. Elever og foresatte ser klassens plan.
 
-Produksjon: https://ukeplan1e.ganddal.net/v4/
+Produksjon: https://ukeplan1e.ganddal.net/
 
 ## Roller
 

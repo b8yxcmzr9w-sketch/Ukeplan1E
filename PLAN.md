@@ -2,21 +2,22 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Nest siste fullførte P-nummer:** P60 (opprydding av kalenderdata før
-  live — migrasjon 025 kjørt og bekreftet i produksjon 24. august 2026;
-  se DECISIONS.md «P60 — Kalenderhendelse vs. oppsett»).
-- **Siste fullførte P-nummer:** P61 (parti/gruppe-spørsmålet fjernet fra
-  «Be om tilgang»-skjemaet — kun fag-listen står igjen. Endring KUN i
-  `visBeOmTilgangModal` i `v4/app.js` + cache-bust `?v=20260824a` i
-  `v4/index.html`. `DECISIONS.md` har ny oppføring «P61 — Tilgangsskjemaet
-  spør ikke lenger om parti/gruppe». Ingen migrasjon (kolonnen
-  `access_requests.divisions_text` beholdt uendret for eldre rader), ingen
-  edge function-endring (`request-access` tåler feltet fraværende), ingen
-  endring av adminpanelets forespørsels-kort. Kode committet og pushet til
-  branch `claude/remove-divisions-access-form-won4xl`. INGEN PR opprettet i
-  denne økten — kun eksplisitt bedt om kjøring, ikke om PR/merge.)
+- **Nest siste fullførte P-nummer:** P61 (parti/gruppe-spørsmålet fjernet
+  fra «Be om tilgang»-skjemaet — se DECISIONS.md «P61 — Tilgangsskjemaet
+  spør ikke lenger om parti/gruppe»).
+- **Siste fullførte P-nummer:** P62 (appen flyttet fra `v4/` til rota —
+  tjenesten kjører nå direkte på `https://ukeplan1e.ganddal.net/` uten
+  undermappe. Den forrige produksjonsløsningen er arkivert til `gammel/`
+  (git mv, innhold uendret bortsett fra tre selvlenker rettet til
+  rot-relative `/gammel/...`-stier — se DECISIONS.md «P62 — Appen flyttet
+  til rota»). `v4/`-mappa er MIDLERTIDIG beholdt uendret som rollback-kopi
+  på Morfars uttrykkelige ønske («ikke slett /v4 før jeg bekrefter at
+  flyttingen er vellykket») — slettes i egen, senere økt etter bekreftelse.
+  Cache-bust `?v=20260824b` i ny rot-`index.html`. CLAUDE.md, PROSEDYRER.md
+  og FUNKSJONELL-BESKRIVELSE.md oppdatert til rot-stier/-adresse. Kode
+  committet og pushet til branch `claude/move-app-v4-to-root-untc86`.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P62
+- **Neste ledige P-nummer:** P63
 - **Dato sist oppdatert:** 24. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P61s prod-sjekk — parti/gruppe-spørsmålet fjernet fra «Be om
@@ -2347,60 +2348,87 @@ frysregelen i DECISIONS.md (begrunnelse: absolutte selvlenker overlever
 ikke en flytting). Går videre med dette med mindre Morfar sier noe annet
 ved «kjør».
 
+**Rettelse ved «kjør»:** Morfar presiserte samtidig at `v4/`-mappa IKKE skal
+slettes ennå («ikke slett /v4 før jeg bekrefter at flyttingen er
+vellykket»). Del B er derfor endret fra `git mv` (flytting) til å KOPIERE
+`v4/`-innholdet til rota — `v4/` blir liggende helt uendret som
+rollback-kopi, ubrukt og urørt, til en egen, senere økt sletter den etter
+Morfars bekreftelse. Dette gjør at «rene R-flyttinger»-kravet i del E ikke
+kan holde bokstavelig for `index.html`/`README.md` (de finnes fortsatt på
+gammel sti òg — i `v4/` — så git kan ikke rename-detektere dem); innholdet
+er likevel korrekt: ny app-kode ligger på rota, frossen løsning i
+`gammel/`, uendret duplikat i `v4/`.
+
 ### Delplan
 
 **A. Arkiver dagens fryste løsning → `gammel/`**
-- [ ] Opprett `gammel/` og `git mv index.html appsscript.gs logo.png info/
+- [x] Opprett `gammel/` og `git mv index.html appsscript.gs logo.png info/
       dev/ README.md gammel/` (innhold uendret, bortsett fra de tre
-      selvlenkene over)
-- [ ] Rett de tre selvlenkene til rot-relative stier (se «Funn før koding»):
+      selvlenkene over) — rene R i `git status`
+- [x] Rett de tre selvlenkene til rot-relative stier (se «Funn før koding»):
       `gammel/index.html` linje 519, `gammel/dev/index.html` linje 519 →
       `href="/gammel/info/"`; `gammel/info/index.html` linje 314 →
       `href="/gammel/"`
-- [ ] `CNAME` og `.github/` blir liggende urørt på rota
+- [x] `CNAME` og `.github/` blir liggende urørt på rota
 
-**B. Flytt appen til rota**
-- [ ] `git mv v4/index.html v4/app.js v4/style.css v4/uno-footer.js
-      v4/unoicon.png v4/supabase v4/README.md .` (løfter alt opp til rot)
-- [ ] `v4/` skal være tom/borte etterpå — ingen stub, ingen videresending
-- [ ] Root-`README.md` (dagens generiske to-linjers stub) erstattes av
-      v4/README.md sitt innhold ved flyttingen (git mv gjør dette naturlig
-      siden begge heter README.md — v4-versjonen vinner)
-- [ ] Verifiser at appen kun bruker relative stier og
+**B. Flytt appen til rota — ENDRET til kopiering, se «Rettelse ved «kjør»»**
+- [x] `cp v4/index.html v4/app.js v4/style.css v4/uno-footer.js
+      v4/unoicon.png v4/README.md .` + `cp -r v4/supabase .` (KOPI, ikke
+      `git mv` — `v4/` skal IKKE tømmes/slettes ennå)
+- [x] `v4/` bekreftet uendret og urørt (ingen treff i `git status` for
+      `v4/`-stien) — beholdes til Morfar bekrefter og sletter i egen økt
+- [x] Root-`README.md` (dagens generiske to-linjers stub) erstattet av
+      v4/README.md sitt innhold — kopien flyttet OVER (kun rotinnholdet
+      overskrevet; stubben lever videre uendret i `gammel/README.md`)
+- [x] Verifisert at appen kun bruker relative stier og
       `location.origin + location.pathname` for elevlenke/QR/redirect
-      (allerede bekreftet ved gjennomgang: `app.js` linje 503, 616, 958,
-      2858, 5223, 5353, 5503, 5526 — ingen hardkodet `/v4` i app.js/ts/css)
-- [ ] Søk gjennom hele repoet etter strengen `/v4` og bekreft ingen treff
-      utenfor historiske/fullførte PLAN.md- og DECISIONS.md-seksjoner
+      (`app.js` linje 503, 616, 958, 2858, 5223, 5353, 5503, 5526 — ingen
+      hardkodet `/v4` i app.js/ts/css)
+- [x] Søkt gjennom hele repoet etter strengen `/v4` — kun treff i
+      PLAN.md/DECISIONS.md-historikk (bevisst) og de tre CLAUDE.md-stedene
+      som omtaler `v4/`-rollback-kopien (bevisst, se D)
 
 **C. Cache-bust**
-- [ ] Bump `?v=` for CSS og JS i ny rot-`index.html` til `20260824b`
+- [x] Bumpet `?v=` for CSS og JS i ny rot-`index.html` til `20260824b`
+      (`v4/index.html` urørt, fortsatt gammel versjon — det er en frossen
+      kopi, ikke i bruk)
 
 **D. Dokumentasjon**
-- [ ] `CLAUDE.md`: alle `v4/`-stier → rot-stier, mappetre, GitHub-lenker,
+- [x] `CLAUDE.md`: alle `v4/`-stier → rot-stier, mappetre, GitHub-lenker,
       «Ny løsning under utvikling: /v4/»-linja, frys-avsnittet skrevet om
-      (fryst = `gammel/`, redigerbart = rot + .md-filer)
-- [ ] `PROSEDYRER.md`: raw.githack-lenken → `<branch>/index.html`
-- [ ] `FUNKSJONELL-BESKRIVELSE.md`: produksjonsadresse →
+      (fryst = `gammel/`, redigerbart = rot + .md-filer). Ny, egen post om
+      `v4/` som midlertidig rollback-kopi (ikke i bruk, ikke kilde, slettes
+      i egen økt)
+- [x] `PROSEDYRER.md`: raw.githack-lenken → `<branch>/index.html`
+- [x] `FUNKSJONELL-BESKRIVELSE.md`: produksjonsadresse →
       `https://ukeplan1e.ganddal.net/`
-- [ ] `PLAN.md`: STATUSLINJE + evt. Backlogg-justering
-- [ ] `DECISIONS.md`: ny oppføring «P62 — Appen flyttet til rota», inkl.
+- [x] Root-`README.md`: gjenværende `v4/`-stier i selve veiledningsteksten
+      (Pages-steg, `app.js`-sti, Site URL-eksempel, strukturtre) rettet til
+      rot — dette er nå den LEVENDE README-en, ikke historikk. `v4/README.md`
+      selv er IKKE rørt (del av den urørte rollback-kopien)
+- [x] `PLAN.md`: STATUSLINJE oppdatert (P62 siste fullført, P63 neste ledige)
+- [x] `DECISIONS.md`: ny oppføring «P62 — Appen flyttet til rota», inkl.
       egen, uttrykkelig dispensasjon fra frysregelen for de tre
-      selvlenke-rettingene i `gammel/` (se «Funn før koding»)
-- [ ] Historiske PLAN.md/DECISIONS.md-seksjoner (Økt 1–61) IKKE endret —
+      selvlenke-rettingene i `gammel/` OG for at `v4/` bevisst IKKE slettes
+      ennå (se «Funn før koding» / «Rettelse ved «kjør»»)
+- [x] Historiske PLAN.md/DECISIONS.md-seksjoner (Økt 1–61) IKKE endret —
       beholder `v4/`-stier som historisk korrekt
 
 **E. Verifisering før PR**
-- [ ] `git status` viser rene R (rename) for alle flyttede filer, ingen D
-      (deleted) uten tilhørende R
-- [ ] Ingen treff på `/v4` i kode (js/html/css/ts) utenfor md-historikk
-- [ ] Rot-`index.html` laster `app.js`, `style.css`, `unoicon.png` relativt
-- [ ] Alle tre rettede selvlenker (pkt. 1–3 over) verifisert i innhold, ikke
+- [x] `git status`: rene R for `gammel/`-arkiveringen (del A). For del B
+      vises `index.html`/`README.md` som «modified» + «new file» i stedet
+      for R — forventet og korrekt når samme sti får nytt innhold mens det
+      gamle innholdet også finnes videre et annet sted (`gammel/` og `v4/`);
+      INGEN reelt slettede filer noe sted
+- [x] Ingen treff på `/v4` i kode (js/html/css/ts) noe sted i repoet —
+      bekreftet med grep over hele treet (inkl. `gammel/` og `v4/`)
+- [x] Rot-`index.html` laster `app.js`, `style.css`, `unoicon.png` relativt
+- [x] Alle tre rettede selvlenker (pkt. 1–3 over) verifisert i innhold, ikke
       bare i planen
-- [ ] Full gjennomgang av `ukeplan1e\.ganddal\.net` i alle filer under
-      `gammel/` (`index.html`, `dev/index.html`, `info/index.html`,
-      `appsscript.gs`, `README.md`) — bekreft at ingen gjenværende absolutt
-      lenke peker utenfor `gammel/`
+- [x] Full gjennomgang av `ukeplan1e\.ganddal\.net` i alle kodefiler i hele
+      repoet: eneste treff er `gammel/info/index.html` linje 278 (ren tekst,
+      ingen lenke) og linje 314 (rettet lenke, peker på `/gammel/`) — ingen
+      gjenværende absolutt lenke peker utenfor `gammel/`
 
 ### Manuelle steg til Morfar (tas med i sluttoppsummeringen)
 - Supabase → Authentication → URL Configuration: Site URL + Redirect URLs

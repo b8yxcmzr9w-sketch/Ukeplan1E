@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Praksisplan</title>
+<title>Ukeplan</title>
 <link rel="icon" type="image/png" href="logo.png">
 <style>
 :root{--bg:#f5f4ef;--kort:#fff;--kant:#ddd8c4;--tekst:#1a1a14;--dempet:#5a5a40;--dempet2:#8a8a6a;--nav:#3d4a1e;--groen:#6B8C2A;--oransje:#A0722A;--gul:#C49A4A;}
@@ -422,12 +422,12 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 </style>
 </head>
 <body>
-<div style="background:#555;color:#fff;text-align:center;font-size:.72rem;padding:.2rem;letter-spacing:.04em;">DEV – testmiljø (eget Sheets)</div>
+<div style="background:#7b4f00;color:#fff;text-align:center;font-size:.72rem;padding:.2rem;letter-spacing:.04em;">⚠️ BETA – ny versjon under utprøving</div>
 <header>
   <div class="hdr-left">
     <img class="hdr-logo" id="hdr-logo" src="" alt="" style="display:none">
     <div class="hdr-titler">
-      <h1 id="header-tittel">Praksisplan</h1>
+      <h1 id="header-tittel">Ukeplan</h1>
       <span class="hdr-sub" id="hdr-sub"></span>
     </div>
   </div>
@@ -486,7 +486,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 <div id="laerer-side">
   <div id="login-wrap">
     <div class="login-kort">
-      <h2>Rediger praksisplan</h2>
+      <h2>Rediger ukeplan</h2>
       <p>Logg inn med ditt navn og passord</p>
       <select id="velg-laerer" onchange="fokusPassord()"><option value="">Velg navn...</option></select>
       <input type="password" id="passord-felt" placeholder="Passord" onkeydown="if(event.key==='Enter')loggInn()">
@@ -516,7 +516,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
             <button class="pw-meny-rad pw-btn" id="btn-ical-laerer" onclick="aapneIcalModal('laerer');lukkPwMeny()" style="display:none;">&#x1F4C5; Kalender</button>
             <button class="pw-meny-rad pw-btn" id="btn-innst" onclick="visLaererSeksjon('innstillinger');lukkPwMeny()" style="display:none;">&#x2699;&#xFE0F; Innstillinger</button>
             <button class="pw-meny-rad pw-btn" id="btn-profil" onclick="aapneProfilModal();lukkPwMeny()" style="display:none;">&#x1F464;&#xFE0F; Profil</button>
-            <a class="pw-meny-rad pw-btn" href="https://ukeplan1e.ganddal.net/info/" target="_blank" onclick="lukkPwMeny()" style="border-top:1.5px solid var(--kant);text-decoration:none;display:block;">&#x2753; Bruksanvisning</a>
+            <a class="pw-meny-rad pw-btn" href="/gammel/info/" target="_blank" onclick="lukkPwMeny()" style="border-top:1.5px solid var(--kant);text-decoration:none;display:block;">&#x2753; Bruksanvisning</a>
           </div>
         </div>
         <span id="lagre-status" style="font-size:.71rem;color:var(--groen);font-weight:600;"></span>
@@ -851,7 +851,7 @@ body.elev-utskrift>*:not(#elev-print){display:none !important;}
 </div>
 <div class="toast" id="toast" onclick="document.getElementById('toast').style.display='none'"></div>
 <script>
-var SCRIPT_URL='https://script.google.com/macros/s/AKfycbwXS2ZUkMJaKCCFkLXLDyr_gZp3_FROCb_zJBrNEcIQRNSA30eTaeq3-ju6qrZvhEqn/exec?dev=1';
+var SCRIPT_URL='https://script.google.com/macros/s/AKfycbwXS2ZUkMJaKCCFkLXLDyr_gZp3_FROCb_zJBrNEcIQRNSA30eTaeq3-ju6qrZvhEqn/exec';
 var _sesjon={};
 var SESJON_MS=3*24*60*60*1000; // 3 dager
 function sesjonSet(k,v){
@@ -3571,7 +3571,7 @@ async function slotAngreSlettet(){
 
 function skrivUt(){
   var c=cfg(),visAlle=erVisAlle();
-  var tittel='Praksisplan'+(c.klassenavn?' - '+c.klassenavn:'')+(c.skoleaar?' | '+c.skoleaar:'')+' | '+aktivtFagLaerer+' | '+(visAlle?'Alle uker':'Mine uker - '+(aktivLaerer||''));
+  var tittel='Ukeplan'+(c.klassenavn?' - '+c.klassenavn:'')+(c.skoleaar?' | '+c.skoleaar:'')+' | '+aktivtFagLaerer+' | '+(visAlle?'Alle uker':'Mine uker - '+(aktivLaerer||''));
   var hdr=document.getElementById('print-header');
   hdr.textContent=tittel;hdr.style.display='block';
   // Ved utskrift: sikre at tomme er skjult (aktiv=false for «Vis tomme»-knappen)
@@ -3690,7 +3690,7 @@ function lagIcalUrl(type) {
 }
 function lagIcalNavn(type) {
   var klasse = cfg().klassenavn || cfg().skolenavn || '';
-  var base = 'Praksisplan_' + klasse;
+  var base = 'Ukeplan_' + klasse;
   if (type === 'laerer') {
     return base + '_' + (aktivLaerer || '') + (aktivtFagLaerer ? '_' + aktivtFagLaerer : '');
   }
@@ -3960,5 +3960,6 @@ byttHovedFane('elev');
 hentData();
 window.addEventListener('resize', oppdaterStickyTop);
 </script>
+<footer style="text-align:center;padding:.6rem;font-size:.65rem;color:var(--dempet);opacity:.45;">© Geddi</footer>
 </body>
 </html>

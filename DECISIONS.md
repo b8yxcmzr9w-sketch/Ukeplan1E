@@ -417,3 +417,55 @@ er UENDRET.
 
 Ikke foreslå å gjeninnføre parti/gruppe-valget i tilgangsskjemaet uten en
 ny, konkret begrunnelse — beslutningen er bevisst, ikke en forglemmelse.
+
+## P62 — Appen flyttet til rota (24.08.2026)
+
+Tjenesten kjørte til nå på `https://ukeplan1e.ganddal.net/v4/` (den
+«midlertidige» undermappa fra utviklingsfasen), mens rota fortsatt viste
+den forrige, frosne produksjonsløsningen. Adressen skal være ren:
+appen kjører nå direkte på `https://ukeplan1e.ganddal.net/` uten
+undermappe. `/v4/` som URL fjernes helt — gamle QR-koder og
+invitasjonslenker som pekte dit slutter å virke. Dette er et BEVISST valg
+(ikke en forglemmelse): en ren rotadresse er verdt at gamle lenker dør,
+fremfor å bygge videresending/stub-logikk for et forbigående
+overgangsproblem.
+
+Den forrige produksjonsløsningen er arkivert til `gammel/` (flyttet med
+`git mv` — `index.html`, `appsscript.gs`, `logo.png`, `info/`, `dev/`,
+`README.md`), fordi 25/26-planene fortsatt kun finnes der (ikke migrert
+til den nye databasen). `gammel/` er nå det fredede arkivet — samme
+frysregel som før gjaldt rotfilene, gjelder nå denne mappa.
+
+**Dispensasjon fra frysregelen (avgrenset til tre linjer):** de arkiverte
+filene skulle i utgangspunktet flyttes med UENDRET innhold. Ved
+gjennomgang viste det seg at «❓ Bruksanvisning»-lenken i verktøymenyen
+(`index.html`/`dev/index.html`, samme linje i begge) var hardkodet
+**absolutt** til `https://ukeplan1e.ganddal.net/info/` — ikke relativ, som
+først antatt. En uendret absolutt selvlenke til rota ville gitt 404 etter
+flyttingen, siden rota nå viser den NYE appen og `/info/` bare finnes på
+`/gammel/info/`. Tilsvarende hadde `info/index.html` en instruks («Gå til
+ukeplan1e.ganddal.net…») som etter flyttingen ville sendt leseren til den
+nye appen, midt i en tekst som beskriver den gamle. Alle tre rettet til
+**rot-relative** stier (`/gammel/info/` og `/gammel/`) — ikke
+mappe-relative, fordi `dev/index.html` havner ett nivå dypere
+(`gammel/dev/index.html`), der en vanlig relativ `info/`-lenke ville
+truffet feil sti. Dette er de ENESTE innholdsendringene i de ellers
+uendrede, arkiverte filene, gjort fordi frysregelens formål («arkivet skal
+virke som det gjorde») ellers ikke ville holdt — en lenke som gir 404 er
+ikke det samme som en fungerende, uendret side. Ikke foreslå å rulle disse
+tre tilbake til de opprinnelige absolutte URL-ene.
+
+**`v4/`-mappa er BEVISST IKKE slettet i denne økten**, på tvers av den
+opprinnelige oppgaveteksten (som sa at v4/ skulle løftes til rota med
+`git mv` og være «helt borte etterpå»). Morfar presiserte ved «kjør»:
+«ikke slett /v4 før jeg bekrefter at flyttingen er vellykket». Appens
+innhold ble derfor KOPIERT (ikke flyttet) fra `v4/` til rota — `v4/` står
+igjen som et fullstendig, uendret duplikat av appen slik den var rett før
+flyttingen, som rollback-sikkerhet. Den skal IKKE redigeres eller brukes
+som kilde for noe (rota er kanonisk fra nå av) og er ikke lenger nevnt som
+«under utvikling» noe sted. Slettes i egen, senere økt når Morfar har
+bekreftet at rot-versjonen fungerer i produksjon — ikke automatisk, ikke
+uten uttrykkelig beskjed.
+
+Cache-bust i ny rot-`index.html` satt til `?v=20260824b`. `v4/index.html`
+sin egen cache-bust er IKKE rørt (den er en frossen kopi, ikke i bruk).
