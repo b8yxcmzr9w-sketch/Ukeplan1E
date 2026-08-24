@@ -467,5 +467,13 @@ som kilde for noe (rota er kanonisk fra nå av) og er ikke lenger nevnt som
 bekreftet at rot-versjonen fungerer i produksjon — ikke automatisk, ikke
 uten uttrykkelig beskjed.
 
+**Manuelt oppfølgingspunkt (Supabase):** Site URL/Redirect URLs i
+Authentication → URL Configuration skal i denne overgangsfasen ha BÅDE
+rot-adressen (lagt til i P62) OG den gamle `/v4/`-adressen (ikke fjernet
+ennå) — så lenge `v4/`-kopien fortsatt eksisterer og kan brukes til å
+teste at flyttingen faktisk virker. Fjerning av `/v4/`-adressen hører
+sammen med selve slettingen av `v4/`-mappa (se backloggen, «Slett
+rollback-kopien /v4/»), ikke til denne økten.
+
 Cache-bust i ny rot-`index.html` satt til `?v=20260824b`. `v4/index.html`
 sin egen cache-bust er IKKE rørt (den er en frossen kopi, ikke i bruk).

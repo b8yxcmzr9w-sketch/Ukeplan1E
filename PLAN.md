@@ -65,6 +65,12 @@
 
 ### Klar til bygging
 
+- **Slett rollback-kopien `/v4/`** (fra P62). Beholdt midlertidig til
+  Morfar har bekreftet at rot-versjonen virker i produksjon. Egen liten
+  økt: `git rm -r v4/`, fjern omtalen av rollback-kopien i CLAUDE.md,
+  cache-bust ikke nødvendig. Fjern samtidig `/v4/`-redirect-adressen fra
+  Supabase Authentication → URL Configuration (lagt til side om side med
+  rot-adressen i P62 — se DECISIONS.md).
 - **Oversett rå Postgres-feiltekst i feiloverlayet til lesbar norsk** (P58).
   I dag vises f.eks. `new row for relation "subjects" violates check
   constraint "subjects_max_divisions_check"` direkte til brukeren ved en
