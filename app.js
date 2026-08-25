@@ -101,6 +101,28 @@ const FUNNY_TEXTS = [
   'Krysser fingrene…',
 ]
 
+// P63: databasedrevet rotasjon — velg faktaet med eldst last_shown_at
+// (manglende/null regnes som eldst = «aldri vist», vises først). Ved
+// flere likestilte velges tilfeldig blant dem. Stemples lokalt + i DB
+// (ikke-blokkerende) med det samme, så neste kall roterer videre uten
+// noen kø-tilstand i nettleseren.
+function nesteFakta() {
+  if (!APP.facts.length) return ''
+  let eldst = Infinity
+  for (const f of APP.facts) {
+    const t = f.last_shown_at ? new Date(f.last_shown_at).getTime() : -Infinity
+    if (t < eldst) eldst = t
+  }
+  const kandidater = APP.facts.filter(f =>
+    (f.last_shown_at ? new Date(f.last_shown_at).getTime() : -Infinity) === eldst)
+  const fakta = kandidater[Math.floor(Math.random() * kandidater.length)]
+  const nyesteKjente = Math.max(0, ...APP.facts.map(f => f.last_shown_at ? new Date(f.last_shown_at).getTime() : 0))
+  fakta.last_shown_at = new Date(Math.max(Date.now(), nyesteKjente + 1000)).toISOString()
+  fakta.view_count = (fakta.view_count || 0) + 1
+  Promise.resolve(sb.rpc('increment_fact_view', { p_fact_id: fakta.id })).then(() => {}, () => {})
+  return fakta.fact_text
+}
+
 // ─────────────────────────────────────────
 // UTILITIES
 // ─────────────────────────────────────────
@@ -322,20 +344,19 @@ async function medLagreOverlay(asyncFn) {
   const overlay = el('div', { class: 'lagre-overlay' })
   const box = el('div', { class: 'overlay-boks' })
   const spinner = el('div', { class: 'spinner' })
-  const msgEl = el('p', { class: 'overlay-tekst', style: 'visibility:hidden' }, '…')
+  const msgEl = el('p', { class: 'overlay-tekst' },
+    FUNNY_TEXTS[Math.floor(Math.random() * FUNNY_TEXTS.length)])
   box.appendChild(spinner)
   box.appendChild(msgEl)
   overlay.appendChild(box)
   document.body.appendChild(overlay)
 
-  // Vis morsomt sitat etter 3 sekunder
+  // Bytt til et funfact etter 1,5 sekund (P63: databasedrevet rotasjon,
+  // se nesteFakta()). Korte lagringer rekker aldri hit — kun lastetekst.
   const sitatTimer = setTimeout(() => {
-    const texts = APP.facts.length
-      ? [...FUNNY_TEXTS, ...APP.facts.map(f => f.fact_text)]
-      : FUNNY_TEXTS
-    msgEl.textContent = texts[Math.floor(Math.random() * texts.length)]
-    msgEl.style.visibility = 'visible'
-  }, 3000)
+    const fakta = nesteFakta()
+    if (fakta) msgEl.textContent = fakta
+  }, 1500)
 
   try {
     const result = await asyncFn()
@@ -371,29 +392,8 @@ async function medAIOverlay(tittel, asyncFn) {
   if (APP.facts.length) {
     const tekstEl = el('p', { class: 'ai-overlay-fakta-tekst' }, '')
 
-    // Stokket kø; fylles på nytt når den er tom, uten samme fakta to ganger på rad
-    let koe = []
-    let forrige = null
-    function nesteFakta() {
-      if (!koe.length) {
-        koe = [...APP.facts]
-        for (let i = koe.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1))
-          ;[koe[i], koe[j]] = [koe[j], koe[i]]
-        }
-        if (koe.length > 1 && koe[koe.length - 1]?.id === forrige?.id) {
-          ;[koe[koe.length - 1], koe[0]] = [koe[0], koe[koe.length - 1]]
-        }
-      }
-      forrige = koe.pop()
-      // Tell visning: oppdater lokalt + DB (ikke-blokkerende, omgår RLS via SECURITY DEFINER)
-      if (forrige?.id) {
-        forrige.view_count = (forrige.view_count || 0) + 1
-        Promise.resolve(sb.rpc('increment_fact_view', { p_fact_id: forrige.id }))
-          .then(() => {}, () => {})
-      }
-      return forrige?.fact_text ?? ''
-    }
+    // P63: nesteFakta() er delt med lagre-overlayet (databasedrevet
+    // rotasjon via last_shown_at) — ingen lokal kø her lenger.
     function visNeste(medFade) {
       if (!medFade) { tekstEl.textContent = nesteFakta(); return }
       tekstEl.classList.add('fade-ut')
@@ -438,6 +438,16 @@ async function medAIOverlay(tittel, asyncFn) {
 // P41: poolen holder maks 20 aktive funfacts; «Forny» er eneste genereringsvei.
 const FUNFACTS_MAKS = 20
 
+// P63: én felles henting av APP.facts, uten sortering-bieffekt (rotasjon
+// leser last_shown_at direkte; admin-fanens view_count-sortering skjer
+// lokalt der den trengs, ikke her).
+async function hentFunfacts() {
+  const { data } = await sb.from('school_facts').select('*')
+    .eq('school_id', APP.school.id).is('deleted_at', null)
+  APP.facts = data || []
+  return APP.facts
+}
+
 // Forny funfacts-poolen. modus 'alle': soft-delete alle aktive og generer 20
 // nye. modus 'fyll': behold alt urørt og generer akkurat nok til å nå 20.
 // Returnerer antall nye som ble satt inn.
@@ -457,6 +467,7 @@ async function fornyFunfacts(modus) {
   const { error: insErr } = await sb.from('school_facts')
     .insert(nyeFakta.map(txt => ({ school_id: APP.school.id, fact_text: txt })))
   if (insErr) throw new Error(insErr.message)
+  await hentFunfacts()
   return nyeFakta.length
 }
 
@@ -6046,19 +6057,22 @@ function visSkoleruteForhandsvisning(events, warnings, onSave, skolear) {
 async function renderFaktaTab(container) {
   async function refresh() {
     clearEl(container)
-    // P41: mest sette øverst; likt antall → eldste først (nyeste sist) som før
-    const { data: facts } = await sb.from('school_facts').select('*')
-      .eq('school_id', APP.school.id).is('deleted_at', null)
-      .order('view_count', { ascending: false })
-      .order('created_at', { ascending: true }).order('id', { ascending: true })
-    APP.facts = facts || []
+    await hentFunfacts()
+    // P41/P63: kun for LISTEVISNINGEN — mest sette øverst, likt antall →
+    // eldste først (nyeste sist). APP.facts selv beholder rekkefølgen fra
+    // hentFunfacts() (rotasjonen leser last_shown_at direkte, ikke denne).
+    const facts = [...APP.facts].sort((a, b) =>
+      (b.view_count || 0) - (a.view_count || 0) ||
+      new Date(a.created_at) - new Date(b.created_at) ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 
     const wrap = el('div', { class: 'skjema-smal' })
-    const antall = facts?.length || 0
+    const antall = facts.length
     wrap.appendChild(el('h3', {}, `Funfacts (${antall}/${FUNFACTS_MAKS})`))
     wrap.appendChild(el('p', { class: 'tekst-svak', style: 'margin:4px 0 14px; font-size:.9rem' },
-      'Vises som pausetekst i lagre-overlaydet for å holde humøret oppe. ' +
-      'Øyet viser hvor mange ganger hver setning er vist — de mest sette øverst.'))
+      'Vises som pausetekst i lagre-overlayet og som «Mens du venter …» i AI-overlayet. ' +
+      'Roterer automatisk — alle vises før noen gjentas. Øyet viser hvor mange ganger hver ' +
+      'setning faktisk er vist, fra begge steder — de mest sette øverst.'))
 
     // P41: temastyring — fritekst som generate-facts flettes inn i prompten
     const temaFelt = el('textarea', {
@@ -6311,12 +6325,7 @@ async function init() {
   if (!h.startsWith('#/login')) await router()
 
   // Last funfacts i bakgrunnen (ikke blokkerende)
-  if (APP.school) {
-    const { data: facts } = await sb.from('school_facts').select('*')
-      .eq('school_id', APP.school.id).is('deleted_at', null)
-      .order('created_at', { ascending: true }).order('id', { ascending: true })
-    APP.facts = facts || []
-  }
+  if (APP.school) await hentFunfacts()
 }
 
 // Kjør init med sikkerhetsnett: enhver uventet feil skal IKKE etterlate

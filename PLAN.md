@@ -2,25 +2,35 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Nest siste fullførte P-nummer:** P61 (parti/gruppe-spørsmålet fjernet
-  fra «Be om tilgang»-skjemaet — se DECISIONS.md «P61 — Tilgangsskjemaet
-  spør ikke lenger om parti/gruppe»).
-- **Siste fullførte P-nummer:** P62 (appen flyttet fra `v4/` til rota —
-  tjenesten kjører nå direkte på `https://ukeplan1e.ganddal.net/` uten
-  undermappe. Den forrige produksjonsløsningen er arkivert til `gammel/`
-  (git mv, innhold uendret bortsett fra tre selvlenker rettet til
-  rot-relative `/gammel/...`-stier — se DECISIONS.md «P62 — Appen flyttet
-  til rota»). `v4/`-mappa er MIDLERTIDIG beholdt uendret som rollback-kopi
-  på Morfars uttrykkelige ønske («ikke slett /v4 før jeg bekrefter at
-  flyttingen er vellykket») — slettes i egen, senere økt etter bekreftelse.
-  Cache-bust `?v=20260824b` i ny rot-`index.html`. CLAUDE.md, PROSEDYRER.md
-  og FUNKSJONELL-BESKRIVELSE.md oppdatert til rot-stier/-adresse. Kode
-  committet og merget til main via PR #173. Morfar har bekreftet i
-  produksjon 24. august 2026 at rota fungerer.)
+- **Nest siste fullførte P-nummer:** P62 (appen flyttet fra `v4/` til rota
+  — tjenesten kjører nå direkte på `https://ukeplan1e.ganddal.net/` uten
+  undermappe. Kode committet og merget til main via PR #173. Morfar har
+  bekreftet i produksjon 24. august 2026 at rota fungerer — se
+  DECISIONS.md «P62 — Appen flyttet til rota»).
+- **Siste fullførte P-nummer:** P63 (funfacts sirkulerer nå skikkelig —
+  rotasjonen er flyttet til databasen: `increment_fact_view` stempler
+  `last_shown_at` sammen med `view_count`, og «neste fakta» er raden med
+  eldst tidsstempel i `APP.facts` (NULL = aldri vist = først), delt av
+  BÅDE lagre-overlayet (lastetekst straks, byttes til funfact etter 1,5s)
+  og AI-overlayet (uendret utseende/10s-rotasjon, henter nå fra samme
+  `nesteFakta()`). Ingen frontend-kø, ingen `localStorage` — se
+  DECISIONS.md «P63 — Funfacts-rotasjon: tilstand i databasen, ikke i
+  nettleseren» for begrunnelsen (og hvorfor ikke en ny kø skal
+  gjeninnføres). Maskinverifisert: 14/14 sjekker i isolert harness (dekker
+  de 6 kravsatte punktene + manglende-kolonne-fallback). Cache-bust
+  `?v=20260825a`. Migrasjon `026_funfacts_last_shown.sql` er kjørt av
+  Morfar i produksjon 25. august 2026 — **Morfars visuelle bekreftelse
+  gjenstår** (se «Åpne sjekkpunkter»). Kode committet og merget til main
+  via PR #174.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P63
-- **Dato sist oppdatert:** 24. august 2026
+- **Neste ledige P-nummer:** P64
+- **Dato sist oppdatert:** 25. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P63s prod-sjekk — migrasjon `026_funfacts_last_shown.sql` er kjørt av
+    Morfar 25. august 2026 og PR #174 er merget; Morfars visuelle
+    bekreftelse i ekte produksjon gjenstår: en lagring som tar litt tid
+    viser et funfact, gjentatte lagringer viser ikke de samme om igjen,
+    og 👁-tellerne i Funfacts-fanen stiger for fakta som faktisk er vist
   - P61s prod-sjekk — parti/gruppe-spørsmålet fjernet fra «Be om
     tilgang»-skjemaet, kun fag-listen står igjen (kode klar, ingen
     migrasjon/redeploy); Morfars visuelle bekreftelse i produksjon etter
@@ -2443,3 +2453,157 @@ er likevel korrekt: ny app-kode ligger på rota, frossen løsning i
 - Hard refresh + kontroller at rota laster og at
   `https://ukeplan1e.ganddal.net/gammel/` fortsatt viser 25/26-planene
 - Del nye elevlenker/QR-koder på nytt (gamle med `/v4/` i URL-en dør)
+
+---
+
+## Økt (P63): Funfacts-rotasjon
+
+Kartlegging (25.08.2026, mot main @ 5f6e9be) bekreftet mot koden ved
+øktstart 25.08.2026 — alle fem funn stemmer (linjenumre uendret siden
+kartleggingen). Se oppgaveteksten for full funnliste; gjentas ikke her.
+
+Retning endret to ganger etter Morfars gjennomlesing 25.08.2026:
+1. Strammet inn: droppet bekreftVisning()-splitten (ett RPC-kall holder),
+   droppet asynkron fakta-gjenoppbygging i et allerede-åpent AI-overlay.
+2. Droppet frontend-køen (kø/stokking/localStorage) HELT til fordel for
+   databasedrevet rotasjon: `increment_fact_view` stempler nå også
+   `last_shown_at`, og «neste fakta» er ganske enkelt raden med eldst
+   tidsstempel i `APP.facts` — ingen tilstand å vedlikeholde i
+   nettleseren i det hele tatt. Se begrunnelse i del A og i
+   DECISIONS.md-punktet i del E.
+
+**Migrasjonsnummer korrigert:** oppgaveteksten ba om `023_...`, men det
+tallet er allerede brukt (`023_tilgangsforesporsler.sql`). Høyeste
+eksisterende er `025_opprydding_for_live.sql`, så denne migrasjonen blir
+`026_funfacts_last_shown.sql`.
+
+### Mål
+Databasen er sannhetskilde for rotasjonsrekkefølge (`last_shown_at`,
+NULL = aldri vist = først). Begge overlay-typer plukker «eldst vist»-
+faktaet fra `APP.facts` via samme funksjon, med lastetekst-først i
+lagre-overlayet og korrekt visningstelling begge steder.
+
+### A. DB-migrasjon — MANUELT STEG (Morfar kjører i Supabase SQL Editor)
+- [x] Ny fil `supabase/migrations/026_funfacts_last_shown.sql`,
+      idempotent, samme mønster som 018:
+      - `ALTER TABLE school_facts ADD COLUMN IF NOT EXISTS
+        last_shown_at timestamptz;` (nullable — NULL = «aldri vist»,
+        nye fakta vises først)
+      - `CREATE OR REPLACE FUNCTION increment_fact_view(p_fact_id uuid)`:
+        én `UPDATE` som setter BÅDE `view_count = view_count + 1` OG
+        `last_shown_at = now()` i samme setning. Behold `SECURITY
+        DEFINER`, `SET search_path = public` og
+        `GRANT EXECUTE ... TO authenticated` nøyaktig som i 018 — ingen
+        RLS-endring, kun `CREATE OR REPLACE` av eksisterende funksjon
+- [x] Denne økten leverer koden klar, men migrasjonen kjøres IKKE av
+      Claude — samme mønster som alle tidligere migrasjoner (se
+      «SQL-migrasjoner» i CLAUDE.md). Tas med som eget manuelt steg i
+      sluttoppsummeringen, FØR frontend-endringene har noen effekt (uten
+      kolonnen stemples ikke `last_shown_at`, og rotasjonen degraderer
+      stille til «alltid samme rekkefølge blant NULL-rader» — se
+      tom-database-tilfellet i verifiseringen)
+
+### B. Frontend — `nesteFakta()` (erstatter dagens `nesteFakta()` inni
+`medAIOverlay`, løftes til modulnivå nær `FUNNY_TEXTS`)
+- [x] Velg fra `APP.facts` raden med eldst `last_shown_at`, der `null`
+      regnes som eldst (aldri vist). Ved flere med `null` (eller likt
+      tidsstempel): velg tilfeldig blant dem, så startrekkefølgen ikke
+      blir helt forutsigbar
+- [x] Sett `last_shown_at` LOKALT på det valgte objektet med en gang
+      (`new Date().toISOString()`), øk lokal `view_count`, og gjør
+      dagens ikke-blokkerende `sb.rpc('increment_fact_view', ...)` med
+      feil svelget stille — ett kall, samme mønster som dagens
+      `nesteFakta()` (app.js:390–394)
+- [x] Returnerer fakta-teksten, eller `''` hvis `APP.facts` er tom
+- [x] Ingen kø, ingen stokking, ingen `_faktaForrige`, ingen
+      `localStorage`, ingen Fisher–Yates — alt dette utgår i sin helhet.
+      Sperren mot gjentakelse to ganger på rad trengs ikke lenger: det
+      nettopp viste faktaet har ferskest tidsstempel og havner sist av
+      seg selv ved neste kall
+
+### C. Lagre-overlayet (`medLagreOverlay`, app.js:320–355)
+- [x] Vis en tilfeldig `FUNNY_TEXTS`-streng med `visibility:visible` med
+      en gang overlayet åpnes (ikke skjult, ikke vent)
+- [x] `setTimeout(..., 1500)` (ned fra 3000): bytt teksten til
+      `nesteFakta()`s tekst HVIS den ga noe (dette kallet teller
+      visningen med det samme, se del B); ellers la lastetekst-en stå
+- [x] `[...FUNNY_TEXTS, ...APP.facts]`-lotteriet fjernes helt
+- [x] `clearTimeout` ved tidlig ferdig lagring uendret (kort lagring →
+      `nesteFakta()` kalles aldri → ingen telling)
+
+### D. AI-overlayet (`medAIOverlay`, app.js:361–435)
+- [x] Lokale `koe`/`forrige`/stokkelogikken (app.js:375–388) fjernes;
+      `visNeste`/`startIntervall`/«→»-knappen kaller den delte
+      `nesteFakta()` i stedet. Utseende, 300ms fade, 10s-intervall og
+      «→»-knapp uendret
+- [x] Tom pool ved åpning: overlayet oppfører seg som i dag — ingen
+      fakta-seksjon bygges, ingen asynkron henting inni et allerede-åpent
+      overlay
+
+### E. Fersk `APP.facts` — én felles hentefunksjon
+- [x] Ny `hentFunfacts()`: `sb.from('school_facts').select('*').eq(...)
+      .is('deleted_at', null)` (`select('*')` dekker `last_shown_at`
+      automatisk, ingen ekstra kolonne å nevne eksplisitt) UTEN
+      sortering-bieffekt på `APP.facts` (sorter kun i visningslaget der
+      det trengs — se under). Setter `APP.facts` og returnerer listen
+- [x] `init()` (app.js:6313–6319) kaller `hentFunfacts()` i stedet for
+      egen spørring
+- [x] `fornyFunfacts()` (app.js:444–461) kaller `hentFunfacts()` etter
+      vellykket forny (både «alle» og «fyll»-modus), så `APP.facts` er
+      ferske umiddelbart — nye fakta har `last_shown_at = null` og vises
+      dermed først, uten noen opprydding å gjøre (ingen kø å rense)
+- [x] `renderFaktaTab`s `refresh()` (app.js:6046–6054): kall
+      `hentFunfacts()` for å sette `APP.facts`, men behold den
+      admin-spesifikke `view_count`-sorteringen KUN i en lokal variabel
+      for selve listevisningen (`facts.slice().sort(...)` eller
+      tilsvarende) — `APP.facts` beholder rekkefølgen fra
+      `hentFunfacts()`
+- [x] Oppdater hjelpeteksten i `renderFaktaTab` (app.js:6059–6061): fjern
+      «Vises som pausetekst … for å holde humøret oppe» + juster
+      øye-forklaringen til noe presist (fakta vises i BEGGE overlays,
+      telleren viser faktiske visninger fra begge)
+
+### F. Cache-bust, dokumentasjon og avslutning
+- [x] Bump `?v=YYYYMMDDx` i rot-`index.html`
+- [x] `DECISIONS.md`: ny post som begrunner to ting:
+      1. hvorfor rotasjonstilstanden ligger i databasen (`last_shown_at`)
+         og ikke i nettleseren — felles for hele skolen (alle lærere ser
+         samme rotasjon), overlever ny maskin/nettleser/tømt lokal
+         lagring, og det er ingen kø-kode å vedlikeholde eller feilsøke
+      2. hvorfor det ble en ny kolonne (`last_shown_at`) framfor gjenbruk
+         av `view_count` — nye fakta måtte da fått et falskt/gjettet
+         starttall for å konkurrere om «minst sett», og telleren skal
+         fortsatt vise EKTE visningsantall (ikke forstyrres av
+         rotasjonslogikken)
+- [x] `CLAUDE.md` under «APP-objekt (global state)»: rett kommentaren
+      `facts: [], // Funfacts for scrollende banner` — det finnes ingen
+      scrollende banner i koden. Ny tekst skal beskrive at fakta vises i
+      lagre-overlayet og AI-overlayet
+- [x] `CLAUDE.md`s migrasjonsliste: legg til
+      `026_funfacts_last_shown.sql`-raden (status: kode klar, IKKE kjørt
+      før Morfar gjør det manuelt)
+- [x] STATUSLINJE i PLAN.md oppdatert i samme commit
+
+### Verifisering (isolert harness, samme mønster som P52–P55)
+- [x] 20 fakta, alle med `last_shown_at = null`: 20 simulerte uttak gir
+      alle 20 fakta nøyaktig én gang, ingen gjentakelse
+- [x] 40 simulerte uttak (to fulle sykluser): andre runde dekker alle 20
+      på nytt, og aldri samme fakta to ganger på rad (siste av forrige
+      runde har alltid eldre tidsstempel enn de 19 andre ved rundeskifte
+      — bekreftes direkte, ikke bare antatt)
+- [x] Blandet starttilstand (noen `null`, noen med eldre tidsstempel):
+      alle `null`-radene velges før noen med satt tidsstempel
+- [x] Ett fakta med kunstig FERSKT tidsstempel velges aldri så lenge det
+      finnes fakta med eldre (inkl. `null`) tidsstempel i poolen
+- [x] Tom pool (`APP.facts = []`): `nesteFakta()` gir `''`, ingen kast,
+      lastetekst som før i lagre-overlayet, AI-overlayets fakta-seksjon
+      uteblir som i dag, ingen RPC-kall
+- [x] Etter at `renderFaktaTab`s `refresh()` har kjørt: `APP.facts`
+      beholder rekkefølgen fra `hentFunfacts()` (ikke `view_count`-sortert)
+
+### Manuelle steg til Morfar (tas med i sluttoppsummeringen)
+- FØRST: kjør `026_funfacts_last_shown.sql` i Supabase SQL Editor (se
+  del A) — rotasjonen virker ikke uten den
+- Gjør en lagring som tar litt tid og se at et funfact dukker opp; gjenta
+  noen ganger og bekreft at det ikke er de samme som går igjen; kontroller
+  at 👁-tellerne i Funfacts-fanen stiger for fakta som faktisk har vært vist

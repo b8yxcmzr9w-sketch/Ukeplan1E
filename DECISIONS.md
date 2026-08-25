@@ -477,3 +477,54 @@ rollback-kopien /v4/»), ikke til denne økten.
 
 Cache-bust i ny rot-`index.html` satt til `?v=20260824b`. `v4/index.html`
 sin egen cache-bust er IKKE rørt (den er en frossen kopi, ikke i bruk).
+
+## P63 — Funfacts-rotasjon: tilstand i databasen, ikke i nettleseren (25.08.2026)
+
+Rotasjonsrekkefølgen («hvilket fakta vises neste gang») lagres nå i
+databasen (`school_facts.last_shown_at`, satt av `increment_fact_view` i
+samme `UPDATE` som `view_count`), ikke i en frontend-kø. To alternativer
+ble vurdert og forkastet før dette:
+
+1. **Kø i modulminnet** (som `medAIOverlay` hadde fra før): dør så snart
+   siden lastes på nytt, og finnes ikke i lagre-overlayet i det hele
+   tatt — det var selve årsaken til at fakta ikke sirkulerte skikkelig
+   (se kartleggingen i PLAN.md, «Økt (P63)»).
+2. **Kø i `localStorage`**: løser reload, men er PER NETTLESER — hver
+   lærers maskin ville fått sin egen rotasjon, uavhengig av alle andres.
+   To lærere som lagrer rett etter hverandre kunne sett samme fakta, selv
+   om «poenget» er at skolen samlet sett skal se alle 20 før noen gjentas.
+   En kø krever i tillegg egen kode for stokking, filtrering mot slettede
+   fakta og feilhåndtering ved korrupt lagret verdi — vedlikeholdsbyrde
+   for noe databasen løser gratis.
+
+`last_shown_at` i databasen er derimot FELLES for hele skolen (alle
+lærere trekker fra samme «eldst vist»-tilstand), overlever ny
+maskin/nettleser/tømt lokal lagring, og krever ingen kø-kode i det hele
+tatt: «neste fakta» er ganske enkelt raden med eldst `last_shown_at`
+(NULL = aldri vist = eldst). Denne enkelheten er bevisst — ikke
+gjeninnfør en frontend-kø (verken i modulminnet eller i
+`localStorage`/`sessionStorage`) med mindre databasedrevet rotasjon viser
+seg utilstrekkelig i praksis.
+
+**Egen kolonne (`last_shown_at`) i stedet for å gjenbruke `view_count`.**
+`view_count` var fristende å sortere på i stedet («vis den med lavest
+telling»), men da måtte nye fakta fra «Forny» fått et falskt/gjettet
+starttall for å konkurrere om «minst sett» mot eksisterende fakta med
+reelle tall — og selve poenget med telleren (Funfacts-fanens 👁-kolonne)
+er at den skal vise EKTE visningsantall, ikke forstyrres av
+rotasjonslogikk. Et tidsstempel unngår problemet helt: `NULL` er en
+utvetydig «aldri vist»-verdi som ikke krever noen gjetning.
+
+**Klokkeavvik ved lokal stempling** (`nesteFakta()` setter
+`last_shown_at` lokalt med det samme, før RPC-svaret kommer tilbake, for
+umiddelbar konsistens i samme økt): det lokale stempelet bruker
+`max(Date.now(), nyeste kjente last_shown_at i APP.facts + 1s)` i stedet
+for rått `Date.now()`. Uten dette kunne en maskin med feilstilt klokke
+(satt bakover) gjøre at et nettopp vist fakta så eldre ut enn urørte
+rader og ble plukket på nytt med det samme.
+
+**Migrasjon 026, ikke 023.** Oppgaveteksten ba opprinnelig om
+`023_funfacts_last_shown.sql`, men det nummeret var allerede brukt
+(`023_tilgangsforesporsler.sql`, fra P57). Høyeste eksisterende migrasjon
+ved øktstart var `025_opprydding_for_live.sql`, så denne ble
+`026_funfacts_last_shown.sql`.

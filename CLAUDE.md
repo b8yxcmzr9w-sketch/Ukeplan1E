@@ -127,6 +127,7 @@ supabase/
     022_import_egne_klasser.sql   # Stram INSERT på sessions til egne klasser (user_classes); admin i adminmodus unntatt (P44)
     023_tilgangsforesporsler.sql  # access_requests-tabell for uinnlogget tilgangsforespørsel ved innlogging (P57)
     024_maks_inndelinger.sql      # Utvider subjects_max_divisions_check fra 1–8 til 1–20 (matcher appens skjema); default fortsatt 8 (P58)
+    026_funfacts_last_shown.sql   # last_shown_at-kolonne + increment_fact_view stempler den; databasedrevet funfacts-rotasjon (P63, kode klar, IKKE kjørt ennå)
   functions/
     ical/                         # iCal-abonnement for klasser/lærere
     generate-facts/               # Generer funfacts med Gemini
@@ -156,7 +157,7 @@ APP = {
   user: null,              // Supabase auth user
   profile: null,           // { id, full_name, role, is_admin_active, school_id, ... }
   school: null,            // { id, name, active_school_year, color_theme, logo_file_path, ... }
-  facts: [],               // Funfacts for scrollende banner
+  facts: [],               // Funfacts, roterer i lagre-overlayet og AI-overlayet
   currentView: null,       // 'elev' | 'laerer' | 'admin'
   currentKlasse: null,     // Klassenavn (string) i elevvisning
   realtimeChannel: null,
