@@ -15,7 +15,8 @@
   flyttingen er vellykket») — slettes i egen, senere økt etter bekreftelse.
   Cache-bust `?v=20260824b` i ny rot-`index.html`. CLAUDE.md, PROSEDYRER.md
   og FUNKSJONELL-BESKRIVELSE.md oppdatert til rot-stier/-adresse. Kode
-  committet og pushet til branch `claude/move-app-v4-to-root-untc86`.)
+  committet og merget til main via PR #173. Morfar har bekreftet i
+  produksjon 24. august 2026 at rota fungerer.)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P63
 - **Dato sist oppdatert:** 24. august 2026
