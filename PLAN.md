@@ -2441,4 +2441,120 @@ er likevel korrekt: ny app-kode ligger på rota, frossen løsning i
   fra `/v4/` til rot (`https://ukeplan1e.ganddal.net/`)
 - Hard refresh + kontroller at rota laster og at
   `https://ukeplan1e.ganddal.net/gammel/` fortsatt viser 25/26-planene
+
+---
+
+## Økt (P63): Funfacts-rotasjon
+
+Kartlegging (25.08.2026, mot main @ 5f6e9be) bekreftet mot koden ved
+øktstart 25.08.2026 — alle fem funn stemmer (linjenumre uendret siden
+kartleggingen). Se oppgaveteksten for full funnliste; gjentas ikke her.
+
+### Mål
+Én delt, vedvarende, stokket kø for funfacts som begge overlay-typer
+plukker fra, med lastetekst-først i lagre-overlayet, korrekt
+visningstelling begge steder, og fersk `APP.facts` etter «Forny»/tom liste.
+
+### A. Delt kø-modul (nytt, modulnivå — nær `FUNNY_TEXTS`/overlay-koden)
+- [ ] Ny modulvariabel `_faktaKoe = []` og `_faktaForrige = null` (erstatter
+      de lokale `koe`/`forrige` i `medAIOverlay`)
+- [ ] `nesteFaktaFraKoe()`: hvis køen er tom, fyll fra `APP.facts`,
+      Fisher–Yates-stokk (gjenbruk eksisterende algoritme fra
+      `medAIOverlay`, app.js:379–385), unngå at nytt køs siste element ==
+      `_faktaForrige` (gjenbruk swap-logikken, app.js:384–386). Pop ett
+      element, sett `_faktaForrige`, tell visning (se del C), returner
+      fact-objektet (ikke bare teksten — begge kallere trenger id for
+      telling, men lagre-overlayet trenger kun teksten)
+- [ ] Returnerer `null`/`undefined` hvis `APP.facts` er tom (ingen kø å
+      hente fra) — kallerne faller da tilbake til lastetekst
+- [ ] `sessionStorage`: nøkkel inkluderer `APP.school.id`. Lagre køen (kun
+      id-er) etter hvert uttak; ved oppstart/første kall, les lagret verdi,
+      filtrer bort id-er som ikke finnes i `APP.facts`, bruk resten som
+      startkø hvis ikke-tom — ellers stokk fersk. All lesing/skriving i
+      try/catch, med fresh-stokk som fallback ved kast eller ugyldig JSON
+
+### B. Lagre-overlayet (`medLagreOverlay`, app.js:320–355)
+- [ ] Vis en tilfeldig `FUNNY_TEXTS`-streng med `visibility:visible` med
+      en gang overlayet åpnes (ikke skjult, ikke vent)
+- [ ] `setTimeout(..., 1200)` (ned fra 3000): bytt teksten til
+      `nesteFaktaFraKoe()`s tekst HVIS den ga noe; ellers la
+      lastetekst-en stå
+- [ ] `[...FUNNY_TEXTS, ...APP.facts]`-lotteriet fjernes helt
+- [ ] `clearTimeout` ved tidlig ferdig lagring uendret (kort lagring →
+      aldri byttet til funfact → ingen telling, siden `nesteFaktaFraKoe`
+      aldri kalles)
+
+### C. Visningstelling (i den delte kø-funksjonen, ett sted)
+- [ ] `nesteFaktaFraKoe()` gjør selve `increment_fact_view`-kallet
+      (ikke-blokkerende `sb.rpc(...)`, feil svelges stille via
+      `.then(() => {}, () => {})`, lokal `view_count` oppdateres samtidig)
+      — flyttes hit fra `medAIOverlay`s `nesteFakta()`, kalles IKKE separat
+      fra `medLagreOverlay`
+- [ ] Telling skjer kun når et fakta faktisk hentes ut av køen (ikke ved
+      ren kø-fylling/stokking)
+
+### D. AI-overlayet (`medAIOverlay`, app.js:361–435)
+- [ ] `nesteFakta()`/`koe`/`forrige` fjernes; `visNeste`/`startIntervall`/
+      «→»-knappen kaller `nesteFaktaFraKoe()` fra den delte modulen i
+      stedet. Utseende, 300ms fade, 10s-intervall og «→»-knapp uendret
+- [ ] Fallback til tom-tilstand uendret hvis `APP.facts` er tom ved åpning
+      (se del E for opphenting)
+
+### E. Fersk `APP.facts` — én felles hentefunksjon
+- [ ] Ny `hentFunfacts()`: `sb.from('school_facts').select('*').eq(...)
+      .is('deleted_at', null)` UTEN sortering-bieffekt på `APP.facts`
+      (sorter kun i visningslaget der det trengs — se under). Setter
+      `APP.facts` og returnerer listen
+- [ ] `init()` (app.js:6313–6319) kaller `hentFunfacts()` i stedet for
+      egen spørring
+- [ ] `fornyFunfacts()` (app.js:444–461) kaller `hentFunfacts()` etter
+      vellykket forny (både «alle» og «fyll»-modus), så `APP.facts` og
+      kø-poolen er ferske umiddelbart — gammel kø i sessionStorage blir
+      automatisk luket av filtreringen i del A neste gang køen leses
+- [ ] `renderFaktaTab`s `refresh()` (app.js:6046–6054): kall
+      `hentFunfacts()` for å sette `APP.facts`, men behold den
+      admin-spesifikke `view_count`-sorteringen KUN i en lokal variabel
+      for selve listevisningen (`facts.slice().sort(...)` eller tilsvarende)
+      — `APP.facts` beholder rekkefølgen fra `hentFunfacts()`
+- [ ] Både `medLagreOverlay` og `medAIOverlay`: hvis `APP.facts` er tom
+      idet overlayet åpnes OG `APP.school` finnes, kall `hentFunfacts()`
+      én gang før første kø-uttak (dekker «lagring rett etter sidelast»
+      fra funn 5). Ingen ekstra kall hvis `APP.facts` allerede har
+      innhold — vi stoler på Forny/init for øvrig ferskhet
+- [ ] Oppdater hjelpeteksten i `renderFaktaTab` (app.js:6059–6061): fjern
+      «Vises som pausetekst … for å holde humøret oppe» + juster
+      øye-forklaringen til noe presist (fakta vises i BEGGE overlays,
+      telleren viser faktiske visninger fra begge)
+
+### F. Cache-bust og avslutning
+- [ ] Bump `?v=YYYYMMDDx` i rot-`index.html`
+- [ ] `DECISIONS.md`: ny post om hvorfor rotasjonstilstanden er delt og
+      vedvarende (sessionStorage) — hvorfor den lokale AI-overlay-køen
+      IKKE skal gjeninnføres
+- [ ] STATUSLINJE i PLAN.md oppdatert i samme commit
+
+### Verifisering (isolert harness, samme mønster som P52–P55)
+- [ ] 20 fakta, 200 simulerte uttak: alle 20 vist innen første runde,
+      aldri samme id to ganger på rad over køskifte, ny stokking ved tom kø
+- [ ] Kø tømt og fylt på nytt gir annen rekkefølge enn forrige runde (ikke
+      garantert alltid ulik ved uflaks, men sjekk at fakta nr. 21 ≠ nr. 20
+      — dette er den sperren mot repetisjon over køskiftet, testes direkte)
+- [ ] Lagre-overlay-simulering < 1200ms: kun lastetekst vist, 0
+      `increment_fact_view`-kall
+- [ ] Lagre-overlay-simulering ≥ 1200ms: funfact-tekst vist, nøyaktig 1
+      `increment_fact_view`-kall
+- [ ] AI-overlay etterfulgt av lagre-overlay (eller omvendt): andre
+      overlayet fortsetter fra der køen sto, ikke en ny stokket runde
+- [ ] Tom pool (`APP.facts = []`): ingen kast, lastetekster som før i
+      lagre-overlayet, AI-overlayets fakta-seksjon uteblir som i dag,
+      ingen RPC-kall
+- [ ] Ugyldig JSON / feil `school_id` / tomt array i sessionStorage → ny
+      fersk stokket kø, ingen kast
+- [ ] `sessionStorage`-tilgang som kaster (simulert) → køen fungerer
+      likevel (in-memory fallback), ingen ubehandlet feil
+
+### Manuelt steg til Morfar (tas med i sluttoppsummeringen)
+- Gjør en lagring som tar litt tid og se at et funfact dukker opp; gjenta
+  noen ganger og bekreft at det ikke er de samme som går igjen; kontroller
+  at 👁-tellerne i Funfacts-fanen stiger for fakta som faktisk har vært vist
 - Del nye elevlenker/QR-koder på nytt (gamle med `/v4/` i URL-en dør)
