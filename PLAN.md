@@ -3,7 +3,10 @@
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
 - **Nest siste fullførte P-nummer:** P62 (appen flyttet fra `v4/` til rota
-  — se DECISIONS.md «P62 — Appen flyttet til rota»).
+  — tjenesten kjører nå direkte på `https://ukeplan1e.ganddal.net/` uten
+  undermappe. Kode committet og merget til main via PR #173. Morfar har
+  bekreftet i produksjon 24. august 2026 at rota fungerer — se
+  DECISIONS.md «P62 — Appen flyttet til rota»).
 - **Siste fullførte P-nummer:** P63 (funfacts sirkulerer nå skikkelig —
   rotasjonen er flyttet til databasen: `increment_fact_view` stempler
   `last_shown_at` sammen med `view_count`, og «neste fakta» er raden med
@@ -15,21 +18,19 @@
   nettleseren» for begrunnelsen (og hvorfor ikke en ny kø skal
   gjeninnføres). Maskinverifisert: 14/14 sjekker i isolert harness (dekker
   de 6 kravsatte punktene + manglende-kolonne-fallback). Cache-bust
-  `?v=20260825a`. Migrasjon `026_funfacts_last_shown.sql` er skrevet og
-  klar, men IKKE kjørt — **Morfars manuelle steg i produksjon gjenstår**:
-  kjør migrasjonen i Supabase SQL Editor FØRST, deretter visuell
-  bekreftelse (se «Åpne sjekkpunkter» og PLAN.md «Økt (P63)»). Kode
-  committet og pushet til branch `claude/p63-funfacts-rotasjon`.)
+  `?v=20260825a`. Migrasjon `026_funfacts_last_shown.sql` er kjørt av
+  Morfar i produksjon 25. august 2026 — **Morfars visuelle bekreftelse
+  gjenstår** (se «Åpne sjekkpunkter»). Kode committet og merget til main
+  via PR #174.)
 - **Pågående:** ingen
 - **Neste ledige P-nummer:** P64
 - **Dato sist oppdatert:** 25. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P63s prod-steg — migrasjon `026_funfacts_last_shown.sql` må kjøres
-    manuelt i Supabase SQL Editor FØR rotasjonen virker i produksjon (uten
-    kolonnen degraderer koden stille, kaster ikke); deretter Morfars
-    visuelle bekreftelse: en lagring som tar litt tid viser et funfact,
-    gjentatte lagringer viser ikke de samme om igjen, og 👁-tellerne i
-    Funfacts-fanen stiger for fakta som faktisk er vist
+  - P63s prod-sjekk — migrasjon `026_funfacts_last_shown.sql` er kjørt av
+    Morfar 25. august 2026 og PR #174 er merget; Morfars visuelle
+    bekreftelse i ekte produksjon gjenstår: en lagring som tar litt tid
+    viser et funfact, gjentatte lagringer viser ikke de samme om igjen,
+    og 👁-tellerne i Funfacts-fanen stiger for fakta som faktisk er vist
   - P61s prod-sjekk — parti/gruppe-spørsmålet fjernet fra «Be om
     tilgang»-skjemaet, kun fag-listen står igjen (kode klar, ingen
     migrasjon/redeploy); Morfars visuelle bekreftelse i produksjon etter
