@@ -2451,121 +2451,148 @@ Kartlegging (25.08.2026, mot main @ 5f6e9be) bekreftet mot koden ved
 øktstart 25.08.2026 — alle fem funn stemmer (linjenumre uendret siden
 kartleggingen). Se oppgaveteksten for full funnliste; gjentas ikke her.
 
-Strammet inn 25.08.2026 etter Morfars gjennomlesing: droppet
-bekreftVisning()-splitten (én timer og ett RPC-kall holder — en lagring
-over halvannet sekund er én brukeren faktisk venter på og ser), droppet
-den asynkrone fakta-gjenoppbyggingen i et allerede-åpent AI-overlay (tom
-pool der oppfører seg som i dag), og byttet sessionStorage til
-localStorage (køen skal overleve fanelukking, ikke nullstilles av den).
+Retning endret to ganger etter Morfars gjennomlesing 25.08.2026:
+1. Strammet inn: droppet bekreftVisning()-splitten (ett RPC-kall holder),
+   droppet asynkron fakta-gjenoppbygging i et allerede-åpent AI-overlay.
+2. Droppet frontend-køen (kø/stokking/localStorage) HELT til fordel for
+   databasedrevet rotasjon: `increment_fact_view` stempler nå også
+   `last_shown_at`, og «neste fakta» er ganske enkelt raden med eldst
+   tidsstempel i `APP.facts` — ingen tilstand å vedlikeholde i
+   nettleseren i det hele tatt. Se begrunnelse i del A og i
+   DECISIONS.md-punktet i del E.
+
+**Migrasjonsnummer korrigert:** oppgaveteksten ba om `023_...`, men det
+tallet er allerede brukt (`023_tilgangsforesporsler.sql`). Høyeste
+eksisterende er `025_opprydding_for_live.sql`, så denne migrasjonen blir
+`026_funfacts_last_shown.sql`.
 
 ### Mål
-Én delt, vedvarende, stokket kø for funfacts som begge overlay-typer
-plukker fra, med lastetekst-først i lagre-overlayet, korrekt
-visningstelling begge steder, og fersk `APP.facts` etter «Forny»/tom liste.
+Databasen er sannhetskilde for rotasjonsrekkefølge (`last_shown_at`,
+NULL = aldri vist = først). Begge overlay-typer plukker «eldst vist»-
+faktaet fra `APP.facts` via samme funksjon, med lastetekst-først i
+lagre-overlayet og korrekt visningstelling begge steder.
 
-### A. Delt kø-modul (nytt, modulnivå — nær `FUNNY_TEXTS`/overlay-koden)
-- [ ] Ny modulvariabel `_faktaKoe = []` og `_faktaForrige = null` (erstatter
-      de lokale `koe`/`forrige` i `medAIOverlay`)
-- [ ] `nesteFaktaFraKoe()`: hvis køen er tom, fyll fra `APP.facts`,
-      Fisher–Yates-stokk (gjenbruk eksisterende algoritme fra
-      `medAIOverlay`, app.js:379–385), unngå at nytt køs siste element ==
-      `_faktaForrige` (gjenbruk swap-logikken, app.js:384–386). Pop ett
-      element, sett `_faktaForrige`, lagre køen (se under), tell visning
-      med samme mønster som dagens `nesteFakta()` (ikke-blokkerende
-      `sb.rpc('increment_fact_view', ...)`, lokal `view_count`
-      oppdateres samtidig, feil svelges stille), returner fakta-teksten
-      — én funksjon, ett kall, ingen kontrakt mellom kø og kaller
-- [ ] Returnerer `''`/`undefined` hvis `APP.facts` er tom (ingen kø å
-      hente fra) — kallerne faller da tilbake til lastetekst
-- [ ] `localStorage`: nøkkel inkluderer `APP.school.id`. Lagret verdi er
-      `{ forrige: <id eller null>, koe: [<id>...] }` — `_faktaForrige`
-      persisteres SAMMEN med køen (uten den ryker sperren mot repetisjon
-      rett etter en reload/fanelukking). Lagre etter hvert uttak. Ved
-      oppstart/første kall: les lagret verdi, filtrer bort id-er (både i
-      `koe` og `forrige`) som ikke finnes i `APP.facts`, bruk resten som
-      startkø/startforrige hvis køen ikke ble tom av filtreringen — ellers
-      stokk fersk (med `forrige = null`). All lesing/skriving i try/catch,
-      med fresh-stokk (`forrige = null`) som fallback ved kast eller
-      ugyldig/manglende JSON
+### A. DB-migrasjon — MANUELT STEG (Morfar kjører i Supabase SQL Editor)
+- [ ] Ny fil `supabase/migrations/026_funfacts_last_shown.sql`,
+      idempotent, samme mønster som 018:
+      - `ALTER TABLE school_facts ADD COLUMN IF NOT EXISTS
+        last_shown_at timestamptz;` (nullable — NULL = «aldri vist»,
+        nye fakta vises først)
+      - `CREATE OR REPLACE FUNCTION increment_fact_view(p_fact_id uuid)`:
+        én `UPDATE` som setter BÅDE `view_count = view_count + 1` OG
+        `last_shown_at = now()` i samme setning. Behold `SECURITY
+        DEFINER`, `SET search_path = public` og
+        `GRANT EXECUTE ... TO authenticated` nøyaktig som i 018 — ingen
+        RLS-endring, kun `CREATE OR REPLACE` av eksisterende funksjon
+- [ ] Denne økten leverer koden klar, men migrasjonen kjøres IKKE av
+      Claude — samme mønster som alle tidligere migrasjoner (se
+      «SQL-migrasjoner» i CLAUDE.md). Tas med som eget manuelt steg i
+      sluttoppsummeringen, FØR frontend-endringene har noen effekt (uten
+      kolonnen stemples ikke `last_shown_at`, og rotasjonen degraderer
+      stille til «alltid samme rekkefølge blant NULL-rader» — se
+      tom-database-tilfellet i verifiseringen)
 
-### B. Lagre-overlayet (`medLagreOverlay`, app.js:320–355)
+### B. Frontend — `nesteFakta()` (erstatter dagens `nesteFakta()` inni
+`medAIOverlay`, løftes til modulnivå nær `FUNNY_TEXTS`)
+- [ ] Velg fra `APP.facts` raden med eldst `last_shown_at`, der `null`
+      regnes som eldst (aldri vist). Ved flere med `null` (eller likt
+      tidsstempel): velg tilfeldig blant dem, så startrekkefølgen ikke
+      blir helt forutsigbar
+- [ ] Sett `last_shown_at` LOKALT på det valgte objektet med en gang
+      (`new Date().toISOString()`), øk lokal `view_count`, og gjør
+      dagens ikke-blokkerende `sb.rpc('increment_fact_view', ...)` med
+      feil svelget stille — ett kall, samme mønster som dagens
+      `nesteFakta()` (app.js:390–394)
+- [ ] Returnerer fakta-teksten, eller `''` hvis `APP.facts` er tom
+- [ ] Ingen kø, ingen stokking, ingen `_faktaForrige`, ingen
+      `localStorage`, ingen Fisher–Yates — alt dette utgår i sin helhet.
+      Sperren mot gjentakelse to ganger på rad trengs ikke lenger: det
+      nettopp viste faktaet har ferskest tidsstempel og havner sist av
+      seg selv ved neste kall
+
+### C. Lagre-overlayet (`medLagreOverlay`, app.js:320–355)
 - [ ] Vis en tilfeldig `FUNNY_TEXTS`-streng med `visibility:visible` med
       en gang overlayet åpnes (ikke skjult, ikke vent)
-- [ ] `setTimeout(..., 1500)` (ned fra 3000, opp fra forrige utkasts 1200):
-      bytt teksten til `nesteFaktaFraKoe()`s tekst HVIS den ga noe (dette
-      kallet teller visningen med det samme, se del A); ellers la
-      lastetekst-en stå
+- [ ] `setTimeout(..., 1500)` (ned fra 3000): bytt teksten til
+      `nesteFakta()`s tekst HVIS den ga noe (dette kallet teller
+      visningen med det samme, se del B); ellers la lastetekst-en stå
 - [ ] `[...FUNNY_TEXTS, ...APP.facts]`-lotteriet fjernes helt
 - [ ] `clearTimeout` ved tidlig ferdig lagring uendret (kort lagring →
-      `nesteFaktaFraKoe()` kalles aldri → ingen telling)
-- [ ] Er `APP.facts` tom når timeren fyrer og `APP.school` finnes, hent
-      `hentFunfacts()` (se del D) før `nesteFaktaFraKoe()` kalles —
-      1500ms-vinduet gir tid til én ekstra spørring. Dette er ENESTE sted
-      tom-pool-opphenting skjer (se del C for hvorfor AI-overlayet ikke
-      gjør det samme)
+      `nesteFakta()` kalles aldri → ingen telling)
 
-### C. AI-overlayet (`medAIOverlay`, app.js:361–435)
-- [ ] `nesteFakta()`/`koe`/`forrige` fjernes; `visNeste`/`startIntervall`/
-      «→»-knappen kaller `nesteFaktaFraKoe()` fra den delte modulen i
-      stedet (som nå også gjør RPC-kallet). Utseende, 300ms fade,
-      10s-intervall og «→»-knapp uendret
-- [ ] Er `APP.facts` tom idet overlayet åpnes, vises overlayet UTEN
-      fakta-seksjon, akkurat som i dag — ingen asynkron henting bygges inn
-      i et allerede-åpent overlay (den kompleksiteten er bevisst droppet;
-      lagre-overlayets 1500ms-vindu i del B dekker «fersk etter sidelast»
-      godt nok, og AI-kjøringer er sjeldne nok til at én tom-pool-visning
-      er akseptabelt)
+### D. AI-overlayet (`medAIOverlay`, app.js:361–435)
+- [ ] Lokale `koe`/`forrige`/stokkelogikken (app.js:375–388) fjernes;
+      `visNeste`/`startIntervall`/«→»-knappen kaller den delte
+      `nesteFakta()` i stedet. Utseende, 300ms fade, 10s-intervall og
+      «→»-knapp uendret
+- [ ] Tom pool ved åpning: overlayet oppfører seg som i dag — ingen
+      fakta-seksjon bygges, ingen asynkron henting inni et allerede-åpent
+      overlay
 
-### D. Fersk `APP.facts` — én felles hentefunksjon
+### E. Fersk `APP.facts` — én felles hentefunksjon
 - [ ] Ny `hentFunfacts()`: `sb.from('school_facts').select('*').eq(...)
-      .is('deleted_at', null)` UTEN sortering-bieffekt på `APP.facts`
-      (sorter kun i visningslaget der det trengs — se under). Setter
-      `APP.facts` og returnerer listen
+      .is('deleted_at', null)` (`select('*')` dekker `last_shown_at`
+      automatisk, ingen ekstra kolonne å nevne eksplisitt) UTEN
+      sortering-bieffekt på `APP.facts` (sorter kun i visningslaget der
+      det trengs — se under). Setter `APP.facts` og returnerer listen
 - [ ] `init()` (app.js:6313–6319) kaller `hentFunfacts()` i stedet for
       egen spørring
 - [ ] `fornyFunfacts()` (app.js:444–461) kaller `hentFunfacts()` etter
-      vellykket forny (både «alle» og «fyll»-modus), så `APP.facts` og
-      kø-poolen er ferske umiddelbart — gammel kø i localStorage blir
-      automatisk luket av filtreringen i del A neste gang køen leses
+      vellykket forny (både «alle» og «fyll»-modus), så `APP.facts` er
+      ferske umiddelbart — nye fakta har `last_shown_at = null` og vises
+      dermed først, uten noen opprydding å gjøre (ingen kø å rense)
 - [ ] `renderFaktaTab`s `refresh()` (app.js:6046–6054): kall
       `hentFunfacts()` for å sette `APP.facts`, men behold den
       admin-spesifikke `view_count`-sorteringen KUN i en lokal variabel
-      for selve listevisningen (`facts.slice().sort(...)` eller tilsvarende)
-      — `APP.facts` beholder rekkefølgen fra `hentFunfacts()`
+      for selve listevisningen (`facts.slice().sort(...)` eller
+      tilsvarende) — `APP.facts` beholder rekkefølgen fra
+      `hentFunfacts()`
 - [ ] Oppdater hjelpeteksten i `renderFaktaTab` (app.js:6059–6061): fjern
       «Vises som pausetekst … for å holde humøret oppe» + juster
       øye-forklaringen til noe presist (fakta vises i BEGGE overlays,
       telleren viser faktiske visninger fra begge)
 
-### E. Cache-bust, dokumentasjon og avslutning
+### F. Cache-bust, dokumentasjon og avslutning
 - [ ] Bump `?v=YYYYMMDDx` i rot-`index.html`
-- [ ] `DECISIONS.md`: ny post om hvorfor rotasjonstilstanden er delt og
-      vedvarende (`localStorage`, ikke `sessionStorage` — skal overleve
-      fanelukking) — hvorfor den lokale AI-overlay-køen IKKE skal
-      gjeninnføres
+- [ ] `DECISIONS.md`: ny post som begrunner to ting:
+      1. hvorfor rotasjonstilstanden ligger i databasen (`last_shown_at`)
+         og ikke i nettleseren — felles for hele skolen (alle lærere ser
+         samme rotasjon), overlever ny maskin/nettleser/tømt lokal
+         lagring, og det er ingen kø-kode å vedlikeholde eller feilsøke
+      2. hvorfor det ble en ny kolonne (`last_shown_at`) framfor gjenbruk
+         av `view_count` — nye fakta måtte da fått et falskt/gjettet
+         starttall for å konkurrere om «minst sett», og telleren skal
+         fortsatt vise EKTE visningsantall (ikke forstyrres av
+         rotasjonslogikken)
 - [ ] `CLAUDE.md` under «APP-objekt (global state)»: rett kommentaren
       `facts: [], // Funfacts for scrollende banner` — det finnes ingen
       scrollende banner i koden. Ny tekst skal beskrive at fakta vises i
       lagre-overlayet og AI-overlayet
+- [ ] `CLAUDE.md`s migrasjonsliste: legg til
+      `026_funfacts_last_shown.sql`-raden (status: kode klar, IKKE kjørt
+      før Morfar gjør det manuelt)
 - [ ] STATUSLINJE i PLAN.md oppdatert i samme commit
 
 ### Verifisering (isolert harness, samme mønster som P52–P55)
-- [ ] 20 fakta, 200 simulerte uttak: alle 20 vist innen første runde,
-      aldri samme id to ganger på rad over køskifte, ny stokking ved tom kø
-- [ ] Kø tømt og fylt på nytt gir annen rekkefølge enn forrige runde (ikke
-      garantert alltid ulik ved uflaks, men sjekk at fakta nr. 21 ≠ nr. 20
-      — dette er den sperren mot repetisjon over køskiftet, testes direkte)
-- [ ] AI-overlay etterfulgt av lagre-overlay (eller omvendt): andre
-      overlayet fortsetter fra der køen sto, ikke en ny stokket runde
-- [ ] Tom pool (`APP.facts = []`): ingen kast, lastetekster som før i
-      lagre-overlayet, AI-overlayets fakta-seksjon uteblir som i dag,
-      ingen RPC-kall
-- [ ] Ugyldig/manglende lagret verdi i `localStorage` (feil JSON, feil
-      `school_id`, tomt array) → ny fersk stokket kø, ingen kast
+- [ ] 20 fakta, alle med `last_shown_at = null`: 20 simulerte uttak gir
+      alle 20 fakta nøyaktig én gang, ingen gjentakelse
+- [ ] 40 simulerte uttak (to fulle sykluser): andre runde dekker alle 20
+      på nytt, og aldri samme fakta to ganger på rad (siste av forrige
+      runde har alltid eldre tidsstempel enn de 19 andre ved rundeskifte
+      — bekreftes direkte, ikke bare antatt)
+- [ ] Blandet starttilstand (noen `null`, noen med eldre tidsstempel):
+      alle `null`-radene velges før noen med satt tidsstempel
+- [ ] Ett fakta med kunstig FERSKT tidsstempel velges aldri så lenge det
+      finnes fakta med eldre (inkl. `null`) tidsstempel i poolen
+- [ ] Tom pool (`APP.facts = []`): `nesteFakta()` gir `''`, ingen kast,
+      lastetekst som før i lagre-overlayet, AI-overlayets fakta-seksjon
+      uteblir som i dag, ingen RPC-kall
 - [ ] Etter at `renderFaktaTab`s `refresh()` har kjørt: `APP.facts`
       beholder rekkefølgen fra `hentFunfacts()` (ikke `view_count`-sortert)
 
-### Manuelt steg til Morfar (tas med i sluttoppsummeringen)
+### Manuelle steg til Morfar (tas med i sluttoppsummeringen)
+- FØRST: kjør `026_funfacts_last_shown.sql` i Supabase SQL Editor (se
+  del A) — rotasjonen virker ikke uten den
 - Gjør en lagring som tar litt tid og se at et funfact dukker opp; gjenta
   noen ganger og bekreft at det ikke er de samme som går igjen; kontroller
   at 👁-tellerne i Funfacts-fanen stiger for fakta som faktisk har vært vist
