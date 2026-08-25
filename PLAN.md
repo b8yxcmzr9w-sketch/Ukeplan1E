@@ -2451,6 +2451,13 @@ Kartlegging (25.08.2026, mot main @ 5f6e9be) bekreftet mot koden ved
 øktstart 25.08.2026 — alle fem funn stemmer (linjenumre uendret siden
 kartleggingen). Se oppgaveteksten for full funnliste; gjentas ikke her.
 
+Strammet inn 25.08.2026 etter Morfars gjennomlesing: droppet
+bekreftVisning()-splitten (én timer og ett RPC-kall holder — en lagring
+over halvannet sekund er én brukeren faktisk venter på og ser), droppet
+den asynkrone fakta-gjenoppbyggingen i et allerede-åpent AI-overlay (tom
+pool der oppfører seg som i dag), og byttet sessionStorage til
+localStorage (køen skal overleve fanelukking, ikke nullstilles av den).
+
 ### Mål
 Én delt, vedvarende, stokket kø for funfacts som begge overlay-typer
 plukker fra, med lastetekst-først i lagre-overlayet, korrekt
@@ -2463,17 +2470,17 @@ visningstelling begge steder, og fersk `APP.facts` etter «Forny»/tom liste.
       Fisher–Yates-stokk (gjenbruk eksisterende algoritme fra
       `medAIOverlay`, app.js:379–385), unngå at nytt køs siste element ==
       `_faktaForrige` (gjenbruk swap-logikken, app.js:384–386). Pop ett
-      element, sett `_faktaForrige`, lagre køen (del A) — men IKKE tell
-      visning her (se del C/G: telling er skilt fra uttak). Returnerer
-      fact-objektet i sin helhet (ikke bare teksten — begge kallere trenger
-      id for senere telling via `bekreftVisning`, lagre-overlayet trenger
-      kun teksten til visning)
-- [ ] Returnerer `null`/`undefined` hvis `APP.facts` er tom (ingen kø å
+      element, sett `_faktaForrige`, lagre køen (se under), tell visning
+      med samme mønster som dagens `nesteFakta()` (ikke-blokkerende
+      `sb.rpc('increment_fact_view', ...)`, lokal `view_count`
+      oppdateres samtidig, feil svelges stille), returner fakta-teksten
+      — én funksjon, ett kall, ingen kontrakt mellom kø og kaller
+- [ ] Returnerer `''`/`undefined` hvis `APP.facts` er tom (ingen kø å
       hente fra) — kallerne faller da tilbake til lastetekst
-- [ ] `sessionStorage`: nøkkel inkluderer `APP.school.id`. Lagret verdi er
+- [ ] `localStorage`: nøkkel inkluderer `APP.school.id`. Lagret verdi er
       `{ forrige: <id eller null>, koe: [<id>...] }` — `_faktaForrige`
       persisteres SAMMEN med køen (uten den ryker sperren mot repetisjon
-      rett etter en reload). Lagre etter hvert uttak. Ved
+      rett etter en reload/fanelukking). Lagre etter hvert uttak. Ved
       oppstart/første kall: les lagret verdi, filtrer bort id-er (både i
       `koe` og `forrige`) som ikke finnes i `APP.facts`, bruk resten som
       startkø/startforrige hvis køen ikke ble tom av filtreringen — ellers
@@ -2484,54 +2491,32 @@ visningstelling begge steder, og fersk `APP.facts` etter «Forny»/tom liste.
 ### B. Lagre-overlayet (`medLagreOverlay`, app.js:320–355)
 - [ ] Vis en tilfeldig `FUNNY_TEXTS`-streng med `visibility:visible` med
       en gang overlayet åpnes (ikke skjult, ikke vent)
-- [ ] `setTimeout(..., 1200)` (ned fra 3000): hent `nesteFaktaFraKoe()`.
-      Ga den noe, bytt teksten til fakta-teksten med en gang, og start en
-      NY `setTimeout(..., 800)` som kaller den returnerte
-      `bekreftVisning()` (se del C/G) — dette er «lest i ~800ms»-sperren
-      fra rettelse 4. Ga `nesteFaktaFraKoe()` ingenting, la lastetekst-en
-      stå og ikke start noen bekreftelses-timer
+- [ ] `setTimeout(..., 1500)` (ned fra 3000, opp fra forrige utkasts 1200):
+      bytt teksten til `nesteFaktaFraKoe()`s tekst HVIS den ga noe (dette
+      kallet teller visningen med det samme, se del A); ellers la
+      lastetekst-en stå
 - [ ] `[...FUNNY_TEXTS, ...APP.facts]`-lotteriet fjernes helt
-- [ ] Begge timere (1200ms-byttet og 800ms-bekreftelsen) ryddes i SAMME
-      `clearTimeout`-vei som i dag skjer for `sitatTimer`: både i den
-      normale ferdig-grenen og i `catch`-grenen. En lagring som blir
-      ferdig før 800ms-bekreftelsen rekker å fyre → ingen telling (selv om
-      teksten alt var byttet ved 1200ms — det er nettopp poenget med
-      rettelse 4: uttak fra kø ≠ bekreftet visning)
+- [ ] `clearTimeout` ved tidlig ferdig lagring uendret (kort lagring →
+      `nesteFaktaFraKoe()` kalles aldri → ingen telling)
+- [ ] Er `APP.facts` tom når timeren fyrer og `APP.school` finnes, hent
+      `hentFunfacts()` (se del D) før `nesteFaktaFraKoe()` kalles —
+      1500ms-vinduet gir tid til én ekstra spørring. Dette er ENESTE sted
+      tom-pool-opphenting skjer (se del C for hvorfor AI-overlayet ikke
+      gjør det samme)
 
-### C. Visningstelling (i den delte kø-modulen, ett sted)
-- [ ] `bekreftVisning(fact)`: gjør selve `increment_fact_view`-kallet
-      (ikke-blokkerende `sb.rpc(...)`, feil svelges stille via
-      `.then(() => {}, () => {})`, lokal `view_count` oppdateres samtidig)
-      — dette er den ENE implementasjonen av selve tellingen, kalt fra
-      begge overlays (se del D for AI-overlayets kalltidspunkt)
-- [ ] `nesteFaktaFraKoe()` gjør IKKE selve RPC-kallet lenger; den returnerer
-      fakta-objektet og en lukning som kaller `bekreftVisning(fact)` (kan
-      være samme funksjonsreferanse med fact bundet, eller
-      `{ fact, bekreftVisning: () => bekreftVisning(fact) }` — valgfritt
-      hvilken form, men kontrakten er: uttak fra køen teller IKKE alene)
-- [ ] Telling skjer kun når kalleren eksplisitt bekrefter visning, aldri
-      ved ren kø-fylling/stokking eller ved selve uttaket
-
-### D. AI-overlayet (`medAIOverlay`, app.js:361–435)
+### C. AI-overlayet (`medAIOverlay`, app.js:361–435)
 - [ ] `nesteFakta()`/`koe`/`forrige` fjernes; `visNeste`/`startIntervall`/
-      «→»-knappen henter fra `nesteFaktaFraKoe()` og kaller den returnerte
-      `bekreftVisning()` MED EN GANG (10s-rotasjonen/eksplisitt
-      «→»-klikk garanterer at faktaen faktisk står lenge nok til å bli
-      lest — ingen forsinkelse trengs her, i motsetning til lagre-overlayet
-      i del B). Utseende, 300ms fade, 10s-intervall og «→»-knapp uendret
-- [ ] Tom pool ved åpning: overlayet vises umiddelbart som i dag (fakta-
-      seksjonen bygges IKKE, `await asyncFn()` startes med en gang — ingen
-      venting på nettverk før overlayet er på skjermen). Er `APP.facts`
-      tom OG `APP.school` finnes, start `hentFunfacts()` UTEN å awaite den;
-      når den svarer med innhold, bygg fakta-seksjonen (samme markup som i
-      dag) og kall `visNeste(false)` + `startIntervall()` først da. Vakt
-      mot at overlayet alt er lukket/fjernet før den async hentingen svarer
-      (sjekk at overlay-noden fortsatt er i DOM, eller sett et lokalt
-      `avbrutt = true` i `finally` og sjekk det i `.then()`-callbacken før
-      DOM-manipulasjon) — ellers bygges fakta-UI inn i et overlay som
-      allerede er fjernet
+      «→»-knappen kaller `nesteFaktaFraKoe()` fra den delte modulen i
+      stedet (som nå også gjør RPC-kallet). Utseende, 300ms fade,
+      10s-intervall og «→»-knapp uendret
+- [ ] Er `APP.facts` tom idet overlayet åpnes, vises overlayet UTEN
+      fakta-seksjon, akkurat som i dag — ingen asynkron henting bygges inn
+      i et allerede-åpent overlay (den kompleksiteten er bevisst droppet;
+      lagre-overlayets 1500ms-vindu i del B dekker «fersk etter sidelast»
+      godt nok, og AI-kjøringer er sjeldne nok til at én tom-pool-visning
+      er akseptabelt)
 
-### E. Fersk `APP.facts` — én felles hentefunksjon
+### D. Fersk `APP.facts` — én felles hentefunksjon
 - [ ] Ny `hentFunfacts()`: `sb.from('school_facts').select('*').eq(...)
       .is('deleted_at', null)` UTEN sortering-bieffekt på `APP.facts`
       (sorter kun i visningslaget der det trengs — se under). Setter
@@ -2540,33 +2525,24 @@ visningstelling begge steder, og fersk `APP.facts` etter «Forny»/tom liste.
       egen spørring
 - [ ] `fornyFunfacts()` (app.js:444–461) kaller `hentFunfacts()` etter
       vellykket forny (både «alle» og «fyll»-modus), så `APP.facts` og
-      kø-poolen er ferske umiddelbart — gammel kø i sessionStorage blir
+      kø-poolen er ferske umiddelbart — gammel kø i localStorage blir
       automatisk luket av filtreringen i del A neste gang køen leses
 - [ ] `renderFaktaTab`s `refresh()` (app.js:6046–6054): kall
       `hentFunfacts()` for å sette `APP.facts`, men behold den
       admin-spesifikke `view_count`-sorteringen KUN i en lokal variabel
       for selve listevisningen (`facts.slice().sort(...)` eller tilsvarende)
       — `APP.facts` beholder rekkefølgen fra `hentFunfacts()`
-- [ ] Dekker «lagring rett etter sidelast» fra funn 5, ulikt per overlay
-      (ingen ekstra kall hvis `APP.facts` allerede har innhold — vi stoler
-      på Forny/init for øvrig ferskhet):
-      - `medLagreOverlay`: siden 1200ms-timeren uansett venter før den
-        trenger et fakta, kan `hentFunfacts()` awaites inni timeren (eller
-        rett før den startes) hvis `APP.facts` er tom og `APP.school`
-        finnes — overlayet selv vises fortsatt med en gang, kun
-        tekstbyttet venter
-      - `medAIOverlay`: bruk det ikke-blokkerende mønsteret fra del D
-        (samme `hentFunfacts()`-kall, ikke en egen variant)
 - [ ] Oppdater hjelpeteksten i `renderFaktaTab` (app.js:6059–6061): fjern
       «Vises som pausetekst … for å holde humøret oppe» + juster
       øye-forklaringen til noe presist (fakta vises i BEGGE overlays,
       telleren viser faktiske visninger fra begge)
 
-### F. Cache-bust, dokumentasjon og avslutning
+### E. Cache-bust, dokumentasjon og avslutning
 - [ ] Bump `?v=YYYYMMDDx` i rot-`index.html`
 - [ ] `DECISIONS.md`: ny post om hvorfor rotasjonstilstanden er delt og
-      vedvarende (sessionStorage) — hvorfor den lokale AI-overlay-køen
-      IKKE skal gjeninnføres
+      vedvarende (`localStorage`, ikke `sessionStorage` — skal overleve
+      fanelukking) — hvorfor den lokale AI-overlay-køen IKKE skal
+      gjeninnføres
 - [ ] `CLAUDE.md` under «APP-objekt (global state)»: rett kommentaren
       `facts: [], // Funfacts for scrollende banner` — det finnes ingen
       scrollende banner i koden. Ny tekst skal beskrive at fakta vises i
@@ -2574,35 +2550,20 @@ visningstelling begge steder, og fersk `APP.facts` etter «Forny»/tom liste.
 - [ ] STATUSLINJE i PLAN.md oppdatert i samme commit
 
 ### Verifisering (isolert harness, samme mønster som P52–P55)
-- [ ] 20 fakta, 200 simulerte uttak (med `bekreftVisning` kalt ved hvert
-      uttak, som i AI-overlayets mønster): alle 20 vist innen første
-      runde, aldri samme id to ganger på rad over køskifte, ny stokking
-      ved tom kø
+- [ ] 20 fakta, 200 simulerte uttak: alle 20 vist innen første runde,
+      aldri samme id to ganger på rad over køskifte, ny stokking ved tom kø
 - [ ] Kø tømt og fylt på nytt gir annen rekkefølge enn forrige runde (ikke
       garantert alltid ulik ved uflaks, men sjekk at fakta nr. 21 ≠ nr. 20
       — dette er den sperren mot repetisjon over køskiftet, testes direkte)
-- [ ] Lagring som blir ferdig FØR 1200ms (tekstbytte skjer aldri): kun
-      lastetekst vist, 0 `increment_fact_view`-kall
-- [ ] Lagring som blir ferdig ~100ms ETTER 1200ms-tekstbyttet, altså FØR
-      800ms-bekreftelsestimeren rekker å fyre (dvs. mellom 1200ms og
-      2000ms total varighet): funfact-teksten VISES, men 0
-      `increment_fact_view`-kall — dette er selve poenget med rettelse 4
-      (uttak fra kø ≠ bekreftet visning)
-- [ ] Lagring som varer godt over 2000ms (1200ms-byttet + 800ms-
-      bekreftelsen begge rekker å fyre): funfact-tekst vist, nøyaktig 1
-      `increment_fact_view`-kall
 - [ ] AI-overlay etterfulgt av lagre-overlay (eller omvendt): andre
       overlayet fortsetter fra der køen sto, ikke en ny stokket runde
 - [ ] Tom pool (`APP.facts = []`): ingen kast, lastetekster som før i
       lagre-overlayet, AI-overlayets fakta-seksjon uteblir som i dag,
       ingen RPC-kall
-- [ ] Ugyldig JSON / feil `school_id` / tomt array i sessionStorage → ny
-      fersk stokket kø (`forrige = null`), ingen kast
-- [ ] `sessionStorage`-tilgang som kaster (simulert) → køen fungerer
-      likevel (in-memory fallback), ingen ubehandlet feil
-- [ ] Etter simulert «Erstatt alle»: køen som leses fra sessionStorage
-      inneholder ingen id-er fra de slettede faktaene, og ingen slettet
-      fakta plukkes ut av `nesteFaktaFraKoe()`
+- [ ] Ugyldig/manglende lagret verdi i `localStorage` (feil JSON, feil
+      `school_id`, tomt array) → ny fersk stokket kø, ingen kast
+- [ ] Etter at `renderFaktaTab`s `refresh()` har kjørt: `APP.facts`
+      beholder rekkefølgen fra `hentFunfacts()` (ikke `view_count`-sortert)
 
 ### Manuelt steg til Morfar (tas med i sluttoppsummeringen)
 - Gjør en lagring som tar litt tid og se at et funfact dukker opp; gjenta
