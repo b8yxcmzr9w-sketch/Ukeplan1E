@@ -528,3 +528,21 @@ rader og ble plukket på nytt med det samme.
 (`023_tilgangsforesporsler.sql`, fra P57). Høyeste eksisterende migrasjon
 ved øktstart var `025_opprydding_for_live.sql`, så denne ble
 `026_funfacts_last_shown.sql`.
+
+## P64 — v4/-rollback-kopien slettet (26.08.2026)
+
+Se «P62 — Appen flyttet til rota» for bakgrunnen: `v4/`-mappa ble bevisst
+IKKE slettet i P62, på Morfars uttrykkelige ønske («ikke slett /v4 før
+jeg bekrefter at flyttingen er vellykket»), og skulle slettes i egen,
+senere økt når han hadde bekreftet at rot-versjonen fungerer i
+produksjon.
+
+Betingelsen er nå oppfylt — Morfar har bekreftet dette, verifisert i
+forkant av denne økten mot GitHub Pages-oppsettet (Source = main → /
+root, ikke /v4), fravær av hardkodede `v4/`-stier i rota, og at siden er
+live fra rota. `v4/`-mappa er derfor fjernet med `git rm -r v4/`, og
+omtalen av den som midlertidig rollback-kopi er fjernet fra CLAUDE.md.
+
+Manuelt gjenstår: `/v4/`-redirect-URL-en i Supabase Dashboard →
+Authentication → URL Configuration (lagt til side om side med
+rot-adressen i P62) må fjernes manuelt av Morfar — ikke gjort av Code.
