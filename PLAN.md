@@ -2,32 +2,30 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P64 (rollback-kopien `v4/` slettet —
+- **Siste fullførte P-nummer:** P65 (synliggjør ekte databasefeil i
+  ical-funksjonen — `error` fra sessions-spørringen i
+  `supabase/functions/ical/index.ts` returneres nå som «Database error:
+  …» (500) i stedet for å forsvinne bak en generisk «No sessions
+  found» (404). Kun to linjer endret. Se egen seksjon lenger ned. Kode
+  committet og merget til main via PR #176. **Manuelt gjenstår:** Morfar
+  må redeploye `ical`-funksjonen i Supabase Dashboard, deretter gjenta
+  det opprinnelige testabonnementet og rapportere det ekte feilbudskapet
+  tilbake for videre diagnose — se «Åpne sjekkpunkter».)
+- **Nest siste fullførte P-nummer:** P64 (rollback-kopien `v4/` slettet —
   betingelsen fra P62 var oppfylt (Morfar har bekreftet at rot-versjonen
   fungerer i produksjon). `git rm -r v4/`, omtalen av `v4/` som
   midlertidig rollback fjernet fra CLAUDE.md. Ingen cache-bust nødvendig
   (v4/ ble aldri servert). Se DECISIONS.md «P64 — v4/-rollback-kopien
   slettet». Manuelt gjenstår: fjerne `/v4/`-redirect-URL-en fra Supabase
   Authentication → URL Configuration — ikke gjort av Code.)
-- **Nest siste fullførte P-nummer:** P63 (funfacts sirkulerer nå skikkelig —
-  rotasjonen er flyttet til databasen: `increment_fact_view` stempler
-  `last_shown_at` sammen med `view_count`, og «neste fakta» er raden med
-  eldst tidsstempel i `APP.facts` (NULL = aldri vist = først), delt av
-  BÅDE lagre-overlayet (lastetekst straks, byttes til funfact etter 1,5s)
-  og AI-overlayet (uendret utseende/10s-rotasjon, henter nå fra samme
-  `nesteFakta()`). Ingen frontend-kø, ingen `localStorage` — se
-  DECISIONS.md «P63 — Funfacts-rotasjon: tilstand i databasen, ikke i
-  nettleseren» for begrunnelsen (og hvorfor ikke en ny kø skal
-  gjeninnføres). Maskinverifisert: 14/14 sjekker i isolert harness (dekker
-  de 6 kravsatte punktene + manglende-kolonne-fallback). Cache-bust
-  `?v=20260825a`. Migrasjon `026_funfacts_last_shown.sql` er kjørt av
-  Morfar i produksjon 25. august 2026 — **Morfars visuelle bekreftelse
-  gjenstår** (se «Åpne sjekkpunkter»). Kode committet og merget til main
-  via PR #174.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P65
+- **Neste ledige P-nummer:** P66
 - **Dato sist oppdatert:** 26. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
+    Dashboard etter merge, deretter gjenta det opprinnelige
+    testabonnementet og rapportere det ekte feilbudskapet tilbake for
+    videre diagnose (se egen seksjon lenger ned)
   - P63s prod-sjekk — migrasjon `026_funfacts_last_shown.sql` er kjørt av
     Morfar 25. august 2026 og PR #174 er merget; Morfars visuelle
     bekreftelse i ekte produksjon gjenstår: en lagring som tar litt tid
@@ -2628,3 +2626,51 @@ rollback-sikkerhet, er derfor fjernet.
 - Fjern `/v4/`-redirect-URL-en fra Supabase Dashboard → Authentication →
   URL Configuration (lagt til side om side med rot-adressen i P62) — kun
   rot-adressen skal stå igjen. Ikke gjort av Code.
+
+## Økt (P65): Synliggjør ekte databasefeil i ical-funksjonen
+
+Kalenderabonnement (webcal/ical) ga «No sessions found» ved test mot en
+skole/klasse som opplagt har planlagte økter. Årsaken: i
+`supabase/functions/ical/index.ts` ble kun `data` destrukturert fra
+sessions-spørringen — `error` ble ignorert helt. En Supabase-spørring
+uten treff returnerer en TOM LISTE `[]` (truthy i JS), ikke `null`, så
+`!sessions` kan kun bli sann når spørringen feilet av en helt annen grunn
+(f.eks. manglende `school_year_start_week`/`end_week`, eller et
+join-forhold som ikke matcher i databasen) — og den ekte feilteksten
+forsvant sporløst bak den generiske 404-meldingen.
+
+Denne økten gjør KUN dette: synliggjør den ekte databasefeilen. Ingen
+gjetning på eller fiksing av selve årsaken — det tas i en egen økt når
+vi vet hva feilen faktisk er.
+
+### Endring
+`supabase/functions/ical/index.ts`, linje ~73–75:
+```ts
+const { data: sessions, error: sessionsError } = await query
+
+if (sessionsError) {
+  return new Response(`Database error: ${sessionsError.message}`, { status: 500, headers: CORS })
+}
+if (!sessions) return new Response('No sessions found', { status: 404, headers: CORS })
+```
+Ingen andre linjer i filen er rørt (verken school-spørringen,
+klasse/lærer-oppslagene eller iCal-bygge-logikken).
+
+### Sjekkliste
+- [x] Endring gjort kun i de to linjene beskrevet over
+- [x] Commit og push til `claude/ical-database-error-visibility-c98v68`
+- [x] PLAN.md oppdatert (denne seksjonen + STATUSLINJE)
+- [ ] Morfar må redeploye `ical`-funksjonen manuelt i Supabase Dashboard
+      etter merge (som vanlig for edge-funksjoner — koden i repoet er
+      IKKE automatisk i produksjon før dette gjøres)
+- [ ] Etter redeploy: gjenta det opprinnelige testabonnementet mot
+      skolen/klassen som feilet, og rapporter det ekte feilbudskapet
+      («Database error: …») tilbake for videre diagnose i en ny økt
+
+### Åpne sjekkpunkter
+- Redeploy av `ical`-funksjonen i Supabase Dashboard gjenstår (manuelt
+  steg, kan ikke gjøres herfra) — feilen er IKKE synlig i produksjon før
+  dette er gjort.
+- Selve den underliggende databasefeilen er fortsatt ukjent — denne
+  økten avdekker den ikke, kun synliggjør den. Neste økt tar fatt i
+  diagnosen når det ekte feilbudskapet er rapportert.

@@ -70,8 +70,11 @@ Deno.serve(async (req) => {
     if (usr) query = query.eq('teacher_id', usr.id)
   }
 
-  const { data: sessions } = await query
+  const { data: sessions, error: sessionsError } = await query
 
+  if (sessionsError) {
+    return new Response(`Database error: ${sessionsError.message}`, { status: 500, headers: CORS })
+  }
   if (!sessions) return new Response('No sessions found', { status: 404, headers: CORS })
 
   // Filtrer på division – ny logikk (UUID-basert) har prioritet over gammel (navn-basert)
