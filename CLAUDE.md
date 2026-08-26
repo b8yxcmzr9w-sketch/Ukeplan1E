@@ -22,12 +22,6 @@ ukeplan1e.ganddal.net — ikke lenger under /v4/.
   er også fredet (GitHub Pages-oppsett). Redigerbare områder: rota (appen
   — `app.js`, `style.css`, `index.html` osv.) og disse .md-filene, hver
   med sitt eget formål og oppdateringspunkt:
-  - `v4/` — **MIDLERTIDIG beholdt, IKKE i bruk.** Identisk snapshot av
-    appen slik den var rett før P62-flyttingen til rota, beholdt kun som
-    rollback-sikkerhet på uttrykkelig ønske fra Morfar («ikke slett /v4
-    før jeg bekrefter at flyttingen er vellykket»). Skal IKKE redigeres
-    eller brukes som kilde — rota er kanonisk. Slettes i egen, senere økt
-    når Morfar har bekreftet at rot-versjonen fungerer i produksjon.
   - `CLAUDE.md` — denne fila; teknisk prosjektbeskrivelse for Claude
     (stack, filstruktur, invarianter, nøkkelfunksjoner). Oppdateres når
     noe av dette faktisk endrer seg i koden.
@@ -94,7 +88,6 @@ ukeplan1e.ganddal.net — ikke lenger under /v4/.
 ```
 BACKLOGG-UX-MOBIL.md              # UX/mobil-backlogg (egen fil; Backlogg-seksjonen i PLAN.md peker hit)
 gammel/                           # Arkivert tidligere produksjonsløsning (P62) — fredet, se Arbeidsrutiner
-v4/                                # MIDLERTIDIG rollback-kopi (P62) — se Arbeidsrutiner, IKKE i bruk
 app.js                             # All frontend-logikk
 style.css
 index.html

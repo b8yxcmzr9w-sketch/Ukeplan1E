@@ -2,12 +2,14 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Nest siste fullførte P-nummer:** P62 (appen flyttet fra `v4/` til rota
-  — tjenesten kjører nå direkte på `https://ukeplan1e.ganddal.net/` uten
-  undermappe. Kode committet og merget til main via PR #173. Morfar har
-  bekreftet i produksjon 24. august 2026 at rota fungerer — se
-  DECISIONS.md «P62 — Appen flyttet til rota»).
-- **Siste fullførte P-nummer:** P63 (funfacts sirkulerer nå skikkelig —
+- **Siste fullførte P-nummer:** P64 (rollback-kopien `v4/` slettet —
+  betingelsen fra P62 var oppfylt (Morfar har bekreftet at rot-versjonen
+  fungerer i produksjon). `git rm -r v4/`, omtalen av `v4/` som
+  midlertidig rollback fjernet fra CLAUDE.md. Ingen cache-bust nødvendig
+  (v4/ ble aldri servert). Se DECISIONS.md «P64 — v4/-rollback-kopien
+  slettet». Manuelt gjenstår: fjerne `/v4/`-redirect-URL-en fra Supabase
+  Authentication → URL Configuration — ikke gjort av Code.)
+- **Nest siste fullførte P-nummer:** P63 (funfacts sirkulerer nå skikkelig —
   rotasjonen er flyttet til databasen: `increment_fact_view` stempler
   `last_shown_at` sammen med `view_count`, og «neste fakta» er raden med
   eldst tidsstempel i `APP.facts` (NULL = aldri vist = først), delt av
@@ -23,8 +25,8 @@
   gjenstår** (se «Åpne sjekkpunkter»). Kode committet og merget til main
   via PR #174.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P64
-- **Dato sist oppdatert:** 25. august 2026
+- **Neste ledige P-nummer:** P65
+- **Dato sist oppdatert:** 26. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P63s prod-sjekk — migrasjon `026_funfacts_last_shown.sql` er kjørt av
     Morfar 25. august 2026 og PR #174 er merget; Morfars visuelle
@@ -76,12 +78,6 @@
 
 ### Klar til bygging
 
-- **Slett rollback-kopien `/v4/`** (fra P62). Beholdt midlertidig til
-  Morfar har bekreftet at rot-versjonen virker i produksjon. Egen liten
-  økt: `git rm -r v4/`, fjern omtalen av rollback-kopien i CLAUDE.md,
-  cache-bust ikke nødvendig. Fjern samtidig `/v4/`-redirect-adressen fra
-  Supabase Authentication → URL Configuration (lagt til side om side med
-  rot-adressen i P62 — se DECISIONS.md).
 - **Oversett rå Postgres-feiltekst i feiloverlayet til lesbar norsk** (P58).
   I dag vises f.eks. `new row for relation "subjects" violates check
   constraint "subjects_max_divisions_check"` direkte til brukeren ved en
@@ -2607,3 +2603,28 @@ lagre-overlayet og korrekt visningstelling begge steder.
 - Gjør en lagring som tar litt tid og se at et funfact dukker opp; gjenta
   noen ganger og bekreft at det ikke er de samme som går igjen; kontroller
   at 👁-tellerne i Funfacts-fanen stiger for fakta som faktisk har vært vist
+
+---
+
+## P64 — Slett v4-rollback-kopien (26.08.2026)
+
+Betingelsen fra P62 var oppfylt: Morfar har bekreftet at rot-versjonen
+fungerer i produksjon. `v4/`-mappa, som kun var beholdt som
+rollback-sikkerhet, er derfor fjernet.
+
+- [x] `git rm -r v4/` — hele mappa slettet, `gammel/`, `CNAME` og
+      `.github/` urørt
+- [x] CLAUDE.md: fjernet avsnittet under «Arbeidsrutiner» som beskrev
+      `v4/` som midlertidig rollback-kopi, og `v4/`-linja i
+      filstruktur-oversikten
+- [x] Ingen cache-bust nødvendig (v4/ ble aldri servert)
+- [x] Backlogg-punktet «Slett rollback-kopien /v4/» flyttet fra «Klar til
+      bygging» til denne P64-seksjonen, markert fullført
+- [x] STATUSLINJE oppdatert i samme commit (Siste fullførte → P64, Neste
+      ledige → P65)
+- [x] DECISIONS.md: «P64 — v4/-rollback-kopien slettet»
+
+### Manuelt steg til Morfar (tas med i sluttoppsummeringen)
+- Fjern `/v4/`-redirect-URL-en fra Supabase Dashboard → Authentication →
+  URL Configuration (lagt til side om side med rot-adressen i P62) — kun
+  rot-adressen skal stå igjen. Ikke gjort av Code.
