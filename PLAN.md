@@ -184,7 +184,7 @@ nettleser-omstart, i motsetning til i dag hvor alle forblir innlogget.
       umiddelbart; logout tømmer alltid `localStorage`; inkognito starter
       alltid uten lagret sesjon.
 - [x] STATUSLINJE i PLAN.md oppdatert i samme commit.
-- [ ] Commit + push + PR.
+- [x] Commit + push + PR (PR #179).
 
 ---
 
