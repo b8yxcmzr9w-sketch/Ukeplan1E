@@ -11,9 +11,9 @@
   til elev-/foresatt-forsiden. Ruten `#/login` og `visBeOmTilgangModal()`
   er urørt. Cache-bust bumpet til `20260830a`. Branch-avvik: kjørt på
   `claude/login-page-for-teachers-3x6a6a`, ikke det opprinnelig foreslåtte
-  navnet — se egen seksjon. **Manuelt gjenstår:** Morfars visuelle
-  bekreftelse i ekte nettleser, se «Verifisering (planlagt)» i egen
-  seksjon.)
+  navnet — se egen seksjon. Merget til main via PR #177. Morfars visuelle
+  og funksjonelle bekreftelse i produksjon er gjort — se «Verifisering»
+  i P66-seksjonen lenger ned.)
 - **Nest siste fullførte P-nummer:** P65 (synliggjør ekte databasefeil i
   ical-funksjonen — `error` fra sessions-spørringen i
   `supabase/functions/ical/index.ts` returneres nå som «Database error:
@@ -27,8 +27,6 @@
 - **Neste ledige P-nummer:** P67
 - **Dato sist oppdatert:** 30. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P66 — Morfars visuelle bekreftelse i ekte nettleser gjenstår: se
-    «Verifisering (planlagt)» i P66-seksjonen lenger ned
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
     testabonnementet og rapportere det ekte feilbudskapet tilbake for
@@ -130,16 +128,18 @@ Ingen ny rute i routeren · ingen endring i `visBeOmTilgangModal()` eller
 `renderHurtigstartTab` · ingen migrasjon · ingen edge functions · ingen
 endring i `for-laerere.html`.
 
-### Verifisering (planlagt)
-- [ ] Manuell sjekk lokalt: `#/login` viser ny rekkefølge/tekst, skjema
-      fungerer som før (feilmelding ved feil passord, «Glemt passord?»
-      sender reset-mail)
-- [ ] «Be om tilgang»-knapp åpner samme modal som før
-- [ ] «Se hva Ukeplan1E er» åpner `for-laerere.html` i ny fane
-- [ ] Knapperad bryter til én kolonne på smal skjerm (mobilbredde)
-- [ ] Hamburger-meny (mobil) viser «For lærere» i stedet for «Logg inn»
-      på `hdr-dd-login`
-- [ ] Hard refresh (cache-bust) bekrefter ny CSS/JS lastes
+### Verifisering
+- [x] Manuell sjekk i produksjon: `#/login` viser ny rekkefølge/tekst,
+      skjema fungerer som før (feilmelding ved feil passord, «Glemt
+      passord?» sender reset-mail) — bekreftet av Morfar
+- [x] «Be om tilgang»-knapp åpner samme modal som før — bekreftet
+- [x] «Se hva Ukeplan1E er» åpner `for-laerere.html` i ny fane —
+      bekreftet
+- [x] Knapperad bryter til én kolonne på smal skjerm (mobilbredde) —
+      bekreftet
+- [x] Hamburger-meny (mobil) viser «For lærere» i stedet for «Logg inn»
+      på `hdr-dd-login` — bekreftet
+- [x] Hard refresh (cache-bust) bekrefter ny CSS/JS lastes — bekreftet
 
 ---
 
