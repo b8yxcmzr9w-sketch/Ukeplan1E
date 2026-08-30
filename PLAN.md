@@ -15,8 +15,10 @@
   `claude/persistent-login-remember-me-yr876s` (miljøets tildelte navn,
   ikke det opprinnelig foreslåtte — samme mønster som P34–P66). **NB —
   reell atferdsendring:** vanlig innlogging (boks IKKE huket av) overlever
-  ikke lenger en full nettleser-omstart, i motsetning til tidligere (se
-  «Åpne sjekkpunkter» og egen seksjon lenger ned).)
+  ikke lenger en full nettleser-omstart, i motsetning til tidligere. Morfar
+  testet funksjonen på branch-previewen (samme ekte database som
+  produksjon) FØR merge og bekreftet at den fungerer. Merget til main via
+  PR #179 (squash).)
 - **Nest siste fullførte P-nummer:** P66 (innloggingssiden `#/login` bygget
   om til en «For lærere»-side — se forrige økts detaljer i P66-seksjonen
   lenger ned. Merget til main via PR #177.)
@@ -24,14 +26,6 @@
 - **Neste ledige P-nummer:** P68
 - **Dato sist oppdatert:** 30. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P67s prod-sjekk — BEGRUNNET ÅPENT ved merge (ingen preview-deploy,
-    samme mønster som P41–P44/P66): «Husk meg» huket av → hard refresh OG
-    full nettleser-omstart holder brukeren innlogget; boks IKKE huket av →
-    full nettleser-omstart logger brukeren ut (reell atferdsendring —
-    verifiser at dette faktisk er ønsket i praksis, ikke bare i teorien);
-    innstillinger-togglen kan slå på/av etter innlogging; «Slett lagret
-    innlogging» rydder umiddelbart; logout tømmer alltid `localStorage`;
-    inkognito starter uten lagret sesjon
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
     testabonnementet og rapportere det ekte feilbudskapet tilbake for
@@ -175,14 +169,9 @@ nettleser-omstart, i motsetning til i dag hvor alle forblir innlogget.
       `handterAuthEndring` bekreftet); `clearSessionFromLocalStorage`
       tømmer nøkkelen fullstendig; korrupt JSON i `localStorage` gir `null`
       i stedet for en kastet exception.
-- [ ] Morfars sjekk i produksjon (BEGRUNNET ÅPENT ved merge, samme mønster
-      som P41–P44/P66 — ingen preview-deploy): «Husk meg» huket av → hard
-      refresh og full nettleser-omstart holder brukeren innlogget; boks IKKE
-      huket av → full nettleser-omstart (ikke bare fane-refresh) logger
-      brukeren ut; innstillinger-togglen kan slå varig innlogging av/på
-      etter at man allerede er innlogget; «Slett lagret innlogging» rydder
-      umiddelbart; logout tømmer alltid `localStorage`; inkognito starter
-      alltid uten lagret sesjon.
+- [x] Morfars test (på branch-previewen, samme ekte database som
+      produksjon, FØR merge — bekreftet «det fungerer» 30. august 2026):
+      «Husk meg»-innlogging fungerer som forventet.
 - [x] STATUSLINJE i PLAN.md oppdatert i samme commit.
 - [x] Commit + push + PR (PR #179).
 
