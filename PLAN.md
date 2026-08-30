@@ -2,31 +2,36 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P66 (innloggingssiden `#/login` bygget om
-  til en «For lærere»-side: hamburger-knapp `hdr-dd-login` heter nå «For
-  lærere», `login-kort` viser overskrift «For lærere» + ingress,
-  uendret innloggingsskjema, et skille «Ikke bruker ennå?», to
-  sekundærknapper («Be om tilgang» / «Se hva Ukeplan1E er» — åpner den
-  nye presentasjonssiden `for-laerere.html` i ny fane) og en diskret lenke
-  til elev-/foresatt-forsiden. Ruten `#/login` og `visBeOmTilgangModal()`
-  er urørt. Cache-bust bumpet til `20260830a`. Branch-avvik: kjørt på
-  `claude/login-page-for-teachers-3x6a6a`, ikke det opprinnelig foreslåtte
-  navnet — se egen seksjon. Merget til main via PR #177. Morfars visuelle
-  og funksjonelle bekreftelse i produksjon er gjort — se «Verifisering»
-  i P66-seksjonen lenger ned.)
-- **Nest siste fullførte P-nummer:** P65 (synliggjør ekte databasefeil i
-  ical-funksjonen — `error` fra sessions-spørringen i
-  `supabase/functions/ical/index.ts` returneres nå som «Database error:
-  …» (500) i stedet for å forsvinne bak en generisk «No sessions
-  found» (404). Kun to linjer endret. Se egen seksjon lenger ned. Kode
-  committet og merget til main via PR #176. **Manuelt gjenstår:** Morfar
-  må redeploye `ical`-funksjonen i Supabase Dashboard, deretter gjenta
-  det opprinnelige testabonnementet og rapportere det ekte feilbudskapet
-  tilbake for videre diagnose — se «Åpne sjekkpunkter».)
+- **Siste fullførte P-nummer:** P67 (Persistent Login / «Husk meg» —
+  avhukingsboks på innloggingsskjermen, opt-in og av som standard.
+  Supabase-klienten peker nå mot `sessionStorage` som default (kun denne
+  fanen), og huker man av «Husk meg» lagres sesjonen i en egen
+  `localStorage`-nøkkel (`ukeplan_persistent_session`) som gjenopprettes
+  via `setSession()` i `init()` ved neste besøk. Roterte refresh-tokens
+  holdes oppdatert via `TOKEN_REFRESHED`. Toggle + «Slett lagret
+  innlogging»-knapp lagt til i Profil-fanens nye «Innlogging»-kort.
+  `logout()` sletter alltid den lagrede kopien. Cache-bust bumpet til
+  `20260830b`. Maskinverifisert med 8 sjekker i isolert harness. Branch:
+  `claude/persistent-login-remember-me-yr876s` (miljøets tildelte navn,
+  ikke det opprinnelig foreslåtte — samme mønster som P34–P66). **NB —
+  reell atferdsendring:** vanlig innlogging (boks IKKE huket av) overlever
+  ikke lenger en full nettleser-omstart, i motsetning til tidligere (se
+  «Åpne sjekkpunkter» og egen seksjon lenger ned).)
+- **Nest siste fullførte P-nummer:** P66 (innloggingssiden `#/login` bygget
+  om til en «For lærere»-side — se forrige økts detaljer i P66-seksjonen
+  lenger ned. Merget til main via PR #177.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P67
+- **Neste ledige P-nummer:** P68
 - **Dato sist oppdatert:** 30. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P67s prod-sjekk — BEGRUNNET ÅPENT ved merge (ingen preview-deploy,
+    samme mønster som P41–P44/P66): «Husk meg» huket av → hard refresh OG
+    full nettleser-omstart holder brukeren innlogget; boks IKKE huket av →
+    full nettleser-omstart logger brukeren ut (reell atferdsendring —
+    verifiser at dette faktisk er ønsket i praksis, ikke bare i teorien);
+    innstillinger-togglen kan slå på/av etter innlogging; «Slett lagret
+    innlogging» rydder umiddelbart; logout tømmer alltid `localStorage`;
+    inkognito starter uten lagret sesjon
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
     testabonnementet og rapportere det ekte feilbudskapet tilbake for
@@ -98,85 +103,87 @@ nettleser-omstart, i motsetning til i dag hvor alle forblir innlogget.
 ### Delplan
 
 **A. Infrastruktur (app.js):**
-- [ ] `createClient(...)` (app.js:19) får `{ auth: { storage: window.sessionStorage } }`
+- [x] `createClient(...)` (app.js:19) får `{ auth: { storage: window.sessionStorage } }`
       — Supabase sin egen persistens/auto-refresh går dermed mot
       sessionStorage (økt-only) som ny default.
-- [ ] Konstant `PERSISTENT_SESSION_KEY = 'ukeplan_persistent_session'`
+- [x] Konstant `PERSISTENT_SESSION_KEY = 'ukeplan_persistent_session'`
       (egen, separat `localStorage`-nøkkel for den valgfrie varige kopien —
       IKKE Supabase sin egen nøkkel).
-- [ ] `saveSessionToLocalStorage(session)` — lagrer
+- [x] `saveSessionToLocalStorage(session)` — lagrer
       `{ access_token, refresh_token }` (kun det som trengs til
       `setSession`) som JSON i `PERSISTENT_SESSION_KEY`.
-- [ ] `loadSessionFromLocalStorage()` — leser og JSON-parser nøkkelen,
+- [x] `loadSessionFromLocalStorage()` — leser og JSON-parser nøkkelen,
       `try/catch` → `null` ved korrupt innhold.
-- [ ] `clearSessionFromLocalStorage()` — `localStorage.removeItem(...)`.
-- [ ] `onAuthStateChange`-handteren (`handterAuthEndring`, app.js:50) utvides
+- [x] `clearSessionFromLocalStorage()` — `localStorage.removeItem(...)`.
+- [x] `onAuthStateChange`-handteren (`handterAuthEndring`, app.js:50) utvides
       med `TOKEN_REFRESHED`: hvis en lagret sesjon allerede finnes i
       `PERSISTENT_SESSION_KEY` (bruker har husk-meg aktiv), oppdateres den
       med det nye (roterte) refresh-tokenet — ellers ville varig innlogging
       slutte å virke etter Supabase sin første token-rotasjon.
 
 **B. Login-skjermen (app.js + style.css):**
-- [ ] `renderLoginForm()` (app.js:563): ny avkrysningsboks «Husk meg på
+- [x] `renderLoginForm()` (app.js:563): ny avkrysningsboks «Husk meg på
       denne enheten» under passordfeltet, IKKE huket av som default
       (`.felt-cb`-klassen gjenbrukes, samme mønster som andre checkboxer).
-- [ ] Ved vellykket innlogging (både `renderLoginForm` sin submit,
+- [x] Ved vellykket innlogging (både `renderLoginForm` sin submit,
       app.js:580, og evt. andre innloggingsveier): boks huket av →
       `saveSessionToLocalStorage(data.session)`; boks IKKE huket av →
       `clearSessionFromLocalStorage()` (rydder en ev. tidligere lagret
       sesjon på samme nettleser/enhet, så et bevisst «ikke husk meg»-valg
       faktisk slutter å overleve omstart).
-- [ ] Liten CSS for boks-raden (avstand til passordfelt/knapp, linje med
+- [x] Liten CSS for boks-raden (avstand til passordfelt/knapp, linje med
       label) — ingen ny fargevariabel, bruker eksisterende `--tekst-svak`.
 
 **C. App-oppstart — auto-restore (app.js, `init()`):**
-- [ ] I `init()` (app.js:6284), rett etter `sb.auth.getSession()` (mot
+- [x] I `init()` (app.js:6284), rett etter `sb.auth.getSession()` (mot
       sessionStorage) har returnert `null`: prøv
       `loadSessionFromLocalStorage()`.
-- [ ] Finnes en lagret sesjon: `await sb.auth.setSession({ access_token,
+- [x] Finnes en lagret sesjon: `await sb.auth.setSession({ access_token,
       refresh_token })`. Lykkes det → fortsett som i dag (`APP.user` settes
       fra resultatet, samme videre flyt som eksisterende `session`-variabel).
-- [ ] Lykkes IKKE (utløpt/ugyldig refresh-token) →
+- [x] Lykkes IKKE (utløpt/ugyldig refresh-token) →
       `clearSessionFromLocalStorage()` og fortsett som ikke-innlogget (ingen
       feilmelding til bruker — samme stille fallback-mønster som dagens
       timeout-håndtering for `getSession()`).
 
 **D. Brukerinnstillinger — toggle (app.js, `renderInnstillingerTab`):**
-- [ ] Nytt kort «Innlogging» i Profil-fanen (samme `.settings-card`-mønster
+- [x] Nytt kort «Innlogging» i Profil-fanen (samme `.settings-card`-mønster
       som Passord-/E-post-kortene, app.js:1808).
-- [ ] Avkrysningsboks «Husk innlogging på denne enheten», forhåndssatt ut
+- [x] Avkrysningsboks «Husk innlogging på denne enheten», forhåndssatt ut
       fra om `PERSISTENT_SESSION_KEY` finnes i dag. Huker AV → PÅ: henter
       gjeldende sesjon (`sb.auth.getSession()`) og kaller
       `saveSessionToLocalStorage`. Huker PÅ → AV: `clearSessionFromLocalStorage()`.
-- [ ] Knapp «Slett lagret innlogging» — umiddelbar
+- [x] Knapp «Slett lagret innlogging» — umiddelbar
       `clearSessionFromLocalStorage()` + avhuking av boksen, for rask
       opprydding på delt/offentlig maskin uten å måtte logge ut.
 
 **E. Logout — server-invalidering (app.js, `logout()`):**
-- [ ] `logout()` (app.js:484): `clearSessionFromLocalStorage()` legges til
+- [x] `logout()` (app.js:484): `clearSessionFromLocalStorage()` legges til
       etter `sb.auth.signOut()` — server-sesjonen invalideres av
       `signOut()` (som i dag), og den lokale varige kopien fjernes samtidig
       slik at «Husk meg» ikke gjenoppstår en gjenglemt sesjon ved neste
       besøk.
 
 **F. Cache-bust + verifisering:**
-- [ ] Bump `?v=YYYYMMDDx` i `v4/index.html` (JS, evt. CSS ved behov).
-- [ ] `node --check app.js`.
-- [ ] Maskinverifisert i isolert harness (stubbet Supabase/localStorage):
-      «Husk meg»-innlogging → token i `localStorage`; boks av → intet i
-      `localStorage` og gammel eventuell nøkkel ryddes; simulert ny
-      "browser-økt" (tom `sessionStorage`, fylt `localStorage`) → `init()`
-      gjenoppretter via `setSession`; token fjernet/ugyldig → stille
-      fallback til logget-ut; `logout()` tømmer `localStorage`.
+- [x] Bump `?v=20260830b` i `v4/index.html` (både CSS og JS).
+- [x] `node --check app.js` — syntaks OK.
+- [x] Maskinverifisert i isolert harness (egen `FakeStorage`, 8 sjekker
+      OK): tom lagring → `null`; gyldig sesjon lagres og lastes tilbake
+      identisk; sesjon uten `refresh_token` lagres ALDRI; rotert token
+      oppdaterer en allerede lagret sesjon (husk-meg aktiv); rotasjon uten
+      aktiv husk-meg starter ALDRI ny lagring (vakten i
+      `handterAuthEndring` bekreftet); `clearSessionFromLocalStorage`
+      tømmer nøkkelen fullstendig; korrupt JSON i `localStorage` gir `null`
+      i stedet for en kastet exception.
 - [ ] Morfars sjekk i produksjon (BEGRUNNET ÅPENT ved merge, samme mønster
-      som P41–P43 — ingen preview-deploy): «Husk meg» huket av → hard
+      som P41–P44/P66 — ingen preview-deploy): «Husk meg» huket av → hard
       refresh og full nettleser-omstart holder brukeren innlogget; boks IKKE
       huket av → full nettleser-omstart (ikke bare fane-refresh) logger
       brukeren ut; innstillinger-togglen kan slå varig innlogging av/på
       etter at man allerede er innlogget; «Slett lagret innlogging» rydder
       umiddelbart; logout tømmer alltid `localStorage`; inkognito starter
       alltid uten lagret sesjon.
-- [ ] STATUSLINJE i PLAN.md oppdatert i samme commit.
+- [x] STATUSLINJE i PLAN.md oppdatert i samme commit.
 - [ ] Commit + push + PR.
 
 ---
