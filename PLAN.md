@@ -65,6 +65,62 @@
 
 ---
 
+## Økt 1 (P66) — Innloggingssiden blir en «For lærere»-side
+
+Bakgrunn: presentasjonssiden `for-laerere.html` (usporet i repo-roten, nå
+lagt til i denne økten — innhold IKKE endret) forklarer lærere hvorfor de
+bør bruke Ukeplan1E. Den skal nås uten innlogging. Samtidig er «Logg inn»
+blitt en for smal etikett på `#/login`, som nå rommer innlogging, «be om
+tilgang» og en lenke til forklaringen. Ruten `#/login` beholdes uendret
+(invitasjons-/passordreset-lenker må fortsatt virke) — kun innholdet på
+siden bygges om.
+
+### Delsteg
+- [ ] 0. `for-laerere.html` lagt til i repo-roten (gjort — lastet opp av
+      Morfar, innhold uendret), tas med i commiten
+- [ ] 1. `index.html`: hamburger-knappen `hdr-dd-login` — teksten endres
+      fra «Logg inn» til «For lærere» (id beholdes, ingen nye menyvalg)
+- [ ] 2. `app.js`, `renderLoginForm()` — bygg om `login-kort` til:
+      a) `<h2>For lærere</h2>` (erstatter «Logg inn») + ingress «Logg inn
+         for å planlegge uka for klassen din.»
+      b) Innloggingsskjemaet uendret (E-post, Passord, «Logg inn»-knapp,
+         «Glemt passord?») — ingen endring i logikk/feilhåndtering/reset
+      c) Skille under skjemaet: «Ikke bruker ennå?» (tynn linje, tekst
+         midt i) — ny klasse `.login-skille`
+      d) To sekundærknapper side om side (PC) / stablet (mobil), ny
+         klasse `.login-valg`:
+         - «Be om tilgang» → `visBeOmTilgangModal()` (erstatter dagens
+           tekstlenke)
+         - «Se hva Ukeplan1E er» → `window.open(...)` til
+           `for-laerere.html` i ny fane (til høyre/nederst av de to)
+      e) Nederst, diskret: «Er du elev eller foresatt? Gå til forsiden og
+         velg klassen din.» med lenke til `#/`
+- [ ] 3. `style.css`: `.login-skille` (linje + tekst midt i) og
+      `.login-valg` (knapperad, bryter til én kolonne på smal skjerm) —
+      bruker `--kant`, `--tekst-svak`, `--primær`, `.btn`/`.btn-s` der det
+      passer, ingen nye inline styles
+- [ ] 4. Cache-bust i `index.html` bumpes til `20260830a` (både
+      `style.css` og `app.js`)
+- [ ] STATUSLINJE i PLAN.md oppdatert i samme commit
+
+### Avgrensning (bekreftet i oppgaven)
+Ingen ny rute i routeren · ingen endring i `visBeOmTilgangModal()` eller
+`renderHurtigstartTab` · ingen migrasjon · ingen edge functions · ingen
+endring i `for-laerere.html`.
+
+### Verifisering (planlagt)
+- [ ] Manuell sjekk lokalt: `#/login` viser ny rekkefølge/tekst, skjema
+      fungerer som før (feilmelding ved feil passord, «Glemt passord?»
+      sender reset-mail)
+- [ ] «Be om tilgang»-knapp åpner samme modal som før
+- [ ] «Se hva Ukeplan1E er» åpner `for-laerere.html` i ny fane
+- [ ] Knapperad bryter til én kolonne på smal skjerm (mobilbredde)
+- [ ] Hamburger-meny (mobil) viser «For lærere» i stedet for «Logg inn»
+      på `hdr-dd-login`
+- [ ] Hard refresh (cache-bust) bekrefter ny CSS/JS lastes
+
+---
+
 ## Backlogg (leses herfra — aldri fra hukommelse eller prosjektminne)
 
 > Verifisert mot koden på main 22. juli 2026 (P39). Punkter merket «(P40)» er
