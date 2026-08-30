@@ -196,8 +196,13 @@ All tidsreferanse i brukergrensesnittet bruker ukenummer som primærenhet.
 Dato er alltid sekundær hjelpeinfo. Mønstre som skal følges konsekvent:
 - **Navigasjonsrad:** `span.uke-label` («Uke ») + `input.uke-nr-input`
   (tall). Knapper: «← Forrige» / «Neste →» — ikke «Forrige uke».
-- **Dag-kolonner:** `.dag-dato` er `display:block` med `opacity:.55` og
-  `font-size:.72rem` — på egen linje under dagnavnet, aldri innebygd.
+- **Dag-kolonner:** `.dag-dato` vises inline rett etter dagnavnet (samme
+  linje, `.dag-tittel` er `display:flex; align-items:baseline`), dempet med
+  `opacity:.55` og `font-size:.72rem`. (P68: reverserer det tidligere
+  «alltid på egen linje»-mønsteret — bevisst designendring fra Morfar, se
+  Økt P68.) Dagens kolonne (matcher dagens dato) får en uthevet boks
+  (`.dag-tittel.i-dag` — bakgrunn + kant + tykkere understrek) i uke-grid
+  både i elevvisning og lærervisningens «Min klasse»-fane.
 - **Perioder** (skolerute-liste, MDE-lister): `ukeTekst(fra, til)` foran
   dato. Format: «uke 7 · 10.02–21.02».
 - **Fridags-toaster:** uke nevnes eksplisitt i meldingen.

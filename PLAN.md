@@ -2,7 +2,28 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P67 (Persistent Login / «Husk meg» —
+- **Siste fullførte P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
+  fargepalett/typografi for `.dag-tittel`, `.okt-kort`, `.fag-badge`,
+  `.aktivitet` og `session-card__*`-detaljene, pluss ny «i dag»-utheving av
+  dagens kolonne i elevvisning og lærervisningens «Min klasse»-fane.
+  CSS-en kom ferdig utformet fra en Claude-chat-økt; fargeverdiene ble
+  flettet inn i EKSISTERENDE temavariabler (`--primær`, `--bg`, `--tekst`
+  osv.) i stedet for som et parallelt variabelsett, slik at «lys»- og
+  «mork»-temaene arver samme oppussing uten å bli overstyrt av faste
+  lyse farger. Fagbadge fikk i tillegg en svak bakgrunnstoning per fag
+  (`background:${color}26`, samme fargekilde som kortets venstrekant) for
+  å matche skjermbildet Morfar viste. Utskrifts-CSS-en i den innsendte
+  koden ble IKKE brukt — appen har fra før en mer komplett/riktig
+  A4-liggende utskriftsstil; ny A4-stående-variant ville vært en
+  regresjon. Cache-bust `20260830c`. Branch:
+  `claude/calendar-view-styling-17z6je` (miljøets tildelte navn).
+  **NB — bevisst reversering av en tidligere invariant:** datoen i
+  dag-kolonnene vises nå INLINE ved siden av dagnavnet, ikke lenger på
+  egen linje under (se CLAUDE.md, avsnittet «Dag-kolonner»). `node --check
+  app.js` OK. Ingen manuell test i nettleser er gjort ennå — kun
+  kode-/syntakssjekk. Merget til main: NEI, venter på PR + Morfars
+  «merge».)
+- **Nest siste fullførte P-nummer:** P67 (Persistent Login / «Husk meg» —
   avhukingsboks på innloggingsskjermen, opt-in og av som standard.
   Supabase-klienten peker nå mot `sessionStorage` som default (kun denne
   fanen), og huker man av «Husk meg» lagres sesjonen i en egen
@@ -19,11 +40,8 @@
   testet funksjonen på branch-previewen (samme ekte database som
   produksjon) FØR merge og bekreftet at den fungerer. Merget til main via
   PR #179 (squash).)
-- **Nest siste fullførte P-nummer:** P66 (innloggingssiden `#/login` bygget
-  om til en «For lærere»-side — se forrige økts detaljer i P66-seksjonen
-  lenger ned. Merget til main via PR #177.)
-- **Pågående:** ingen
-- **Neste ledige P-nummer:** P68
+- **Pågående:** P68 (venter på PR + Morfars «merge», se STATUSLINJE over)
+- **Neste ledige P-nummer:** P69
 - **Dato sist oppdatert:** 30. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
@@ -45,6 +63,73 @@
   lukkbar boks i stedet. Lagt i Backlogg → «Klar til bygging» som eget punkt
   (se nedenfor), da dette nå er en UX-endring, ikke en gjenstående
   prod-sjekk.
+
+---
+
+## Økt (P68): Visuell oppussing av uke-grid
+
+**Branch:** `claude/calendar-view-styling-17z6je` (miljøets tildelte branch).
+**Scope:** KUN `style.css`, `app.js` (kun de to `dag-tittel`-render-stedene +
+`renderSessionCard`-fagbadgen) og cache-bust i `index.html`, samt en
+CLAUDE.md-notat-oppdatering for den reverserte invarianten. Ingen DB, ingen
+edge functions.
+
+Morfar limte inn ferdig CSS fra en Claude-chat-økt (skjermbilde av
+elevvisningens uke-grid som mål), med beskjeden «Kopier alt dette inn i
+style.css. Ferdig!». Logoen skulle beholdes (ingen endring av header/logo).
+
+### Vurderinger gjort under implementering
+
+- **Fargeverdiene flettet inn i eksisterende temavariabler** (`--primær`,
+  `--primær-svak`, `--bg`, `--tekst`, `--tekst-svak`, `--kant`, `--skygge`)
+  i stedet for de nye variabelnavnene i den innsendte CSS-en
+  (`--brand-dark` osv.), fordi de nye navnene bare var definert på `:root`
+  og dermed ville overstyrt «lys»- og «mork»-temaene med faste lyse farger
+  (mørk modus ville fått hvite kort). Samme mønster for `--dag-kant`
+  (endret fra `var(--primær-svak)` til `var(--primær)` i alle tre tema for
+  en tydeligere dagoverskrift-strek).
+- **Ny «i dag»-utheving** (`.dag-tittel.i-dag`) krevde en liten JS-endring
+  for faktisk å bli synlig — CSS-klassen fantes ikke i DOM-en fra før.
+  Lagt til begge steder uke-griden bygges: elevvisning (app.js, `dag-tittel`
+  rundt linje 1493) og lærervisningens «Min klasse»-fane (rundt linje 2311).
+  Sammenligner `toISOString().slice(0,10)` mot dagens dato (samme mønster
+  som resten av datohåndteringen i filen).
+- **Fagbadge-bakgrunnstoning per fag** (`background:${color}26`) lagt til i
+  `renderSessionCard` — den innsendte CSS-en for `.fag-badge` hadde bevisst
+  ingen farge (antok at den ble satt per fag et annet sted), og
+  skjermbildet viste tydelig ulik badge-farge per fag. Bruker samme
+  fargekilde (`subjects.color_hex`) som kortets venstre kant fra før.
+- **Utskrifts-CSS-en i den innsendte koden ble IKKE brukt.** Appen har fra
+  før en mer komplett `@media print`-blokk (A4 liggende, skjuler header/
+  knapper/modaler eksplisitt) enn den innsendte (A4 stående, færre
+  selektorer, delvis andre klassenavn som ikke finnes i appen). Å legge til
+  den nye ville gitt en dårligere/duplisert utskriftsopplevelse.
+- **Bevisst reversering av en tidligere invariant:** `.dag-dato` var
+  dokumentert i CLAUDE.md som «alltid på egen linje, aldri innebygd» —
+  skjermbildet og den innsendte CSS-en viser dato inline ved siden av
+  dagnavnet. Vurdert som en bevisst, ønsket designendring (skjermbildet var
+  eksplisitt målet), CLAUDE.md oppdatert til å reflektere den nye
+  virkeligheten.
+
+### Sjekkliste
+- [x] `:root`/tema-blokkene: nye fargeverdier flettet inn i eksisterende
+      variabler (standard-temaet), `--dag-kant` og nye `--bg-i-dag`/
+      `--kant-i-dag`/`--understrek-i-dag` lagt til i alle tre tema.
+- [x] `.dag-tittel` + `.dag-dato`: ny inline-layout, ny `.i-dag`-variant.
+- [x] `.okt-kort` (+ hover-skygge), `.fag-badge`, `.aktivitet`,
+      `.session-card__meeting/info/teacher`: ny typografi/spacing, gamle
+      kritiske egenskaper (`position:relative`, `cursor:default`,
+      word-break) beholdt.
+- [x] `app.js`: `.i-dag`-klasse satt på dagens dagkolonne (elevvisning +
+      «Min klasse»), fagbadge-bakgrunnstoning per fag.
+- [x] `node --check app.js` — syntaks OK.
+- [x] Bump `?v=20260830c` i `index.html` (CSS + JS).
+- [x] CLAUDE.md: «Dag-kolonner»-invarianten oppdatert.
+- [x] STATUSLINJE i PLAN.md oppdatert i samme commit.
+- [ ] Manuell visuell test i nettleser (PC + mobil) — IKKE gjort i denne
+      økten (ingen kjørende nettleser tilgjengelig i dette miljøet). Kun
+      kode-/syntakssjekk. Morfar bør sjekke branch-previewen før merge.
+- [ ] Commit + push + PR.
 
 ---
 

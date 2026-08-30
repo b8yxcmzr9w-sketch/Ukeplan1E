@@ -1489,9 +1489,11 @@ async function renderElevView(klasseNavn) {
     for (let dag = 1; dag <= 5; dag++) {
       const dayCol = el('div', { class: 'dag-kol' })
       const dateForDay = isoWeekToDate(visKalenderaar, weekNr, dag)
+      const dayStr = dateForDay.toISOString().slice(0, 10)
       const dayHeader = el('div', { class: 'dag-tittel' })
+      if (dayStr === new Date().toISOString().slice(0, 10)) dayHeader.classList.add('i-dag')
       dayHeader.appendChild(document.createTextNode(dagNavn(dag)))
-      dayHeader.appendChild(el('span', { class: 'dag-dato' }, ` ${formatDatoNO(dateForDay.toISOString().slice(0, 10))}`))
+      dayHeader.appendChild(el('span', { class: 'dag-dato' }, ` ${formatDatoNO(dayStr)}`))
       dayCol.appendChild(dayHeader)
 
       let daySessions = (sessions || []).filter(s => s.day_of_week === dag)
@@ -1512,7 +1514,6 @@ async function renderElevView(klasseNavn) {
       }
 
       // Check holiday for this day
-      const dayStr = dateForDay.toISOString().slice(0, 10)
       if (calEvents) {
         const dayHoliday = calEvents.find(e => e.start_date <= dayStr && e.end_date >= dayStr && (e.type === 'helligdag' || e.type === 'ferie' || e.type === 'planleggingsdag'))
         if (dayHoliday) {
@@ -1617,7 +1618,7 @@ function renderSessionCard(s, showActions, actions = {}) {
   const color = s.subjects?.color_hex || '#4a90d9'
   const card = el('div', { class: 'okt-kort', style: `border-left: 4px solid ${color}` })
 
-  card.appendChild(el('div', { class: 'fag-badge' }, s.subjects?.name || 'Ukjent fag'))
+  card.appendChild(el('div', { class: 'fag-badge', style: `background:${color}26` }, s.subjects?.name || 'Ukjent fag'))
   if (s.activity) card.appendChild(el('div', { class: 'aktivitet' }, truncate(s.activity)))
 
   if (showActions) {
@@ -2307,6 +2308,7 @@ async function renderMinKlasseTab(container, klasse) {
       const dateForDayL = isoWeekToDate(visKalenderaarL, currentWeek, dag)
       const dayStrL = dateForDayL.toISOString().slice(0, 10)
       const dayHeader = el('div', { class: 'dag-tittel' })
+      if (dayStrL === new Date().toISOString().slice(0, 10)) dayHeader.classList.add('i-dag')
       dayHeader.appendChild(document.createTextNode(dagNavn(dag)))
       dayHeader.appendChild(el('span', { class: 'dag-dato' }, ` ${formatDatoNO(dayStrL)}`))
       dayCol.appendChild(dayHeader)
