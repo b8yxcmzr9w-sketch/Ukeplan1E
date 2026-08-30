@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ukeplan1E for lærere</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+
+<style>
+/* ── Tokens ─────────────────────────────────────────────────────── */
+:root{
+  --ground:#F6F7F3;
+  --surface:#FFFFFF;
+  --ink:#16211B;
+  --ink-2:#56655C;
+  --line:#DCE2DA;
+  --on-green:#FFFFFF;
+  --green:#2D6A4F;
+  --green-lys:#40916C;
+  --green-svak:#D8F3DC;
+  --green-ink:#1E4A37;
+  --kald:#5B7183;
+  --kald-svak:#E5EBEF;
+  --kald-ink:#3C4C58;
+  --shadow:0 1px 2px rgba(22,33,27,.05), 0 8px 24px -12px rgba(22,33,27,.18);
+  --shadow-lift:0 2px 4px rgba(22,33,27,.06), 0 18px 40px -18px rgba(22,33,27,.28);
+  --radius:14px;
+  --maxw:1080px;
+  --read:63ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1613;
+    --surface:#18211C;
+    --ink:#E9F0EA;
+    --ink-2:#9DB0A3;
+    --line:#28332C;
+    --on-green:#0F1613;
+    --green:#74C69D;
+    --green-lys:#95D5B2;
+    --green-svak:#1D3A2B;
+    --green-ink:#B7E4C7;
+    --kald:#93A9B8;
+    --kald-svak:#202C33;
+    --kald-ink:#C4D4DE;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.45), 0 22px 48px -20px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1613;
+  --surface:#18211C;
+  --ink:#E9F0EA;
+  --ink-2:#9DB0A3;
+  --line:#28332C;
+  --on-green:#0F1613;
+  --green:#74C69D;
+  --green-lys:#95D5B2;
+  --green-svak:#1D3A2B;
+  --green-ink:#B7E4C7;
+  --kald:#93A9B8;
+  --kald-svak:#202C33;
+  --kald-ink:#C4D4DE;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.45), 0 22px 48px -20px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  font-size:17px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{
+  font-family:"Fraunces","Iowan Old Style",Georgia,serif;
+  font-variation-settings:"SOFT" 30,"WONK" 1;
+  font-weight:600;
+  text-wrap:balance;
+  margin:0;
+  letter-spacing:-.012em;
+}
+p{margin:0}
+a{color:var(--green);text-underline-offset:3px}
+
+/* ── Layout ─────────────────────────────────────────────────────── */
+.band{padding:clamp(56px,9vw,104px) 20px}
+.band--surface{background:var(--surface);border-block:1px solid var(--line)}
+.wrap{max-width:var(--maxw);margin:0 auto}
+.read{max-width:var(--read)}
+.stack{display:flex;flex-direction:column}
+.gap-8{gap:8px}.gap-12{gap:12px}.gap-16{gap:16px}.gap-20{gap:20px}
+.gap-28{gap:28px}.gap-40{gap:40px}.gap-56{gap:56px}
+
+.eyebrow{
+  font-size:.74rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--green);
+}
+.eyebrow--kald{color:var(--kald)}
+.lede{font-size:1.16rem;color:var(--ink-2);line-height:1.55}
+.small{font-size:.92rem;color:var(--ink-2)}
+h2{font-size:clamp(1.7rem,3.4vw,2.45rem);line-height:1.15}
+h3{font-size:1.1rem;line-height:1.3;font-variation-settings:"SOFT" 20,"WONK" 0}
+
+/* ── Hero ───────────────────────────────────────────────────────── */
+.hero{
+  padding:clamp(60px,10vw,120px) 20px clamp(40px,6vw,64px);
+  background:
+    radial-gradient(120% 90% at 12% -10%, var(--green-svak) 0%, transparent 58%),
+    var(--ground);
+}
+.hero h1{
+  font-size:clamp(2.5rem,6.4vw,4.3rem);
+  line-height:1.02;
+  letter-spacing:-.028em;
+  max-width:16ch;
+}
+.hero h1 em{font-style:normal;color:var(--green);font-variation-settings:"SOFT" 40,"WONK" 1}
+.hero-lede{font-size:clamp(1.1rem,2.2vw,1.35rem);color:var(--ink-2);max-width:52ch;line-height:1.5}
+
+/* ukestripe — uke er appens primære tidsenhet */
+.ukestripe{
+  display:flex;gap:4px;flex-wrap:wrap;align-items:center;
+  font-variant-numeric:tabular-nums;
+}
+.ukestripe span{
+  font-size:.72rem;font-weight:500;color:var(--ink-2);
+  padding:3px 7px;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface);
+}
+.ukestripe span.na{background:var(--green);border-color:var(--green);color:var(--on-green);font-weight:700}
+.ukestripe .ell{border:0;background:none;padding:3px 2px}
+
+/* ── Kort ───────────────────────────────────────────────────────── */
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(292px,1fr))}
+.kort{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:22px 22px 24px;
+  display:flex;flex-direction:column;gap:8px;
+  box-shadow:var(--shadow);
+}
+.band--surface .kort{background:var(--ground)}
+.kort p{color:var(--ink-2);font-size:.96rem}
+.kort .ikon{width:26px;height:26px;color:var(--green);margin-bottom:2px}
+.kort .ikon svg{display:block;width:100%;height:100%}
+
+/* ── Figurer / rammer ───────────────────────────────────────────── */
+figure{margin:0}
+figcaption{font-size:.88rem;color:var(--ink-2);margin-top:12px;max-width:60ch}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.ramme{
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#eef0ec;
+  padding:10px;
+  box-shadow:var(--shadow-lift);
+  min-width:760px;
+}
+.ramme-topp{display:flex;align-items:center;gap:6px;padding:2px 6px 10px}
+.ramme-topp i{width:9px;height:9px;border-radius:50%;background:#cfd6cd;display:block}
+.ramme-topp b{
+  margin-left:8px;font:500 .74rem/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:#6b7a70;letter-spacing:.02em;
+}
+
+/* ── Appkopi (gjengir Ukeplan1E sine egne farger) ───────────────── */
+.app{
+  --a-primaer:#2d6a4f;--a-primaer-lys:#40916c;--a-primaer-svak:#d8f3dc;
+  --a-bg:#f0f2f0;--a-kort:#ffffff;--a-tekst:#212529;--a-svak:#6c757d;
+  --a-kant:#dee2e6;--a-fridag-bg:#FAEEDA;--a-fridag-tekst:#633806;
+  background:var(--a-bg);color:var(--a-tekst);
+  border-radius:9px;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.45;
+}
+.app-header{
+  background:var(--a-primaer);color:#fff;
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+}
+.app-header .navn{font-size:1.05rem;font-weight:800}
+.app-header .aar{font-size:.78rem;font-weight:600;opacity:.85}
+.app-header .klasse{
+  margin-left:2px;font-size:.8rem;font-weight:600;
+  background:rgba(255,255,255,.18);padding:2px 9px;border-radius:999px;
+}
+.app-header .sp{flex:1}
+.app-header .hbtn{
+  font-size:.78rem;font-weight:600;border:1px solid rgba(255,255,255,.45);
+  border-radius:6px;padding:5px 10px;color:#fff;
+}
+.app-faner{display:flex;gap:2px;padding:0 14px;background:var(--a-kort);border-bottom:1px solid var(--a-kant)}
+.app-fane{padding:9px 12px;font-size:.85rem;color:var(--a-svak);border-bottom:2px solid transparent}
+.app-fane.aktiv{color:var(--a-primaer);font-weight:700;border-bottom-color:var(--a-primaer)}
+.app-nav{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:11px 14px;background:var(--a-kort);border-bottom:1px solid var(--a-kant);
+}
+.app-nav .uke{font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums}
+.app-nav .pil{
+  width:26px;height:26px;border:1px solid var(--a-kant);border-radius:6px;
+  display:grid;place-items:center;font-size:.8rem;color:var(--a-svak);
+}
+.app-nav .sp{flex:1}
+.knapp{
+  font-size:.82rem;font-weight:600;border-radius:6px;padding:6px 11px;
+  border:1px solid var(--a-kant);background:var(--a-kort);color:var(--a-tekst);
+  white-space:nowrap;
+}
+.knapp.p{background:var(--a-primaer);border-color:var(--a-primaer);color:#fff}
+
+.uke-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:12px 14px 16px}
+.dag-tittel{
+  font-size:.72rem;font-weight:700;color:var(--a-primaer);
+  text-transform:uppercase;letter-spacing:.06em;
+  padding:5px 3px;border-bottom:2px solid var(--a-primaer-svak);margin-bottom:7px;
+}
+.dag-dato{display:block;font-size:.68rem;font-weight:400;opacity:.55;text-transform:none;letter-spacing:0;margin-top:1px}
+.dag-okter{display:flex;flex-direction:column;gap:7px}
+.okt-kort{
+  background:var(--a-kort);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);
+  padding:9px 11px;border-left:4px solid var(--a-primaer-lys);
+}
+.okt-hode{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.fag-badge{
+  font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;
+  background:var(--a-primaer-svak);color:var(--a-primaer);white-space:nowrap;
+}
+.felles-badge{font-size:.7rem;color:var(--a-svak)}
+.aktivitet{font-weight:500;line-height:1.35;font-size:.86rem}
+.okt-meta{font-size:.74rem;color:var(--a-svak);margin-top:3px;font-variant-numeric:tabular-nums}
+.okt-meta .sted{color:var(--a-primaer);font-weight:600}
+.fridag{
+  background:var(--a-fridag-bg);color:var(--a-fridag-tekst);
+  border-radius:8px;padding:10px 11px;font-size:.8rem;font-weight:600;
+}
+
+/* Alle mine økter — tabellvisning */
+.mine{width:100%;border-collapse:collapse;font-size:.84rem;background:var(--a-kort)}
+.mine th{
+  text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--a-svak);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--a-kant);
+}
+.mine td{padding:10px 12px;border-bottom:1px solid var(--a-kant);vertical-align:top}
+.mine tr:last-child td{border-bottom:0}
+.mine .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.mine .sted{color:var(--a-primaer);font-weight:600}
+
+/* Økt-skjema */
+.skjema{background:var(--a-kort);padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px}
+.skjema-rad{display:flex;gap:10px;flex-wrap:wrap}
+.felt{flex:1 1 130px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.felt label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--a-svak)}
+.felt .verdi{
+  border:1px solid var(--a-kant);border-radius:6px;padding:7px 10px;
+  font-size:.86rem;background:#fff;min-height:34px;
+}
+.felt .verdi.sel::after{content:"▾";float:right;color:var(--a-svak);font-size:.7rem}
+.felt .verdi.tom{color:#adb5bd}
+.felt--bred{flex:1 1 100%}
+.felles-boks{
+  border:1px dashed var(--a-kant);border-radius:6px;padding:9px 11px;
+  display:flex;gap:16px;flex-wrap:wrap;font-size:.84rem;
+}
+.hake{display:inline-flex;align-items:center;gap:6px}
+.hake i{
+  width:14px;height:14px;border-radius:3px;border:1px solid var(--a-kant);display:inline-block;
+}
+.hake.pa i{background:var(--a-primaer);border-color:var(--a-primaer);position:relative}
+.hake.pa i::after{
+  content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg);
+}
+.skjema-bunn{display:flex;justify-content:flex-end;gap:8px;padding-top:2px}
+.ut{
+  font-size:.72rem;color:var(--a-svak);border-top:1px solid var(--a-kant);
+  padding:8px 16px;background:var(--a-kort);
+}
+
+/* ── Før / etter ────────────────────────────────────────────────── */
+.foretter{display:grid;gap:22px;grid-template-columns:1fr auto 1fr;align-items:center}
+@media (max-width:760px){.foretter{grid-template-columns:1fr;justify-items:stretch}}
+.docs{display:flex;flex-wrap:wrap;gap:8px}
+.doc{
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  border-top:3px solid var(--kald);
+  padding:9px 11px;font-size:.78rem;line-height:1.35;flex:1 1 150px;min-width:0;
+  box-shadow:var(--shadow);
+}
+.doc b{display:block;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc span{color:var(--kald);font-size:.72rem}
+.til{display:grid;place-items:center;color:var(--green)}
+.til svg{width:34px;height:34px}
+@media (max-width:760px){.til svg{transform:rotate(90deg)}}
+.ett{
+  background:var(--surface);border:1px solid var(--green-lys);border-radius:12px;
+  padding:14px;box-shadow:var(--shadow-lift);
+}
+.ett .ett-hode{
+  font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--green);margin-bottom:10px;
+}
+.mini-uke{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mini-dag{display:flex;flex-direction:column;gap:4px}
+.mini-dag b{
+  font-size:.6rem;letter-spacing:.06em;color:var(--green);text-transform:uppercase;
+  border-bottom:2px solid var(--green-svak);padding-bottom:3px;font-weight:700;
+}
+.mini-okt{background:var(--green-svak);border-radius:4px;height:15px}
+.mini-okt.h{height:26px}
+.mini-okt.fri{background:#FAEEDA}
+
+/* ── Kopier til flere uker ──────────────────────────────────────── */
+.kopi{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.kopi-uke{
+  border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface);
+  min-width:104px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow);
+}
+.kopi-uke.valgt{border-color:var(--green);outline:2px solid var(--green-svak)}
+.kopi-uke b{font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);font-weight:700}
+.kopi-uke.valgt b{color:var(--green)}
+.kopi-rad{height:12px;border-radius:3px;background:var(--green-svak)}
+.kopi-rad.b{width:70%}
+.kopi-pil{color:var(--green);display:grid;place-items:center}
+.kopi-pil svg{width:24px;height:24px}
+
+/* ── Steg ───────────────────────────────────────────────────────── */
+.steg{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));counter-reset:s}
+.steg-kort{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow);
+}
+.band--surface .steg-kort{background:var(--ground)}
+.steg-nr{
+  font-family:"Fraunces",Georgia,serif;font-size:1.5rem;font-weight:700;
+  color:var(--green);line-height:1;font-variant-numeric:tabular-nums;
+}
+.steg-kort p{color:var(--ink-2);font-size:.96rem}
+
+.cta{
+  display:inline-flex;align-items:center;gap:10px;align-self:flex-start;
+  background:var(--green);color:var(--on-green);
+  font-weight:600;font-size:1.02rem;
+  padding:14px 24px;border-radius:999px;text-decoration:none;
+  box-shadow:var(--shadow-lift);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.cta:hover{transform:translateY(-2px)}
+.cta svg{width:18px;height:18px}
+.cta:focus-visible,a:focus-visible{outline:3px solid var(--green-lys);outline-offset:3px}
+
+.sitat{
+  border-left:3px solid var(--green);padding-left:20px;
+  font-family:"Fraunces",Georgia,serif;font-size:clamp(1.25rem,2.6vw,1.6rem);
+  line-height:1.35;font-variation-settings:"SOFT" 40,"WONK" 1;
+  max-width:24ch;
+}
+
+footer{
+  padding:34px 20px 48px;text-align:center;
+  color:var(--ink-2);font-size:.86rem;
+}
+
+/* ── Bevegelse ──────────────────────────────────────────────────── */
+.rev{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
+.rev.inn{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  .rev{opacity:1;transform:none;transition:none}
+  .cta{transition:none}
+}
+</style>
+</head>
+<body>
+
+
+<header class="hero">
+  <div class="wrap stack gap-28">
+    <div class="stack gap-16 rev">
+      <p class="eyebrow">Til lærerne på Vg1 · Øksnevad videregående skole</p>
+      <h1>Hele uka på <em>én</em> plass.</h1>
+      <p class="hero-lede">Ukeplan1E samler undervisningen for hele trinnet – 1A til 1E og 1R – i én
+        plan, uke for uke. Elevene ser den uten å logge inn. Du ser dine egne økter samlet:
+        når, hva og hvor.</p>
+    </div>
+    <div class="ukestripe rev" aria-label="Skoleåret går fra uke 33 til uke 24">
+      <span>33</span><span>34</span><span>35</span><span class="ell">…</span>
+      <span>08</span><span class="na">Uke 10</span><span>11</span><span>12</span>
+      <span class="ell">…</span><span>23</span><span>24</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── I dag ─────────────────────────────────────────────────────── -->
+<section class="band band--surface">
+  <div class="wrap stack gap-40">
+    <div class="stack gap-16 read rev">
+      <p class="eyebrow eyebrow--kald">Slik ser det ut i dag</p>
+      <h2>Word-tabellene har gjort jobben. De har bare aldri møtt hverandre.</h2>
+      <p class="lede">Hvert fag har sin egen tabell, i sitt eget team, med sitt eget oppsett og sin egen
+        versjon. Ingen av dokumentene vet om de andre. For å se hva som faktisk skjer i uke 10, må noen
+        åpne alle sammen og legge dem ved siden av hverandre.</p>
+    </div>
+
+    <figure class="foretter rev">
+      <div class="docs">
+        <div class="doc"><b>Ukeplan Naturbruk v3.docx</b><span>Team: Naturbruk 1A</span></div>
+        <div class="doc"><b>Norsk – plan uke 8–12.docx</b><span>Team: Norsk 1A</span></div>
+        <div class="doc"><b>YFF-plan VÅR (ny).docx</b><span>Team: YFF</span></div>
+        <div class="doc"><b>Matte ukeplan.docx</b><span>Team: 1A</span></div>
+        <div class="doc"><b>Kroppsøving vår.docx</b><span>Team: Kroppsøving</span></div>
+        <div class="doc"><b>Ukeplan 1B v2 SISTE.docx</b><span>Team: 1B</span></div>
+      </div>
+      <div class="til" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12h15"/><path d="M13 6l6 6-6 6"/>
+        </svg>
+      </div>
+      <div class="ett">
+        <div class="ett-hode">Uke 10 · 1A</div>
+        <div class="mini-uke" aria-hidden="true">
+          <div class="mini-dag"><b>Man</b><div class="mini-okt h"></div><div class="mini-okt"></div></div>
+          <div class="mini-dag"><b>Tir</b><div class="mini-okt h"></div></div>
+          <div class="mini-dag"><b>Ons</b><div class="mini-okt"></div><div class="mini-okt h"></div></div>
+          <div class="mini-dag"><b>Tor</b><div class="mini-okt"></div><div class="mini-okt h"></div></div>
+          <div class="mini-dag"><b>Fre</b><div class="mini-okt fri"></div></div>
+        </div>
+      </div>
+      <figcaption style="grid-column:1/-1">Seks dokumenter som ikke snakker sammen – mot én plan alle ser på samtidig.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ── Ukevisningen ──────────────────────────────────────────────── -->
+<section class="band">
+  <div class="wrap stack gap-40">
+    <div class="stack gap-16 read rev">
+      <p class="eyebrow">Én plan, én uke om gangen</p>
+      <h2>Dette er uka. Ferdig satt sammen.</h2>
+      <p class="lede">Alle fagene til klassen står i samme rute. Fridager fra skoleruta ligger allerede
+        inne, og du kan ikke komme i skade for å planlegge undervisning på dem.</p>
+    </div>
+
+    <figure class="rev">
+      <div class="scroller">
+        <div class="ramme">
+          <div class="ramme-topp"><i></i><i></i><i></i><b>ukeplan1e.ganddal.net</b></div>
+          <div class="app">
+            <div class="app-header">
+              <span class="aar">26/27</span>
+              <span class="navn">Ukeplan1E</span>
+              <span class="klasse">1A ▾</span>
+              <span class="sp"></span>
+              <span class="hbtn">Lærervisning</span>
+            </div>
+            <div class="app-faner">
+              <span class="app-fane aktiv">Klasse</span>
+              <span class="app-fane">Alle mine økter</span>
+              <span class="app-fane">Søk</span>
+              <span class="app-fane">Klasse-admin</span>
+            </div>
+            <div class="app-nav">
+              <span class="pil">‹</span>
+              <span class="uke">Uke 10</span>
+              <span class="pil">›</span>
+              <span class="knapp">Nå</span>
+              <span class="sp"></span>
+              <span class="knapp p">+ Ny økt</span>
+              <span class="knapp">Lim inn med AI</span>
+              <span class="knapp">Del elevlenke</span>
+            </div>
+            <div class="uke-grid">
+              <div>
+                <div class="dag-tittel">Mandag<span class="dag-dato">02.03</span></div>
+                <div class="dag-okter">
+                  <div class="okt-kort">
+                    <div class="okt-hode"><span class="fag-badge">Naturbruk</span></div>
+                    <div class="aktivitet">Morgenstell og fôring – gruppe A</div>
+                    <div class="okt-meta">08:30–11:30 · <span class="sted">Fjøset</span></div>
+                  </div>
+                  <div class="okt-kort">
+                    <div class="okt-hode"><span class="fag-badge">Norsk</span></div>
+                    <div class="aktivitet">Sammensatte tekster, kap. 4</div>
+                    <div class="okt-meta">12:15–14:00 · <span class="sted">Rom 214</span></div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="dag-tittel">Tirsdag<span class="dag-dato">03.03</span></div>
+                <div class="dag-okter">
+                  <div class="okt-kort">
+                    <div class="okt-hode"><span class="fag-badge">YFF</span></div>
+                    <div class="aktivitet">Vedlikehold av redskap – HMS-runde først</div>
+                    <div class="okt-meta">08:30–14:00 · <span class="sted">Verkstedet</span></div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="dag-tittel">Onsdag<span class="dag-dato">04.03</span></div>
+                <div class="dag-okter">
+                  <div class="okt-kort">
+                    <div class="okt-hode"><span class="fag-badge">Matematikk</span></div>
+                    <div class="aktivitet">Prosent og forholdstall</div>
+                    <div class="okt-meta">08:30–10:00 · <span class="sted">Rom 118</span></div>
+                  </div>
+                  <div class="okt-kort">
+                    <div class="okt-hode"><span class="fag-badge">Naturbruk</span><span class="felles-badge">Felles med 1B</span></div>
+                    <div class="aktivitet">Såing og pikering</div>
+                    <div class="okt-meta">10:15–14:00 · <span class="sted">Ute – ved veksthuset</span></div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="dag-tittel">Torsdag<span class="dag-dato">05.03</span></div>
+                <div class="dag-okter">
+                  <div class="okt-kort">
+                    <div class="okt-hode"><span class="fag-badge">Kroppsøving</span></div>
+                    <div class="aktivitet">Utholdenhet – intervall</div>
+                    <div class="okt-meta">08:30–10:00 · <span class="sted">Idrettshallen</span></div>
+                  </div>
+                  <div class="okt-kort">
+                    <div class="okt-hode"><span class="fag-badge">Naturbruk</span></div>
+                    <div class="aktivitet">Dyrevelferd – praktisk vurdering</div>
+                    <div class="okt-meta">10:15–14:00 · <span class="sted">Fjøset</span></div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="dag-tittel">Fredag<span class="dag-dato">06.03</span></div>
+                <div class="dag-okter">
+                  <div class="fridag">Planleggingsdag – ingen undervisning</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Lærervisningen for 1A, uke 10. Elevene ser den samme uka – uten knappene.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ── For læreren ───────────────────────────────────────────────── -->
+<section class="band band--surface">
+  <div class="wrap stack gap-40">
+    <div class="stack gap-16 read rev">
+      <p class="eyebrow">For deg som underviser</p>
+      <h2>Din egen uke, samlet på ett sted</h2>
+      <p class="lede">Fanen <strong>Alle mine økter</strong> viser øktene dine på tvers av klassene du
+        har – i rekkefølge, med klokkeslett og møtested. Særlig for praksisøktene: du slipper å lete
+        etter hvor dere egentlig skulle møtes.</p>
+    </div>
+
+    <figure class="rev">
+      <div class="scroller">
+        <div class="ramme">
+          <div class="ramme-topp"><i></i><i></i><i></i><b>Alle mine økter</b></div>
+          <div class="app">
+            <div class="app-faner">
+              <span class="app-fane">Klasse</span>
+              <span class="app-fane aktiv">Alle mine økter</span>
+              <span class="app-fane">Søk</span>
+              <span class="app-fane">Klasse-admin</span>
+            </div>
+            <table class="mine">
+              <thead>
+                <tr><th>Når</th><th>Tid</th><th>Klasse</th><th>Fag</th><th>Aktivitet</th><th>Møtested</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">Uke 10 · Mandag 02.03</td><td class="num">08:30–11:30</td>
+                  <td>1A</td><td>Naturbruk</td><td>Morgenstell og fôring – gruppe A</td><td class="sted">Fjøset</td>
+                </tr>
+                <tr>
+                  <td class="num">Uke 10 · Tirsdag 03.03</td><td class="num">08:30–14:00</td>
+                  <td>1A</td><td>YFF</td><td>Vedlikehold av redskap</td><td class="sted">Verkstedet</td>
+                </tr>
+                <tr>
+                  <td class="num">Uke 10 · Onsdag 04.03</td><td class="num">10:15–14:00</td>
+                  <td>1A + 1B</td><td>Naturbruk</td><td>Såing og pikering</td><td class="sted">Ute – ved veksthuset</td>
+                </tr>
+                <tr>
+                  <td class="num">Uke 10 · Torsdag 05.03</td><td class="num">10:15–14:00</td>
+                  <td>1A</td><td>Naturbruk</td><td>Dyrevelferd – praktisk vurdering</td><td class="sted">Fjøset</td>
+                </tr>
+                <tr>
+                  <td class="num">Uke 11 · Mandag 09.03</td><td class="num">08:30–11:30</td>
+                  <td>1B</td><td>Naturbruk</td><td>Morgenstell og fôring – gruppe B</td><td class="sted">Fjøset</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="ut">Har du flere klasser, ligger de i samme liste. Ingen bytting mellom team.</div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Når, hva og hvor – for alle øktene dine, på tvers av klasser og fag.</figcaption>
+    </figure>
+
+    <div class="grid grid-3 rev">
+      <div class="kort">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s-6.5-5.1-6.5-10a6.5 6.5 0 1 1 13 0c0 4.9-6.5 10-6.5 10z"/><circle cx="12" cy="11" r="2.4"/>
+          </svg>
+        </div>
+        <h3>Møtestedet står i økta</h3>
+        <p>Fjøset, verkstedet, veksthuset eller ute i felt – stedet er et eget felt, ikke noe som må
+          forklares i en melding kvelden før.</p>
+      </div>
+      <div class="kort">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20h4l10-10a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 6.5l3 3"/>
+          </svg>
+        </div>
+        <h3>Rediger én økt på ti sekunder</h3>
+        <p>Klikk på økta, endre tid, sted eller innhold, lagre. Endringen er ute med det samme – ingen
+          ny versjon, ingen ny fil, ingen beskjed som må sendes.</p>
+      </div>
+      <div class="kort">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 4.5h-11v11"/>
+          </svg>
+        </div>
+        <h3>Gjentakende undervisning</h3>
+        <p>Går det samme igjen uke etter uke? Merk én eller flere økter og kopier dem til uka du vil –
+          i stedet for å skrive dem inn på nytt.</p>
+      </div>
+      <div class="kort">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="9.5" r="2.4"/><path d="M14.6 18.6a4.2 4.2 0 0 1 6.4-3.3"/>
+          </svg>
+        </div>
+        <h3>Fellesøkter med en annen klasse</h3>
+        <p>Skal 1A og 1B ha samme økt? Huk av under <em>Felles med</em>. Én økt, som dukker opp i
+          begge klassers plan.</p>
+      </div>
+      <div class="kort">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/><path d="M8.5 14.5h7"/>
+          </svg>
+        </div>
+        <h3>Skoleruta er lagt inn</h3>
+        <p>Ferier og fridager vises i planen, og systemet stopper deg hvis du prøver å legge en økt på
+          en fridag.</p>
+      </div>
+      <div class="kort">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 4.5h8l4.5 4.5V19a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 19V6A1.5 1.5 0 0 1 6 4.5z"/>
+            <path d="M13.5 4.5V9H18"/><path d="M8 13h6M8 16.5h4"/>
+          </svg>
+        </div>
+        <h3>Du beholder årsplanen din</h3>
+        <p>Har du planen i et Word-dokument? Kopier teksten, trykk <em>Lim inn med AI</em>, og la den bli
+          tolket til ferdige økter du går gjennom før du lagrer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Økt-skjema + kopiering ────────────────────────────────────── -->
+<section class="band">
+  <div class="wrap stack gap-40">
+    <div class="stack gap-16 read rev">
+      <p class="eyebrow">Å legge inn en økt</p>
+      <h2>Samme felter hver gang – for alle fag</h2>
+      <p class="lede">Ingen egne maler per fag, ingen tabeller som må formateres. Du fyller ut de samme
+        feltene, og planen setter seg selv sammen.</p>
+    </div>
+
+    <div class="grid grid-2 gap-28 rev" style="align-items:start">
+      <figure>
+        <div class="scroller">
+          <div class="ramme" style="min-width:420px">
+            <div class="ramme-topp"><i></i><i></i><i></i><b>Ny økt</b></div>
+            <div class="app">
+              <div class="skjema">
+                <div class="skjema-rad">
+                  <div class="felt"><label>Klasse</label><div class="verdi sel">1A</div></div>
+                  <div class="felt"><label>Uke</label><div class="verdi">10</div></div>
+                  <div class="felt"><label>Dag</label><div class="verdi sel">Onsdag</div></div>
+                </div>
+                <div class="skjema-rad">
+                  <div class="felt"><label>Fra</label><div class="verdi">10:15</div></div>
+                  <div class="felt"><label>Til</label><div class="verdi">14:00</div></div>
+                  <div class="felt"><label>Fag</label><div class="verdi sel">Naturbruk</div></div>
+                </div>
+                <div class="felt felt--bred"><label>Aktivitet</label><div class="verdi">Såing og pikering</div></div>
+                <div class="felt felt--bred"><label>Møtested</label><div class="verdi">Ute – ved veksthuset</div></div>
+                <div class="felt felt--bred"><label>Info</label><div class="verdi">Ta med arbeidstøy og hansker</div></div>
+                <div class="felt felt--bred">
+                  <label>Felles med</label>
+                  <div class="felles-boks">
+                    <span class="hake pa"><i></i>1B</span>
+                    <span class="hake"><i></i>1C</span>
+                    <span class="hake"><i></i>1D</span>
+                    <span class="hake"><i></i>1E</span>
+                    <span class="hake"><i></i>1R</span>
+                  </div>
+                </div>
+                <div class="skjema-bunn">
+                  <span class="knapp">Avbryt</span><span class="knapp p">Lagre</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Klasse, uke, dag, tid, fag, aktivitet og møtested – og eventuelt hvilke klasser økta er felles med.</figcaption>
+      </figure>
+
+      <div class="stack gap-28">
+        <figure>
+          <div class="kopi" aria-hidden="true">
+            <div class="kopi-uke valgt"><b>Uke 10</b><div class="kopi-rad"></div><div class="kopi-rad b"></div></div>
+            <div class="kopi-pil">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12h15"/><path d="M13 6l6 6-6 6"/>
+              </svg>
+            </div>
+            <div class="kopi-uke"><b>Uke 11</b><div class="kopi-rad"></div><div class="kopi-rad b"></div></div>
+            <div class="kopi-uke"><b>Uke 12</b><div class="kopi-rad"></div><div class="kopi-rad b"></div></div>
+          </div>
+          <figcaption>Merk øktene du vil ha igjen, velg uke, kopier. Så justerer du det som skal være annerledes.</figcaption>
+        </figure>
+
+        <div class="kort">
+          <h3>Dere jobber i samme plan samtidig</h3>
+          <p>Det en kollega endrer, dukker opp hos deg med det samme – uten at du må laste siden på nytt.
+            Hver økt er merket med hvem som laget den og hvem som sist endret den, og du får en tydelig
+            beskjed før du endrer noe som tilhører en annen lærer.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── For elevene ───────────────────────────────────────────────── -->
+<section class="band band--surface">
+  <div class="wrap stack gap-40">
+    <div class="grid grid-2 gap-28 rev" style="align-items:center">
+      <div class="stack gap-16">
+        <p class="eyebrow">For elever og foresatte</p>
+        <h2>Én lenke. Ingen innlogging.</h2>
+        <p class="lede">Elever og foresatte åpner klassens plan direkte fra en lenke eller QR-kode, og
+          ser alltid den versjonen som gjelder nå. Så velger de selv hvordan de vil ha den: på skjerm,
+          på papir eller rett inn i kalenderen.</p>
+      </div>
+      <div class="stack gap-16">
+        <p class="sitat">«Hvor skulle vi møtes igjen på onsdag?»</p>
+        <p class="small">Svaret står i planen, samme sted hver gang – uansett hvem i familien som
+          leter etter det.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-2 rev">
+      <div class="kort">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 8.5V4h10v4.5"/><rect x="3.5" y="8.5" width="17" height="7.5" rx="2"/>
+            <path d="M7 13.5h10V20H7z"/><path d="M9.5 16h5M9.5 18h3"/>
+          </svg>
+        </div>
+        <h3>Uka på papir</h3>
+        <p>Én uke kan skrives ut som den er, med et eget utskriftshode som viser klasse og ukenummer.
+          Fint for elever som jobber best med arket foran seg, og for foresatte som vil ha uka
+          hengende på kjøkkenet i stedet for å lete den opp på telefonen.</p>
+      </div>
+      <div class="kort">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/>
+            <path d="M9 15l2 2 4-4"/>
+          </svg>
+        </div>
+        <h3>Rett inn i egen kalender</h3>
+        <p>Velg klassen og abonner på planen. Da dukker øktene opp i kalenderen elevene og foresatte
+          allerede bruker – på mobilen, i Outlook eller i Google – og de oppdaterer seg selv når
+          læreren endrer noe. Ingen ny app å installere.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Kom i gang ────────────────────────────────────────────────── -->
+<section class="band">
+  <div class="wrap stack gap-40">
+    <div class="stack gap-16 read rev">
+      <p class="eyebrow">Slik kommer du i gang</p>
+      <h2>Tre steg – og du er inne</h2>
+    </div>
+
+    <div class="steg rev">
+      <div class="steg-kort">
+        <span class="steg-nr">1</span>
+        <h3>Be om tilgang</h3>
+        <p>Gå til innloggingssiden og trykk <em>«Har du ikke konto? Be om tilgang»</em>. Fyll inn navn og
+          jobb-e-post, hvilke klasser du har, og om du er kontaktlærer eller faglærer.</p>
+      </div>
+      <div class="steg-kort">
+        <span class="steg-nr">2</span>
+        <h3>Logg inn og finn klassen din</h3>
+        <p>Du får en invitasjon på e-post og setter ditt eget passord. Trykk <em>Lærervisning</em>, så
+          står du i ukeoversikten for klassen din.</p>
+      </div>
+      <div class="steg-kort">
+        <span class="steg-nr">3</span>
+        <h3>Legg inn den første uka</h3>
+        <p>Lag øktene med <em>+ Ny økt</em>, eller lim inn årsplanen du allerede har. Del så elevlenka
+          med klassen.</p>
+      </div>
+    </div>
+
+    <div class="stack gap-16 rev">
+      <a class="cta" href="https://ukeplan1e.ganddal.net/#/login" target="_blank" rel="noopener">
+        Be om tilgang
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h13"/><path d="M12 6l6 6-6 6"/>
+        </svg>
+      </a>
+      <p class="small">Skjemaet ligger på innloggingssiden – knappen <em>«Har du ikke konto? Be om tilgang»</em> under passordfeltet.</p>
+    </div>
+  </div>
+</section>
+
+<footer>Ukeplan1E · Øksnevad videregående skole</footer>
+
+<script>
+(function(){
+  var els = document.querySelectorAll('.rev');
+  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    els.forEach(function(e){ e.classList.add('inn'); });
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (en.isIntersecting){ en.target.classList.add('inn'); io.unobserve(en.target); }
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  els.forEach(function(e){ io.observe(e); });
+})();
+</script>
+
+</body>
+</html>

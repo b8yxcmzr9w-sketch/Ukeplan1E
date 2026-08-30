@@ -2,7 +2,19 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P65 (synliggjør ekte databasefeil i
+- **Siste fullførte P-nummer:** P66 (innloggingssiden `#/login` bygget om
+  til en «For lærere»-side: hamburger-knapp `hdr-dd-login` heter nå «For
+  lærere», `login-kort` viser overskrift «For lærere» + ingress,
+  uendret innloggingsskjema, et skille «Ikke bruker ennå?», to
+  sekundærknapper («Be om tilgang» / «Se hva Ukeplan1E er» — åpner den
+  nye presentasjonssiden `for-laerere.html` i ny fane) og en diskret lenke
+  til elev-/foresatt-forsiden. Ruten `#/login` og `visBeOmTilgangModal()`
+  er urørt. Cache-bust bumpet til `20260830a`. Branch-avvik: kjørt på
+  `claude/login-page-for-teachers-3x6a6a`, ikke det opprinnelig foreslåtte
+  navnet — se egen seksjon. **Manuelt gjenstår:** Morfars visuelle
+  bekreftelse i ekte nettleser, se «Verifisering (planlagt)» i egen
+  seksjon.)
+- **Nest siste fullførte P-nummer:** P65 (synliggjør ekte databasefeil i
   ical-funksjonen — `error` fra sessions-spørringen i
   `supabase/functions/ical/index.ts` returneres nå som «Database error:
   …» (500) i stedet for å forsvinne bak en generisk «No sessions
@@ -11,17 +23,12 @@
   må redeploye `ical`-funksjonen i Supabase Dashboard, deretter gjenta
   det opprinnelige testabonnementet og rapportere det ekte feilbudskapet
   tilbake for videre diagnose — se «Åpne sjekkpunkter».)
-- **Nest siste fullførte P-nummer:** P64 (rollback-kopien `v4/` slettet —
-  betingelsen fra P62 var oppfylt (Morfar har bekreftet at rot-versjonen
-  fungerer i produksjon). `git rm -r v4/`, omtalen av `v4/` som
-  midlertidig rollback fjernet fra CLAUDE.md. Ingen cache-bust nødvendig
-  (v4/ ble aldri servert). Se DECISIONS.md «P64 — v4/-rollback-kopien
-  slettet». Manuelt gjenstår: fjerne `/v4/`-redirect-URL-en fra Supabase
-  Authentication → URL Configuration — ikke gjort av Code.)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P66
-- **Dato sist oppdatert:** 26. august 2026
+- **Neste ledige P-nummer:** P67
+- **Dato sist oppdatert:** 30. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P66 — Morfars visuelle bekreftelse i ekte nettleser gjenstår: se
+    «Verifisering (planlagt)» i P66-seksjonen lenger ned
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
     testabonnementet og rapportere det ekte feilbudskapet tilbake for
@@ -62,6 +69,77 @@
     tekst som blander flere klasser (én egen + én fremmed) gjenstår
     (maskinverifisert med 41 sjekker i mellomtiden, samme mønster som
     P41–P43)
+
+---
+
+## Økt 1 (P66) — Innloggingssiden blir en «For lærere»-side
+
+Bakgrunn: presentasjonssiden `for-laerere.html` (usporet i repo-roten, nå
+lagt til i denne økten — innhold IKKE endret) forklarer lærere hvorfor de
+bør bruke Ukeplan1E. Den skal nås uten innlogging. Samtidig er «Logg inn»
+blitt en for smal etikett på `#/login`, som nå rommer innlogging, «be om
+tilgang» og en lenke til forklaringen. Ruten `#/login` beholdes uendret
+(invitasjons-/passordreset-lenker må fortsatt virke) — kun innholdet på
+siden bygges om.
+
+**Branch-avvik (samme mønster som P34–P39):** oppgaveteksten ba om branch
+`claude/P66-for-laerere-side`, men miljøet startet allerede på
+`claude/login-page-for-teachers-3x6a6a`. Etter avklaring med Morfar er
+denne branchen beholdt — arbeidet for P66 ligger på
+`claude/login-page-for-teachers-3x6a6a`, ikke på det branch-navnet
+oppgaveteksten opprinnelig nevnte.
+
+### Delsteg
+- [x] 0. `for-laerere.html` lagt til i repo-roten (lastet opp av Morfar,
+      innhold uendret — 855 linjer, 40254 byte, sjekksum verifisert av
+      Morfar utenfra)
+- [x] 1. `index.html`: hamburger-knappen `hdr-dd-login` — teksten endret
+      fra «Logg inn» til «For lærere» (id beholdt, ingen nye menyvalg)
+- [x] 2. `app.js`, `renderLoginForm()` — `login-kort` bygget om til:
+      a) `<h2>For lærere</h2>` (erstatter «Logg inn») + ingress «Logg inn
+         for å planlegge uka for klassen din.»
+      b) Innloggingsskjemaet uendret (E-post, Passord, «Logg inn»-knapp,
+         «Glemt passord?») — ingen endring i logikk/feilhåndtering/reset
+      c) Skille under skjemaet: «Ikke bruker ennå?» (tynn linje, tekst
+         midt i) — ny klasse `.login-skille`
+      d) To sekundærknapper side om side (PC) / stablet (mobil), ny
+         klasse `.login-valg`:
+         - «Be om tilgang» → `visBeOmTilgangModal()` (erstatter dagens
+           tekstlenke)
+         - «Se hva Ukeplan1E er» → `window.open(...)` til
+           `for-laerere.html` i ny fane (til høyre/nederst av de to)
+      e) Nederst, diskret: «Er du elev eller foresatt? Gå til forsiden og
+         velg klassen din.» med lenke til `#/`
+- [x] 3. `style.css`: `.login-skille` (linje + tekst midt i) og
+      `.login-valg` (knapperad, bryter til én kolonne ≤700px, samme
+      breakpoint som øvrig `.login-kort`-mobiljustering) lagt til —
+      bruker `--kant`, `--tekst-svak`, `.btn`/`.btn-s`, ingen nye inline
+      styles for det nye innholdet
+- [x] 4. Cache-bust i `index.html` bumpet til `20260830a` (både
+      `style.css` og `app.js`)
+- [x] `node --check app.js` kjørt — syntaks OK
+- [x] STATUSLINJE i PLAN.md oppdatert i samme commit
+
+### Verifisert lokalt (maskinsjekk, ikke ekte nettleser)
+- [x] Diff bekrefter `visBeOmTilgangModal()`-funksjonen selv er urørt —
+      kun kall-stedet (knapp i stedet for tekstlenke) er endret
+- [x] `renderHurtigstartTab` og routeren er urørt (ingen treff i diff)
+
+### Avgrensning (bekreftet i oppgaven)
+Ingen ny rute i routeren · ingen endring i `visBeOmTilgangModal()` eller
+`renderHurtigstartTab` · ingen migrasjon · ingen edge functions · ingen
+endring i `for-laerere.html`.
+
+### Verifisering (planlagt)
+- [ ] Manuell sjekk lokalt: `#/login` viser ny rekkefølge/tekst, skjema
+      fungerer som før (feilmelding ved feil passord, «Glemt passord?»
+      sender reset-mail)
+- [ ] «Be om tilgang»-knapp åpner samme modal som før
+- [ ] «Se hva Ukeplan1E er» åpner `for-laerere.html` i ny fane
+- [ ] Knapperad bryter til én kolonne på smal skjerm (mobilbredde)
+- [ ] Hamburger-meny (mobil) viser «For lærere» i stedet for «Logg inn»
+      på `hdr-dd-login`
+- [ ] Hard refresh (cache-bust) bekrefter ny CSS/JS lastes
 
 ---
 
