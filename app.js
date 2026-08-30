@@ -16,7 +16,42 @@ if (!window.supabase || !window.supabase.createClient) {
   throw new Error('window.supabase ikke tilgjengelig – CDN lastet ikke')
 }
 
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// P67: Supabase sin egen sesjonspersistens peker på sessionStorage (kun
+// denne fanen/økten) i stedet for default localStorage. Varig innlogging på
+// tvers av nettleser-omstart er dermed KUN det brukeren aktivt ber om via
+// «Husk meg» (se saveSessionToLocalStorage/loadSessionFromLocalStorage
+// under), ikke noe supabase-js gjør av seg selv.
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { storage: window.sessionStorage }
+})
+
+// P67: Persistent Login («Husk meg») – separat, valgfri localStorage-kopi av
+// sesjonen. Nøkkelens blotte tilstedeværelse betyr at brukeren har bedt om
+// varig innlogging på denne enheten/nettleseren.
+const PERSISTENT_SESSION_KEY = 'ukeplan_persistent_session'
+
+function saveSessionToLocalStorage(session) {
+  if (!session?.access_token || !session?.refresh_token) return
+  try {
+    localStorage.setItem(PERSISTENT_SESSION_KEY, JSON.stringify({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    }))
+  } catch {}
+}
+
+function loadSessionFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(PERSISTENT_SESSION_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function clearSessionFromLocalStorage() {
+  try { localStorage.removeItem(PERSISTENT_SESSION_KEY) } catch {}
+}
 
 window.APP = {
   user: null,
@@ -87,6 +122,12 @@ async function handterAuthEndring(event, session) {
         onFerdig: () => navigate('#/laerer/hurtigstart'),
       })
     }
+  } else if (event === 'TOKEN_REFRESHED' && session) {
+    // P67: Supabase roterer refresh-tokenet ved hver fornyelse. Har brukeren
+    // «Husk meg» aktiv (nøkkelen finnes fra før), må vår egen kopi oppdateres
+    // med det nye tokenet – ellers slutter varig innlogging å virke etter
+    // første rotasjon.
+    if (loadSessionFromLocalStorage()) saveSessionToLocalStorage(session)
   }
 }
 
@@ -483,6 +524,7 @@ async function login(email, password) {
 
 async function logout() {
   await sb.auth.signOut()
+  clearSessionFromLocalStorage()
   APP.user = null
   APP.profile = null
   APP.isAdminActive = false
@@ -579,6 +621,9 @@ function renderLoginForm() {
     try {
       const { data, error } = await sb.auth.signInWithPassword({ email, password })
       if (error) throw error
+      const huskMeg = form.querySelector('[name=husk_meg]').checked
+      if (huskMeg) saveSessionToLocalStorage(data.session)
+      else clearSessionFromLocalStorage()
       APP.user = data.user
       APP.profile = await fetchProfile(data.user.id)
       APP.isAdminActive = APP.profile.is_admin_active || false
@@ -608,6 +653,11 @@ function renderLoginForm() {
   form.appendChild(el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true', placeholder: 'din@epost.no' }))
   form.appendChild(el('label', { class: 'felt-label' }, 'Passord'))
   form.appendChild(el('input', { name: 'password', type: 'password', class: 'felt input', required: 'true' }))
+  const huskMegRad = el('label', { class: 'login-husk-meg' },
+    el('input', { name: 'husk_meg', type: 'checkbox', class: 'felt-cb' }),
+    'Husk meg på denne enheten',
+  )
+  form.appendChild(huskMegRad)
   form.appendChild(el('button', { type: 'submit', class: 'btn btn-p', style: 'width:100%;margin-top:8px' }, 'Logg inn'))
 
   // Glemt passord
@@ -1858,6 +1908,35 @@ async function renderInnstillingerTab(container) {
   })
   epostKort.appendChild(epostForm)
   page.appendChild(epostKort)
+
+  // Kort 4: Innlogging («Husk meg», P67)
+  const innloggingKort = el('div', { class: 'settings-card' })
+  innloggingKort.appendChild(el('h3', {}, 'Innlogging'))
+  const huskMegLabel = el('label', { class: 'login-husk-meg', style: 'margin:0' })
+  const huskMegCb = el('input', { type: 'checkbox', class: 'felt-cb' })
+  huskMegCb.checked = !!loadSessionFromLocalStorage()
+  huskMegLabel.appendChild(huskMegCb)
+  huskMegLabel.appendChild(document.createTextNode('Husk innlogging på denne enheten'))
+  innloggingKort.appendChild(huskMegLabel)
+  innloggingKort.appendChild(el('p', { class: 'tekst-svak', style: 'font-size:.82rem;margin-top:8px' },
+    'Holder deg innlogget på denne enheten helt til du logger ut, selv etter at nettleseren er lukket.'))
+  huskMegCb.addEventListener('change', async () => {
+    if (huskMegCb.checked) {
+      const { data: { session } } = await sb.auth.getSession()
+      saveSessionToLocalStorage(session)
+      showToast('Innlogging huskes på denne enheten', 'info')
+    } else {
+      clearSessionFromLocalStorage()
+      showToast('Innlogging huskes ikke lenger på denne enheten', 'info')
+    }
+  })
+  const slettBtn = el('button', { type: 'button', class: 'btn btn-s', style: 'margin-top:10px', onclick: () => {
+    clearSessionFromLocalStorage()
+    huskMegCb.checked = false
+    showToast('Lagret innlogging er slettet', 'info')
+  }}, 'Slett lagret innlogging')
+  innloggingKort.appendChild(slettBtn)
+  page.appendChild(innloggingKort)
 
   container.appendChild(page)
 }
@@ -6317,6 +6396,23 @@ async function init() {
   } catch (err) {
     console.warn('Sesjonshenting feilet eller tok for lang tid:', err.message)
   }
+
+  // P67: ingen sessionStorage-sesjon (ny nettleserøkt) – prøv en lagret
+  // «Husk meg»-sesjon fra localStorage før vi gir opp.
+  if (!session) {
+    const lagret = loadSessionFromLocalStorage()
+    if (lagret) {
+      try {
+        const { data, error } = await sb.auth.setSession(lagret)
+        if (error) throw error
+        session = data?.session ?? null
+      } catch (err) {
+        console.warn('Lagret innlogging var ugyldig, sletter:', err.message)
+        clearSessionFromLocalStorage()
+      }
+    }
+  }
+
   if (session) APP.user = session.user
 
   // Vis siden – session er nå kjent (eller timet ut)

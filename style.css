@@ -1199,6 +1199,11 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
 }
 .login-kort h2 { margin-bottom: 4px; font-size: 1.1rem; }
 .login-ingress { color: var(--tekst-svak); font-size: .9rem; margin-bottom: 16px; }
+.login-husk-meg {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px 0 2px; font-size: .88rem; color: var(--tekst-svak);
+  cursor: pointer;
+}
 .login-skille {
   display: flex; align-items: center; gap: 10px;
   margin: 20px 0 14px; color: var(--tekst-svak); font-size: .82rem;
