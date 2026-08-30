@@ -30,42 +30,21 @@
     Dashboard etter merge, deretter gjenta det opprinnelige
     testabonnementet og rapportere det ekte feilbudskapet tilbake for
     videre diagnose (se egen seksjon lenger ned)
-  - P63s prod-sjekk — migrasjon `026_funfacts_last_shown.sql` er kjørt av
-    Morfar 25. august 2026 og PR #174 er merget; Morfars visuelle
-    bekreftelse i ekte produksjon gjenstår: en lagring som tar litt tid
-    viser et funfact, gjentatte lagringer viser ikke de samme om igjen,
-    og 👁-tellerne i Funfacts-fanen stiger for fakta som faktisk er vist
-  - P61s prod-sjekk — parti/gruppe-spørsmålet fjernet fra «Be om
-    tilgang»-skjemaet, kun fag-listen står igjen (kode klar, ingen
-    migrasjon/redeploy); Morfars visuelle bekreftelse i produksjon etter
-    merge gjenstår, samme mønster som P41–P55
-  - P55s prod-sjekk — filtrering av myk-slettede brukere i brukerlisten og
-    overfør-nedtrekket (kode klar, ingen SQL-endring); Morfars manuelle
-    testrunde i produksjon gjenstår (krever innlogget admin-sesjon, ikke
-    tilgjengelig fra denne økten): opprett testbruker → slett → bekreft
-    hun forsvinner ved refresh → bekreft hun ikke dukker opp i
-    «Overfør til»-nedtrekket ved neste sletting
-  - P54s prod-sjekk — illustrert hurtigstart-veiledning, åpnes i ny fane,
-    og nye brukere sendes dit automatisk etter invitasjon (alle tre deler
-    maskinverifisert i isolerte harnesser); Morfars visuelle bekreftelse i
-    ekte produksjon gjenstår, samme mønster som P41–P53
-  - P53s prod-sjekk — mobil sammendragslinje i AI-import (maskinverifisert,
-    12 CSS-sjekker + 4 logikksjekker mot isolert harness); Morfars visuelle
-    bekreftelse på ekte telefon i produksjon gjenstår, samme mønster som
-    P41–P52 (krever ekte AI-import: Supabase-innlogging + Gemini-kall)
-  - P52s prod-sjekk — redusert linjeavstand i «Ny økt» (maskinverifisert,
-    5 sjekker); Morfars visuelle bekreftelse i produksjon gjenstår
   - P33s langtidssjekk — «Nå»-knappen etter skoleslutt (juli 2027 med 26/27
     aktivt); maskinverifisert, ekte manuell bekreftelse skjer naturlig når
     datoen inntreffer
   - P43s prod-sjekk — kosmetikken er maskinverifisert (18 sjekker) og merget;
     Morfars visuelle bekreftelse i produksjon gjenstår (ingen preview-deploy,
     samme mønster som P41/P42)
-  - P44s prod-test — migrasjon 022 kjørt og `ai-parse-sessions` redeployet
-    (begge bekreftet 12. august 2026); ekte funksjonstest i produksjon med
-    tekst som blander flere klasser (én egen + én fremmed) gjenstår
-    (maskinverifisert med 41 sjekker i mellomtiden, samme mønster som
-    P41–P43)
+
+  **Lukket av Morfar 30. august 2026 (uten individuell prod-verifisering av
+  hvert punkt, eksplisitt akseptert av Morfar):** P44, P52, P53, P61, P63.
+
+  **P54 bekreftet fungerende i produksjon 30. august 2026** — men Morfar er
+  ikke fornøyd med at hurtigstart-veiledningen åpnes i egen fane; ønsker en
+  lukkbar boks i stedet. Lagt i Backlogg → «Klar til bygging» som eget punkt
+  (se nedenfor), da dette nå er en UX-endring, ikke en gjenstående
+  prod-sjekk.
 
 ---
 
@@ -260,6 +239,15 @@ endring i `for-laerere.html`.
 > Innholdet dupliseres ikke hit.
 
 ### Klar til bygging
+
+- **P54: Hurtigstart-veiledning som lukkbar boks i stedet for ny fane**
+  (Morfar, 30. august 2026, etter prod-bekreftelse av P54). Veiledningen
+  fungerer og åpnes/sendes automatisk til nye brukere etter invitasjon, men
+  Morfar ønsker den heller vist som en boks (modal/overlay) med en
+  lukkeknapp inne i appen, ikke i en egen nettleserfane. Design-punkter å
+  avklare før bygging: skal boksen fortsatt være tilgjengelig fra samme
+  sted/lenke som i dag (bare med annen presentasjon), og skal den lukkes
+  med samme «X»-mønster som andre modaler i appen (`.settings-close`).
 
 - **Oversett rå Postgres-feiltekst i feiloverlayet til lesbar norsk** (P58).
   I dag vises f.eks. `new row for relation "subjects" violates check
