@@ -1114,6 +1114,7 @@ tr:hover td { background: var(--primær-svak); }
   .side-wrap  { padding: 16px 16px 40px; }
   .kort       { padding: 14px; }
   .login-kort { padding: 20px; }
+  .login-valg { flex-direction: column; }
   .modal      { padding: 16px; }
   .admin-rad  { gap: 6px; }
 }
@@ -1196,7 +1197,21 @@ select.felt, select.select { background: var(--bg-kort); color: var(--tekst); fo
   background: var(--bg-kort); border-radius: var(--radius);
   box-shadow: var(--skygge); padding: 32px; width: 100%; max-width: 380px;
 }
-.login-kort h2 { margin-bottom: 16px; font-size: 1.1rem; }
+.login-kort h2 { margin-bottom: 4px; font-size: 1.1rem; }
+.login-ingress { color: var(--tekst-svak); font-size: .9rem; margin-bottom: 16px; }
+.login-skille {
+  display: flex; align-items: center; gap: 10px;
+  margin: 20px 0 14px; color: var(--tekst-svak); font-size: .82rem;
+}
+.login-skille::before, .login-skille::after {
+  content: ""; flex: 1; height: 1px; background: var(--kant);
+}
+.login-valg { display: flex; gap: 10px; }
+.login-valg .btn { flex: 1; justify-content: center; }
+.login-elev-lenke {
+  margin-top: 18px; text-align: center; font-size: .8rem; color: var(--tekst-svak);
+}
+.login-elev-lenke a { color: var(--tekst-svak); text-decoration: underline; }
 .felt-label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: 4px; margin-top: 12px; }
 
 /* ── Laerer/admin-layout ─────────────────────────────────────────── */

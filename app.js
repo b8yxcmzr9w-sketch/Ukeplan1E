@@ -601,7 +601,8 @@ function renderLoginForm() {
     }
   }})
 
-  kort.appendChild(el('h2', {}, 'Logg inn'))
+  kort.appendChild(el('h2', {}, 'For lærere'))
+  kort.appendChild(el('p', { class: 'login-ingress' }, 'Logg inn for å planlegge uka for klassen din.'))
   kort.appendChild(feilMelding)
   form.appendChild(el('label', { class: 'felt-label' }, 'E-post'))
   form.appendChild(el('input', { name: 'email', type: 'email', class: 'felt input', required: 'true', placeholder: 'din@epost.no' }))
@@ -636,10 +637,28 @@ function renderLoginForm() {
 
   kort.appendChild(form)
 
+  // P66: skille + sekundærvalg (erstatter tidligere tekstlenke «Be om tilgang»)
+  const skille = el('div', { class: 'login-skille' }, el('span', {}, 'Ikke bruker ennå?'))
+  kort.appendChild(skille)
+
+  const valgRad = el('div', { class: 'login-valg' })
+
   // P57: uinnlogget tilgangsforespørsel
-  const tilgangBtn = el('button', { type: 'button', class: 'btn-lenke', style: 'margin-top:6px;font-size:.85rem;color:var(--tekst-svak);background:none;border:none;cursor:pointer;display:block;width:100%;text-align:center' }, 'Har du ikke konto? Be om tilgang')
+  const tilgangBtn = el('button', { type: 'button', class: 'btn btn-s' }, 'Be om tilgang')
   tilgangBtn.addEventListener('click', () => visBeOmTilgangModal())
-  kort.appendChild(tilgangBtn)
+  valgRad.appendChild(tilgangBtn)
+
+  const presentasjonBtn = el('button', { type: 'button', class: 'btn btn-s' }, 'Se hva Ukeplan1E er')
+  presentasjonBtn.addEventListener('click', () => {
+    window.open(`${location.pathname.replace(/index\.html$/, '')}for-laerere.html`, '_blank', 'noopener')
+  })
+  valgRad.appendChild(presentasjonBtn)
+
+  kort.appendChild(valgRad)
+
+  // P66: diskret lenke til elev-/foresatt-forsiden
+  const elevLenke = el('p', { class: 'login-elev-lenke' }, 'Er du elev eller foresatt? Gå til ', el('a', { href: '#/' }, 'forsiden'), ' og velg klassen din.')
+  kort.appendChild(elevLenke)
 
   wrap.appendChild(kort)
   main.appendChild(wrap)
