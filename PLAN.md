@@ -139,6 +139,15 @@ style.css. Ferdig!». Logoen skulle beholdes (ingen endring av header/logo).
       fanger ev. felter som ikke bruker `.felt`-klassen.
 - [x] Bump `?v=20260830d` (kun CSS — JS uendret denne runden, samme mønster
       som P43).
+### Justering 2 (samme økt, etter Morfars sammenligning mot originalen)
+Morfar viste side-om-side-skjermbilder: ny stil hadde for stor luft mellom
+badge/tittel/detaljer sammenlignet med den gamle, tette kortstilen.
+- [x] `.okt-kort`: padding tilbake til `10px 12px` (var `13px 14px 14px`),
+      flex-`gap` redusert til `4px` (var `8px`).
+- [x] `.session-card__meeting/info/teacher`: `margin-top` redusert til
+      `1px` (var `2px`), skillelinjen over lærernavn strammet inn
+      (`padding-top:4px; margin-top:3px`, var `9px`/`6px`).
+- [x] Bump `?v=20260830e` (kun CSS).
 - [ ] Manuell visuell test i nettleser (PC + mobil) — IKKE gjort i denne
       økten (ingen kjørende nettleser tilgjengelig i dette miljøet). Kun
       kode-/diffsjekk. Morfar bør sjekke branch-previewen før merge.

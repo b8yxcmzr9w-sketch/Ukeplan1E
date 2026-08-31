@@ -306,8 +306,8 @@ header .spacer { flex: 1; }
   border-radius: var(--radius);
   box-shadow: var(--skygge);
   transition: box-shadow 120ms ease;
-  padding: 13px 14px 14px;
-  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
   border-left: 4px solid var(--økt-kant);
   position: relative;
   cursor: default;
@@ -866,10 +866,10 @@ tr:hover td { background: var(--primær-svak); }
 /* ── Økt-kort sub-elementer ──────────────────────────────────────── */
 .session-card__meeting,
 .session-card__info,
-.session-card__teacher { font-size: .8125rem; color: var(--tekst-svak); margin-top: 2px; word-break: break-word; overflow-wrap: break-word; }
+.session-card__teacher { font-size: .78rem; color: var(--tekst-svak); margin-top: 1px; word-break: break-word; overflow-wrap: break-word; }
 .session-card__meeting { display: flex; gap: 6px; align-items: flex-start; }
-.session-card__info { font-style: italic; line-height: 1.4; }
-.session-card__teacher { font-size: .75rem; border-top: 1px solid var(--kant); padding-top: 9px; margin-top: 6px; }
+.session-card__info { font-style: italic; line-height: 1.3; }
+.session-card__teacher { font-size: .74rem; border-top: 1px solid var(--kant); padding-top: 4px; margin-top: 3px; }
 .session-card__class {
   display: block; font-size: .75rem; font-weight: 700;
   color: var(--primær); margin-bottom: 4px; letter-spacing: .02em;
