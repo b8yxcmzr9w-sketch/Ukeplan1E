@@ -73,6 +73,96 @@
 
 ---
 
+## Kartlegging: parti-checkboxes mangler i økt-skjema
+
+**Ikke P-nummerert ennå** — dette er kun kartlegging/diagnose, ingen kode
+er endret. P-nummer tildeles når/hvis fikset skal implementeres.
+
+**Melding fra Morfar:** Faget «Produksjon» er satt opp i admin-panelet med
+inndelingstype «Parti (innenfor klassen)», maks 2, navn P1/P2 — men
+«Parti/gruppe»-raden er skjult i både «+ Ny økt» og «Rediger økt», så
+partiene kan ikke velges på en økt.
+
+### Funn
+
+1. **To forskjellige steder oppretter `subject_divisions`, og kun ett av
+   dem er riktig for partier:**
+   - **Admin → Fag-fane → «Rediger fag»** (`visRedigerFagModal`,
+     app.js linje 5143–5322) setter `has_parti`/`has_gruppe`/`max_divisions`
+     på `subjects`-raden (denne delen har feilsjekk og virker), men
+     oppretter/oppdaterer selve `subject_divisions`-radene UTEN `class_id`
+     (linje 5193–5204, spesielt `insert`-kallet på linje 5198). Dette er
+     stedet Morfar brukte («i admin-panelet»).
+   - **Lærervisning → Klasse-admin-fane → «Partier»**
+     (inni `renderKlasseAdminInnhold`, app.js linje 4430–4483) oppretter
+     partier korrekt MED `class_id: aktivKlasse.id` satt (linje 4472).
+     Dette er trolig ikke der Morfar var.
+
+2. **Databasens CHECK-constraint (migrasjon 017,
+   `chk_parti_har_klasse`) krever at `division_type='parti'` ALLTID har
+   `class_id IS NOT NULL`** (ellers feiler INSERT/UPDATE på DB-nivå).
+   `visRedigerFagModal` sin division-insert (punkt 1 over) prøver å sette
+   inn `division_type: 'parti'` med `class_id` uspesifisert → NULL →
+   **constraint-brudd, INSERT-en feiler.**
+
+3. **Feilen fanges ikke opp i UI:** `insert`/`update`-kallene på
+   `subject_divisions` i `visRedigerFagModal` (linje 5190, 5196, 5198, 5202)
+   sjekker ALDRI `error`-verdien fra Supabase-kallet (i motsetning til
+   `subjects`-lagringen rett over, linje 5175/5178–5180, som gjør
+   `if (error) throw error`). Modalen lukkes med «Lagret»-oppførsel selv om
+   `subject_divisions`-raden aldri ble skrevet.
+
+4. **Hvorfor Morfar likevel «ser» P1/P2 i skjemaet:** Navnefeltene i
+   `visRedigerFagModal` (`oppdaterDivNavn`, linje 5292–5310) viser ALLTID
+   etikettene «P1:»/«P2:» generert fra løkkeindeksen
+   (`standardNavn = divType === 'parti' ? \`P${i+1}\` : ...`), uavhengig av
+   om det faktisk finnes lagrede rader i `subject_divisions`
+   (`eksisterendeDivs`). Så skjemaet ser «riktig konfigurert» ut ved hvert
+   besøk, selv om databasen står tom for dette faget.
+
+**Konklusjon: hypotese (a) — data mangler — bekreftet som mest sannsynlig
+årsak,** ikke (b) query-feil eller (c) RLS.
+
+### Om (b) og (c) — sjekket, ikke feilen
+
+- `.or('class_id.is.null,class_id.eq.${classId}')` i
+  `oppdaterDivisionCheckboxes` (linje 3150–3167 i «Ny økt» og motstykket i
+  «Rediger økt», linje 3208+) er korrekt Supabase-js/PostgREST-syntaks —
+  ANDes med de foregående `.eq()`/`.is()`-leddene som forventet, ingen
+  kjent rekkefølge-quirk her. Hadde `subject_divisions`-radene faktisk
+  eksistert (uansett `class_id`-verdi), ville de blitt hentet.
+- RLS: `subject_divisions_read_any` er åpen for alle innloggede
+  (kun `deleted_at IS NULL`-filter) — ikke innskrenket til `class_id`.
+  Ikke synderen.
+
+### Verifiseringssteg for Morfar (Supabase SQL Editor)
+
+```sql
+select id, subject_id, division_type, class_id, name, deleted_at
+from subject_divisions
+where subject_id = (select id from subjects where name = 'Produksjon');
+```
+
+Forventet resultat ved bekreftet hypotese: **0 rader** (eller rader med
+`class_id = NULL` til tross for `division_type = 'parti'`, hvis en eldre
+uheldig tilstand fra før migrasjon 017 skulle finnes). Gir 0 rader →
+hypotesen er bekreftet: INSERT-en har aldri lyktes.
+
+### Foreslått fiks (til senere P-nummerert økt, IKKE implementert nå)
+
+- `visRedigerFagModal` sin division-lagring bør enten (i) flytte
+  parti-opprettelse til klasse-scoped flyt (som Klasse-admin-fanen
+  allerede gjør riktig), eller (ii) selv kreve/sette `class_id` når
+  `divType === 'parti'` — og i begge tilfeller legge til `if (error) throw
+  error` på alle `subject_divisions`-kallene (linje 5190/5196/5198/5202) så
+  fremtidige DB-avslag ikke lenger forsvinner stille.
+- Bør avklares med Morfar: skal «Rediger fag»-modalen i det hele tatt tilby
+  å opprette partier (som krever en klasse), eller skal den kun styre
+  `has_parti`/`has_gruppe`/`max_divisions` og la selve parti-opprettelsen
+  skje i Klasse-admin-fanen (der class_id naturlig finnes)?
+
+---
+
 ## Økt (P68): Visuell oppussing av uke-grid
 
 **Branch:** `claude/calendar-view-styling-17z6je` (miljøets tildelte branch).
