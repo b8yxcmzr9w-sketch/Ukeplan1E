@@ -177,6 +177,12 @@ fargefeltet rundt faget skal ha full bredde uavhengig av fagnavnets lengde
 - [x] `.fag-badge`: `display: inline-block` → `display: block` (fyller nå
       kortets fulle innholdsbredde uansett fagnavnets lengde).
 - [x] Bump `?v=20260830g` (kun CSS).
+
+### Justering 5 (samme økt — aktivitetstittel skal helst få plass på én linje)
+- [x] `.aktivitet`: `font-size` redusert til `.9rem` (var `1.05rem`, som var
+      selve opphavet til den ekstra linjebruken sammenlignet med
+      originalens `.9rem`).
+- [x] Bump `?v=20260830h` (kun CSS).
 - [ ] Manuell visuell test i nettleser (PC + mobil) — IKKE gjort i denne
       økten (ingen kjørende nettleser tilgjengelig i dette miljøet). Kun
       kode-/diffsjekk. Morfar bør sjekke branch-previewen før merge.

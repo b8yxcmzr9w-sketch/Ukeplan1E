@@ -328,7 +328,7 @@ header .spacer { flex: 1; }
 .felles-badge { font-size: .74rem; color: var(--tekst-svak); }
 .felles-velger { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .felles-velger__valg { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: .9rem; }
-.aktivitet { font-weight: 600; line-height: 1.2; font-size: 1.05rem; color: var(--tekst); margin: 3px 0 0; word-break: break-word; }
+.aktivitet { font-weight: 600; line-height: 1.2; font-size: .9rem; color: var(--tekst); margin: 3px 0 0; word-break: break-word; }
 .okt-meta { font-size: .78rem; color: var(--tekst-svak); margin-top: 3px; }
 /* Romsliggjør kortet slik at kebab-knappen ikke overlapper innhold */
 .okt-kort--handlinger { padding-right: 28px; }
