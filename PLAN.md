@@ -15,14 +15,21 @@
   å matche skjermbildet Morfar viste. Utskrifts-CSS-en i den innsendte
   koden ble IKKE brukt — appen har fra før en mer komplett/riktig
   A4-liggende utskriftsstil; ny A4-stående-variant ville vært en
-  regresjon. Cache-bust `20260830c`. Branch:
-  `claude/calendar-view-styling-17z6je` (miljøets tildelte navn).
+  regresjon. Endelig cache-bust `20260830i`, etter flere runder finjustering
+  av Morfar (se øktens sjekkliste-underseksjoner Justering 1–6): tettere
+  kort-spacing (fjernet en flex-gap-feil som var hovedårsaken til for stor
+  luft), fagbadge med full kortbredde uansett fagnavnets lengde, mindre
+  fontstørrelse på aktivitetstittelen (`.9rem`) for bedre sjanse til én
+  linje, og skillelinjen over lærernavn beholdt til slutt (lagt tilbake
+  etter en kort fjerning). Branch: `claude/calendar-view-styling-17z6je`
+  (miljøets tildelte navn).
   **NB — bevisst reversering av en tidligere invariant:** datoen i
   dag-kolonnene vises nå INLINE ved siden av dagnavnet, ikke lenger på
   egen linje under (se CLAUDE.md, avsnittet «Dag-kolonner»). `node --check
-  app.js` OK. Ingen manuell test i nettleser er gjort ennå — kun
-  kode-/syntakssjekk. Merget til main: NEI, venter på PR + Morfars
-  «merge».)
+  app.js` OK gjennom hele økten. Ingen automatisert nettlesertest ble kjørt
+  (ingen nettleser tilgjengelig i miljøet) — Morfar godkjente utseendet
+  visuelt på branch-previewen og ga eksplisitt «Godkjent pr og merge».
+  Merget til main via PR #181 (squash).)
 - **Nest siste fullførte P-nummer:** P67 (Persistent Login / «Husk meg» —
   avhukingsboks på innloggingsskjermen, opt-in og av som standard.
   Supabase-klienten peker nå mot `sessionStorage` som default (kun denne
@@ -40,9 +47,9 @@
   testet funksjonen på branch-previewen (samme ekte database som
   produksjon) FØR merge og bekreftet at den fungerer. Merget til main via
   PR #179 (squash).)
-- **Pågående:** P68 (venter på PR + Morfars «merge», se STATUSLINJE over)
+- **Pågående:** ingen
 - **Neste ledige P-nummer:** P69
-- **Dato sist oppdatert:** 30. august 2026
+- **Dato sist oppdatert:** 31. august 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
@@ -195,9 +202,12 @@ Justering 3, med de eksakte verdiene fra sin opprinnelige CSS-kode.
 - [x] Ingenting annet rørt (fagbadge full bredde og aktivitetstittelens
       fontstørrelse er uendret, som avtalt).
 - [x] Bump `?v=20260830i` (kun CSS).
-- [ ] Manuell visuell test i nettleser (PC + mobil) — IKKE gjort i denne
-      økten (ingen kjørende nettleser tilgjengelig i dette miljøet). Kun
-      kode-/diffsjekk. Morfar bør sjekke branch-previewen før merge.
+- [x] Morfars visuelle godkjenning av branch-previewen (PC): «Godkjent pr
+      og merge» mottatt 31. august 2026. Ingen automatisert nettlesertest
+      ble kjørt fra Claude Code sin side i denne økten (ingen nettleser
+      tilgjengelig i miljøet), men Morfar har selv sett gjennom flere
+      runder med skjermbilder og justeringer underveis.
+- [x] PR #181 merget til main (squash) 31. august 2026.
 
 ---
 
