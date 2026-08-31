@@ -161,6 +161,60 @@ hypotesen er bekreftet: INSERT-en har aldri lyktes.
   `has_parti`/`has_gruppe`/`max_divisions` og la selve parti-opprettelsen
   skje i Klasse-admin-fanen (der class_id naturlig finnes)?
 
+### Morfars bekreftelse (etter kartlegging)
+
+Skjermbilde av «Importer økter med AI» viser at Parti/gruppe-dropdownen for
+Produksjon-økten er tom (kun «—») for klasse 1R, nøyaktig som forventet
+siden `subject_divisions` ikke har noen rader for faget (INSERT-en fra
+«Rediger fag» feilet stille). Ønske: lærere skal kunne tilordne en
+Produksjon-økt til P1 eller P2, «tilsvarende som for YFF-gruppene»
+(YFF er `division_type='gruppe'`, `class_id=NULL` — fungerer i dag).
+
+---
+
+## Økt (P69): Parti-tilordning på økter fungerer ikke — «Rediger fag»
+## kan ikke lagre partier
+
+**Branch:** `claude/okt-parti-gruppe-checkboxes-pmkysn` (miljøets tildelte
+branch — samme branch som kartleggingen).
+**Scope:** KUN `visRedigerFagModal` i `app.js` (linje ~5143–5322), pluss
+cache-bust i `index.html`. Ingen endring i «Ny økt»/«Rediger økt»/AI-import
+sine checkbox-/dropdown-funksjoner (de er allerede korrekte — bekreftet i
+kartleggingen). Ingen endring i Klasse-admin-fanens parti-seksjon (linje
+4430–4483 — allerede korrekt). Ingen SQL-migrasjon (det finnes ingen
+korrupte rader å rydde opp i — INSERT-forsøkene feilet før noe ble
+skrevet).
+
+### Plan
+
+- [ ] I `visRedigerFagModal`: når `divType === 'parti'`, IKKE forsøk å
+      opprette/oppdatere `subject_divisions`-rader fra denne modalen (den
+      kjenner ikke til klasse, og ethvert slikt forsøk brytes uansett av
+      DB-constrainten `chk_parti_har_klasse`). Erstatt
+      navn-inndeling-feltene for parti-tilfellet med en informasjonstekst:
+      «Partier opprettes per klasse under Lærervisning → Klasse-admin →
+      Partier, etter at dette er lagret.» `has_parti`/`max_divisions`
+      lagres fortsatt her som i dag (den delen virker).
+- [ ] Behold navn-inndeling + lagringslogikk UENDRET for
+      `divType === 'gruppe'` (class_id er NULL som forventet — denne
+      fungerer allerede, jf. YFF).
+- [ ] Legg til `if (error) throw error` på de gjenværende
+      `subject_divisions`-kallene (gruppe-lagring, linje ~5190/5196/5202)
+      slik at fremtidige DB-avslag vises som feilmelding i stedet for å
+      forsvinne stille.
+- [ ] `node --check app.js` for syntakssjekk (ingen nettleser i dette
+      miljøet).
+- [ ] Cache-bust `?v=` i `index.html` (kun JS endres).
+- [ ] Commit + push til `claude/okt-parti-gruppe-checkboxes-pmkysn`.
+- [ ] STATUSLINJE i PLAN.md oppdatert i samme commit.
+- [ ] **Manuelt trinn for Morfar (kan ikke gjøres av Claude — krever
+      innlogging i produksjon):** Lærervisning → Klasse-admin → velg
+      klasse 1R → «Partier» → opprett P1 og P2 for faget Produksjon der.
+      Deretter bekrefte i «+ Ny økt»/«Rediger økt»/AI-import at
+      Parti/gruppe-raden nå viser P1/P2 som valgbare.
+- [ ] Morfars visuelle prod-bekreftelse av punktet over — ikke
+      maskinverifiserbart (krever ekte database + innlogging).
+
 ---
 
 ## Økt (P68): Visuell oppussing av uke-grid
