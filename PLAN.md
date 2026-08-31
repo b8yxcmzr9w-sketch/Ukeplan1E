@@ -126,10 +126,22 @@ style.css. Ferdig!». Logoen skulle beholdes (ingen endring av header/logo).
 - [x] Bump `?v=20260830c` i `index.html` (CSS + JS).
 - [x] CLAUDE.md: «Dag-kolonner»-invarianten oppdatert.
 - [x] STATUSLINJE i PLAN.md oppdatert i samme commit.
+- [x] Commit + push + PR (PR #181).
+
+### Justering (samme økt, etter Morfars preview-sjekk)
+- [x] `.aktivitet` linjeavstand redusert til `1.2` (var `1.3`).
+- [x] `.session-card__info` linjeavstand redusert til `1.4` (var `1.5`).
+- [x] `.dag-kol` fikk hvit bakgrunn (`#ffffff`), `border-radius:8px`,
+      `padding:12px` — samme mønster som resten av «hvitere» ønsket.
+- [x] Ny global `input, textarea, select { background:#fff; border:1px
+      solid var(--kant) }` lagt til rett over `.felt`-reglene (som fortsatt
+      har høyere spesifisitet og styrer fokusstil/full bredde uendret) —
+      fanger ev. felter som ikke bruker `.felt`-klassen.
+- [x] Bump `?v=20260830d` (kun CSS — JS uendret denne runden, samme mønster
+      som P43).
 - [ ] Manuell visuell test i nettleser (PC + mobil) — IKKE gjort i denne
       økten (ingen kjørende nettleser tilgjengelig i dette miljøet). Kun
-      kode-/syntakssjekk. Morfar bør sjekke branch-previewen før merge.
-- [ ] Commit + push + PR.
+      kode-/diffsjekk. Morfar bør sjekke branch-previewen før merge.
 
 ---
 
