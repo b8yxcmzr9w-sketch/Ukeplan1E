@@ -183,6 +183,18 @@ fargefeltet rundt faget skal ha full bredde uavhengig av fagnavnets lengde
       selve opphavet til den ekstra linjebruken sammenlignet med
       originalens `.9rem`).
 - [x] Bump `?v=20260830h` (kun CSS).
+
+### Justering 6 (samme økt — skillelinjen over lærernavn tilbake)
+Morfar ba spesifikt om å legge tilbake skillelinjen som ble fjernet i
+Justering 3, med de eksakte verdiene fra sin opprinnelige CSS-kode.
+- [x] `.session-card__teacher`: `border-top: 1px solid var(--kant);
+      padding-top: 9px; margin-top: 2px;` lagt til som egen regel (var
+      `var(--border-card-light)` i oppgaveteksten — den variabelen finnes
+      ikke i vårt merge-inn-i-eksisterende-tema-opplegg, så `var(--kant)`
+      er brukt igjen, samme mønster som Justering 1).
+- [x] Ingenting annet rørt (fagbadge full bredde og aktivitetstittelens
+      fontstørrelse er uendret, som avtalt).
+- [x] Bump `?v=20260830i` (kun CSS).
 - [ ] Manuell visuell test i nettleser (PC + mobil) — IKKE gjort i denne
       økten (ingen kjørende nettleser tilgjengelig i dette miljøet). Kun
       kode-/diffsjekk. Morfar bør sjekke branch-previewen før merge.
