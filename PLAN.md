@@ -148,6 +148,27 @@ badge/tittel/detaljer sammenlignet med den gamle, tette kortstilen.
       `1px` (var `2px`), skillelinjen over lærernavn strammet inn
       (`padding-top:4px; margin-top:3px`, var `9px`/`6px`).
 - [x] Bump `?v=20260830e` (kun CSS).
+
+### Justering 3 (samme økt — luften var fortsatt for stor)
+Morfar bekreftet at justering 2 ikke var nok. Rotårsak funnet: `.okt-kort`
+var satt til `display:flex; flex-direction:column; gap:4px`, og flex
+`gap` legger IKKE sammen med barnas egne marginer (ingen «collapsing») —
+det la 4px OVENPÅ hver av barnas egne mellomrom, i tillegg til at
+`.fag-badge` (en `<div>`) kun beholdt sin kompakte pille-form fordi
+`align-self:flex-start` overstyrte flex-strekkingen.
+- [x] `.okt-kort`: flex/gap fjernet helt — tilbake til vanlig blokk-flyt
+      (samme som opprinnelig, før hele P68). Mellomrom styres nå kun av
+      hvert barns egen `margin-top`.
+- [x] `.fag-badge`: `display: inline-block` lagt til eksplisitt (i stedet
+      for å stole på flex+`align-self` for å unngå full bredde) —
+      matcher samme mønster som `.mp-fag-badge` andre steder i filen.
+      `flex-shrink`/`align-self` fjernet (ikke lenger relevant).
+- [x] `.aktivitet`: `margin: 3px 0 0` (var `0`) — egen liten avstand til
+      badgen over, nå som flex-gap er borte.
+- [x] `.session-card__teacher`: skillelinjen (`border-top`) over lærernavn
+      fjernet helt — original hadde ingen linje der, kun samme
+      `margin-top:2px` som møtepunkt/info.
+- [x] Bump `?v=20260830f` (kun CSS).
 - [ ] Manuell visuell test i nettleser (PC + mobil) — IKKE gjort i denne
       økten (ingen kjørende nettleser tilgjengelig i dette miljøet). Kun
       kode-/diffsjekk. Morfar bør sjekke branch-previewen før merge.
