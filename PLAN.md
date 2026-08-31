@@ -169,6 +169,14 @@ det la 4px OVENPÅ hver av barnas egne mellomrom, i tillegg til at
       fjernet helt — original hadde ingen linje der, kun samme
       `margin-top:2px` som møtepunkt/info.
 - [x] Bump `?v=20260830f` (kun CSS).
+
+### Justering 4 (samme økt — fagbadge skal ha full bredde)
+Morfar bekreftet at linjeavstanden nå er bra, og ba om ett tillegg:
+fargefeltet rundt faget skal ha full bredde uavhengig av fagnavnets lengde
+(i stedet for å krympe rundt teksten).
+- [x] `.fag-badge`: `display: inline-block` → `display: block` (fyller nå
+      kortets fulle innholdsbredde uansett fagnavnets lengde).
+- [x] Bump `?v=20260830g` (kun CSS).
 - [ ] Manuell visuell test i nettleser (PC + mobil) — IKKE gjort i denne
       økten (ingen kjørende nettleser tilgjengelig i dette miljøet). Kun
       kode-/diffsjekk. Morfar bør sjekke branch-previewen før merge.
