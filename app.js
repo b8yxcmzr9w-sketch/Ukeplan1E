@@ -2405,7 +2405,10 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     .in('type', ['ferie', 'helligdag', 'planleggingsdag'])
   if (interval) calQuery = calQuery.gte('end_date', interval.fra).lte('start_date', interval.til)
 
-  const [{ data: sessions }, { data: calEvents }] = await Promise.all([alleOkterQuery, calQuery])
+  const userClassesQuery = sb.from('user_classes').select('class_id').eq('user_id', APP.profile.id)
+
+  const [{ data: sessions }, { data: calEvents }, { data: mineKlasserRader }] =
+    await Promise.all([alleOkterQuery, calQuery, userClassesQuery])
 
   clearEl(container)
 
@@ -2414,6 +2417,21 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     return
   }
 
+  // Flerdagsarrangementer for lærerens egne klasser + skolefelles (class_id null).
+  // Kan redigeres/slettes herfra av kontaktlærer/admin (samme RLS-begrensning
+  // som Klasse-admin-fanen); vises uansett rolle, som info, til alle lærere.
+  const isKontakt = APP.profile?.role === 'kontaktlaerer' || APP.isAdminActive
+  const mineKlasseIder = (mineKlasserRader || []).map(r => r.class_id).filter(Boolean)
+  let mdeQuery = sb.from('multi_day_events').select('*, classes(name)')
+    .eq('school_id', APP.school.id)
+    .is('deleted_at', null)
+  mdeQuery = mineKlasseIder.length
+    ? mdeQuery.or(`class_id.is.null,class_id.in.(${mineKlasseIder.join(',')})`)
+    : mdeQuery.is('class_id', null)
+  if (aktivtSkolear) mdeQuery = mdeQuery.eq('school_year', aktivtSkolear)
+  if (interval) mdeQuery = mdeQuery.gte('end_date', interval.fra).lte('start_date', interval.til)
+  const { data: mdeEvents } = await mdeQuery
+
   // Grupper økter per uke
   const byWeek = {}
   for (const s of sessions) {
@@ -2421,31 +2439,36 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     byWeek[s.week_nr].push(s)
   }
 
-  // Map skolerute-hendelser til ukene de dekker, med dag-spennet (man–fre) i HVER
-  // uke. Jul/påske kan spenne flere uker → vises i hver uke med riktig dag-spenn.
+  // Map skolerute-hendelser (og flerdagsarrangementer) til ukene de dekker,
+  // med dag-spennet (man–fre) i HVER uke. Jul/påske og flerdagsarrangementer
+  // kan spenne flere uker → vises i hver uke med riktig dag-spenn.
   const sluttPos = ukePosisjon(schoolEnd, schoolStart)
   const eventsByWeek = {}
-  for (const ev of (calEvents || [])) {
-    const dagerPerUke = {}  // uke → Set(ukedag 1–5)
-    const d = new Date(ev.start_date + 'T00:00:00')
-    const slutt = new Date(ev.end_date + 'T00:00:00')
-    let guard = 0
-    while (d <= slutt && guard++ < 400) {
-      const dow = d.getDay()  // Man=1 … Fre=5 (lør/søn ignoreres)
-      if (dow >= 1 && dow <= 5) {
-        const w = getISOWeek(d)
-        if (!dagerPerUke[w]) dagerPerUke[w] = new Set()
-        dagerPerUke[w].add(dow)
+  function leggTilEventsByUke(events) {
+    for (const ev of (events || [])) {
+      const dagerPerUke = {}  // uke → Set(ukedag 1–5)
+      const d = new Date(ev.start_date + 'T00:00:00')
+      const slutt = new Date(ev.end_date + 'T00:00:00')
+      let guard = 0
+      while (d <= slutt && guard++ < 400) {
+        const dow = d.getDay()  // Man=1 … Fre=5 (lør/søn ignoreres)
+        if (dow >= 1 && dow <= 5) {
+          const w = getISOWeek(d)
+          if (!dagerPerUke[w]) dagerPerUke[w] = new Set()
+          dagerPerUke[w].add(dow)
+        }
+        d.setDate(d.getDate() + 1)
       }
-      d.setDate(d.getDate() + 1)
-    }
-    for (const w of Object.keys(dagerPerUke).map(Number)) {
-      if (ukePosisjon(w, schoolStart) > sluttPos) continue  // utenfor skoleårsvinduet
-      const dager = [...dagerPerUke[w]]
-      if (!eventsByWeek[w]) eventsByWeek[w] = []
-      eventsByWeek[w].push({ ev, dagFra: Math.min(...dager), dagTil: Math.max(...dager) })
+      for (const w of Object.keys(dagerPerUke).map(Number)) {
+        if (ukePosisjon(w, schoolStart) > sluttPos) continue  // utenfor skoleårsvinduet
+        const dager = [...dagerPerUke[w]]
+        if (!eventsByWeek[w]) eventsByWeek[w] = []
+        eventsByWeek[w].push({ ev, dagFra: Math.min(...dager), dagTil: Math.max(...dager) })
+      }
     }
   }
+  leggTilEventsByUke(calEvents)
+  leggTilEventsByUke((mdeEvents || []).map(ev => ({ ...ev, _mde: true })))
 
   // Vis-uker = union av økt-uker og skolerute-uker, i skoleår-rekkefølge (33→52→1→24)
   const uker = [...new Set([...Object.keys(byWeek), ...Object.keys(eventsByWeek)].map(Number))]
@@ -2479,12 +2502,16 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     ['nyttår', '🎆'],
   ]
   function fridagIkon(ev) {
+    if (ev._mde) return '📌'
     const navn = (ev.title || '').toLowerCase()
     for (const [nokkel, ikon] of FRIDAG_NAVN_IKON) if (navn.includes(nokkel)) return ikon
     return ev.type === 'planleggingsdag' ? '📋' : '🗓️'
   }
   // Skolerute-merke for én hendelse i én uke: dag/dato FØRST (som øktene), deretter
-  // ikon + tittel + type. Dag primært, dato som diskret støtte.
+  // ikon + tittel + type. Dag primært, dato som diskret støtte. Flerdagsarrangement
+  // (ev._mde) viser klassenavn (eller «alle klasser») i stedet for kalendertype, og
+  // får rediger/slett-knapper for kontaktlærer/admin (samme rettighet som
+  // Klasse-admin-fanen — RLS blokkerer andre uansett).
   function lagFridagMerke(fe, week) {
     const { ev, dagFra, dagTil } = fe
     const ikon = fridagIkon(ev)
@@ -2495,10 +2522,21 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     const datoFra = formatDatoNO(isoWeekToDate(kalAar, week, dagFra).toISOString().slice(0, 10))
     const datoTil = formatDatoNO(isoWeekToDate(kalAar, week, dagTil).toISOString().slice(0, 10))
     const datoTekst = dagFra === dagTil ? datoFra : `${datoFra}–${datoTil}`
-    return el('div', { class: 'min-plan-fridag' },
+    const merke = el('div', { class: 'min-plan-fridag' + (ev._mde ? ' min-plan-mde' : '') },
       el('span', { class: 'mp-fridag-dag' }, dagTekst),
       el('span', { class: 'mp-fridag-dato' }, ` ${datoTekst}`),
-      ` ${ikon} ${ev.title} · ${kalenderTypeNavn(ev.type)}`)
+      ` ${ikon} ${ev.title} · ${ev._mde ? (ev.classes?.name || 'alle klasser') : kalenderTypeNavn(ev.type)}`)
+    if (ev._mde && isKontakt) {
+      merke.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger arrangement',
+        onclick: () => visRedigerMDEModal(ev, reRender) }, '✏️'))
+      merke.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett arrangement',
+        onclick: async () => {
+          if (!confirm('Slette?')) return
+          await medLagreOverlay(() => sb.from('multi_day_events').delete().eq('id', ev.id))
+          reRender()
+        }}, '🗑️'))
+    }
+    return merke
   }
 
   // P42: kompakt økt-rad. Faste kolonner der tomme celler beholder bredden
@@ -2560,14 +2598,26 @@ async function renderAlleOkterTab(container, autoScroll = true) {
     const datoFra = formatDatoNO(isoWeekToDate(kalAar, week, dagFra).toISOString().slice(0, 10))
     const datoTil = formatDatoNO(isoWeekToDate(kalAar, week, dagTil).toISOString().slice(0, 10))
     const datoTekst = dagFra === dagTil ? datoFra : `${datoFra}–${datoTil}`
+    const typeTekst = ev._mde ? (ev.classes?.name || 'alle klasser') : kalenderTypeNavn(ev.type)
+    const tittelCelle = el('div', { class: 'mpk-tittel mpk-fridag-tekst' },
+      `${fridagIkon(ev)} ${ev.title} · ${typeTekst} `,
+      el('span', { class: 'mpk-hint' }, datoTekst))
+    if (ev._mde && isKontakt) {
+      tittelCelle.appendChild(el('button', { class: 'btn btn-ikon', title: 'Rediger arrangement',
+        onclick: () => visRedigerMDEModal(ev, reRender) }, '✏️'))
+      tittelCelle.appendChild(el('button', { class: 'btn btn-ikon btn-f', title: 'Slett arrangement',
+        onclick: async () => {
+          if (!confirm('Slette?')) return
+          await medLagreOverlay(() => sb.from('multi_day_events').delete().eq('id', ev.id))
+          reRender()
+        }}, '🗑️'))
+    }
     return el('div', { class: 'min-plan-rad mpk-rad mpk-fridag' },
       el('div', { class: 'mp-cb' }),
       el('div', { class: 'mpk-uke' }, visUke ? String(week) : ''),
       el('div', { class: 'mpk-dag' }, dagTekst),
       el('div', { class: 'mpk-klasse' }),
-      el('div', { class: 'mpk-tittel mpk-fridag-tekst' },
-        `${fridagIkon(ev)} ${ev.title} · ${kalenderTypeNavn(ev.type)} `,
-        el('span', { class: 'mpk-hint' }, datoTekst)))
+      tittelCelle)
   }
 
   // ── Bulk-valg ──────────────────────────────────────────────
@@ -4532,12 +4582,14 @@ async function visNyMDEModal(classId, onSave) {
     }
     await medLagreOverlay(async () => {
       const { error } = await sb.from('multi_day_events').insert({
+        school_id: APP.school.id,
         class_id: classId,
         title: titleInput.value,
-        description: descInput.value || null,
+        description: descInput.value || '',
         start_date: startInput.value,
         end_date: endInput.value,
         school_year: APP.school?.active_school_year,
+        created_by: APP.profile.id,
       })
       if (error) throw error
     })
@@ -4580,10 +4632,10 @@ async function visRedigerMDEModal(mde, onSave) {
     await medLagreOverlay(async () => {
       const { error } = await sb.from('multi_day_events').update({
         title: titleInput.value,
-        description: descInput.value || null,
+        description: descInput.value || '',
         start_date: startInput.value,
         end_date: endInput.value,
-      }).eq('id', mde.id)
+      }).eq('id', mde.id).eq('school_id', APP.school.id)
       if (error) throw error
     })
     modal.remove()

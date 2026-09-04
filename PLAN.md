@@ -2,7 +2,28 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
+- **Siste fullførte P-nummer:** P69 (RLS-fix for `multi_day_events`:
+  insert/update-kallene i `visNyMDEModal()`/`visRedigerMDEModal()` (app.js)
+  sendte ikke `school_id`, så RLS-policyen (som krever
+  `school_id = auth_school_id()`) blokkerte lagring/redigering av
+  flerdagsarrangementer. Opprett-modalen sender nå `school_id: APP.school.id`
+  i insert-objektet; rediger-modalen legger til `.eq('school_id',
+  APP.school.id)` som ekstra betingelse på update-kallet. Morfars
+  branch-preview-test avdekket to påfølgende feil i SAMME økt (fikset i
+  samme commit): `description`-feltet ble sendt som `null` i stedet for tom
+  streng (kolonnen er `not null default ''`), og `created_by` manglet helt i
+  insert-kallet (også `not null`) — begge rettet. Morfar ba deretter om at
+  flerdagsarrangementer også vises i «Alle mine økter»
+  (`renderAlleOkterTab`), samt et sted å redigere/slette dem der (eneste
+  eksisterende rediger/slett-UI lå i «Klasse-admin», kun synlig for
+  kontaktlærer/admin). Lagt til i samme økt: MDE-er for lærerens klasser +
+  skolefelles hentes og flettes inn i samme uke-gruppering som skoleruta
+  (📌-ikon, klassenavn i stedet for kalendertype), med ✏️/🗑️ på merket for
+  kontaktlærer/admin (RLS håndhever uansett hvem som faktisk får lagre).
+  `node --check app.js` OK. Cache-bust `app.js?v=20260830f`. Branch:
+  `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte navn).
+  Ekte funksjonstest i nettleser gjenstår etter denne siste utvidelsen.)
+- **Nest siste fullførte P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
   fargepalett/typografi for `.dag-tittel`, `.okt-kort`, `.fag-badge`,
   `.aktivitet` og `session-card__*`-detaljene, pluss ny «i dag»-utheving av
   dagens kolonne i elevvisning og lærervisningens «Min klasse»-fane.
@@ -30,7 +51,7 @@
   (ingen nettleser tilgjengelig i miljøet) — Morfar godkjente utseendet
   visuelt på branch-previewen og ga eksplisitt «Godkjent pr og merge».
   Merget til main via PR #181 (squash).)
-- **Nest siste fullførte P-nummer:** P67 (Persistent Login / «Husk meg» —
+- **Tidligere fullført P-nummer:** P67 (Persistent Login / «Husk meg» —
   avhukingsboks på innloggingsskjermen, opt-in og av som standard.
   Supabase-klienten peker nå mot `sessionStorage` som default (kun denne
   fanen), og huker man av «Husk meg» lagres sesjonen i en egen
@@ -48,8 +69,8 @@
   produksjon) FØR merge og bekreftet at den fungerer. Merget til main via
   PR #179 (squash).)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P69
-- **Dato sist oppdatert:** 31. august 2026
+- **Neste ledige P-nummer:** P70
+- **Dato sist oppdatert:** 4. september 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
@@ -70,6 +91,89 @@
   lukkbar boks i stedet. Lagt i Backlogg → «Klar til bygging» som eget punkt
   (se nedenfor), da dette nå er en UX-endring, ikke en gjenstående
   prod-sjekk.
+
+---
+
+## Økt (P69): RLS-fix for multi_day_events (mangler school_id)
+
+**Branch:** `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte
+branch).
+
+**Root cause:** Insert- og update-kallene mot `multi_day_events` i
+`visNyMDEModal()`/`visRedigerMDEModal()` (app.js) sendte ikke `school_id`.
+RLS-policyen på tabellen krever `school_id = auth_school_id()`, så uten
+feltet ble insert/update blokkert av policyen (stille feil for bruker).
+
+**Endringer:**
+- `visNyMDEModal()` — insert-objektet får nå `school_id: APP.school.id`.
+- `visRedigerMDEModal()` — update-kallet får en ekstra betingelse
+  `.eq('school_id', APP.school.id)` i tillegg til `.eq('id', mde.id)`.
+- Cache-bust: `app.js?v=20260830d` i `index.html`.
+
+**Oppfølging (samme økt, etter Morfars branch-preview-test):** første testrunde
+avdekket en NY feil, ikke sett på forhånd: `null value in column "description"
+of relation "multi_day_events" violates not-null constraint`. Root cause:
+`description`-kolonnen i skjemaet er `not null default ''`
+(`001_initial_schema.sql`), men koden sendte `descInput.value || null` —
+tom beskrivelse ble til eksplisitt `null`, som overstyrer default-verdien og
+brøt not-null-constrainten. Samtidig ble det oppdaget at insert-kallet i
+`visNyMDEModal()` heller ikke satte `created_by`, som også er `not null
+references users(id)` i skjemaet — ville gitt en ny feil rett etter
+description-fiksen. Rettet begge steder:
+- `visNyMDEModal()` og `visRedigerMDEModal()`: `description: descInput.value
+  || ''` (tom streng, ikke null)
+- `visNyMDEModal()`: lagt til `created_by: APP.profile.id` i insert-objektet
+  (samme mønster som andre insert-kall i app.js, f.eks. linje 3076/3371/3604)
+- Cache-bust bumpet videre til `app.js?v=20260830e`
+
+**Oppfølging 2 (samme økt, etter Morfars bekreftelse «Det fungerer nå, men
+det vises ikke i oversikten over alle mine økter»):** ikke en feil, men en
+avdekket avgrensning — `renderAlleOkterTab()` («Alle mine økter») spurte kun
+`sessions` + `school_calendar`, aldri `multi_day_events`. Flerdagsarrangementer
+vises derfor hittil KUN i klassens ukevisning (elev-/«Min klasse»-fanen), ikke
+i lærerens samlede oversikt. Morfar ba eksplisitt om at dette legges til, og
+fulgte opp med at han også manglet et sted å redigere/slette dem (siden eneste
+eksisterende rediger/slett-UI ligger i «Klasse-admin»-fanen, som kun
+kontaktlærer/admin ser). Løst i samme økt:
+- `renderAlleOkterTab()` henter nå i tillegg lærerens klasser (`user_classes`)
+  og `multi_day_events` for disse klassene + skolefelles (`class_id is null`),
+  avgrenset til aktivt skoleår/periode (samme mønster som skolerute-spørringen)
+- Flettet inn i samme `eventsByWeek`-kart som skoleruta (delt
+  `leggTilEventsByUke()`-hjelper, tagget `_mde: true` på hver rad) — gjenbruker
+  dermed ALL eksisterende uke-gruppering/sortering/kompakt-/detaljer-/
+  mobilvisning uendret, ingen egne render-grener
+- `fridagIkon()` gir flerdagsarrangement et eget ikon (📌); `lagFridagMerke()`
+  og `lagKompaktFridagRad()` viser klassenavn (eller «alle klasser») i stedet
+  for kalendertype for disse
+- Rediger (✏️)/slett (🗑️) lagt til på selve merket — synlig for
+  kontaktlærer/admin (`isKontakt`, samme sjekk som fane-synligheten), kaller
+  eksisterende `visRedigerMDEModal()` / samme slett-mønster som
+  Klasse-admin-fanen. RLS blokkerer uansett andre roller (samme policy som
+  P69), så UI-sjekken er kun for et ryddigere grensesnitt, ikke sikkerhet
+- Cache-bust bumpet videre til `app.js?v=20260830f`
+
+### Sjekkliste
+- [x] `school_id` lagt til i insert-kallet i `visNyMDEModal()`
+- [x] `.eq('school_id', APP.school.id)` lagt til i update-kallet i
+      `visRedigerMDEModal()`
+- [x] `description: descInput.value || ''` i begge modaler (ikke `null`,
+      pga. not-null constraint uten tolerert null i skjemaet)
+- [x] `created_by: APP.profile.id` lagt til i insert-kallet i
+      `visNyMDEModal()`
+- [x] Flerdagsarrangementer vises nå også i «Alle mine økter»
+      (`renderAlleOkterTab`), gruppert per uke sammen med skoleruta
+- [x] Rediger/slett-knapper på arrangement-merket i «Alle mine økter», synlig
+      for kontaktlærer/admin
+- [x] `node --check app.js` → OK
+- [x] Bekreftet at kun disse to stedene gjør insert/update mot
+      `multi_day_events` (søk i app.js)
+- [x] Cache-bust bumpet i `index.html` (`20260830f`)
+- [ ] Ekte funksjonstest i nettleser mot Supabase (krever innlogget bruker
+      og ekte database — ikke kjørbart i dette miljøet; Morfar verifiserer
+      på branch-previewen før merge — description/created_by-feilen er allerede
+      bekreftet rettet, ny runde gjenstår for visning + rediger/slett i «Alle
+      mine økter»)
+- [x] PLAN.md: denne sjekklisten + STATUSLINJE oppdatert i samme commit
 
 ---
 
