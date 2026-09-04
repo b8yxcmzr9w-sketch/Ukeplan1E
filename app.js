@@ -2969,20 +2969,44 @@ async function renderSokTab(container) {
     aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; doSearch() })
   }
 
+  // PostgREST .or()-verdier med komma/parentes må quotes; \ og " escapes.
+  function orVerdi(v) {
+    return `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  }
+
   async function doSearch() {
     const q = searchInput.value.trim()
     clearEl(results)
     if (!q) return
 
-    let sokQuery = sb.from('sessions')
-      .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
-      .or(`activity.ilike.%${q}%,meeting_point.ilike.%${q}%,info.ilike.%${q}%`)
-      .eq('teacher_id', APP.profile.id)
-    if (valgtSkolear) sokQuery = sokQuery.eq('school_year', valgtSkolear)
-    const { data } = await sokQuery
+    const substreng = `%${q}%`
 
-    // Also search by subject name and teacher name with a join – approximate via client side
-    if (!data || !data.length) {
+    let feltQuery = sb.from('sessions')
+      .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
+      .or(`activity.ilike.${orVerdi(substreng)},meeting_point.ilike.${orVerdi(substreng)},info.ilike.${orVerdi(substreng)}`)
+      .eq('teacher_id', APP.profile.id)
+    let fagQuery = sb.from('sessions')
+      .select('*, subjects!inner(name, color_hex), users!teacher_id(full_name), classes(name)')
+      .eq('teacher_id', APP.profile.id)
+      .ilike('subjects.name', substreng)
+    let laererQuery = sb.from('sessions')
+      .select('*, subjects(name, color_hex), users!teacher_id!inner(full_name), classes(name)')
+      .eq('teacher_id', APP.profile.id)
+      .ilike('users.full_name', substreng)
+    if (valgtSkolear) {
+      feltQuery = feltQuery.eq('school_year', valgtSkolear)
+      fagQuery = fagQuery.eq('school_year', valgtSkolear)
+      laererQuery = laererQuery.eq('school_year', valgtSkolear)
+    }
+
+    const [feltRes, fagRes, laererRes] = await Promise.all([feltQuery, fagQuery, laererQuery])
+    const funnet = new Map()
+    for (const r of [feltRes, fagRes, laererRes]) {
+      for (const s of (r.data || [])) funnet.set(s.id, s)
+    }
+    const data = [...funnet.values()].sort((a, b) => a.week_nr - b.week_nr || a.day_of_week - b.day_of_week)
+
+    if (!data.length) {
       results.appendChild(el('p', {}, 'Ingen resultater.'))
       return
     }
