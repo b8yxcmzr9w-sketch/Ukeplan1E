@@ -16,7 +16,9 @@
   OR-e egne felt mot embedded tabellers felt i én spørring. Ingen andre
   endringer i UI, logikk eller database. `node --check app.js` OK.
   Cache-bust `app.js?v=20260904c`. Branch:
-  `claude/p71-word-based-search-rgvr6d` (miljøets tildelte navn).)
+  `claude/p71-word-based-search-rgvr6d` (miljøets tildelte navn). Morfar
+  testet på branch-previewen og bekreftet at fiksen virker; ga «merge».
+  Merget til main via PR #184 (squash).)
 - **Nest siste fullførte P-nummer:** P70 (Skjul flerdagsarrangement-opprettelse
   midlertidig — «+ Nytt arrangement»-knappen i Klasse-admin-fanen er
   kommentert ut, mens `visNyMDEModal()`/`visRedigerMDEModal()` selv er
@@ -162,7 +164,8 @@ samme økt.
       fungerer (4. september 2026, via `rawcdn.githack.com`-lenken etter at
       første `raw.githack.com`-test viste en CDN-cachet gammel versjon)
 
-**Neste steg:** Klar til merge — vent på Morfars uttrykkelige «merge».
+**Neste steg:** Ferdig — merget til main via PR #184 (squash) etter Morfars
+«merge».
 
 ---
 
