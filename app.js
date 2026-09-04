@@ -4532,6 +4532,7 @@ async function visNyMDEModal(classId, onSave) {
     }
     await medLagreOverlay(async () => {
       const { error } = await sb.from('multi_day_events').insert({
+        school_id: APP.school.id,
         class_id: classId,
         title: titleInput.value,
         description: descInput.value || null,
@@ -4583,7 +4584,7 @@ async function visRedigerMDEModal(mde, onSave) {
         description: descInput.value || null,
         start_date: startInput.value,
         end_date: endInput.value,
-      }).eq('id', mde.id)
+      }).eq('id', mde.id).eq('school_id', APP.school.id)
       if (error) throw error
     })
     modal.remove()

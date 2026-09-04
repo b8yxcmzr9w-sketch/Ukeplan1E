@@ -2,7 +2,16 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
+- **Siste fullførte P-nummer:** P69 (RLS-fix for `multi_day_events`:
+  insert/update-kallene i `visNyMDEModal()`/`visRedigerMDEModal()` (app.js)
+  sendte ikke `school_id`, så RLS-policyen (som krever
+  `school_id = auth_school_id()`) blokkerte lagring/redigering av
+  flerdagsarrangementer. Opprett-modalen sender nå `school_id: APP.school.id`
+  i insert-objektet; rediger-modalen legger til `.eq('school_id',
+  APP.school.id)` som ekstra betingelse på update-kallet. `node --check
+  app.js` OK. Cache-bust `app.js?v=20260830d`. Branch:
+  `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte navn).)
+- **Nest siste fullførte P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
   fargepalett/typografi for `.dag-tittel`, `.okt-kort`, `.fag-badge`,
   `.aktivitet` og `session-card__*`-detaljene, pluss ny «i dag»-utheving av
   dagens kolonne i elevvisning og lærervisningens «Min klasse»-fane.
@@ -30,7 +39,7 @@
   (ingen nettleser tilgjengelig i miljøet) — Morfar godkjente utseendet
   visuelt på branch-previewen og ga eksplisitt «Godkjent pr og merge».
   Merget til main via PR #181 (squash).)
-- **Nest siste fullførte P-nummer:** P67 (Persistent Login / «Husk meg» —
+- **Tidligere fullført P-nummer:** P67 (Persistent Login / «Husk meg» —
   avhukingsboks på innloggingsskjermen, opt-in og av som standard.
   Supabase-klienten peker nå mot `sessionStorage` som default (kun denne
   fanen), og huker man av «Husk meg» lagres sesjonen i en egen
@@ -48,8 +57,8 @@
   produksjon) FØR merge og bekreftet at den fungerer. Merget til main via
   PR #179 (squash).)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P69
-- **Dato sist oppdatert:** 31. august 2026
+- **Neste ledige P-nummer:** P70
+- **Dato sist oppdatert:** 4. september 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
@@ -70,6 +79,37 @@
   lukkbar boks i stedet. Lagt i Backlogg → «Klar til bygging» som eget punkt
   (se nedenfor), da dette nå er en UX-endring, ikke en gjenstående
   prod-sjekk.
+
+---
+
+## Økt (P69): RLS-fix for multi_day_events (mangler school_id)
+
+**Branch:** `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte
+branch).
+
+**Root cause:** Insert- og update-kallene mot `multi_day_events` i
+`visNyMDEModal()`/`visRedigerMDEModal()` (app.js) sendte ikke `school_id`.
+RLS-policyen på tabellen krever `school_id = auth_school_id()`, så uten
+feltet ble insert/update blokkert av policyen (stille feil for bruker).
+
+**Endringer:**
+- `visNyMDEModal()` — insert-objektet får nå `school_id: APP.school.id`.
+- `visRedigerMDEModal()` — update-kallet får en ekstra betingelse
+  `.eq('school_id', APP.school.id)` i tillegg til `.eq('id', mde.id)`.
+- Cache-bust: `app.js?v=20260830d` i `index.html`.
+
+### Sjekkliste
+- [x] `school_id` lagt til i insert-kallet i `visNyMDEModal()`
+- [x] `.eq('school_id', APP.school.id)` lagt til i update-kallet i
+      `visRedigerMDEModal()`
+- [x] `node --check app.js` → OK
+- [x] Bekreftet at kun disse to stedene gjør insert/update mot
+      `multi_day_events` (søk i app.js)
+- [x] Cache-bust bumpet i `index.html`
+- [ ] Ekte funksjonstest i nettleser mot Supabase (krever innlogget bruker
+      og ekte database — ikke kjørbart i dette miljøet; Morfar verifiserer
+      på branch-previewen før merge)
+- [x] PLAN.md: denne sjekklisten + STATUSLINJE oppdatert i samme commit
 
 ---
 
