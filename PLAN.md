@@ -2,7 +2,18 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P69 (RLS-fix for `multi_day_events`:
+- **Siste fullførte P-nummer:** P70 (Skjul flerdagsarrangement-opprettelse
+  midlertidig — «+ Nytt arrangement»-knappen i Klasse-admin-fanen er
+  kommentert ut, mens `visNyMDEModal()`/`visRedigerMDEModal()` selv er
+  urørt (brukes fortsatt av rediger-knappen på eksisterende arrangement,
+  både i Klasse-admin og «Alle mine økter»). Bakgrunn: funksjonen skal ut
+  av bruk mens design for multi-klasse-støtte avklares — fem designpunkter
+  logget i Backlogg → «Klar til bygging» (se «P70-design»). Ingen
+  databaseendring i denne økten; Morfar sletter selv den ene eksisterende
+  raden (`Temadager Vg1 naturbruk`) i Supabase SQL Editor etter merge.
+  `node --check app.js` OK. Cache-bust `app.js?v=20260904a`. Branch:
+  `claude/p70-skjul-flerdags-midlertidig-x5jkvt` (miljøets tildelte navn).)
+- **Nest siste fullførte P-nummer:** P69 (RLS-fix for `multi_day_events`:
   insert/update-kallene i `visNyMDEModal()`/`visRedigerMDEModal()` (app.js)
   sendte ikke `school_id`, så RLS-policyen (som krever
   `school_id = auth_school_id()`) blokkerte lagring/redigering av
@@ -24,7 +35,7 @@
   `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte navn).
   Morfar testet på branch-previewen og bekreftet at fiksen virker; ga
   «Merge». Merget til main via PR #182 (squash).)
-- **Nest siste fullførte P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
+- **Tidligere fullført P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
   fargepalett/typografi for `.dag-tittel`, `.okt-kort`, `.fag-badge`,
   `.aktivitet` og `session-card__*`-detaljene, pluss ny «i dag»-utheving av
   dagens kolonne i elevvisning og lærervisningens «Min klasse»-fane.
@@ -52,7 +63,7 @@
   (ingen nettleser tilgjengelig i miljøet) — Morfar godkjente utseendet
   visuelt på branch-previewen og ga eksplisitt «Godkjent pr og merge».
   Merget til main via PR #181 (squash).)
-- **Tidligere fullført P-nummer:** P67 (Persistent Login / «Husk meg» —
+- **Enda tidligere:** P67 (Persistent Login / «Husk meg» —
   avhukingsboks på innloggingsskjermen, opt-in og av som standard.
   Supabase-klienten peker nå mot `sessionStorage` som default (kun denne
   fanen), og huker man av «Husk meg» lagres sesjonen i en egen
@@ -70,7 +81,7 @@
   produksjon) FØR merge og bekreftet at den fungerer. Merget til main via
   PR #179 (squash).)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P70
+- **Neste ledige P-nummer:** P71
 - **Dato sist oppdatert:** 4. september 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
@@ -92,6 +103,50 @@
   lukkbar boks i stedet. Lagt i Backlogg → «Klar til bygging» som eget punkt
   (se nedenfor), da dette nå er en UX-endring, ikke en gjenstående
   prod-sjekk.
+
+---
+
+## Økt (P70): Skjul flerdagsarrangement-opprettelse midlertidig
+
+**Branch:** `claude/p70-skjul-flerdags-midlertidig-x5jkvt` (miljøets tildelte
+branch — oppgaveteksten sa `claude/P70-skjul-flerdags-midlertidig`, samme
+situasjon som P34–P69).
+**Scope:** KUN `app.js` (opprettelsesknappen) + cache-bust i `index.html` +
+PLAN.md. Ingen DB-migrasjon, ingen edge functions.
+
+**Bakgrunn:** Flerdagsarrangement-funksjonen skal midlertidig ut av bruk
+mens design for multi-klasse-støtte avklares (fem åpne designpunkter,
+loggført i Backlogg → «Klar til bygging» som «P70-design»). Kun
+opprettelses-inngangen fjernes fra UI; eksisterende arrangement i
+databasen (`Temadager Vg1 naturbruk`) slettes manuelt av Morfar i
+Supabase SQL Editor etter merge — ikke del av denne økten.
+
+**Endring:** Fant én synlig opprettelsesknapp i koden: «+ Nytt
+arrangement» i Klasse-admin-fanen (`renderKlasseAdminInnhold`, app.js
+~4478), som kalte `visNyMDEModal(aktivKlasse.id, ...)`. Kommentert ut
+(ikke slettet — enkel reversering senere når design er avklart).
+`visNyMDEModal()`/`visRedigerMDEModal()` selv er urørt: rediger (✏️)
+på eksisterende arrangement fortsetter å virke, både i Klasse-admin og
+i «Alle mine økter» (lagt til i P69).
+
+### Sjekkliste
+- [x] Opprettelsesknappen («+ Nytt arrangement») i Klasse-admin-fanen
+      kommentert ut
+- [x] `visNyMDEModal()`/`visRedigerMDEModal()` selv beholdt uendret
+      (fortsatt i bruk fra rediger-knappene)
+- [x] Designpunkter for multi-klasse-støtte loggført i PLAN.md Backlogg →
+      «Klar til bygging» («P70-design»)
+- [x] `node --check app.js` → OK
+- [x] Søk bekrefter «Nytt flerdagsarrangement»/«Nytt arrangement» ikke
+      lenger finnes som synlig knapp — eneste treff er den kommenterte
+      linjen og selve `visNyMDEModal()`-definisjonen, som nå er helt
+      uten kallsted (ingen aktiv vei inn i den modalen lenger)
+- [x] Cache-bust bumpet i `index.html` (`20260904a`)
+- [x] STATUSLINJE i PLAN.md oppdatert i samme commit
+- [ ] Databasesletting av `Temadager Vg1 naturbruk` — Morfars manuelle
+      steg i Supabase SQL Editor etter PR-merge, ikke del av denne økten
+      (bevisst uavkrysset til Morfar bekrefter det er gjort)
+- [x] Commit + push + PR
 
 ---
 
@@ -515,6 +570,22 @@ endring i `for-laerere.html`.
   avklare før bygging: skal boksen fortsatt være tilgjengelig fra samme
   sted/lenke som i dag (bare med annen presentasjon), og skal den lukkes
   med samme «X»-mønster som andre modaler i appen (`.settings-close`).
+
+- **P70-design: Flerdagsarrangement — multi-klasse-støtte**
+  (Morfar, 4. september 2026). Funksjonen er midlertidig skjult fra
+  opprettelses-UI mens design avklares. Fem designpunkter må besvares
+  før bygging:
+  1. Databasestruktur — skal `multi_day_events.class_id` bevares eller
+     migreres vekk? Junction-tabell `multi_day_event_classes`?
+  2. Opprettelsesmodus — flervalgs-lista (checkboxer) eller
+     steg-for-steg (« + Legg til»-knapper)?
+  3. Redigeringsmodus — samme som opprettelse eller annen stil?
+  4. Minimumkrav — kan arrangement ha 0 klasser, eller må det alltid
+     være minst 1?
+  5. Synlighet — hvis arrangement er i flere klasser, skal det vises i
+     «Alle mine økter» for lærere i ALLE klassene, eller bare for den
+     opprinnelige klassens kontaktlærer?
+  Branch: `claude/P70-skjul-flerdags-midlertidig`.
 
 - **Oversett rå Postgres-feiltekst i feiloverlayet til lesbar norsk** (P58).
   I dag vises f.eks. `new row for relation "subjects" violates check
