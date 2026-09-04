@@ -2,7 +2,19 @@
 
 ## STATUSLINJE (oppdateres hver økt, i samme commit som resten av PLAN.md)
 
-- **Siste fullførte P-nummer:** P70 (Skjul flerdagsarrangement-opprettelse
+- **Siste fullførte P-nummer:** P71 (Forbedret søk i «Søk»-fanen —
+  ord-basert matching istedenfor substreng, pluss søk i fagname og
+  lærernavn. `doSearch()` i `renderSokTab` (app.js) bruker nå PostgREST
+  `imatch` (case-insensitive regex) med Postgres-ordgrense-ankrene `\y`
+  rundt en escapet versjon av søkestrengen, istedenfor `ilike.%q%` — «Norsk»
+  matcher «Norsk» men ikke «Norskebok». Tre parallelle spørringer
+  (aktivitet/sted/info, `subjects!inner(name)`, `users!teacher_id!inner
+  (full_name)`) kjøres med `Promise.all` og resultatene flettes/dedupliseres
+  på `id` og sorteres på uke/dag, siden PostgREST ikke kan OR-e egne felt mot
+  embedded tabellers felt i én spørring. Ingen andre endringer i UI, logikk
+  eller database. `node --check app.js` OK. Cache-bust `app.js?v=20260904b`.
+  Branch: `claude/p71-word-based-search-rgvr6d` (miljøets tildelte navn).)
+- **Nest siste fullførte P-nummer:** P70 (Skjul flerdagsarrangement-opprettelse
   midlertidig — «+ Nytt arrangement»-knappen i Klasse-admin-fanen er
   kommentert ut, mens `visNyMDEModal()`/`visRedigerMDEModal()` selv er
   urørt (brukes fortsatt av rediger-knappen på eksisterende arrangement,
@@ -13,7 +25,7 @@
   raden (`Temadager Vg1 naturbruk`) i Supabase SQL Editor etter merge.
   `node --check app.js` OK. Cache-bust `app.js?v=20260904a`. Branch:
   `claude/p70-skjul-flerdags-midlertidig-x5jkvt` (miljøets tildelte navn).)
-- **Nest siste fullførte P-nummer:** P69 (RLS-fix for `multi_day_events`:
+- **Tidligere fullført P-nummer:** P69 (RLS-fix for `multi_day_events`:
   insert/update-kallene i `visNyMDEModal()`/`visRedigerMDEModal()` (app.js)
   sendte ikke `school_id`, så RLS-policyen (som krever
   `school_id = auth_school_id()`) blokkerte lagring/redigering av
@@ -35,7 +47,7 @@
   `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte navn).
   Morfar testet på branch-previewen og bekreftet at fiksen virker; ga
   «Merge». Merget til main via PR #182 (squash).)
-- **Tidligere fullført P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
+- **Enda tidligere fullført P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
   fargepalett/typografi for `.dag-tittel`, `.okt-kort`, `.fag-badge`,
   `.aktivitet` og `session-card__*`-detaljene, pluss ny «i dag»-utheving av
   dagens kolonne i elevvisning og lærervisningens «Min klasse»-fane.
@@ -81,9 +93,11 @@
   produksjon) FØR merge og bekreftet at den fungerer. Merget til main via
   PR #179 (squash).)
 - **Pågående:** ingen
-- **Neste ledige P-nummer:** P71
+- **Neste ledige P-nummer:** P72
 - **Dato sist oppdatert:** 4. september 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
+  - P71 — Morfar må teste søket i Søk-fanen på branch-previewen (ord-basert
+    matching + fag/lærer-søk) og bekrefte at det fungerer, deretter merge
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
     testabonnementet og rapportere det ekte feilbudskapet tilbake for
@@ -103,6 +117,46 @@
   lukkbar boks i stedet. Lagt i Backlogg → «Klar til bygging» som eget punkt
   (se nedenfor), da dette nå er en UX-endring, ikke en gjenstående
   prod-sjekk.
+
+---
+
+## Økt (P71): Forbedret søk — ord-basert + fag/lærer-søk
+
+**Branch:** `claude/p71-word-based-search-rgvr6d` (miljøets tildelte branch).
+**Scope:** KUN `doSearch()` i `renderSokTab` (app.js) + cache-bust i
+`index.html` + PLAN.md. Ingen andre endringer i UI, logikk eller database.
+
+**Bakgrunn:** Søk-fanen brukte substreng-matching (`ilike.%q%`) i tre felt
+(activity, meeting_point, info) — «Norsk» matchet også «Norskebok». Søk i
+fagname og lærernavn var nevnt i plassholderteksten men aldri implementert.
+
+**Endring:**
+- Bytt `ilike.%q%` til PostgREST `imatch` (case-insensitive regex) med
+  Postgres' ordgrense-ankre `\y` rundt en regex-escapet søkestreng
+  (`ordGrenseMonster()`), pluss `orVerdi()` som quoter/escaper verdien for
+  bruk i `.or()`.
+- Siden PostgREST ikke kan OR-e egne kolonner mot embedded tabellers
+  kolonner i én spørring, kjøres tre parallelle spørringer med
+  `Promise.all`: (1) activity/meeting_point/info via `.or()`, (2)
+  `subjects!inner(name)` filtrert med `.filter('subjects.name', 'imatch', …)`,
+  (3) `users!teacher_id!inner(full_name)` filtrert tilsvarende. Resultatene
+  flettes og dedupliseres på `id`, sorteres på uke/dag.
+- `.eq('teacher_id', APP.profile.id)`-avgrensingen (lærerens egne økter) er
+  UENDRET — kun matchemetoden og de søkte feltene er utvidet.
+
+**Sjekkliste:**
+- [x] `ordGrenseMonster`/`orVerdi`-hjelpere lagt til
+- [x] `doSearch()` bruker `imatch` + ordgrense i stedet for `ilike.%q%`
+- [x] Søk i `subjects.name` og `users.full_name` lagt til (egne spørringer,
+      flettet og deduplisert på klientsiden)
+- [x] `node --check app.js` OK
+- [x] Cache-bust `app.js?v=20260904b` i index.html
+- [ ] Morfar har testet søket på branch-previewen (Norsk vs. Norskebok, søk
+      på fag/lærer) og bekreftet at det fungerer — **kan ikke krysses av før
+      Morfar har testet i preview**, se Åpne sjekkpunkter over
+
+**Neste steg:** Vent på Morfars bekreftelse fra branch-previewen, kryss av
+siste punkt og merge.
 
 ---
 

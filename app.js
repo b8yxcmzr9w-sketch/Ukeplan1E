@@ -2969,20 +2969,51 @@ async function renderSokTab(container) {
     aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; doSearch() })
   }
 
+  // Ordgrense-mønster (Postgres regex \y = ordgrense) – matcher "Norsk" men
+  // ikke "Norskebok". \-tegn i søkestrengen escapes så de tas bokstavelig.
+  function ordGrenseMonster(q) {
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return `\\y${escaped}\\y`
+  }
+
+  // PostgREST .or()-verdier med spesialtegn må quotes; \ og " escapes.
+  function orVerdi(v) {
+    return `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  }
+
   async function doSearch() {
     const q = searchInput.value.trim()
     clearEl(results)
     if (!q) return
 
-    let sokQuery = sb.from('sessions')
-      .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
-      .or(`activity.ilike.%${q}%,meeting_point.ilike.%${q}%,info.ilike.%${q}%`)
-      .eq('teacher_id', APP.profile.id)
-    if (valgtSkolear) sokQuery = sokQuery.eq('school_year', valgtSkolear)
-    const { data } = await sokQuery
+    const monster = ordGrenseMonster(q)
 
-    // Also search by subject name and teacher name with a join – approximate via client side
-    if (!data || !data.length) {
+    let feltQuery = sb.from('sessions')
+      .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
+      .or(`activity.imatch.${orVerdi(monster)},meeting_point.imatch.${orVerdi(monster)},info.imatch.${orVerdi(monster)}`)
+      .eq('teacher_id', APP.profile.id)
+    let fagQuery = sb.from('sessions')
+      .select('*, subjects!inner(name, color_hex), users!teacher_id(full_name), classes(name)')
+      .eq('teacher_id', APP.profile.id)
+      .filter('subjects.name', 'imatch', monster)
+    let laererQuery = sb.from('sessions')
+      .select('*, subjects(name, color_hex), users!teacher_id!inner(full_name), classes(name)')
+      .eq('teacher_id', APP.profile.id)
+      .filter('users.full_name', 'imatch', monster)
+    if (valgtSkolear) {
+      feltQuery = feltQuery.eq('school_year', valgtSkolear)
+      fagQuery = fagQuery.eq('school_year', valgtSkolear)
+      laererQuery = laererQuery.eq('school_year', valgtSkolear)
+    }
+
+    const [feltRes, fagRes, laererRes] = await Promise.all([feltQuery, fagQuery, laererQuery])
+    const funnet = new Map()
+    for (const r of [feltRes, fagRes, laererRes]) {
+      for (const s of (r.data || [])) funnet.set(s.id, s)
+    }
+    const data = [...funnet.values()].sort((a, b) => a.week_nr - b.week_nr || a.day_of_week - b.day_of_week)
+
+    if (!data.length) {
       results.appendChild(el('p', {}, 'Ingen resultater.'))
       return
     }
