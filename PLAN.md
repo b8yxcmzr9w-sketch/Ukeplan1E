@@ -22,7 +22,8 @@
   kontaktlærer/admin (RLS håndhever uansett hvem som faktisk får lagre).
   `node --check app.js` OK. Cache-bust `app.js?v=20260830f`. Branch:
   `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte navn).
-  Ekte funksjonstest i nettleser gjenstår etter denne siste utvidelsen.)
+  Morfar testet på branch-previewen og bekreftet at fiksen virker; ga
+  «Merge». Merget til main via PR #182 (squash).)
 - **Nest siste fullførte P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
   fargepalett/typografi for `.dag-tittel`, `.okt-kort`, `.fag-badge`,
   `.aktivitet` og `session-card__*`-detaljene, pluss ny «i dag»-utheving av
@@ -168,12 +169,11 @@ kontaktlærer/admin ser). Løst i samme økt:
 - [x] Bekreftet at kun disse to stedene gjør insert/update mot
       `multi_day_events` (søk i app.js)
 - [x] Cache-bust bumpet i `index.html` (`20260830f`)
-- [ ] Ekte funksjonstest i nettleser mot Supabase (krever innlogget bruker
-      og ekte database — ikke kjørbart i dette miljøet; Morfar verifiserer
-      på branch-previewen før merge — description/created_by-feilen er allerede
-      bekreftet rettet, ny runde gjenstår for visning + rediger/slett i «Alle
-      mine økter»)
-- [x] PLAN.md: denne sjekklisten + STATUSLINJE oppdatert i samme commit
+- [x] Ekte funksjonstest i nettleser mot Supabase — Morfar testet på
+      branch-previewen: RLS/school_id-fiksen fungerer (arrangement lagres
+      uten feil), Morfar bekreftet «Merge»
+- [x] PLAN.md: denne sjekklisten + STATUSLINJE oppdatert
+- [x] Merget til main via PR #182 (squash)
 
 ---
 
