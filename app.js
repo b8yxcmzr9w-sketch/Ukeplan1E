@@ -4475,7 +4475,8 @@ async function renderKlasseAdminTab(container) {
       }}, '🗑️'))
       innhold.appendChild(row)
     }
-    innhold.appendChild(el('button', { class: 'btn btn-s', title: 'Legg til flerdagsarrangement', onclick: () => visNyMDEModal(aktivKlasse.id, renderKlasseAdminInnhold) }, '+ Nytt arrangement'))
+    // P70: opprettelse midlertidig skjult (multi-klasse-design under avklaring, se PLAN.md)
+    // innhold.appendChild(el('button', { class: 'btn btn-s', title: 'Legg til flerdagsarrangement', onclick: () => visNyMDEModal(aktivKlasse.id, renderKlasseAdminInnhold) }, '+ Nytt arrangement'))
 
     // Partier for denne klassen (kun fag med has_parti = true)
     const { data: fagMedParti } = await sb.from('subjects').select('*')
