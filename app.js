@@ -2969,14 +2969,7 @@ async function renderSokTab(container) {
     aarSel.addEventListener('change', () => { valgtSkolear = aarSel.value; doSearch() })
   }
 
-  // Ordgrense-mønster (Postgres regex \y = ordgrense) – matcher "Norsk" men
-  // ikke "Norskebok". \-tegn i søkestrengen escapes så de tas bokstavelig.
-  function ordGrenseMonster(q) {
-    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    return `\\y${escaped}\\y`
-  }
-
-  // PostgREST .or()-verdier med spesialtegn må quotes; \ og " escapes.
+  // PostgREST .or()-verdier med komma/parentes må quotes; \ og " escapes.
   function orVerdi(v) {
     return `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
   }
@@ -2986,20 +2979,20 @@ async function renderSokTab(container) {
     clearEl(results)
     if (!q) return
 
-    const monster = ordGrenseMonster(q)
+    const substreng = `%${q}%`
 
     let feltQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex), users!teacher_id(full_name), classes(name)')
-      .or(`activity.imatch.${orVerdi(monster)},meeting_point.imatch.${orVerdi(monster)},info.imatch.${orVerdi(monster)}`)
+      .or(`activity.ilike.${orVerdi(substreng)},meeting_point.ilike.${orVerdi(substreng)},info.ilike.${orVerdi(substreng)}`)
       .eq('teacher_id', APP.profile.id)
     let fagQuery = sb.from('sessions')
       .select('*, subjects!inner(name, color_hex), users!teacher_id(full_name), classes(name)')
       .eq('teacher_id', APP.profile.id)
-      .filter('subjects.name', 'imatch', monster)
+      .ilike('subjects.name', substreng)
     let laererQuery = sb.from('sessions')
       .select('*, subjects(name, color_hex), users!teacher_id!inner(full_name), classes(name)')
       .eq('teacher_id', APP.profile.id)
-      .filter('users.full_name', 'imatch', monster)
+      .ilike('users.full_name', substreng)
     if (valgtSkolear) {
       feltQuery = feltQuery.eq('school_year', valgtSkolear)
       fagQuery = fagQuery.eq('school_year', valgtSkolear)
