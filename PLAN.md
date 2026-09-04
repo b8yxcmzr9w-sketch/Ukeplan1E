@@ -99,9 +99,6 @@
 - **Neste ledige P-nummer:** P72
 - **Dato sist oppdatert:** 4. september 2026
 - **Åpne sjekkpunkter som ikke kan lukkes ennå:**
-  - P71 — Morfar må teste søket i Søk-fanen på branch-previewen (substreng
-    som før + nytt fag/lærer-søk) og bekrefte at det fungerer, deretter
-    merge
   - P65 — Morfar må redeploye `ical`-funksjonen manuelt i Supabase
     Dashboard etter merge, deretter gjenta det opprinnelige
     testabonnementet og rapportere det ekte feilbudskapet tilbake for
@@ -160,13 +157,12 @@ samme økt.
       flettet og deduplisert på klientsiden)
 - [x] `node --check app.js` OK
 - [x] Cache-bust `app.js?v=20260904c` i index.html
-- [ ] Morfar har testet søket på branch-previewen (substreng som «lek» →
+- [x] Morfar har testet søket på branch-previewen (substreng som «lek» →
       leker/lekse/blek/slekt, pluss søk på fag/lærer) og bekreftet at det
-      fungerer — **kan ikke krysses av før Morfar har testet i preview**,
-      se Åpne sjekkpunkter over
+      fungerer (4. september 2026, via `rawcdn.githack.com`-lenken etter at
+      første `raw.githack.com`-test viste en CDN-cachet gammel versjon)
 
-**Neste steg:** Vent på Morfars bekreftelse fra branch-previewen, kryss av
-siste punkt og merge.
+**Neste steg:** Klar til merge — vent på Morfars uttrykkelige «merge».
 
 ---
 
