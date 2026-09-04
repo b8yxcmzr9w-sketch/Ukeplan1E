@@ -4535,10 +4535,11 @@ async function visNyMDEModal(classId, onSave) {
         school_id: APP.school.id,
         class_id: classId,
         title: titleInput.value,
-        description: descInput.value || null,
+        description: descInput.value || '',
         start_date: startInput.value,
         end_date: endInput.value,
         school_year: APP.school?.active_school_year,
+        created_by: APP.profile.id,
       })
       if (error) throw error
     })
@@ -4581,7 +4582,7 @@ async function visRedigerMDEModal(mde, onSave) {
     await medLagreOverlay(async () => {
       const { error } = await sb.from('multi_day_events').update({
         title: titleInput.value,
-        description: descInput.value || null,
+        description: descInput.value || '',
         start_date: startInput.value,
         end_date: endInput.value,
       }).eq('id', mde.id).eq('school_id', APP.school.id)

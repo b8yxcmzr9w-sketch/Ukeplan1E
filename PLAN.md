@@ -8,9 +8,14 @@
   `school_id = auth_school_id()`) blokkerte lagring/redigering av
   flerdagsarrangementer. Opprett-modalen sender nå `school_id: APP.school.id`
   i insert-objektet; rediger-modalen legger til `.eq('school_id',
-  APP.school.id)` som ekstra betingelse på update-kallet. `node --check
-  app.js` OK. Cache-bust `app.js?v=20260830d`. Branch:
-  `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte navn).)
+  APP.school.id)` som ekstra betingelse på update-kallet. Morfars
+  branch-preview-test avdekket to påfølgende feil i SAMME økt (fikset i
+  samme commit): `description`-feltet ble sendt som `null` i stedet for tom
+  streng (kolonnen er `not null default ''`), og `created_by` manglet helt i
+  insert-kallet (også `not null`) — begge rettet. `node --check app.js` OK.
+  Cache-bust `app.js?v=20260830e`. Branch:
+  `claude/multi-day-events-rls-school-id-gcncap` (miljøets tildelte navn).
+  Ekte funksjonstest i nettleser gjenstår etter denne siste rettelsen.)
 - **Nest siste fullførte P-nummer:** P68 (Visuell oppussing av uke-grid — nytt
   fargepalett/typografi for `.dag-tittel`, `.okt-kort`, `.fag-badge`,
   `.aktivitet` og `session-card__*`-detaljene, pluss ny «i dag»-utheving av
@@ -98,17 +103,39 @@ feltet ble insert/update blokkert av policyen (stille feil for bruker).
   `.eq('school_id', APP.school.id)` i tillegg til `.eq('id', mde.id)`.
 - Cache-bust: `app.js?v=20260830d` i `index.html`.
 
+**Oppfølging (samme økt, etter Morfars branch-preview-test):** første testrunde
+avdekket en NY feil, ikke sett på forhånd: `null value in column "description"
+of relation "multi_day_events" violates not-null constraint`. Root cause:
+`description`-kolonnen i skjemaet er `not null default ''`
+(`001_initial_schema.sql`), men koden sendte `descInput.value || null` —
+tom beskrivelse ble til eksplisitt `null`, som overstyrer default-verdien og
+brøt not-null-constrainten. Samtidig ble det oppdaget at insert-kallet i
+`visNyMDEModal()` heller ikke satte `created_by`, som også er `not null
+references users(id)` i skjemaet — ville gitt en ny feil rett etter
+description-fiksen. Rettet begge steder:
+- `visNyMDEModal()` og `visRedigerMDEModal()`: `description: descInput.value
+  || ''` (tom streng, ikke null)
+- `visNyMDEModal()`: lagt til `created_by: APP.profile.id` i insert-objektet
+  (samme mønster som andre insert-kall i app.js, f.eks. linje 3076/3371/3604)
+- Cache-bust bumpet videre til `app.js?v=20260830e`
+
 ### Sjekkliste
 - [x] `school_id` lagt til i insert-kallet i `visNyMDEModal()`
 - [x] `.eq('school_id', APP.school.id)` lagt til i update-kallet i
       `visRedigerMDEModal()`
+- [x] `description: descInput.value || ''` i begge modaler (ikke `null`,
+      pga. not-null constraint uten tolerert null i skjemaet)
+- [x] `created_by: APP.profile.id` lagt til i insert-kallet i
+      `visNyMDEModal()`
 - [x] `node --check app.js` → OK
 - [x] Bekreftet at kun disse to stedene gjør insert/update mot
       `multi_day_events` (søk i app.js)
-- [x] Cache-bust bumpet i `index.html`
+- [x] Cache-bust bumpet i `index.html` (`20260830e`)
 - [ ] Ekte funksjonstest i nettleser mot Supabase (krever innlogget bruker
       og ekte database — ikke kjørbart i dette miljøet; Morfar verifiserer
-      på branch-previewen før merge)
+      på branch-previewen før merge — én runde er allerede kjørt og avdekket
+      description/created_by-feilen over, ny runde gjenstår etter denne
+      commiten)
 - [x] PLAN.md: denne sjekklisten + STATUSLINJE oppdatert i samme commit
 
 ---
